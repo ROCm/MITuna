@@ -1,0 +1,5 @@
+conv -F 0
+convfp16 -F 0
+CBAInfer -F 4 -m 3
+CBAInfer -F 5 -m 3
+CBAInfer -F 6

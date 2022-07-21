@@ -1,0 +1,107 @@
+def runsql(query) {
+    echo "query: ${query}"
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${db_name}" -e "${query}" -N -s /$
+    def res = sh (script: "${cmd}", returnStdout: true).trim()
+    return res
+}
+
+def QueryConfigs(arch, num_cu, fdb_prefix)
+{ 
+  def script_args = " -a ${arch} -n ${num_cu}"
+  if(params.skip_db)
+  {
+    script_args = script_args + " --skip_db"
+  }
+  if(params.job_info)
+  {
+    script_args = script_args + " --job_info"
+  }
+  if(params.fdb_info)
+  {
+    script_args = script_args + " --fdb_info"
+  }
+  if(params.miopen_version != '')
+  {
+    sh "wget https://github.com/ROCmSoftwarePlatform/MIOpen/blob/${params.miopen_version}/src/kernels/${fdb_prefix}.HIP.fdb.txt?raw=true -O ${fdb_prefix}.HIP.fdb.txt"
+    script_args = script_args + " --fdb_filename ${fdb_prefix}.HIP.fdb.txt"
+    archiveArtifacts "${fdb_prefix}.HIP.fdb.txt"
+  }
+  script_args = script_args + " --file_name query_configs.txt "
+  echo "${script_args}"
+  def build_args = " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  sh "echo ${build_args}"
+  def tuna_docker = docker.build("tuna_docker", "${build_args}" )
+  tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+      env.PYTHONPATH=env.WORKSPACE
+      env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+      env.TUNA_LOGLEVEL="${tuna_loglevel}" 
+      echo "/tuna/tuna/query_db.py ${script_args}"
+      sh "/tuna/tuna/query_db.py ${script_args}"
+  }
+}
+
+def VerifyArgs()
+{
+  if(params.miopen_version != '')
+  {
+    // Checking only one arch is sufficient
+    statusCode = sh script:" wget -q --method=HEAD https://github.com/ROCmSoftwarePlatform/MIOpen/blob/${params.miopen_version}/src/kernels/gfx900_56.HIP.fdb.txt?raw=true ", returnStatus:true
+    if(statusCode)
+    {
+	    error "Invalid MIOpen version for find db"
+    }
+  }
+  if(params.skip_db)
+  {
+    if(params.job_info || params.fdb_info)
+    {
+      error "job_info or fdb_info cannot be specified when skip_db is true"
+    }
+  }
+  if(params.config == '')
+  {
+      error "No configs were supplied to query"
+  }
+  writeFile(file: 'query_configs.txt', text: params.configs)
+  archiveArtifacts 'query_configs.txt'
+}
+
+pipeline {
+  agent { node { label 'mysql' } }
+  parameters {
+    text(name: 'configs', description: 'Configs to be imported')
+    booleanParam(name: 'skip_db', defaultValue: false, description: 'Skip all Database operations')
+    booleanParam(name: 'fdb_info', defaultValue: false, description: 'Report on Find Db info Tuna DB')
+    booleanParam(name: 'job_info', defaultValue: false, description: 'Report on the tuned jobs in Tuna DB')
+    string(name: 'miopen_version', defaultValue: '', description: 'If specified the find database from this version of MIOpen will be queried for the configs')
+    string(name: 'db_name', defaultValue: ${TUNA_DB_NAME}, description: 'Name of the database schema')
+    string(name: 'db_user', defaultValue: ${JENKINS_USER}, description: 'Username for the databse')
+    string(name: 'db_password', defaultValue: ${JENKINS_PWD}, description: 'Password for the user')
+  }
+  stages {
+    stage("Check params")
+    {
+        steps {
+            VerifyArgs()   
+        }
+    } 
+    stage("Query Configs (gfx900, 56)")
+    {
+        steps {
+            QueryConfigs("gfx900", "56", "gfx900_56")
+        }
+    }
+    stage("Query Configs (gfx906, 60)")
+    {
+        steps {
+            QueryConfigs("gfx906", "60", "gfx906_60")
+        }
+    }
+    stage("Query Configs (gfx908, 120)")
+    {
+        steps {
+            QueryConfigs("gfx908", "120", "gfx90878")
+        }
+    }
+  }
+}

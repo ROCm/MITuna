@@ -1,0 +1,8 @@
+**
+
+!utils/mysql_docker/conf.d*
+!requirements.txt
+!./bin/setup_db.sh
+!./tuna
+!./tests
+!./setup.py

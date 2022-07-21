@@ -1,0 +1,123 @@
+def getDockerName(backend)
+{
+  def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_name}_${backend}_${env.BUILD_ID}"
+  return tuna_docker_name
+}
+
+def BuildDocker()
+{
+  def build_args = " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  sh "echo ${build_args}"
+  def tuna_docker_name = getDockerName("HIPNOGPU")
+  def tuna_docker = docker.build("${tuna_docker_name}", "${build_args}" )
+}
+
+def exportDb(arch, num_cu)
+{
+  if(params.rocm_version != '')
+  {
+    rocm_version = "rocm-${params.rocm_version}"
+  }
+  else
+  {
+    rocm_version = "osdb-${params.osdb_bkc_version}"
+  }
+
+  def build_args = " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  sh "echo ${build_args}"
+  def tuna_docker_name = getDockerName("HIPNOGPU")
+  def tuna_docker = docker.build("${tuna_docker_name}", "${build_args}" )
+  tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+      env.PYTHONPATH=env.WORKSPACE
+      env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+      env.TUNA_LOGLEVEL="${tuna_loglevel}"
+      if(params.find_db)
+      {
+        def fdb_file = sh(script: "/tuna/tuna/export_db.py -a ${arch} -n ${num_cu} -f --miopen_v ${params.miopen_hash} --rocm_v ${rocm_version}", returnStdout: true)
+        archiveArtifacts  "${fdb_file}"
+      }
+      if(params.kern_db)
+      {
+        def kdb_file = sh(script: "/tuna/tuna/export_db.py -a ${arch} -n ${num_cu} -k --miopen_v ${params.miopen_hash} --rocm_v ${rocm_version}", returnStdout: true)
+        archiveArtifacts "${kdb_file}"
+      }
+      if(params.perf_db)
+      {
+        def pdb_file = sh(script: "/tuna/tuna/export_db.py -a ${arch} -n ${num_cu} -p ", returnStdout: true)
+        archiveArtifacts  "${pdb_file}"
+      }
+  }
+}
+
+def VerifyArgs()
+{
+    if(params.rocm_version == '' && params.osdb_bkc_version == '')
+    {
+      error "Either ROCm version or OSDB build number is required"
+    }
+
+    if(params.rocm_version != '' && params.osdb_bkc_version != '')
+    {
+      error "Can only specify either the ROCm version or the OSDB build number"
+    }
+}
+
+pipeline {
+  agent { node { label 'mysql' } }
+  parameters {
+    booleanParam(name: "find_db", defaultValue: true, description: "Enable or disable the find db export")
+    booleanParam(name: "kern_db", defaultValue: true, description: "Enable or disable the kernel db export")
+    booleanParam(name: "perf_db", defaultValue: true, description: "Enable or disable the permormance db export")
+    string(name: 'miopen_hash', defaultValue: '', description: 'MIOpen branch used to build dockers')
+    string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
+    string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
+    string(name: 'db_host', defaultValue: ${headnode}, description: 'Name of the machine hosting the database instance')
+    string(name: 'db_name', defaultValue: ${TUNA_DB_NAME}, description: 'Name of the database schema')
+    string(name: 'db_user', defaultValue: ${JENKINS_USER}, description: 'Username for the databse')
+    string(name: 'db_password', defaultValue: ${JENKINS_PWD}, description: 'Password for the user')
+    string(name: 'docker_registry', defaultValue: '${headnode}:5000', description: 'Name of the docker registry for pushing images')
+  }
+  stages {
+   stage("Check params")
+   {
+     steps {
+       VerifyArgs()   
+     }
+   }
+   stage("build docker")
+   {
+     steps {
+       BuildDocker()   
+     }
+   }
+   stage('exports'){
+     parallel{
+       stage ("gfx1030_36"){
+        steps{
+          exportDb("gfx1030", "36")
+        }
+       }
+       stage ("gfx90a_110"){
+        steps{
+          exportDb("gfx90a", "110")
+        }
+       }
+       stage ("gfx908_120"){
+        steps{
+          exportDb("gfx908", "120")
+        }
+       }
+       stage("gfx906_60"){
+        steps{
+          exportDb("gfx906", "60")
+        }
+       }
+       stage("gfx900_56"){
+        steps{
+          exportDb("gfx900", "56")
+        }
+       }
+     }
+   }
+  }
+}

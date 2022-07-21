@@ -1,0 +1,95 @@
+def runsql(query) {
+    echo "query: ${query}"
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${db_name}" -e "${query}" -N -s /$
+    def res = sh (script: "${cmd}", returnStdout: true).trim()
+    return res
+}
+
+def ImportConfigs()
+{ 
+  def script_args = ''
+  def new_label = ''
+  if(params.command != '')
+  {
+      script_args = script_args + " -c ${params.command}"
+  }
+  if(params.batches != '')
+  {
+      script_args = script_args + " -b ${params.batches}"
+  }
+
+  if(params.mark_recurrent)
+  {
+      script_args = script_args + " --mark_recurrent"
+  }
+  writeFile(file: 'import_configs.txt', text: params.configs)
+  archiveArtifacts 'import_configs.txt'
+  script_args = script_args + " --tag ${params.tag} --file_name import_configs.txt"
+  echo "${script_args}"
+  def build_args = " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  sh "echo ${build_args}"
+  def tuna_docker = docker.build("tuna_docker", "${build_args}" )
+  tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+      env.PYTHONPATH=env.WORKSPACE
+      env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+      env.TUNA_LOGLEVEL="${tuna_loglevel}" 
+      echo "/tuna/tuna/import_configs.py ${script_args}"
+      sh "/tuna/tuna/import_configs.py ${script_args}"
+      def num_configs = runsql("SELECT count(*) from config_tags WHERE tag = '${params.tag}' ;").toInteger()
+      sh "echo ${num_configs} new tags for ${params.tag}"
+  }
+}
+
+def VerifyArgs()
+{
+    if(params.config == '')
+    {
+        error "No configs were supplied to be imported"
+    }
+    if(params.tag == '')
+    {
+        error "config_tag must be specified when importing jobs"
+    }
+
+    if(params.mark_recurrent)
+    {
+        echo "The imported configs will be marked recurrent"
+    }
+
+    if(params.batches != '')
+    {
+        echo "The following batches will be added for the imported commands: ${params.batches}"
+    }
+    if(params.command != '')
+    {
+        echo "The following command will be used to override the precision specified: ${params.command}"
+    }
+}
+
+pipeline {
+  agent { node { label 'mysql' } }
+  parameters {
+    text(name: 'configs', description: '[Required] Configs to be imported')
+    string(name: 'tag', defaultValue: '', description: '[Required] Mark the imported configs with this identifier in the relational database')
+    booleanParam(name: 'mark_recurrent', defaultValue: false, description: 'Mark the imported configs to be recurrently tuned (ie with every release)')
+    string(name: 'batches', defaultValue: '', description: 'Iterate over batches, this allows to do a batch sweep over the imported configs')
+    string(name: 'command', defaultValue: '', description: 'Override the command in the imported configs, allows to convert FP32 commands into FP16 commands')
+    string(name: 'db_name', defaultValue: ${TUNA_DB_NAME}, description: 'Name of the database schema')
+    string(name: 'db_user', defaultValue: ${JENKINS_USER}, description: 'Username for the databse')
+    string(name: 'db_password', defaultValue: ${JENKINS_PWD}, description: 'Password for the user')
+  }
+  stages {
+    stage("Check params")
+    {
+        steps {
+            VerifyArgs()   
+        }
+    } 
+    stage("Import Configs")
+    {
+        steps {
+            ImportConfigs()
+        }
+    }
+  }
+}

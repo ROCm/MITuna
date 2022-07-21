@@ -1,0 +1,73 @@
+def shared_library_branch = scm.branches[0].name
+if (shared_library_branch .contains("*/")) {
+    shared_library_branch  = shared_library_branch.split("\\*/")[1]
+    }
+echo shared_library_branch 
+
+def VerifyArgs()
+{
+    if(params.job_label == '')
+    {
+        def new_label = utils.getJobReason()
+        echo "No label specified: Using: ${new_label}"
+    }
+    else
+    {
+        echo "Using specified label: ${params.job_label}"
+    }
+    
+    if(params.all_configs)
+    {
+        if(params.config_tag != '')
+        {
+            error "config_tags must be empty when specifying all_configs"
+        }
+    }
+    
+    if(params.arch != '')
+    {
+        if(params.num_cu == '')
+        {
+            error "Arch and num_cu must both be specified"
+        }
+    }
+}
+
+library "jenkins-shared@${shared_library_branch}"
+
+pipeline {
+  agent { node { label 'mysql' } }
+  environment {
+    tuna_docker_name = utils.getDockerName("HIPNOGPU")
+  }
+  parameters {
+    string(name: 'branch_name', defaultValue: 'tuning_pipeline', description: '')
+    string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
+    string(name: 'job_label', defaultValue: '', description: 'Label for new jobs. Leave empty for one to be generated')
+    booleanParam(name: 'all_configs', defaultValue: false, description: 'Create jobs for all configs in the Db. Useful for find db generation')
+    booleanParam(name: 'only_applicable', defaultValue: false, description: 'Create a job for each applicable solver (requires all_configs)')
+    string(name: 'config_tag', defaultValue: 'inception3', description: 'Configs matching this tag would be added to jobs. Must be empty if all_configs is set')
+    choice(name: 'arch', choices: ['', 'gfx908', 'gfx906', 'gfx900', 'gfx1030', 'gfx90a'], description: 'Target architecture, empty means all')
+    choice(name: 'num_cu', choices: ['', '120', '110', '104', '64', '60', '56', '36'], description: 'Target architecture num_cu, empty means all')
+    choice(name: 'cmd', choices: ['', 'conv', 'convfp16', 'convbfp16'], description: 'get configs for cmd type')
+    choice(name: 'stage', choices: ['perf', 'fin_find'], description: 'Load jobs args')
+  }
+  stages {
+    stage("Check params")
+    {
+        steps {
+          script {
+            VerifyArgs()   
+          }
+        }
+    }
+    stage("Load Jobs")
+    {
+        steps {
+          script {
+            utils.LoadJobs()
+          }
+        }
+    }
+  }
+}
