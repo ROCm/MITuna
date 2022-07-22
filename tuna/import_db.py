@@ -67,45 +67,7 @@ def parse_args():
   return args
 
 
-def insert_perf_configs_v1(context, configs):
-  """insert sqlite3 config table into mysql perf_config"""
-  perf_cfg_fields = [
-      x for x in SQLITE_CONFIG_COLS if x not in MYSQL_CONFIG_COLS
-  ]
-  insert_ids = []
-  ret = False
-
-  for i, config in enumerate(configs):
-    perf_cfg = {
-        key: val for key, val in config.items() if key in perf_cfg_fields
-    }
-    mysql_cfg = {
-        key: val for key, val in config.items() if key in MYSQL_CONFIG_COLS
-    }
-
-    cfg_filter = mysql_cfg.copy()
-    mysql_cfg['valid'] = '1'
-    ret, idx = mysqldb_insert_dict(context.table_cfg, mysql_cfg, cfg_filter)
-    if not ret:
-      LOGGER.error('Could not update config: %s', mysql_cfg)
-      break
-    perf_cfg['config'] = idx
-
-    ret, ins_id = mysqldb_insert_dict(context.table_perf_cfg, perf_cfg,
-                                      perf_cfg)
-    if ret:
-      insert_ids.append(ins_id)
-    else:
-      LOGGER.error('Could not update perf_config: %s', perf_cfg)
-      break
-
-    if i % 100 == 0:
-      LOGGER.info('Loading configs... %s', i)
-
-  return ret, insert_ids
-
-
-def insert_perf_configs_v2(context, configs):
+def insert_configs(context, configs):
   """Read in perf_config sqlite table from configs arg and insert into mysql tables.
   This function constructs a temporary perf_cfg dict that translates a sqlite perf_config entry
   into mysql conv_config and perf_config entry"""
@@ -128,21 +90,13 @@ def insert_perf_configs_v2(context, configs):
     #only use valid mysql configs
     mysql_cfg['valid'] = '1'
     cfg_filter = mysql_cfg.copy()
-    ret, idx = mysqldb_insert_dict(context.table_cfg, mysql_cfg, cfg_filter)
+    ret, cfg_idx = mysqldb_insert_dict(context.table_cfg, mysql_cfg, cfg_filter)
     if not ret:
       LOGGER.error('Could not update config: %s', mysql_cfg)
       break
 
-    perf_cfg['config'] = idx
-    cfg_filter = perf_cfg.copy()
-    #ok to update to valid here if matching uq layout,data_type,bias,config
-    perf_cfg['valid'] = '1'
-
-    #inserting sqlite perf_config into mysql perf_config table
-    ret, ins_id = mysqldb_insert_dict(context.table_perf_cfg, perf_cfg,
-                                      cfg_filter)
     if ret:
-      insert_ids.append(ins_id)
+      insert_ids.append(cfg_idx)
     else:
       LOGGER.error('Could not update perf_config: %s', perf_cfg)
       break
@@ -159,8 +113,7 @@ def insert_perf_db(context, perf_rows, perf_cols, cvrt):
   perf_db = []
   for row in perf_rows:
     entry = dict(zip(perf_cols, row))
-    entry['miopen_config'] = cvrt[entry['config']]
-    entry.pop('config', None)
+    entry['config'] = cvrt[entry['config']]
     entry.pop('id', None)
     entry['session'] = context.session_id
     entry['valid'] = 1
@@ -171,8 +124,8 @@ def insert_perf_db(context, perf_rows, perf_cols, cvrt):
 
     perf_db.append(entry)
 
-  ret, insert_ids = mysqldb_overwrite_table(
-      context.table_perf_db, perf_db, ['solver', 'miopen_config', 'session'])
+  ret, insert_ids = mysqldb_overwrite_table(context.table_perf_db, perf_db,
+                                            ['solver', 'config', 'session'])
   if not ret:
     LOGGER.error('Could not update perf_db: %s', perf_db)
 
@@ -209,7 +162,7 @@ def record_perfdb_v2(args, cnx, config_rows, config_cols, cfg_filter):  #pylint:
       cnx, 'perf_db', {'config': [perf_cfg['id'] for perf_cfg in configs]})
 
   #inserting perf_config from sqlite configs
-  ret, insert_ids = insert_perf_configs_v2(args, configs)
+  ret, insert_ids = insert_configs(args, configs)
   if not ret:
     return False
 

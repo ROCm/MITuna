@@ -290,8 +290,7 @@ class Evaluator(WorkerInterface):
       context = DotDict({
           'target_file': self.get_miopen_udb(),
           'table_cfg': self.dbt.config_table,
-          'table_perf_cfg': self.dbt.perf_config_table,
-          'table_perf_db': self.dbt.perf_db_table,
+          'table_perf_db': self.dbt.find_db_table,
           'session_id': self.session_id
       })
       saved_sql = record_perfdb(context, self.get_perf_cfg())

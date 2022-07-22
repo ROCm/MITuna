@@ -52,7 +52,7 @@ class BASE(object):
     exclude_cols = [
         '_sa_instance_state', 'md5', 'valid', 'input_tensor', 'weight_tensor'
     ]
-    if ommit_valid:
+    if not ommit_valid:
       exclude_cols.remove('valid')
 
     for col in exclude_cols:

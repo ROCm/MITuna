@@ -445,39 +445,6 @@ class SolverFusionApplicability(BASE, SolverApplicabilityMixin):
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
 
-class PerfConfigMixin():
-  """Represents perf_db config table mixin"""
-  config = Column(Integer, ForeignKey("config.id"), nullable=False)
-  layout = Column(String(60), nullable=False, server_default="NCHW")
-  data_type = Column(String(60), nullable=False, server_default="FP32")
-  bias = Column(Integer, nullable=False, server_default="0")
-  valid = Column(TINYINT(1), nullable=False, server_default="1")
-
-
-class ConvPerfConfig(BASE, PerfConfigMixin):
-  """Represents perf_db config table for convolutions"""
-  __tablename__ = "conv_perf_config"
-  __table_args__ = (UniqueConstraint("config",
-                                     "layout",
-                                     "data_type",
-                                     "bias",
-                                     name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-
-
-class BNPerfConfig(BASE, PerfConfigMixin):
-  """Represents perf_db config table for batch norm"""
-  __tablename__ = "bn_perf_config"
-  __table_args__ = (UniqueConstraint("config",
-                                     "layout",
-                                     "data_type",
-                                     "bias",
-                                     name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
-
-
 class PerfDBMixin():
   """perf databades"""
 
@@ -586,7 +553,6 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvSolverApplicability())
   miopen_tables.append(ConvolutionFindDB)
   miopen_tables.append(ConvolutionKernelCache())
-  miopen_tables.append(ConvPerfConfig())
   miopen_tables.append(ConvPerfDB())
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
@@ -611,7 +577,6 @@ def add_bn_tables(miopen_tables):
   miopen_tables.append(BNSolverApplicability())
   miopen_tables.append(BNFindDB())
   miopen_tables.append(BNKernelCache())
-  miopen_tables.append(BNPerfConfig())
   miopen_tables.append(BNPerfDB())
   miopen_tables.append(BNJobCache())
   miopen_tables.append(BNFinJobCache())

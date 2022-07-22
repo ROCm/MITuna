@@ -226,8 +226,8 @@ class FinEvaluator(WorkerInterface):
             bias = pdb_obj['bias']
             params = pdb_obj['params']
             #call also updates perf_db+perf_config tables
-            _, _ = self.update_pdb_entry(session, solver, layout, data_type,
-                                         bias, params)
+            _ = self.update_pdb_entry(session, solver, layout, data_type, bias,
+                                      params)
 
           except OperationalError as err:
             self.logger.warning('FinEval: Unable to update Database: %s', err)

@@ -374,45 +374,21 @@ class WorkerInterface(Process):
 
     return success
 
-  def update_pdb_config(self, session, layout, data_type, bias):
-    """ update and retrieve perf_config entry from mysql """
-    perf_config_table = self.dbt.perf_config_table
-
-    perf_config_dict = {
-        'layout': layout,
-        'data_type': data_type,
-        'bias': bias,
-        'config': self.config.id,
-        'session': self.dbt.session.id
-    }
-
-    self.logger.info('Updating %s for job_id=%s',
-                     perf_config_table.__tablename__, self.job.id)
-    res = session.query(perf_config_table).filter_by(**perf_config_dict).all()
-    if not res:
-      session.add(perf_config_table(**perf_config_dict))
-      session.commit()
-
-    perf_config_entry = session.query(perf_config_table).filter_by(
-        **perf_config_dict).one()
-    return perf_config_entry
-
   def update_pdb_entry(self, session, solver, layout, data_type, bias, params):
     """ update and retrieve perf_db entry from mysql """
     perf_table = self.dbt.perf_db_table
 
-    perf_config_entry = self.update_pdb_config(session, layout, data_type, bias)
-
     perf_db_dict = {
         'solver': solver,
-        'miopen_config': perf_config_entry.id,
-        'session': self.dbt.session.id
+        'config': self.config.id,
+        'session': self.dbt.session.id,
+        'opencl': False
     }
-    update_dict = {'params': params, 'session': self.dbt.session.id}
-    self.logger.info('Updating %s for job_id=%s', perf_table.__tablename__,
-                     self.job.id)
-    num_rows = session.query(perf_table).filter_by(
-        **perf_db_dict).update(update_dict)
+    update_dict = {'params': params}
+    self.logger.info('Updating %s for job_id=%s',
+                     self.dbt.find_db_table.__tablename__, self.job.id)
+    num_rows = session.query(
+        self.dbt.find_db_table).filter_by(**perf_db_dict).update(update_dict)
     perf_db_dict.update(update_dict)
     if num_rows == 0:
       self.logger.info('insert %s for job_id=%s', perf_db_dict, self.job.id)
@@ -426,7 +402,7 @@ class WorkerInterface(Process):
     query = session.query(perf_table).filter_by(**perf_db_dict)
     perf_entry = query.one()
 
-    return perf_config_entry, perf_entry
+    return perf_entry
 
   def queue_end_reset(self):
     """resets end queue flag"""
