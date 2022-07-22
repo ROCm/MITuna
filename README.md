@@ -3,6 +3,13 @@
 
 
 ## Prerequisites
+Install Python3.9
+```
+apt-get update && apt-get install software-properties-common
+add-apt-repository ppa:deadsnakes/ppa
+apt install python3.9
+```
+
 Install MySQL server
 ```
 apt-get install mysql-server
@@ -25,7 +32,7 @@ git clone <repo url>
 ```
 Then create a virtual env using 
 ```
-virtualenv -p python3 myvenv
+virtualenv -p python3.9 myvenv
 ```
 Enter the Tuna directory
 ```
@@ -33,7 +40,7 @@ cd Tuna
 ```
 Activate the virtualenv and source the virtual env for subsequent use
 ```
-virtualenv -p python3 myvenv
+virtualenv -p python3.9 myvenv
 source myvenv/bin/activate
 ```
 Install the required dependencies:

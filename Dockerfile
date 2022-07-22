@@ -25,7 +25,7 @@ ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
 ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
 ADD requirements.txt requirements.txt
 # Install dependencies
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated \
+RUN apt-get update && apt-get install software-properties-common && add-apt-repository ppa:deadsnakes/ppa && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated \
     apt-utils \
     sshpass \
     build-essential \
@@ -47,11 +47,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-
     miopengemm \
     pkg-config \
     python \
-    python3 \
+    python3.9 \
     python-dev \
-    python3-dev \
+    python3.9-dev \
     python-pip \
-    python3-pip \
+    python3.9-pip \
     software-properties-common \
     sqlite3 \
     wget \
@@ -68,6 +68,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-
     mysql-client && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN ln -sf /usr/bin/python3.9 /usr/bin/python3 
+RUN ln -sf /usr/bin/python3.9-dev /usr/bin/python3-dev
+RUN ln -sf /usr/bin/python3.9-pip /usr/bin/python3-pip 
 
 RUN pip3 install --default-timeout=100000 -r requirements.txt
 RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysql_connector mysql-connector-python==8.0.20
@@ -160,4 +164,4 @@ ADD tests /tuna/tests/
 ADD utils /tuna/utils/
 ADD requirements.txt /tuna/
 WORKDIR /tuna
-RUN python3 setup.py install
+RUN python3.9 setup.py install
