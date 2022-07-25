@@ -42,6 +42,10 @@ class FinEvaluator(WorkerInterface):
   """ The Evaluator class implements the worker class. Its purpose is to run benchmarking jobs
   and when completed sets the state of the job to evaluated. """
 
+  def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    self.envmt.append("HIP_VISIBLE_DEVICES={}".format(self.gpu_id))
+
   def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""
     self.logger.info('find job: %s', find_state)

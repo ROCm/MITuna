@@ -34,7 +34,7 @@ from sqlalchemy.exc import OperationalError
 
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.metadata import (KCACHE_DIR, TUNA_LOG_DIR, MIOPEN_USER_DB_PATH,
+from tuna.metadata import (KCACHE_DIR, TUNA_LOG_DIR,
                            SQLITE_CONFIG_COLS, CMD_TO_PREC, MIOPEN_DB_VERSION)
 from tuna.analyze_parse_db import mysql_to_sqlite_cfg
 from tuna.helper import valid_cfg_dims
@@ -61,7 +61,7 @@ class Evaluator(WorkerInterface):
     self.last_fetch_state = 'new'
     super().__init__(**kwargs)
 
-    self.envmt.append("MIOPEN_USER_DB_PATH={}".format(MIOPEN_USER_DB_PATH))
+    self.envmt.append("HIP_VISIBLE_DEVICES={}".format(self.gpu_id))
 
     dir_name = os.path.join(
         TUNA_LOG_DIR, 'evaluator', self.machine.arch,
@@ -201,14 +201,14 @@ class Evaluator(WorkerInterface):
       files = []
       try:
         ftp = self.machine.connect().open_sftp()
-        files = ftp.listdir(MIOPEN_USER_DB_PATH)
+        files = ftp.listdir(self.miopen_user_db_path)
       except ftplib.error_perm as resp:
         if str(resp) == "550 No files found":
           self.logger.warning("No files in this directory")
         else:
           raise
     else:
-      files = [f for f in os.listdir(MIOPEN_USER_DB_PATH)]
+      files = [f for f in os.listdir(self.miopen_user_db_path)]
 
     for fname in files:
       arch = self.dbt.session.arch
@@ -223,7 +223,7 @@ class Evaluator(WorkerInterface):
             break
 
     if not self.machine.local_machine:
-      remote_path = os.path.join(MIOPEN_USER_DB_PATH, miopen_udb)
+      remote_path = os.path.join(self.miopen_user_db_path, miopen_udb)
       local_path = os.path.expanduser(
           os.path.join('~/tmp', 'partial_perf_db', str(self.machine.id),
                        str(self.gpu_id)))
@@ -232,7 +232,7 @@ class Evaluator(WorkerInterface):
       ftp = self.machine.connect().open_sftp()
       ftp.get(remote_path, local_path)
     else:
-      local_path = os.path.join(MIOPEN_USER_DB_PATH, miopen_udb)
+      local_path = os.path.join(self.miopen_user_db_path, miopen_udb)
 
     self.logger.info('sqlite db file: %s', local_path)
 

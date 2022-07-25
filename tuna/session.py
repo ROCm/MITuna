@@ -70,7 +70,7 @@ class Session(BASE):
     self.arch = args.arch
     self.num_cu = args.num_cu
     self.rocm_v = worker.get_rocm_v()
-    self.miopen_v = worker.get_branch_hash()
+    self.miopen_v = worker.get_miopen_v()
     self.reason = args.label
     if args.ticket:
       self.ticket = args.ticket

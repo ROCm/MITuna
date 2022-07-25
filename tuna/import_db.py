@@ -30,10 +30,11 @@ import sqlite3
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg, parse_pdb_filename
-from tuna.metadata import SQLITE_CONFIG_COLS, MYSQL_CONFIG_COLS, MYSQL_PERF_CONFIG
+from tuna.metadata import MYSQL_PERF_CONFIG
 from tuna.metadata import CONV_CONFIG_COLS
 from tuna.miopen_tables import Solver
-from tuna.miopen_tables import ConvolutionConfig, ConvPerfConfig, ConvPerfDB
+from tuna.miopen_tables import ConvolutionConfig
+from tuna.find_db import ConvolutionFindDB
 from tuna.helper import compose_tensors, valid_cfg_dims
 from tuna.helper import mysqldb_insert_dict, mysqldb_overwrite_table
 from tuna.parse_args import TunaArgs, setup_arg_parser
@@ -72,13 +73,12 @@ def insert_configs(context, configs):
   This function constructs a temporary perf_cfg dict that translates a sqlite perf_config entry
   into mysql conv_config and perf_config entry"""
   #fields from perf_config table sans conv_config FKEY and timestamps
-  perf_cfg_fields = MYSQL_PERF_CONFIG
   insert_ids = []
   ret = False
 
   for i, config in enumerate(configs):
     perf_cfg = {
-        key: val for key, val in config.items() if key in perf_cfg_fields
+        key: val for key, val in config.items() if key in MYSQL_PERF_CONFIG
     }
 
     #mysql_cfg represents a conv_config entry
@@ -213,8 +213,7 @@ def main():
   """main"""
   args = parse_args()
   args.table_cfg = ConvolutionConfig
-  args.table_perf_cfg = ConvPerfConfig
-  args.table_perf_db = ConvPerfDB
+  args.table_perf_db = ConvolutionFindDB
   record_perfdb(args)
 
 
