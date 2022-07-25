@@ -27,9 +27,8 @@
 """Module that encapsulates the DB representation based on configuration type"""
 from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
-from tuna.miopen_tables import ConvPerfDB
 from tuna.miopen_tables import ConvJobCache, Solver
-from tuna.miopen_tables import BNJob, BNConfig, BNPerfDB, BNJobCache, BNFinJobCache, BNConfigTags
+from tuna.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
 from tuna.miopen_tables import ConvSolverApplicability, BNSolverApplicability
 from tuna.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
 from tuna.miopen_tables import TensorTable
@@ -55,7 +54,6 @@ class DBTables():
     self.config_tags_table = None
     self.find_db_table = None
     self.solver_app = None
-    self.perf_db_table = None
     self.cache_table = None
     self.fin_cache_table = None
     self.solver_table = None
@@ -86,7 +84,6 @@ class DBTables():
       self.config_tags_table = BNConfigTags
       self.find_db_table = BNFindDB
       self.solver_app = BNSolverApplicability
-      self.perf_db_table = BNPerfDB
       self.cache_table = BNJobCache
       self.fin_cache_table = BNFinJobCache
       self.kernel_cache = BNKernelCache
@@ -96,7 +93,6 @@ class DBTables():
       self.config_tags_table = ConvolutionConfigTags
       self.find_db_table = ConvolutionFindDB
       self.solver_app = ConvSolverApplicability
-      self.perf_db_table = ConvPerfDB
       self.cache_table = ConvJobCache
       self.fin_cache_table = ConvFinJobCache
       self.kernel_cache = ConvolutionKernelCache

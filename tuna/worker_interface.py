@@ -376,7 +376,7 @@ class WorkerInterface(Process):
 
   def update_pdb_entry(self, session, solver, layout, data_type, bias, params):
     """ update and retrieve perf_db entry from mysql """
-    perf_table = self.dbt.perf_db_table
+    perf_table = self.dbt.find_db_table
 
     perf_db_dict = {
         'solver': solver,
