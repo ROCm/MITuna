@@ -271,7 +271,7 @@ class WorkerInterface(Process):
 
     return success
 
-  def compose_query(self, find_state, session):
+  def compose_job_query(self, find_state, session):
     """Helper function to compose query"""
     query = session.query(self.dbt.job_table, self.dbt.config_table)\
                           .filter(self.dbt.job_table.session == self.dbt.session.id)\
@@ -302,7 +302,6 @@ class WorkerInterface(Process):
     fdb_entry.session = self.dbt.session.id
     fdb_entry.opencl = False
     fdb_entry.logger = self.logger
-    fdb_entry.session = self.dbt.session.id
     fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
                                     self.dbt.solver_app, self.dbt.session.id)
     obj = fdb_query.first()
@@ -326,16 +325,20 @@ class WorkerInterface(Process):
     fdb_entry = self.update_fdb_entry(
         session, self.solver_id_map[fdb_obj['solver_name']])
     fdb_entry.fdb_key = fin_json['db_key']
-    fdb_entry.kernel_time = -1
     fdb_entry.alg_lib = fdb_obj['algorithm']
-    fdb_entry.workspace_sz = -1
-    fdb_entry.session = self.dbt.session.id
+    fdb_entry.params = fdb_obj['params']
+    fdb_entry.workspace_sz = fdb_obj['workspace']
+    fdb_entry.valid = True
+
+    fdb_entry.kernel_time = -1
+    if 'time' in fdb_obj:
+      fdb_entry.kernel_time = fdb_obj['time']
+
+
     return fdb_entry
 
   def compose_kernel_entry(self, fdb_obj, fdb_entry):
     """Compose a new Kernel Cache entry from fin input"""
-    fdb_entry.valid = True
-    fdb_entry.workspace_sz = fdb_obj['workspace']
     # Now we have the ID, lets add the binary cache objects
     fdb_entry.blobs = []
     for kern_obj in fdb_obj['kernel_objects']:
@@ -349,7 +352,7 @@ class WorkerInterface(Process):
       fdb_entry.blobs.append(kernel_obj)
     return True
 
-  def process_fdb_compile(self,
+  def process_fdb_w_kernels(self,
                           session,
                           fin_json,
                           result_str='miopen_find_compile_result',
@@ -377,36 +380,6 @@ class WorkerInterface(Process):
       success = False
 
     return success
-
-  def update_pdb_entry(self, session, solver, layout, data_type, bias, params):
-    """ update and retrieve perf_db entry from mysql """
-    perf_table = self.dbt.find_db_table
-
-    perf_db_dict = {
-        'solver': solver,
-        'config': self.config.id,
-        'session': self.dbt.session.id,
-        'opencl': False
-    }
-    update_dict = {'params': params}
-    self.logger.info('Updating %s for job_id=%s',
-                     self.dbt.find_db_table.__tablename__, self.job.id)
-    num_rows = session.query(
-        self.dbt.find_db_table).filter_by(**perf_db_dict).update(update_dict)
-    perf_db_dict.update(update_dict)
-    if num_rows == 0:
-      self.logger.info('insert %s for job_id=%s', perf_db_dict, self.job.id)
-      session.add(perf_table(**perf_db_dict))
-    else:
-      self.logger.info('%u update %s for job_id=%s', num_rows, perf_db_dict,
-                       self.job.id)
-
-    session.commit()
-
-    query = session.query(perf_table).filter_by(**perf_db_dict)
-    perf_entry = query.one()
-
-    return perf_entry
 
   def queue_end_reset(self):
     """resets end queue flag"""
@@ -466,7 +439,7 @@ class WorkerInterface(Process):
           if self.job_queue.empty():
             ids = ()
             with DbSession() as session:
-              query = self.compose_query(find_state, session)
+              query = self.compose_job_query(find_state, session)
               job_cfgs = query.all()
 
               if not job_cfgs:

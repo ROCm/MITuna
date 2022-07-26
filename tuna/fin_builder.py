@@ -72,13 +72,10 @@ class FinBuilder(WorkerInterface):
   def process_pdb_compile(self, session, fin_json):
     """retrieve perf db compile json results"""
     success = True
-    if fin_json['miopen_perf_compile_result']:
-      for pdb_obj in fin_json['miopen_perf_compile_result']:
-        if pdb_obj['perf_compiled']:
-          self.compose_job_cache_entrys(session, pdb_obj)
-          self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
-    else:
-      success = False
+    for pdb_obj in fin_json['miopen_perf_compile_result']:
+      if pdb_obj['perf_compiled']:
+        self.compose_job_cache_entrys(session, pdb_obj)
+        self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
 
     return success
 
@@ -98,7 +95,7 @@ class FinBuilder(WorkerInterface):
       with DbSession() as session:
         try:
           if 'miopen_find_compile_result' in fin_json:
-            failed_job = not self.process_fdb_compile(session, fin_json)
+            failed_job = not self.process_fdb_w_kernels(session, fin_json)
 
           elif 'miopen_perf_compile_result' in fin_json:
             failed_job = not self.process_pdb_compile(session, fin_json)

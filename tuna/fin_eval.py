@@ -77,8 +77,6 @@ class FinEvaluator(WorkerInterface):
       query = session.query(self.dbt.solver_app).filter(
           self.dbt.solver_app.session == self.dbt.session.id,
           self.dbt.solver_app.config == self.job.config,
-          self.dbt.solver_app.arch == self.dbt.session.arch,
-          self.dbt.solver_app.num_cu == self.dbt.session.num_cu,
           self.dbt.solver_app.applicable == 1)
       for slv_entry in query.all():
         slv_name = self.id_solver_map[slv_entry.solver]
@@ -199,9 +197,9 @@ class FinEvaluator(WorkerInterface):
           fdb_entry = obj
           fdb_entry.alg_lib = fdb_obj['algorithm']
           fdb_entry.kernel_time = fdb_obj['time']
-          # workspace
           fdb_entry.workspace_sz = fdb_obj['workspace']
           fdb_entry.session = self.dbt.session.id
+          fdb_entry.params = fdb_obj['params']
         else:
           self.logger.warning("Not evaluated: job(%s), solver(%s), %s",
                               self.job.id, fdb_obj['solver_name'],
@@ -213,29 +211,6 @@ class FinEvaluator(WorkerInterface):
         except OperationalError as err:
           self.logger.warning('FinEval: Unable to update Database: %s', err)
           failed_job = True
-
-    return failed_job
-
-  def process_pdb_eval(self, fin_json):
-    """process perf db eval json results"""
-    failed_job = False
-    for pdb_obj in fin_json['miopen_perf_eval_result']:
-      self.logger.info('Processing object: %s', pdb_obj)
-      with DbSession() as session:
-        if pdb_obj['evaluated'] and pdb_obj['tunable']:
-          try:
-            solver = self.solver_id_map[pdb_obj['solver_name']]
-            layout = pdb_obj['layout']
-            data_type = pdb_obj['data_type']
-            bias = pdb_obj['bias']
-            params = pdb_obj['params']
-            #call also updates perf_db+perf_config tables
-            _ = self.update_pdb_entry(session, solver, layout, data_type, bias,
-                                      params)
-
-          except OperationalError as err:
-            self.logger.warning('FinEval: Unable to update Database: %s', err)
-            failed_job = True
 
     return failed_job
 
@@ -274,18 +249,12 @@ class FinEvaluator(WorkerInterface):
         failed_job = self.process_fdb_eval(fin_json)
 
       elif 'miopen_perf_eval_result' in fin_json:
-        failed_job = self.process_pdb_eval(fin_json)
-        #also update fdb
-        if not failed_job:
-          with DbSession() as session:
-            failed_job = not self.process_fdb_compile(
-                session,
-                fin_json,
-                result_str='miopen_perf_eval_result',
-                check_str='evaluated')
-        if not failed_job:
-          failed_job = self.process_fdb_eval(
-              fin_json, result_str='miopen_perf_eval_result')
+        with DbSession() as session:
+          failed_job = not self.process_fdb_w_kernels(
+              session,
+              fin_json,
+              result_str='miopen_perf_eval_result',
+              check_str='evaluated')
 
     if failed_job:
       self.check_gpu()
