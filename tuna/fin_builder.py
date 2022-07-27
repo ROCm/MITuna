@@ -71,13 +71,15 @@ class FinBuilder(WorkerInterface):
 
   def process_pdb_compile(self, session, fin_json):
     """retrieve perf db compile json results"""
-    success = True
+    status = []
     for pdb_obj in fin_json['miopen_perf_compile_result']:
+      slv_stat = self.get_fin_slv_status(pdb_obj, 'perf_compiled')
+      status.append(slv_stat)
       if pdb_obj['perf_compiled']:
         self.compose_job_cache_entrys(session, pdb_obj)
         self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
 
-    return success
+    return status
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
@@ -90,15 +92,19 @@ class FinBuilder(WorkerInterface):
     fin_json = self.run_fin_cmd(is_eval=False)
 
     failed_job = True
+    result_str = ''
     if fin_json:
       failed_job = False
       with DbSession() as session:
         try:
           if 'miopen_find_compile_result' in fin_json:
-            failed_job = not self.process_fdb_w_kernels(session, fin_json)
+            status = self.process_fdb_w_kernels(session, fin_json)
 
           elif 'miopen_perf_compile_result' in fin_json:
-            failed_job = not self.process_pdb_compile(session, fin_json)
+            status = self.process_pdb_compile(session, fin_json)
+
+          success, result_str = self.get_fin_result(status)
+          failed_job = not success
 
         except (OperationalError, IntegrityError) as err:
           self.logger.warning('FinBuild: Unable to update Database %s', err)
@@ -112,7 +118,7 @@ class FinBuilder(WorkerInterface):
           failed_job = True
 
     if failed_job:
-      self.set_job_state('errored')
+      self.set_job_state('errored', result=result_str)
     else:
-      self.set_job_state('compiled')
+      self.set_job_state('compiled', result=result_str)
     return True

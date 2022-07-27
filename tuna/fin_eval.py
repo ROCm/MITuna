@@ -180,9 +180,11 @@ class FinEvaluator(WorkerInterface):
 
   def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
     """process find db eval json results"""
-    failed_job = False
+    status = []
     for fdb_obj in fin_json[result_str]:
       self.logger.info('Processing object: %s', fdb_obj)
+      slv_stat = self.get_fin_slv_status(fdb_obj, 'evaluated')
+      status.append(slv_stat)
       with DbSession() as session:
         if fdb_obj['evaluated']:
           obj, _ = self.get_fdb_entry(
@@ -210,9 +212,9 @@ class FinEvaluator(WorkerInterface):
           session.commit()
         except OperationalError as err:
           self.logger.warning('FinEval: Unable to update Database: %s', err)
-          failed_job = True
+          status = [{'solver': 'all', 'success': False, 'result': 'FinEval: Unable to update Database: {}'.format(err)}]
 
-    return failed_job
+    return status
 
   def clean_cache_table(self):
     """Remove the fin cache kernel entries for this job"""
@@ -244,29 +246,33 @@ class FinEvaluator(WorkerInterface):
       return True
 
     failed_job = True
+    result_str = ''
     if fin_json:
       if 'miopen_find_eval_result' in fin_json:
-        failed_job = self.process_fdb_eval(fin_json)
+        status = self.process_fdb_eval(fin_json)
 
       elif 'miopen_perf_eval_result' in fin_json:
         with DbSession() as session:
-          failed_job = not self.process_fdb_w_kernels(
+          status = self.process_fdb_w_kernels(
               session,
               fin_json,
               result_str='miopen_perf_eval_result',
               check_str='evaluated')
 
+      success, result_str = self.get_fin_result(status)
+      failed_job = not success
+
     if failed_job:
       self.check_gpu()
       if self.job.retries == (MAX_ERRORED_JOB_RETRIES - 1):
         self.logger.warning('max job retries exhausted, setting to errored')
-        self.set_job_state('errored')
+        self.set_job_state('errored', result=result_str)
       else:
         self.logger.warning('resetting job state to %s, incrementing retries',
                             orig_state)
-        self.set_job_state(orig_state, increment_retries=True)
+        self.set_job_state(orig_state, increment_retries=True, result=result_str)
     else:
-      self.set_job_state('evaluated')
+      self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()
 
     return True

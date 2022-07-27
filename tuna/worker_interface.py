@@ -352,18 +352,40 @@ class WorkerInterface(Process):
       fdb_entry.blobs.append(kernel_obj)
     return True
 
+  def get_fin_slv_status(self, json_obj, check_str):
+    """Retrieve status information from fin json output, each represents a solver"""
+    slv_stat = {}
+    slv_stat['solver'] = json_obj['solver_name']
+    slv_stat['success'] = json_obj[check_str]
+    slv_stat['result'] = json_obj['reason']
+    return slv_stat
+
+  def get_fin_result(self, status):
+    """construct result string from status, and single success boolean"""
+    result_str = ''
+    success = False
+    if True in [x['success'] for x in status]:
+      success = True
+    for slv, res in [[x['solver'], x['result']] for x in status]:
+      result_str += ' ({}: {})'.format(slv, res)
+
+    return success, result_str
+
   def process_fdb_w_kernels(self,
                           session,
                           fin_json,
                           result_str='miopen_find_compile_result',
                           check_str='find_compiled'):
     """retrieve find db compile json results"""
-    success = False
+    status = []
     for fdb_obj in fin_json[result_str]:
+      slv_stat = self.get_fin_slv_status(fdb_obj, check_str)
+      status.append(slv_stat)
+
       if fdb_obj[check_str]:
         fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
         if fdb_obj['reason'] == 'Success':
-          success = self.compose_kernel_entry(fdb_obj, fdb_entry)
+          self.compose_kernel_entry(fdb_obj, fdb_entry)
           session.add(fdb_entry)
           self.logger.info('Updating find Db(Build) for job_id=%s', self.job.id)
         else:
@@ -377,9 +399,9 @@ class WorkerInterface(Process):
       session.commit()
     except OperationalError as err:
       self.logger.warning('FinEval: Unable to update Database: %s', err)
-      success = False
+      status = [{'solver': 'all', 'success': False, 'result': 'FinEval: Unable to update Database: {}'.format(err)}]
 
-    return success
+    return status
 
   def queue_end_reset(self):
     """resets end queue flag"""
@@ -501,7 +523,7 @@ class WorkerInterface(Process):
     return False
 
   # JD: This should take a session obj as an input to remove the creation of an extraneous session
-  def set_job_state(self, state, increment_retries=False):
+  def set_job_state(self, state, increment_retries=False, result=''):
     """Interface function to update job state for builder/evaluator"""
     self.logger.info('Setting job id %s state to %s', self.job.id, state)
     for idx in range(NUM_SQL_RETRIES):
@@ -511,13 +533,15 @@ class WorkerInterface(Process):
             session.query(self.dbt.job_table).filter(
                 self.dbt.job_table.id == self.job.id).update({
                     self.dbt.job_table.state: state,
+                    self.dbt.job_table.result: result
                 })
           else:
             if increment_retries:
               session.query(self.dbt.job_table).filter(
                   self.dbt.job_table.id == self.job.id).update({
                       self.dbt.job_table.state: state,
-                      self.dbt.job_table.retries: self.dbt.job_table.retries + 1
+                      self.dbt.job_table.retries: self.dbt.job_table.retries + 1,
+                      self.dbt.job_table.result: result
                   })
             else:
               # JD: When would this happen ?
@@ -529,7 +553,8 @@ class WorkerInterface(Process):
               session.query(self.dbt.job_table).filter(
                   self.dbt.job_table.id == self.job.id).update({
                       self.dbt.job_table.state: state,
-                      self.dbt.job_table.cache_loc: cache_loc
+                      self.dbt.job_table.cache_loc: cache_loc,
+                      self.dbt.job_table.result: result
                   })
           session.commit()
           return True
