@@ -362,7 +362,7 @@ class JobMixin():
   compile_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_start = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  result = Column(String(length=60), nullable=False, server_default="")
+  result = Column(Text)
   reason = Column(String(length=60), nullable=False, server_default="")
   machine_id = Column(Integer, nullable=False, server_default="-1")
   eval_mid = Column(Integer, server_default="-1")

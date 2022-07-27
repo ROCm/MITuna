@@ -378,22 +378,25 @@ class WorkerInterface(Process):
                           check_str='find_compiled'):
     """retrieve find db compile json results"""
     status = []
-    for fdb_obj in fin_json[result_str]:
-      slv_stat = self.get_fin_slv_status(fdb_obj, check_str)
-      status.append(slv_stat)
+    if fin_json[result_str]:
+      for fdb_obj in fin_json[result_str]:
+        slv_stat = self.get_fin_slv_status(fdb_obj, check_str)
+        status.append(slv_stat)
 
-      if fdb_obj[check_str]:
-        fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
-        if fdb_obj['reason'] == 'Success':
-          self.compose_kernel_entry(fdb_obj, fdb_entry)
-          session.add(fdb_entry)
-          self.logger.info('Updating find Db(Build) for job_id=%s', self.job.id)
+        if fdb_obj[check_str]:
+          fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
+          if fdb_obj['reason'] == 'Success':
+            self.compose_kernel_entry(fdb_obj, fdb_entry)
+            session.add(fdb_entry)
+            self.logger.info('Updating find Db(Build) for job_id=%s', self.job.id)
+          else:
+            # JD: add info about reason to the logs table
+            fdb_entry.valid = False
         else:
-          # JD: add info about reason to the logs table
-          fdb_entry.valid = False
-      else:
-        self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
-                            fin_json['config_tuna_id'], fdb_obj)
+          self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
+                              fin_json['config_tuna_id'], fdb_obj)
+    else:
+      status = [{'solver': 'all', 'success': False, 'result': 'Find Compile: No results'}]
 
     try:
       session.commit()
@@ -422,7 +425,6 @@ class WorkerInterface(Process):
     for job, config in job_cfgs:
       if job.solver:
         query = session.query(self.dbt.solver_table)\
-            .filter(self.dbt.solver_table.session == self.dbt.session.id)\
             .filter(self.dbt.solver_table.solver == job.solver)
         solver = query.one()
       else:
