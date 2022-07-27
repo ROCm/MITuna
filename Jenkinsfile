@@ -23,7 +23,6 @@ pipeline {
         pwd = "${pwd}"
         port = "${port}"
         TUNA_ROCM_VERSION = '4.5'
-
     } 
     stages {
         stage("code Format") {
