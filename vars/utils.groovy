@@ -60,7 +60,7 @@ def addJobs() {
 }
 
 def finSolvers(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     /*
     Note: Does not need
             GPUs
@@ -89,7 +89,7 @@ def finSolvers(){
 }
 
 def finApplicability(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -140,7 +140,7 @@ def finApplicability(){
 }
 
 def finFindCompile(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -196,7 +196,7 @@ def finFindCompile(){
 
 
 def finFindEval(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -259,7 +259,7 @@ def buildTunaDocker(){
 }
 
 def loadJobTest() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -307,7 +307,7 @@ def loadJobTest() {
 }
 
 def perfCompile() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -349,7 +349,7 @@ def perfCompile() {
 }
 
 def perfEval_gfx908() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -398,7 +398,7 @@ def perfEval_gfx908() {
 }
 
 def pytestSuite1() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -435,7 +435,7 @@ def pytestSuite1() {
 }
 
 def pytestSuite2() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -461,7 +461,7 @@ def pytestSuite2() {
 }
 
 def pytestSuite3() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -487,7 +487,7 @@ def pytestSuite3() {
 def runFormat() {
     node {
         checkout scm
-        def tuna_docker = docker.build("ci-tuna:${branch_id}")
+        def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
         tuna_docker.inside("") {
             sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/"
         }
@@ -497,7 +497,7 @@ def runFormat() {
 def runLint() {
     node {
           checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}")
+          def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string='  ' *.py"
           }
@@ -565,7 +565,7 @@ def LoadJobs()
       script_args = script_args + " -t ${params.config_tag} "
   }
   echo "${script_args}"
-  def build_args = " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
   sh "echo ${build_args}"
   def tuna_docker = docker.build("${tuna_docker_name}", "${build_args}" )
   tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
@@ -614,7 +614,7 @@ def compile()
 {
   backend = "HIPNOGPU"
   def tuna_docker
-  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -698,7 +698,7 @@ def compile()
 def evaluate()
 {
   def tuna_docker
-  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
