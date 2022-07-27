@@ -410,10 +410,6 @@ def execute_docker(worker, docker_cmd, machine):
 def get_kwargs(gpu_idx, f_vals, args):
   """Helper function to set up kwargs for worker instances"""
   envmt = f_vals["envmt"].copy()
-  # JD: Move it down to the evaluator class
-  if not args.compile and not (args.fin_steps and 'compile' in args.fin_steps[0]):
-    #compile phase doesn't use the gpu
-    envmt.append("HIP_VISIBLE_DEVICES={}".format(gpu_idx))
   if args.config_type is None:
     args.config_type = ConfigType.convolution
 

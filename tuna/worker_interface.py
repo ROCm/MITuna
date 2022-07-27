@@ -590,7 +590,6 @@ class WorkerInterface(Process):
   @staticmethod
   def compose_lcl_envmt(solver):
     """Setting up local_envmt var"""
-    # JD: Move HIP_VISIBLE_DEVICES here
     # pylint: disable=too-many-nested-blocks
     lcl_envmt = []
     solver_id_map, _ = get_solver_ids()
