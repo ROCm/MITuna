@@ -127,6 +127,13 @@ class WorkerInterface(Process):
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
 
+    self.miopen_user_db_path = "/tmp/miopenpdb/thread-{}/config/miopen".format(
+        self.gpu_id)
+    self.envmt.append(
+        "MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{}/cache".format(
+            self.gpu_id))
+    self.envmt.append("MIOPEN_USER_DB_PATH={}".format(self.miopen_user_db_path))
+
     self.hostname = self.machine.hostname
     self.poll_retries = 0
     self.job = None
