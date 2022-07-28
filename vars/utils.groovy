@@ -629,20 +629,6 @@ def compile()
       env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
       env.TUNA_LOGLEVEL="${tuna_loglevel}"
       sh "pwd"
-      def num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx1030' and num_cu = 36;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx1030_36"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx90a' and num_cu = 110;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx90a_110"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx908' and num_cu = 120;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx908_120"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx906' and num_cu = 60;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx906_60"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx900' and num_cu = 56;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx900_56"
   }
   // push the image 
   tuna_docker.push()
