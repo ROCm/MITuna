@@ -76,7 +76,7 @@ have all-to-all machine communication available and passwords must not be requir
 
 Run the setup scripts:
 ```
-python3 setup.py develop
+python3.9 setup.py develop
 ```
 
 The root tuna folder needs to be appeneded to the PYTHONAPTH:

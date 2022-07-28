@@ -50,8 +50,8 @@ RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-pro
     python3.9 \
     python-dev \
     python3.9-dev \
-    python-pip \
-    python3.9-pip \
+    python3.9-distutils \
+    python3-pip \
     software-properties-common \
     sqlite3 \
     wget \
@@ -69,9 +69,22 @@ RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-pro
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# create dir for temp stuff
+RUN mkdir __tuna_setup_docker_artifacts__/
+
+# download pip for python 3.9
+RUN curl https://bootstrap.pypa.io/get-pip.py -o __tuna_setup_docker_artifacts__/get-pip.py
+RUN python3.9 __tuna_setup_docker_artifacts__/get-pip.py
+RUN rm __tuna_setup_docker_artifacts__/get-pip.py
+
+# setup symlinks to python 3.9
 RUN ln -sf /usr/bin/python3.9 /usr/bin/python3 
 RUN ln -sf /usr/bin/python3.9-dev /usr/bin/python3-dev
-RUN ln -sf /usr/bin/python3.9-pip /usr/bin/python3-pip 
+RUN alias pip3='python3.9 -m pip'
+
+RUN pip3 install --upgrade setuptools  
+RUN pip3 install --upgrade pip  
+RUN pip3 install --upgrade distlib  
 
 RUN pip3 install --default-timeout=100000 -r requirements.txt
 RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysql_connector mysql-connector-python==8.0.20
@@ -166,3 +179,5 @@ ADD utils /tuna/utils/
 ADD requirements.txt /tuna/
 WORKDIR /tuna
 RUN python3.9 setup.py install
+
+RUN rm -rf __tuna_setup_docker_artifacts__/
