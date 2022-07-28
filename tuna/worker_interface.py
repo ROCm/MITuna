@@ -127,8 +127,11 @@ class WorkerInterface(Process):
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
 
-    self.miopen_user_db_path="/tmp/miopenpdb/thread-{}/config/miopen".format(self.gpu_id)
-    self.envmt.append("MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{}/cache".format(self.gpu_id))
+    self.miopen_user_db_path = "/tmp/miopenpdb/thread-{}/config/miopen".format(
+        self.gpu_id)
+    self.envmt.append(
+        "MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{}/cache".format(
+            self.gpu_id))
     self.envmt.append("MIOPEN_USER_DB_PATH={}".format(self.miopen_user_db_path))
 
     self.hostname = self.machine.hostname
@@ -334,7 +337,6 @@ class WorkerInterface(Process):
     if 'time' in fdb_obj:
       fdb_entry.kernel_time = fdb_obj['time']
 
-
     return fdb_entry
 
   def compose_kernel_entry(self, fdb_obj, fdb_entry):
@@ -372,10 +374,10 @@ class WorkerInterface(Process):
     return success, result_str
 
   def process_fdb_w_kernels(self,
-                          session,
-                          fin_json,
-                          result_str='miopen_find_compile_result',
-                          check_str='find_compiled'):
+                            session,
+                            fin_json,
+                            result_str='miopen_find_compile_result',
+                            check_str='find_compiled'):
     """retrieve find db compile json results"""
     status = []
     if fin_json[result_str]:
@@ -388,7 +390,8 @@ class WorkerInterface(Process):
           if fdb_obj['reason'] == 'Success':
             self.compose_kernel_entry(fdb_obj, fdb_entry)
             session.add(fdb_entry)
-            self.logger.info('Updating find Db(Build) for job_id=%s', self.job.id)
+            self.logger.info('Updating find Db(Build) for job_id=%s',
+                             self.job.id)
           else:
             # JD: add info about reason to the logs table
             fdb_entry.valid = False
@@ -396,13 +399,21 @@ class WorkerInterface(Process):
           self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
                               fin_json['config_tuna_id'], fdb_obj)
     else:
-      status = [{'solver': 'all', 'success': False, 'result': 'Find Compile: No results'}]
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Find Compile: No results'
+      }]
 
     try:
       session.commit()
     except OperationalError as err:
       self.logger.warning('FinEval: Unable to update Database: %s', err)
-      status = [{'solver': 'all', 'success': False, 'result': 'FinEval: Unable to update Database: {}'.format(err)}]
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'FinEval: Unable to update Database: {}'.format(err)
+      }]
 
     return status
 
@@ -541,9 +552,12 @@ class WorkerInterface(Process):
             if increment_retries:
               session.query(self.dbt.job_table).filter(
                   self.dbt.job_table.id == self.job.id).update({
-                      self.dbt.job_table.state: state,
-                      self.dbt.job_table.retries: self.dbt.job_table.retries + 1,
-                      self.dbt.job_table.result: result
+                      self.dbt.job_table.state:
+                          state,
+                      self.dbt.job_table.retries:
+                          self.dbt.job_table.retries + 1,
+                      self.dbt.job_table.result:
+                          result
                   })
             else:
               # JD: When would this happen ?

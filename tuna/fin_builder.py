@@ -80,7 +80,11 @@ class FinBuilder(WorkerInterface):
           self.compose_job_cache_entrys(session, pdb_obj)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
-      status = [{'solver': 'all', 'success': False, 'result': 'Perf Compile: No results'}]
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Perf Compile: No results'
+      }]
 
     return status
 

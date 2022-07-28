@@ -212,7 +212,11 @@ class FinEvaluator(WorkerInterface):
           session.commit()
         except OperationalError as err:
           self.logger.warning('FinEval: Unable to update Database: %s', err)
-          status = [{'solver': 'all', 'success': False, 'result': 'FinEval: Unable to update Database: {}'.format(err)}]
+          status = [{
+              'solver': 'all',
+              'success': False,
+              'result': 'FinEval: Unable to update Database: {}'.format(err)
+          }]
 
     return status
 
@@ -270,7 +274,9 @@ class FinEvaluator(WorkerInterface):
       else:
         self.logger.warning('resetting job state to %s, incrementing retries',
                             orig_state)
-        self.set_job_state(orig_state, increment_retries=True, result=result_str)
+        self.set_job_state(orig_state,
+                           increment_retries=True,
+                           result=result_str)
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()
