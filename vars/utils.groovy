@@ -676,7 +676,7 @@ def compile()
   {
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
-  def s_id = runsql("select id from session where reason=${params.job_label}")
+  def s_id = runsql("select id from session where reason='${params.job_label}'")
     // Run the jobs on the cluster
   sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${compile_cmd} -l ${params.job_label} --session_id ${s_id}'"
 }
