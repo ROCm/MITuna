@@ -398,11 +398,12 @@ def get_pdb_query(dbt, args):
     query = session.query(dbt.find_db_table,
                           dbt.config_table, dbt.tensor_table)\
         .filter(dbt.find_db_table.valid == 1)\
+        .filter(dbt.find_db_table.kernel_time != -1)\
         .filter(dbt.find_db_table.params != '')\
         .filter(dbt.find_db_table.session == dbt.session.id)\
         .filter(dbt.find_db_table.config == dbt.config_table.id)\
-        .filter(dbt.find_db_table.solver == dbt.solver_table.id)\
         .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
+        .filter(dbt.find_db_table.solver == dbt.solver_table.id)\
         .filter(dbt.solver_table.tunable == 1)
 
     LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
