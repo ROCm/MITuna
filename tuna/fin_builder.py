@@ -72,12 +72,15 @@ class FinBuilder(WorkerInterface):
   def process_pdb_compile(self, session, fin_json):
     """retrieve perf db compile json results"""
     status = []
-    for pdb_obj in fin_json['miopen_perf_compile_result']:
-      slv_stat = self.get_fin_slv_status(pdb_obj, 'perf_compiled')
-      status.append(slv_stat)
-      if pdb_obj['perf_compiled']:
-        self.compose_job_cache_entrys(session, pdb_obj)
-        self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
+    if fin_json['miopen_perf_compile_result']:
+      for pdb_obj in fin_json['miopen_perf_compile_result']:
+        slv_stat = self.get_fin_slv_status(pdb_obj, 'perf_compiled')
+        status.append(slv_stat)
+        if pdb_obj['perf_compiled']:
+          self.compose_job_cache_entrys(session, pdb_obj)
+          self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
+    else:
+      status = [{'solver': 'all', 'success': False, 'result': 'Perf Compile: No results'}]
 
     return status
 
