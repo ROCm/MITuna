@@ -109,7 +109,7 @@ ARG FIN_DIR=/root/dFin
 RUN git clone https://db0437f627141247b3a231b9fad7d4a51fc1554a:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=176de41e012341d8b98531bde70b2af8b6468103
+ARG FIN_BRANCH=30d699b9edc014c6076a9649f849bd3c4588d4ab
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 
