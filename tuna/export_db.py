@@ -392,15 +392,18 @@ def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
   LOGGER.info("Inserting row in perf_db: %s", perf_db_dict)
 
 
-def get_query(dbt, args):
+def get_pdb_query(dbt, args):
   """Compose query to get perf_db rows based on filters from args"""
   with DbSession() as session:
     query = session.query(dbt.find_db_table,
                           dbt.config_table, dbt.tensor_table)\
         .filter(dbt.find_db_table.valid == 1)\
+        .filter(dbt.find_db_table.params != '')\
         .filter(dbt.find_db_table.session == dbt.session.id)\
         .filter(dbt.find_db_table.config == dbt.config_table.id)\
-        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)
+        .filter(dbt.find_db_table.solver == dbt.solver_table.id)\
+        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
+        .filter(dbt.solver_table.tunable == 1)
 
     LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
     LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
@@ -420,11 +423,11 @@ def export_pdb(dbt, args):
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
   with DbSession() as session:
-    query = get_query(dbt, args)
+    query = get_pdb_query(dbt, args)
     cfg_map = {}
     for perf_db_entry, cfg_entry, tensor_entry in query.all():
       LOGGER.info("%s, %s, %s", dbt.session.miopen_v, dbt.session.rocm_v,
-                  perf_db_entry.miopen_config)
+                  cfg_entry.id)
 
       if cfg_entry.id in cfg_map:
         ins_cfg_id = cfg_map[cfg_entry.id]
@@ -447,6 +450,9 @@ def main():
   args = parse_args()
   result_file = ''
   dbt = DBTables(session_id=args.session_id)
+
+  args.arch   = dbt.session.arch
+  args.num_cu = dbt.session.num_cu
 
   if args.kern_db:
     result_file = export_kdb(dbt, args)
