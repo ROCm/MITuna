@@ -45,6 +45,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import get_id_solvers
 from tuna.abort import chk_abort_file
 from tuna.fin_utils import compose_config_obj
+from tuna.fin_utils import get_fin_slv_status
 from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME, PREC_TO_CMD
 from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR_MAP
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
@@ -127,8 +128,11 @@ class WorkerInterface(Process):
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
 
-    self.miopen_user_db_path="/tmp/miopenpdb/thread-{}/config/miopen".format(self.gpu_id)
-    self.envmt.append("MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{}/cache".format(self.gpu_id))
+    self.miopen_user_db_path = "/tmp/miopenpdb/thread-{}/config/miopen".format(
+        self.gpu_id)
+    self.envmt.append(
+        "MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{}/cache".format(
+            self.gpu_id))
     self.envmt.append("MIOPEN_USER_DB_PATH={}".format(self.miopen_user_db_path))
 
     self.hostname = self.machine.hostname
@@ -334,7 +338,6 @@ class WorkerInterface(Process):
     if 'time' in fdb_obj:
       fdb_entry.kernel_time = fdb_obj['time']
 
-
     return fdb_entry
 
   def compose_kernel_entry(self, fdb_obj, fdb_entry):
@@ -352,35 +355,16 @@ class WorkerInterface(Process):
       fdb_entry.blobs.append(kernel_obj)
     return True
 
-  def get_fin_slv_status(self, json_obj, check_str):
-    """Retrieve status information from fin json output, each represents a solver"""
-    slv_stat = {}
-    slv_stat['solver'] = json_obj['solver_name']
-    slv_stat['success'] = json_obj[check_str]
-    slv_stat['result'] = json_obj['reason']
-    return slv_stat
-
-  def get_fin_result(self, status):
-    """construct result string from status, and single success boolean"""
-    result_str = ''
-    success = False
-    if True in [x['success'] for x in status]:
-      success = True
-    for slv, res in [[x['solver'], x['result']] for x in status]:
-      result_str += ' ({}: {})'.format(slv, res)
-
-    return success, result_str
-
   def process_fdb_w_kernels(self,
-                          session,
-                          fin_json,
-                          result_str='miopen_find_compile_result',
-                          check_str='find_compiled'):
+                            session,
+                            fin_json,
+                            result_str='miopen_find_compile_result',
+                            check_str='find_compiled'):
     """retrieve find db compile json results"""
     status = []
     if fin_json[result_str]:
       for fdb_obj in fin_json[result_str]:
-        slv_stat = self.get_fin_slv_status(fdb_obj, check_str)
+        slv_stat = get_fin_slv_status(fdb_obj, check_str)
         status.append(slv_stat)
 
         if fdb_obj[check_str]:
@@ -388,7 +372,8 @@ class WorkerInterface(Process):
           if fdb_obj['reason'] == 'Success':
             self.compose_kernel_entry(fdb_obj, fdb_entry)
             session.add(fdb_entry)
-            self.logger.info('Updating find Db(Build) for job_id=%s', self.job.id)
+            self.logger.info('Updating find Db(Build) for job_id=%s',
+                             self.job.id)
           else:
             # JD: add info about reason to the logs table
             fdb_entry.valid = False
@@ -396,13 +381,21 @@ class WorkerInterface(Process):
           self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
                               fin_json['config_tuna_id'], fdb_obj)
     else:
-      status = [{'solver': 'all', 'success': False, 'result': 'Find Compile: No results'}]
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Find Compile: No results'
+      }]
 
     try:
       session.commit()
     except OperationalError as err:
       self.logger.warning('FinEval: Unable to update Database: %s', err)
-      status = [{'solver': 'all', 'success': False, 'result': 'FinEval: Unable to update Database: {}'.format(err)}]
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'FinEval: Unable to update Database: {}'.format(err)
+      }]
 
     return status
 
@@ -541,9 +534,12 @@ class WorkerInterface(Process):
             if increment_retries:
               session.query(self.dbt.job_table).filter(
                   self.dbt.job_table.id == self.job.id).update({
-                      self.dbt.job_table.state: state,
-                      self.dbt.job_table.retries: self.dbt.job_table.retries + 1,
-                      self.dbt.job_table.result: result
+                      self.dbt.job_table.state:
+                          state,
+                      self.dbt.job_table.retries:
+                          self.dbt.job_table.retries + 1,
+                      self.dbt.job_table.result:
+                          result
                   })
             else:
               # JD: When would this happen ?
@@ -639,7 +635,7 @@ class WorkerInterface(Process):
                   lcl_envmt.append(cnstr)
     return lcl_envmt
 
-  def run_fin_cmd(self, is_eval):
+  def run_fin_cmd(self):
     """Run a fin command after generating the JSON"""
     fin_output = self.machine.make_temp_file()
     cmd = []

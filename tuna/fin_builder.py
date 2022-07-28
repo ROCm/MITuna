@@ -33,6 +33,7 @@ from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.fin_utils import fin_job
+from tuna.fin_utils import get_fin_slv_status, get_fin_result
 
 
 class FinBuilder(WorkerInterface):
@@ -74,13 +75,17 @@ class FinBuilder(WorkerInterface):
     status = []
     if fin_json['miopen_perf_compile_result']:
       for pdb_obj in fin_json['miopen_perf_compile_result']:
-        slv_stat = self.get_fin_slv_status(pdb_obj, 'perf_compiled')
+        slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
         status.append(slv_stat)
         if pdb_obj['perf_compiled']:
           self.compose_job_cache_entrys(session, pdb_obj)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
-      status = [{'solver': 'all', 'success': False, 'result': 'Perf Compile: No results'}]
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Perf Compile: No results'
+      }]
 
     return status
 
@@ -92,7 +97,7 @@ class FinBuilder(WorkerInterface):
     # JD: while fin can exec multiple jobs at a time, that makes error detection difficult
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('compiling')
-    fin_json = self.run_fin_cmd(is_eval=False)
+    fin_json = self.run_fin_cmd()
 
     failed_job = True
     result_str = ''
@@ -106,7 +111,7 @@ class FinBuilder(WorkerInterface):
           elif 'miopen_perf_compile_result' in fin_json:
             status = self.process_pdb_compile(session, fin_json)
 
-          success, result_str = self.get_fin_result(status)
+          success, result_str = get_fin_result(status)
           failed_job = not success
 
         except (OperationalError, IntegrityError) as err:

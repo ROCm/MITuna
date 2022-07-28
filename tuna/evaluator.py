@@ -34,8 +34,8 @@ from sqlalchemy.exc import OperationalError
 
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.metadata import (KCACHE_DIR, TUNA_LOG_DIR,
-                           SQLITE_CONFIG_COLS, CMD_TO_PREC, MIOPEN_DB_VERSION)
+from tuna.metadata import (KCACHE_DIR, TUNA_LOG_DIR, SQLITE_CONFIG_COLS,
+                           CMD_TO_PREC, MIOPEN_DB_VERSION)
 from tuna.analyze_parse_db import mysql_to_sqlite_cfg
 from tuna.helper import valid_cfg_dims
 from tuna.import_db import record_perfdb

@@ -452,7 +452,7 @@ def main():
   result_file = ''
   dbt = DBTables(session_id=args.session_id)
 
-  args.arch   = dbt.session.arch
+  args.arch = dbt.session.arch
   args.num_cu = dbt.session.num_cu
 
   if args.kern_db:
