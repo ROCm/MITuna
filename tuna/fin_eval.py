@@ -33,6 +33,7 @@ from sqlalchemy.exc import OperationalError
 
 from tuna.worker_interface import WorkerInterface
 from tuna.fin_utils import fin_job
+from tuna.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
 
 MAX_ERRORED_JOB_RETRIES = 3
@@ -183,7 +184,7 @@ class FinEvaluator(WorkerInterface):
     status = []
     for fdb_obj in fin_json[result_str]:
       self.logger.info('Processing object: %s', fdb_obj)
-      slv_stat = self.get_fin_slv_status(fdb_obj, 'evaluated')
+      slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
       status.append(slv_stat)
       with DbSession() as session:
         if fdb_obj['evaluated']:
@@ -243,7 +244,7 @@ class FinEvaluator(WorkerInterface):
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
     try:
-      fin_json = self.run_fin_cmd(is_eval=True)
+      fin_json = self.run_fin_cmd()
     except AssertionError as err:
       self.set_job_state('errored')
       self.logger.warning('Unable to launch job %s : %s', self.job.id, err)
@@ -263,7 +264,7 @@ class FinEvaluator(WorkerInterface):
               result_str='miopen_perf_eval_result',
               check_str='evaluated')
 
-      success, result_str = self.get_fin_result(status)
+      success, result_str = get_fin_result(status)
       failed_job = not success
 
     if failed_job:

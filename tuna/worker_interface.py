@@ -45,6 +45,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import get_id_solvers
 from tuna.abort import chk_abort_file
 from tuna.fin_utils import compose_config_obj
+from tuna.fin_utils import get_fin_slv_status
 from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME, PREC_TO_CMD
 from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR_MAP
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
@@ -354,25 +355,6 @@ class WorkerInterface(Process):
       fdb_entry.blobs.append(kernel_obj)
     return True
 
-  def get_fin_slv_status(self, json_obj, check_str):
-    """Retrieve status information from fin json output, each represents a solver"""
-    slv_stat = {}
-    slv_stat['solver'] = json_obj['solver_name']
-    slv_stat['success'] = json_obj[check_str]
-    slv_stat['result'] = json_obj['reason']
-    return slv_stat
-
-  def get_fin_result(self, status):
-    """construct result string from status, and single success boolean"""
-    result_str = ''
-    success = False
-    if True in [x['success'] for x in status]:
-      success = True
-    for slv, res in [[x['solver'], x['result']] for x in status]:
-      result_str += ' ({}: {})'.format(slv, res)
-
-    return success, result_str
-
   def process_fdb_w_kernels(self,
                             session,
                             fin_json,
@@ -382,7 +364,7 @@ class WorkerInterface(Process):
     status = []
     if fin_json[result_str]:
       for fdb_obj in fin_json[result_str]:
-        slv_stat = self.get_fin_slv_status(fdb_obj, check_str)
+        slv_stat = get_fin_slv_status(fdb_obj, check_str)
         status.append(slv_stat)
 
         if fdb_obj[check_str]:
@@ -653,7 +635,7 @@ class WorkerInterface(Process):
                   lcl_envmt.append(cnstr)
     return lcl_envmt
 
-  def run_fin_cmd(self, is_eval):
+  def run_fin_cmd(self):
     """Run a fin command after generating the JSON"""
     fin_output = self.machine.make_temp_file()
     cmd = []
