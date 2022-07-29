@@ -140,7 +140,7 @@ def finApplicability(){
 }
 
 def finFindCompile(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -196,7 +196,7 @@ def finFindCompile(){
 
 
 def finFindEval(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -259,7 +259,7 @@ def buildTunaDocker(){
 }
 
 def loadJobTest() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -307,7 +307,7 @@ def loadJobTest() {
 }
 
 def perfCompile() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -349,7 +349,7 @@ def perfCompile() {
 }
 
 def perfEval_gfx908() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -435,7 +435,7 @@ def pytestSuite1() {
 }
 
 def pytestSuite2() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -461,7 +461,7 @@ def pytestSuite2() {
 }
 
 def pytestSuite3() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
