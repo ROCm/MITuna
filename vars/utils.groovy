@@ -102,9 +102,9 @@ def finApplicability(){
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "./tuna/go_fish.py -a ${arch} -n ${num_cu} --init_session -l new_session --local_machine"
+        sh "./tuna/go_fish.py --init_session -l new_session --local_machine"
         def sesh1 = runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py -a ${arch} -n ${num_cu} --init_session -l new_session --local_machine"
+        sh "./tuna/go_fish.py --init_session -l new_session --local_machine"
         def sesh2 = runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
