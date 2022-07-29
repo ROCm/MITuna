@@ -26,3 +26,80 @@ please ask for them. The Tuna team does not provide these.
 phase of all the recurrent configurations takes up to a few days. There are many configurations
 used for each network and one should try and use as many machines as possible to speed up
 the tuning part. The current configurations we tune for are:
+
+## Tuning Steps
+
+### Add Network Configurations 
+The config table contains network configurations. If provided with a text file of MIOpenDriver
+commands, the import script can translate those commands and populate the config table. 
+Additionally the user may provide a name to tag a configuration for easier recall later.
+Tags are stored in the config_tags table.
+
+./import_configs.py -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt
+-t - tag
+-f - filepath
+
+### Add Solvers
+The solver table contains MIOpen solvers and solver characteristics. This should be initialized
+and updated when an MIOpen version adds new solvers.
+
+./go_fish.py --local_machine --update_solvers
+--local_machine - run directly on this machine
+
+### Create a Tuning session
+Session will track the architecture and skew, as well as the miopen version and 
+rocm version of the tuning session.
+
+This command will need to be run from inside the tuning environment eg MITunaX docker
+and will populate the table with the version and architecture information.
+
+./go_fish.py --local_machine --init_session -l reason
+--init_session - create a session entry
+-l             - reference text description
+
+### Create Applicability
+Each network configuration has a set of applicable solvers. In this step we update the
+solver_applicability table with our applicable solvers for each configuration for the session.
+
+./go_fish.py --local_machine --update_applicability --session_id 1
+--session_id - tuning session id
+
+### Load Jobs
+Time to create the jobs for the tuning session. We'll need to specify the session id, the configs that
+should be tuned, the fin_step to be executed. Jobs should have a compile and an eval fin step pair.
+
+fin steps include miopen_perf_compile, miopen_perf_eval, miopen_find_compile, miopen_find_eval
+
+./load_job.py --session_id 1 -t resnet50 --fin_steps miopen_perf_compile,miopen_perf_eval -o -l reason
+--session_id - tuning session id
+-t           - config tag
+--fin_steps  - operations to be performed by fin (tuning handle into miopen)
+-o           - only_applicable, will create a job for each applicable solver
+-l           - reference text description
+
+### Compile Step
+Finally time to start executing the jobs. To compile the jobs supply the session id
+along with the fin_step for the job.
+
+./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_compile
+--local_machine - run directly on this machine
+--session_id    - tuning session id
+--fin_steps     - execute this operation
+
+### Evaluation Step
+The job is ready for evaluation after the compile step, this command is similar to the previous
+
+./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_eval
+--local_machine - run directly on this machine
+--session_id    - tuning session id
+--fin_steps     - execute this operation
+
+### Database Export
+To export the results the export_db.py script can be run with options
+for selecting session as well as database type.
+
+./export_db.py --session_id 1 -p
+--session_id - tuning session id
+-p           - export performance db
+-f           - export find db
+-k           - export kernel db

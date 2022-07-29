@@ -85,7 +85,7 @@ To create the database run the following script:
 The installation and setup are now complete. To start a tuning cycle, please follow the steps
 documented in [TuningCycle](https://github.com/ROCmSoftwarePlatform/MITunaX/blob/develop/doc/TuningCycle.md)
 
-##Code formatting
+## Code formatting
 
 MITunaX used yapf for code formatting:
 ```
@@ -93,7 +93,7 @@ yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tuna/
 yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tests/
 ```
 
-##Static code analysis
+## Static code analysis
 
 In order for a PR to be accepted the following `pylint` command needs to result in 10/10 analysis:
 ```
