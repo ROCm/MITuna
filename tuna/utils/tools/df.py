@@ -1,9 +1,8 @@
-import pdb
 import re
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
-from sklearn.model_selection import train_test_split as sklearn_train_test_split
+# from sklearn.model_selection import train_test_split as sklearn_train_test_split
 
 from tuna.utils import logging
 from tuna.utils.ANSI_formatting import ANSIFormats
@@ -87,9 +86,10 @@ def train_test_split(df, train_ratio, random=False, seed=None):
         test = df.iloc[train_size:, :]
 
     else:
-        train, test = sklearn_train_test_split(df,
-                                               train_size=train_ratio,
-                                               random_state=seed)
+        # train, test = sklearn_train_test_split(df,
+        #                                        train_size=train_ratio,
+        #                                        random_state=seed)
+        pass
 
     return train, test
 
