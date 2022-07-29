@@ -576,35 +576,23 @@ def LoadJobs()
       {
         echo "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx1030' and num_cu = 36;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx1030_36"
 
         echo "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx90a' and num_cu = 110;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx90a_110"
 
         echo "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx908' and num_cu = 120;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx908_120"
 
         echo "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx906' and num_cu = 60;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx906_60"
         
         echo "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx900' and num_cu = 56;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx900_56"
       }
       else
       {
         echo "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
         sh "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = '${params.arch}' and num_cu = ${params.num_cu};").toInteger()
-        sh "echo ${num_jobs} new jobs for ${params.arch}_${params.num_cu}"
       }
   }
 }
