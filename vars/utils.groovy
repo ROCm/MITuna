@@ -382,18 +382,6 @@ def perfEval_gfx908() {
             echo "#errored jobs: ${errored_conv_jobs}"
             error("Unable to eval all conv jobs")
         }
-
-        def num_perf_config = runsql("SELECT count(*) from conv_perf_config;").toInteger()
-        echo "#conv_perf_config entries: ${num_perf_config}"
-        if (num_perf_config == 0){
-            error("Unable to add entries to conv_perf_configs for non-standard layouts")
-        }
-
-        def num_perf_db = runsql("SELECT count(*) from conv_perf_db;").toInteger()
-        echo "#conv_perf_db entries: ${num_perf_db}"
-        if (num_perf_db == 0){
-            error("Unable to add entries to conv_perf_db for non-standard layouts")
-        }
     }
 }
 
