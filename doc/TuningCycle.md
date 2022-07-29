@@ -25,9 +25,18 @@ please ask for them. The Tuna team does not provide these.
 2. Recurrent configurations need retuning when internals of MIOpen/Tuna change. The tuning
 phase of all the recurrent configurations takes up to a few days. There are many configurations
 used for each network and one should try and use as many machines as possible to speed up
-the tuning part. The current configurations we tune for are:
+the tuning part.
 
 ## Tuning Steps
+Tuning stores intermittent data in a central mySQL database. Each reference to a table, 
+refers to a table in this database. Each table and its associated schema is found in miopen_tables.py.
+
+Tuning is divided in multiple steps and each step builds on top of the previous ones. 
+To start a tuning session, some prerequisite have to be asserted: setting up configurations, 
+getting the latest solvers and their associated applicability from MIOpen, 
+and adding the jobs that compose the tuning session. 
+Once these prerequisite are established the tuning session can begin. Each step, 
+including the prerequisites are detailed below.
 
 ### Add Network Configurations 
 The config table contains network configurations. If provided with a text file of MIOpenDriver
@@ -54,7 +63,7 @@ and updated when an MIOpen version adds new solvers.
 --local_machine - run directly on this machine
 </pre>
 
-### Create a Tuning session
+### Add Tuning Session
 Session will track the architecture and skew, as well as the miopen version and 
 rocm version for the tuning session.
 
@@ -69,7 +78,7 @@ and will populate the table with the version and architecture information.
 -l             - reference text description
 </pre>
 
-### Create Applicability
+### Add Applicability
 Each network configuration has a set of applicable solvers. This step will update the
 solver_applicability table with applicable solvers for each configuration for the session.
 
@@ -85,7 +94,7 @@ Time to create the jobs for the tuning session. Specify the session id, the conf
 should be tuned, and the fin_step to be executed. Confings can be added by using the tag from
 the config_tags table. Jobs should have a compile and an eval fin step pair.
 
-fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, miopen_find_eval
+Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, and miopen_find_eval.
 <pre>
 ./load_job.py --session_id 1 -t resnet50 --fin_steps miopen_perf_compile,miopen_perf_eval -o -l reason
 </pre>
@@ -98,8 +107,8 @@ fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, m
 </pre>
 
 ### Compile Step
-To compile the jobs, supply the session id along with the compile fin_step 
-matching the one in the job table.
+Once prerequisites are set, tuning can begin. To compile the jobs, 
+supply the session id along with the compile fin_step matching the one in the job table.
 
 <pre>
 ./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_compile 
@@ -111,7 +120,8 @@ matching the one in the job table.
 </pre>
 
 ### Evaluation Step
-The job is ready for evaluation after the compile step. This command is similar to the previous.
+Once compilation has been started, evaluation can also be launched.
+This command is similar to the previous.
 
 <pre>
 ./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_eval
@@ -126,6 +136,8 @@ The job is ready for evaluation after the compile step. This command is similar 
 To export the results the export_db.py script can be run with options
 for selecting session as well as database type.
 
+The outputs of this function are database files in the format that MIOpen keeps and manages.
+eg for MI100, -p will produce a gfx90878.db file, -f will produce gfx90878.HIP.fdb.txt, and -k will produce gfx90878.kdb
 <pre>
 ./export_db.py --session_id 1 -p
 </pre>
@@ -135,3 +147,4 @@ for selecting session as well as database type.
 -f           - export find db
 -k           - export kernel db
 </pre>
+
