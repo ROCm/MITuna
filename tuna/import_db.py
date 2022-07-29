@@ -33,8 +33,7 @@ from tuna.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg, parse_pd
 from tuna.metadata import MYSQL_PERF_CONFIG
 from tuna.metadata import CONV_CONFIG_COLS
 from tuna.miopen_tables import Solver
-from tuna.miopen_tables import ConvolutionConfig
-from tuna.find_db import ConvolutionFindDB
+from tuna.tables import DBTables
 from tuna.helper import compose_tensors, valid_cfg_dims
 from tuna.helper import mysqldb_insert_dict, mysqldb_overwrite_table
 from tuna.parse_args import TunaArgs, setup_arg_parser
@@ -212,8 +211,9 @@ def print_sqlite_rows(cnx, cfg_filter):
 def main():
   """main"""
   args = parse_args()
-  args.table_cfg = ConvolutionConfig
-  args.table_perf_db = ConvolutionFindDB
+  dbt = DBTables(session_id=args.session_id)
+  args.table_cfg = dbt.config_table
+  args.table_perf_db = dbt.find_db_table
   record_perfdb(args)
 
 

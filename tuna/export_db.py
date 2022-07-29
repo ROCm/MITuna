@@ -397,10 +397,10 @@ def get_pdb_query(dbt, args):
   with DbSession() as session:
     query = session.query(dbt.find_db_table,
                           dbt.config_table, dbt.tensor_table)\
+        .filter(dbt.find_db_table.session == dbt.session.id)\
         .filter(dbt.find_db_table.valid == 1)\
         .filter(dbt.find_db_table.kernel_time != -1)\
         .filter(dbt.find_db_table.params != '')\
-        .filter(dbt.find_db_table.session == dbt.session.id)\
         .filter(dbt.find_db_table.config == dbt.config_table.id)\
         .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
         .filter(dbt.find_db_table.solver == dbt.solver_table.id)\
@@ -408,7 +408,6 @@ def get_pdb_query(dbt, args):
 
     LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
     LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
-    query = query.filter(dbt.find_db_table.session == dbt.session.id)
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
       tag_query = session.query(dbt.config_tags_table.config).filter(
