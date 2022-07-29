@@ -31,6 +31,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
 from tuna.dbBase.base_class import BASE
+from tuna.utils.helpers import Deprecated
 
 FDB_SLV_NUM_FIELDS = 5
 
@@ -129,6 +130,11 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
             columns.pop(0)
 
     return retval
+
+
+class FindDB(metaclass=Deprecated):
+  """Deprecated convolution find_db class from tuna v0.1.0"""
+  pass
 
 
 class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attributes
