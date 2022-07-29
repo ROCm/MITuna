@@ -137,7 +137,7 @@ To export the results the export_db.py script can be run with options
 for selecting session as well as database type.
 
 The outputs of this function are database files in the format that MIOpen keeps and manages.
-eg for MI100, -p will produce a gfx90878.db file, -f will produce gfx90878.HIP.fdb.txt, and -k will produce gfx90878.kdb
+eg for MI100, -p will produce a gfx90878.db file, -f will produce gfx90878.HIP.fdb.txt, and -k will produce gfx90878.kdb.
 <pre>
 ./export_db.py --session_id 1 -p
 </pre>
