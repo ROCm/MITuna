@@ -673,6 +673,9 @@ class WorkerInterface(Process):
     cmd = []
     if is_eval:
       cmd.append('HIP_VISIBLE_DEVICES={} '.format(self.gpu_id))
+
+    env_str = " ".join(self.envmt)
+    cmd.append(env_str)
     cmd.extend(
         ['/opt/rocm/bin/fin', '-i',
          self.get_fin_input(), '-o', fin_output])  # pylint: disable=no-member
