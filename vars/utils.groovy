@@ -90,7 +90,7 @@ def finSolvers(){
 
 def finApplicability(){
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+    tuna_docker.inside("--network host  --dns 8.8.8.8 --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
