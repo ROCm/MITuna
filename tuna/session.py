@@ -67,8 +67,8 @@ class Session(BASE):
 
   def add_new_session(self, args, worker):
     """Add new session entry"""
-    self.arch = args.arch
-    self.num_cu = args.num_cu
+    self.arch = worker.machine.arch
+    self.num_cu = worker.machine.num_cu
     self.rocm_v = worker.get_rocm_v()
     self.miopen_v = worker.get_miopen_v()
     self.reason = args.label

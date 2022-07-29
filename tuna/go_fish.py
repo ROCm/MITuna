@@ -229,11 +229,10 @@ def parse_args():
     args.machines = [int(x) for x in args.machines.split(',')
                     ] if ',' in args.machines else [int(args.machines)]
 
-  if args.init_session and not (args.arch and args.num_cu and args.label and
-                                args.local_machine):
+  if args.init_session and not (args.label and args.local_machine):
     parser.error(
         "When setting up a new tunning session the following must be specified: "\
-        "arch, num_cu, reason, local_machine.")
+        "label, local_machine.")
 
   fin_session_steps = [
       'miopen_find_compile', 'miopen_find_eval', 'miopen_perf_compile',
