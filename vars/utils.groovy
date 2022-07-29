@@ -721,8 +721,10 @@ def evaluate()
   {
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
+
+  def s_id = runsql("select id from session where reason='${params.job_label}'")  
   
-  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} || scontrol requeue \$SLURM_JOB_ID'"
+  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
 
