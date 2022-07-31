@@ -667,12 +667,10 @@ class WorkerInterface(Process):
                   lcl_envmt.append(cnstr)
     return lcl_envmt
 
-  def run_fin_cmd(self, is_eval):
+  def run_fin_cmd(self):
     """Run a fin command after generating the JSON"""
     fin_output = self.machine.make_temp_file()
     cmd = []
-    if is_eval:
-      cmd.append('HIP_VISIBLE_DEVICES={} '.format(self.gpu_id))
 
     env_str = " ".join(self.envmt)
     cmd.append(env_str)
