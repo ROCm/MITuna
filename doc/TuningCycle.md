@@ -41,8 +41,8 @@ including the prerequisites are detailed below.
 ### Add Network Configurations 
 The config table contains network configurations. If provided with a text file of MIOpenDriver
 commands, the import script can translate those commands and populate the config table. 
-Additionally the user may provide a name to tag a configuration for easier recall later.
-Tags are stored in the config_tags table.
+Additionally the user may provide a name to tag a configuration for easier recall later. 
+A tag will be required when adding a tuning job. Tags are stored in the config_tags table.
 
 <pre>
 ./import_configs.py -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt
@@ -53,8 +53,8 @@ Tags are stored in the config_tags table.
 </pre>
 
 ### Add Solvers
-The solver table contains MIOpen solvers and solver characteristics. This should be initialized
-and updated when an MIOpen version adds new solvers.
+The solver table contains MIOpen solvers and solver characteristics. 
+This should be updated when an MIOpen version modifies solvers.
 
 <pre>
 ./go_fish.py --local_machine --update_solvers
