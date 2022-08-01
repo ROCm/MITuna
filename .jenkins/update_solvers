@@ -39,7 +39,7 @@ def finSolvers(){
   }
   if(params.UPDATE_APPLICABILITY)
   { 
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id 8 --local_machine --arch_num_cu_list ${params.architecture}'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id.toInteger()} --local_machine --arch_num_cu_list ${params.architecture}'"
     def num_sapp = runsql("SELECT count(*) from conv_solver_applicability;")
     println "Count(*) conv_solver_applicability table: ${num_sapp}"
     if (num_sapp.toInteger() == 0){
@@ -60,6 +60,11 @@ def VerifyArgs()
     {
       error "Can only specify either the ROCm version or the OSDB build number"
     }
+
+    if(params.session_id=='')
+    {
+        error "Session id is required!"
+    }
 }
 
 pipeline {
@@ -69,6 +74,7 @@ pipeline {
     booleanParam(name: "UPDATE_APPLICABILITY", defaultValue: false, description: "Enable or disable the applicability update stage")
     choice(name: 'architecture', choices: ["gfx90a-104", "gfx90a-110", "gfx900-56", "gfx900-64", "gfx906-60", "gfx908-120", "gfx1030-36"], description: 'Log level for TUNA')
     string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
+    string(name: 'session_id', defaultValue: '', description: 'session id for update applicability')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
