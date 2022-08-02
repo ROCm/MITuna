@@ -127,6 +127,13 @@ class WorkerInterface(Process):
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
 
+    self.miopen_user_db_path = "/tmp/miopenpdb/thread-{}/config/miopen".format(
+        self.gpu_id)
+    self.envmt.append(
+        "MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{}/cache".format(
+            self.gpu_id))
+    self.envmt.append("MIOPEN_USER_DB_PATH={}".format(self.miopen_user_db_path))
+
     self.hostname = self.machine.hostname
     self.poll_retries = 0
     self.job = None
@@ -660,12 +667,13 @@ class WorkerInterface(Process):
                   lcl_envmt.append(cnstr)
     return lcl_envmt
 
-  def run_fin_cmd(self, is_eval):
+  def run_fin_cmd(self):
     """Run a fin command after generating the JSON"""
     fin_output = self.machine.make_temp_file()
     cmd = []
-    if is_eval:
-      cmd.append('HIP_VISIBLE_DEVICES={} '.format(self.gpu_id))
+
+    env_str = " ".join(self.envmt)
+    cmd.append(env_str)
     cmd.extend(
         ['/opt/rocm/bin/fin', '-i',
          self.get_fin_input(), '-o', fin_output])  # pylint: disable=no-member
