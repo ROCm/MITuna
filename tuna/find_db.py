@@ -149,7 +149,7 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs['logger'] if 'logger' in kwargs.keys() else None  #pylint: disable=multiple-statements
+    self.logger = kwargs['logger'] if 'logger' in kwargs.keys() else None
     self.fdb_slv_dir = {}
 
 
@@ -170,5 +170,5 @@ class BNFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attribute
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs.get('logger', None)  #pylint: disable=multiple-statements
+    self.logger = kwargs.get('logger', None)
     self.fdb_slv_dir = {}
