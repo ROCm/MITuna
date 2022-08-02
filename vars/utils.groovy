@@ -151,6 +151,12 @@ def finFindCompile(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        //env.OTEL_METRICS_EXPORTER=none
+        //env.OTEL_TRACES_EXPORTER=otlp_proto_http
+        //Jager port
+        //env.OTEL_EXPORTER_OTLP_ENDPOINT=http://HOSTNAME:16686
+        env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
+        env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
@@ -160,7 +166,7 @@ def finFindCompile(){
         runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -a ${arch} -n ${num_cu} -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "opentelmetry-instrument --traces-exporter console ./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelmetry-instrument python3 --traces-exporter console ./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){

@@ -69,9 +69,6 @@ RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-pro
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# opentelemetry
-RUN opentelemetry-bootstrap -a install
-
 # create dir for temp stuff
 RUN mkdir __tuna_setup_docker_artifacts__/
 
@@ -94,6 +91,9 @@ RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysq
 RUN pip3 install /tmp/mysql_connector/*.whl
 RUN pip3 install --quiet pylint
 RUN pip3 install --quiet nosexcover
+
+# opentelemetry
+RUN opentelemetry-bootstrap -a install
 
 # Setup ubsan environment to printstacktrace
 RUN ln -s /usr/bin/llvm-symbolizer-3.8 /usr/local/bin/llvm-symbolizer
