@@ -151,10 +151,10 @@ def finFindCompile(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        //env.OTEL_METRICS_EXPORTER=none
-        //env.OTEL_TRACES_EXPORTER=otlp_proto_http
+        env.OTEL_METRICS_EXPORTER=none
+        env.OTEL_TRACES_EXPORTER=otlp_proto_http
         //Jager port
-        //env.OTEL_EXPORTER_OTLP_ENDPOINT=http://HOSTNAME:16686
+        env.OTEL_EXPORTER_OTLP_ENDPOINT=http://HOSTNAME:16686
         env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
         env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
         def sesh1 = runsql("select id from session order by id asc limit 1")
