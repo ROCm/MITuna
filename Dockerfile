@@ -69,6 +69,9 @@ RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-pro
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# opentelemetry
+RUN opentelemetry-bootstrap -a install
+
 # create dir for temp stuff
 RUN mkdir __tuna_setup_docker_artifacts__/
 

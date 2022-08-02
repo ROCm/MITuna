@@ -160,7 +160,7 @@ def finFindCompile(){
         runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -a ${arch} -n ${num_cu} -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelmetry-instrument --traces-exporter console ./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
