@@ -154,10 +154,10 @@ def finFindCompile(){
         env.OTEL_METRICS_EXPORTER="none"
         env.OTEL_TRACES_EXPORTER="otlp_proto_http"
         //Jager port
-        env.OTEL_EXPORTER_OTLP_ENDPOINT="http://HOSTNAME:16686"
+        //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://HOSTNAME:16686"
         env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
         env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
-        env.OTEL_PROPAGATORS="jaeger"
+        //env.OTEL_PROPAGATORS="jaeger"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
