@@ -154,7 +154,7 @@ def finFindCompile(){
         env.OTEL_METRICS_EXPORTER="none"
         env.OTEL_TRACES_EXPORTER="otlp_proto_http"
         //Jager port
-        env.OTEL_EXPORTER_OTLP_ENDPOINT="http://0.0.0.0:16686"
+        env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
         env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
         env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
         //env.OTEL_PROPAGATORS="jaeger"
