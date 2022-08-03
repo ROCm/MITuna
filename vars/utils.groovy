@@ -152,9 +152,9 @@ def finFindCompile(){
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         env.OTEL_METRICS_EXPORTER="none"
-        env.OTEL_TRACES_EXPORTER="otlp_proto_http"
+        env.OTEL_TRACES_EXPORTER="console"
         //Jager port
-        env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
+        //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
         env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
         env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
         //env.OTEL_PROPAGATORS="jaeger"
