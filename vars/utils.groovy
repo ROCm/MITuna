@@ -157,6 +157,7 @@ def finFindCompile(){
         //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
         env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
         env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
+        env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="mysql"
         //env.OTEL_PROPAGATORS="jaeger"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
