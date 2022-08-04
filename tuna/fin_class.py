@@ -33,6 +33,7 @@ import paramiko
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 
+from tuna.worker_interface import WorkerInterface
 from tuna.db_tables import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
@@ -41,16 +42,17 @@ from tuna.metadata import DOCKER_CMD, LOG_TIMEOUT, INVERS_DIR_MAP
 from tuna.fin_utils import compose_config_obj
 from tuna.tables import DBTables
 from tuna.config_type import ConfigType
+from tuna.helper import session_commit_retry
 
 
-class FinClass():
+class FinClass(WorkerInterface):
   """Class to provide Tuna support for Fin"""
 
   # pylint: disable=too-many-instance-attributes
 
   def __init__(self, **kwargs):
     """Constructor"""
-    # super().__init__(**kwargs)
+    super().__init__(**kwargs)
     allowed_keys = set([
         'fin_steps', 'arch_num_cu_list', 'local_file', 'fin_outfile',
         'fin_infile', 'machine', 'docker_name', 'version', 'config_type',
@@ -58,7 +60,7 @@ class FinClass():
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    self.logger = setup_logger('fin_class')
+    #self.logger = setup_logger('fin_class')
     connect_db()
     self.all_configs = []
     self.jobid_to_config = {}
@@ -153,23 +155,16 @@ class FinClass():
     # pylint: disable=broad-except
     result = None
 
-    self.run(self.local_file, to_file=True)
-    fin_cmd = self.compose_fincmd()
-    if not self.machine.local_machine:
-      fin_cmd = DOCKER_CMD.format(self.docker_name, fin_cmd)
-    ret_code, out, _ = self.exec_command(fin_cmd)
-    if ret_code > 0:
-      self.logger.warning('Err executing cmd: %s', fin_cmd)
-      self.logger.warning(out.read())
+    if self.prep_fin_input(self.local_file, to_file=True):
+      fin_cmd = self.compose_fincmd()
+      if not self.machine.local_machine:
+        fin_cmd = DOCKER_CMD.format(self.docker_name, fin_cmd)
+      ret_code, out, _ = self.exec_command(fin_cmd)
+      if ret_code > 0:
+        self.logger.warning('Err executing cmd: %s', fin_cmd)
+        self.logger.warning(out.read())
 
-    while True:
-      line = out.readline()
-      if line == '' and not self.cnx.is_alive():
-        break
-      if line:
-        self.logger.info(line.strip())
-
-    result = self.parse_out()
+      result = self.parse_out()
 
     return result
 
@@ -229,11 +224,25 @@ class FinClass():
       query = query.order_by(self.dbt.config_table.id.asc())
       rows = query.all()
 
-      block = rows.size() / num_blk
-      if idx == num_blk-1:
-        subarr = rows[i*block:]
+      block = int(len(rows) / num_blk)
+      extra = len(rows) % num_blk
+      start = idx*block
+      end   = (idx+1)*block
+      if idx < extra:
+        start += idx
+        end   += 1 + idx
       else:
-        subarr = rows[i*block:(i+1)*block]
+        start += extra
+        end   += extra
+
+      self.logger.info("cfg workdiv: proc %s, start %s, end %s", self.gpu_id, start, end)
+
+      if start >= len(rows):
+        return False
+      elif end >= len(rows):
+        subarr = rows[start:]
+      else:
+        subarr = rows[start:end]
 
       for row in subarr:
         r_dict = compose_config_obj(row, self.config_type)
@@ -307,17 +316,17 @@ class FinClass():
 
     return True
 
-  def run(self, outfile=None, to_file=True):
+  def prep_fin_input(self, outfile=None, to_file=True):
     """Main function in Fin that produces Fin input file"""
 
     self.cnx = self.machine.connect(self.chk_abort_file())
-    ret = ''
+    ret = False 
     if outfile is None:
       outfile = "fin_input.json"
     if self.create_dumplist():
       ret = self.dump_json(outfile, to_file)
     else:
-      self.logger.error("Could not create dumplist for Fin input file")
+      self.logger.warning("Could not create dumplist for Fin input file")
 
     return ret
 
@@ -352,11 +361,8 @@ class FinClass():
               self.logger.info("Please run 'go_fish.py --update_solver' first")
               return False
       self.logger.info('Commit bulk transaction, please wait')
-      try:
-        session.commit()
-      except IntegrityError as err:
-        self.logger.warning("DB err occurred commiting bulk transaction %s",
-                            err)
+
+      session_commit_retry(session, self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
@@ -379,7 +385,7 @@ class FinClass():
             session.query(self.dbt.solver_table).filter(
                 self.dbt.solver_table.id == i).update(
                     {self.dbt.solver_table.valid: 0})
-            session.commit()
+            session_commit_retry(session, self.logger)
           i += 1
       except IntegrityError as err:
         self.logger.warning("DB err occurred %s", err)
@@ -409,7 +415,7 @@ class FinClass():
                                         config_type=config_type,
                                         is_dynamic=slv_map['dynamic'])
           session.add(new_s)
-          session.commit()
+          session_commit_retry(session, self.logger)
         except IntegrityError:
           self.logger.info(
               "Duplicate entry, updating solver %s: valid=1, tunable=%s",
@@ -421,7 +427,7 @@ class FinClass():
                   self.dbt.solver_table.solver: solver,
                   self.dbt.solver_table.tunable: tunable
               })
-          session.commit()
+          session_commit_retry(session, self.logger)
         except InvalidRequestError as err2:
           self.logger.info("DB err occurred: %s", err2)
 

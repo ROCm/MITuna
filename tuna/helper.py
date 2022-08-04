@@ -42,6 +42,7 @@ from tuna.worker_interface import NUM_SQL_RETRIES
 from tuna.miopen_tables import TensorTable, Session
 from tuna.config_type import ConfigType
 from tuna.metadata import get_solver_ids
+import pymysql
 
 LOGGER = setup_logger('helper')
 
@@ -178,6 +179,22 @@ def mysqldb_overwrite_table(table, dict_list, filter_cols):
 
   return ret, insert_ids
 
+def session_commit_retry(session, logger=LOGGER):
+  """insert/update dict obj to mysql table"""
+  for idx in range(NUM_SQL_RETRIES):
+    try:
+      session.commit()
+      return True
+    except OperationalError as error:
+      logger.warning('%s, maybe DB contention sleeping ...', error)
+      session.rollback()
+      sleep(random.randint(1, 30))
+    except pymysql.err.OperationalError as error:
+      logger.warning('%s, maybe DB contention sleeping ...', error)
+      session.rollback()
+      sleep(random.randint(1, 30))
+
+  return False
 
 def handle_op_error(logger, error):
   """error handling for sql OperationalError"""

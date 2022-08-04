@@ -539,7 +539,7 @@ def compose_worker_list(res, args):
     if args.restart_machine:
       machine.restart_server(wait=False)
       continue
-    if args.compile:
+    if args.compile or args.update_applicability:
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
