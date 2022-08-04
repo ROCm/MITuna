@@ -42,13 +42,21 @@ pipeline {
            }
            }
         }
+        stage("coverage") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+           script {
+           utils.runCodeCov()
+           }
+           }
+        }
         stage("fin get solver"){
 	      agent{  label "gfx908" }
         steps {
             script {
             utils.finSolvers()
             }
-            }
+            } 
         }
         stage("fin applicability"){
 	      agent{  label "gfx908" }

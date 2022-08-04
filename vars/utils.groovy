@@ -504,11 +504,28 @@ def runLint() {
     }
 }
 
+def runCodeCov() {
 
+    node {
 
-
-
-
+          checkout scm
+          def tuna_docker = docker.build("ci-tuna:${branch_id}")
+          tuna_docker.inside("") {
+          sh "cd tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string='  ' *.py"
+          sh "python3 -m coverage run -m pytest"
+          sh "python3 -m coverage json"
+          sh "mv coverage.json ../MITunaX/tests/covscripts/buffer"
+          sh "python3 tests/covscripts/parse_attributes.py"
+          sh "file="../MITunaX/tests/covscripts/buffer/coverage_percentage.txt""
+          sh "name=$(cat "$file")"
+          myvar = sh "echo $name"
+          CODE_COV = 10
+          if (CODE_COV > myvar) {
+          error "Not added to env: ${item}"
+          }
+         }
+    }
+}
 
 def getJobReason()
 {
