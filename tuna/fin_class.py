@@ -78,6 +78,8 @@ class FinClass():
     self.label = None
     self.session_id = None
 
+    self.multiproc = False
+
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
@@ -211,21 +213,29 @@ class FinClass():
 
     return True
 
-  def set_all_configs(self):
+  def set_all_configs(self, idx=0, num_blk=1):
     """Gathering all configs from Tuna DB to set up fin input file"""
     with DbSession() as session:
       query = session.query(
           self.dbt.config_table).filter(self.dbt.config_table.valid == 1)
 
       if self.label:
-        query_cfgs = session.query(self.dbt.job_table)\
-            .filter(self.dbt.job_table.reason == self.label)
+        query_cfgs = session.query(self.dbt.config_tags_table)\
+            .filter(self.dbt.config_tags_table.tag == self.label)
         rows = query_cfgs.all()
         ids = tuple([str(job_row.config) for job_row in rows])
         query = query.filter(self.dbt.config_table.id.in_(ids))
 
+      query = query.order_by(self.dbt.config_table.id.asc())
       rows = query.all()
-      for row in rows:
+
+      block = rows.size() / num_blk
+      if idx == num_blk-1:
+        subarr = rows[i*block:]
+      else:
+        subarr = rows[i*block:(i+1)*block]
+
+      for row in subarr:
         r_dict = compose_config_obj(row, self.config_type)
         if self.config_type == ConfigType.batch_norm:
           r_dict['direction'] = row.get_direction()
@@ -242,7 +252,13 @@ class FinClass():
 
     if "applicability" in self.fin_steps:
       self.logger.info("Creating dumplist for: %s", self.fin_steps[0])
-      if not self.set_all_configs():
+      idx     = 0
+      num_blk = 1
+      if self.multiproc:
+        idx     = self.gpu_id
+        num_blk = self.num_procs.value
+
+      if not self.set_all_configs(idx, num_blk):
         return False
       assert self.all_configs is not None
       return self.compose_fin_list()
@@ -436,3 +452,12 @@ class FinClass():
       self.logger.info("Current invalid solvers: %s", solver_ids_invalid)
 
     return True
+
+  def step(self):
+    """Inner loop for Process run defined in worker_interface"""
+    self.multiproc = True 
+    if "applicability" in self.fin_steps:
+      self.applicability()
+
+    self.multiproc = False
+
