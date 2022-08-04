@@ -50,13 +50,12 @@ from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
 from tuna.metadata import FIND_ONLY_EXCEPTION
 from tuna.metadata import get_solver_ids, TENSOR_PRECISION
+from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from tuna.config_type import ConfigType
-from tuna.helper import session_commit_retry
 
 MAX_JOB_RETRIES = 10
-NUM_SQL_RETRIES = 10
 
 TABLE_COLS_CONV_INVMAP = {}
 for clarg, cnvparam in TABLE_COLS_CONV_MAP.items():
@@ -374,8 +373,11 @@ class WorkerInterface(Process):
         self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
                             fin_json['config_tuna_id'], fdb_obj)
 
-
-    success = session_commit_retry(session, self.logger)
+    try:
+      session.commit()
+    except OperationalError as err:
+      self.logger.warning('FinEval: Unable to update Database: %s', err)
+      success = False
 
     return success
 
@@ -396,7 +398,7 @@ class WorkerInterface(Process):
     res = session.query(perf_config_table).filter_by(**perf_config_dict).all()
     if not res:
       session.add(perf_config_table(**perf_config_dict))
-      session_commit_retry(session, self.logger)
+      session.commit()
 
     perf_config_entry = session.query(perf_config_table).filter_by(
         **perf_config_dict).one()
@@ -426,7 +428,7 @@ class WorkerInterface(Process):
       self.logger.info('%u update %s for job_id=%s', num_rows, perf_db_dict,
                        self.job.id)
 
-    session_commit_retry(session, self.logger)
+    session.commit()
 
     query = session.query(perf_table).filter_by(**perf_db_dict)
     perf_entry = query.one()
@@ -524,8 +526,8 @@ class WorkerInterface(Process):
                             self.dbt.job_table.gpu_id: self.gpu_id
                         },
                         synchronize_session='fetch')
-
               session.commit()
+
               self.load_job_queue(session, ids)
 
           #also in queue_lock
@@ -583,7 +585,6 @@ class WorkerInterface(Process):
                       self.dbt.job_table.state: state,
                       self.dbt.job_table.cache_loc: cache_loc
                   })
-
           session.commit()
           return True
         except OperationalError as error:

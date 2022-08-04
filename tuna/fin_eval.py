@@ -34,7 +34,6 @@ from sqlalchemy.exc import OperationalError
 from tuna.worker_interface import WorkerInterface
 from tuna.fin_utils import fin_job
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.helper import session_commit_retry
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -206,7 +205,7 @@ class FinEvaluator(WorkerInterface):
 
         self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
         try:
-          session_commit_retry(session, self.logger)
+          session.commit()
         except OperationalError as err:
           self.logger.warning('FinEval: Unable to update Database: %s', err)
           failed_job = True
@@ -243,7 +242,7 @@ class FinEvaluator(WorkerInterface):
         old_cache = session.query(self.dbt.fin_cache_table)\
             .filter(self.dbt.fin_cache_table.job_id == self.job.id)
         old_cache.delete()
-        session_commit_retry(session, self.logger)
+        session.commit()
       except OperationalError as err:
         session.rollback()
         self.logger.warning('FinEval: Unable to clean %s: %s',

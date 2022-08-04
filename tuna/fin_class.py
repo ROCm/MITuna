@@ -42,7 +42,7 @@ from tuna.metadata import DOCKER_CMD, LOG_TIMEOUT, INVERS_DIR_MAP
 from tuna.fin_utils import compose_config_obj
 from tuna.tables import DBTables
 from tuna.config_type import ConfigType
-from tuna.helper import session_commit_retry
+from tuna.helper import session_retry
 
 
 class FinClass(WorkerInterface):
@@ -330,45 +330,52 @@ class FinClass(WorkerInterface):
 
     return ret
 
+  def insert_applicability(self, session, json_in):
+    _, solver_id_map_h = get_solver_ids()
+    for elem in json_in:
+      if "applicable_solvers" in elem.keys():
+        #remove old applicability
+        query = 'delete from {} where config={} and session={}'.format(
+                self.dbt.solver_app.__tablename__,
+                elem["input"]["config_tuna_id"], self.session_id)
+        session.execute(query)
+        if not elem["applicable_solvers"]:
+          self.logger.warning("No applicable solvers for %s", elem["input"]["config_tuna_id"])
+        for solver in elem["applicable_solvers"]:
+          try:
+            new_entry = self.dbt.solver_app(
+                solver=solver_id_map_h[solver],
+                config=elem["input"]["config_tuna_id"],
+                session=self.session_id)
+            session.add(new_entry)
+          except KeyError:
+            self.logger.warning('Solver %s not found in solver table', solver)
+            self.logger.info("Please run 'go_fish.py --update_solver' first")
+            return False
+
+    self.logger.info('Commit bulk transaction, please wait')
+    session.commit()
+    return True
+
   def parse_applicability(self, json_in):
     """Function to parse fin outputfile and populate DB with results"""
     self.logger.info('Parsing fin solver applicability output...')
-    _, solver_id_map_h = get_solver_ids()
     if json_in is None:
       self.logger.error("JSON file returned from Fin is empty")
       return False
-    idx = 0
-    with DbSession() as session:
-      for elem in json_in:
-        if idx % 100 == 0:
-          self.logger.info('.')
-        idx += 1
-        if "applicable_solvers" in elem.keys():
-          #remove old applicability
-          session.execute(
-              'delete from {} where config={} and session={}'.format(
-                  self.dbt.solver_app.__tablename__,
-                  elem["input"]["config_tuna_id"], self.dbt.session.id))
-          for solver in elem["applicable_solvers"]:
-            try:
-              new_entry = self.dbt.solver_app(
-                  solver=solver_id_map_h[solver],
-                  config=elem["input"]["config_tuna_id"],
-                  session=self.session_id)
-              session.add(new_entry)
-            except KeyError:
-              self.logger.warning('Solver %s not found in solver table', solver)
-              self.logger.info("Please run 'go_fish.py --update_solver' first")
-              return False
-      self.logger.info('Commit bulk transaction, please wait')
 
-      session_commit_retry(session, self.logger)
+    with DbSession() as session:
+      #self.insert_applicability(session, json_in)
+      callback = self.insert_applicability
+      actuator = lambda x : x(session, json_in)
+      session_retry(session, callback, actuator, self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
       sapp_count = query.one()[0]
       self.logger.info("Solver applicability table updated to %d entries",
                        sapp_count)
+
     self.logger.info('Done parsing fin solver applicability output')
     return True
 
@@ -385,7 +392,7 @@ class FinClass(WorkerInterface):
             session.query(self.dbt.solver_table).filter(
                 self.dbt.solver_table.id == i).update(
                     {self.dbt.solver_table.valid: 0})
-            session_commit_retry(session, self.logger)
+            session.commit()
           i += 1
       except IntegrityError as err:
         self.logger.warning("DB err occurred %s", err)
@@ -415,7 +422,7 @@ class FinClass(WorkerInterface):
                                         config_type=config_type,
                                         is_dynamic=slv_map['dynamic'])
           session.add(new_s)
-          session_commit_retry(session, self.logger)
+          session.commit()
         except IntegrityError:
           self.logger.info(
               "Duplicate entry, updating solver %s: valid=1, tunable=%s",
@@ -427,7 +434,7 @@ class FinClass(WorkerInterface):
                   self.dbt.solver_table.solver: solver,
                   self.dbt.solver_table.tunable: tunable
               })
-          session_commit_retry(session, self.logger)
+          session.commit()
         except InvalidRequestError as err2:
           self.logger.info("DB err occurred: %s", err2)
 

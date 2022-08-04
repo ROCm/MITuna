@@ -33,7 +33,6 @@ from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.fin_utils import fin_job
-from tuna.helper import session_commit_retry
 
 
 class FinBuilder(WorkerInterface):
@@ -64,9 +63,9 @@ class FinBuilder(WorkerInterface):
       kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
-      session.add(kernel_obj)
 
-    session_commit_retry(session, self.logger)
+      session.add(kernel_obj)
+    session.commit()
 
     return True
 

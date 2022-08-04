@@ -30,6 +30,7 @@ import random
 from time import sleep
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Query
+import pymysql
 
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
@@ -38,11 +39,10 @@ from tuna.utils.utility import check_qts
 from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, CONV_CONFIG_COLS, TENSOR_PRECISION
 from tuna.metadata import BN_DEFAULTS, BN_CONFIG_COLS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
-from tuna.worker_interface import NUM_SQL_RETRIES
+from tuna.metadata import NUM_SQL_RETRIES
 from tuna.miopen_tables import TensorTable, Session
 from tuna.config_type import ConfigType
 from tuna.metadata import get_solver_ids
-import pymysql
 
 LOGGER = setup_logger('helper')
 
@@ -179,22 +179,22 @@ def mysqldb_overwrite_table(table, dict_list, filter_cols):
 
   return ret, insert_ids
 
-def session_commit_retry(session, logger=LOGGER):
+def session_retry(session, callback, actuator, logger=LOGGER):
   """insert/update dict obj to mysql table"""
   for idx in range(NUM_SQL_RETRIES):
     try:
-      session.commit()
-      return True
+      return actuator(callback)
     except OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping ...', error)
+      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
       session.rollback()
       sleep(random.randint(1, 30))
     except pymysql.err.OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping ...', error)
+      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
       session.rollback()
       sleep(random.randint(1, 30))
 
-  return False
+  logger.error('All retries have failed.')
+  return None 
 
 def handle_op_error(logger, error):
   """error handling for sql OperationalError"""
