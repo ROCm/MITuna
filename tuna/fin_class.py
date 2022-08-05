@@ -36,7 +36,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable
 from tuna.worker_interface import WorkerInterface
 from tuna.db_tables import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.logger import setup_logger
+#from tuna.utils.logger import setup_logger
 from tuna.metadata import get_solver_ids, FIN_CACHE
 from tuna.metadata import DOCKER_CMD, LOG_TIMEOUT, INVERS_DIR_MAP
 from tuna.fin_utils import compose_config_obj
@@ -103,7 +103,7 @@ class FinClass(WorkerInterface):
 
     return False
 
-  def exec_command(self, cmd, timeout=LOG_TIMEOUT):
+  def exec_command(self, cmd):
     """Definiting cmd execution process"""
     ins, out, err = self.cnx.exec_command(cmd, timeout, self.chk_abort_file())
     if err is not None and hasattr(err, 'channel'):
@@ -224,10 +224,9 @@ class FinClass(WorkerInterface):
       query = query.order_by(self.dbt.config_table.id.asc())
       rows = query.all()
 
-      block = int(len(rows) / num_blk)
       extra = len(rows) % num_blk
-      start = idx * block
-      end = (idx + 1) * block
+      start = idx * (len(rows) / num_blk)
+      end = (idx + 1) * (len(rows) / num_blk)
       if idx < extra:
         start += idx
         end += 1 + idx
@@ -240,7 +239,8 @@ class FinClass(WorkerInterface):
 
       if start >= len(rows):
         return False
-      elif end >= len(rows):
+
+      if end >= len(rows):
         subarr = rows[start:]
       else:
         subarr = rows[start:end]
@@ -332,6 +332,7 @@ class FinClass(WorkerInterface):
     return ret
 
   def insert_applicability(self, session, json_in):
+  """write applicability to sql"""
     _, solver_id_map_h = get_solver_ids()
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
