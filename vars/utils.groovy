@@ -516,7 +516,7 @@ def runCodeCov() {
           sh "python3 -m coverage json"
           sh "mv coverage.json ../MITunaX/tests/covscripts/buffer"
           sh "python3 tests/covscripts/parse_attributes.py"
-          sh "file="../MITunaX/tests/covscripts/buffer/coverage_percentage.txt""
+          sh "file= ../MITunaX/tests/covscripts/buffer/coverage_percentage.txt"
           sh "name=$(cat "$file")"
           myvar = sh "echo $name"
           CODE_COV = 10
