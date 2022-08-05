@@ -225,8 +225,8 @@ class FinClass(WorkerInterface):
       rows = query.all()
 
       extra = len(rows) % num_blk
-      start = idx * (len(rows) / num_blk)
-      end = (idx + 1) * (len(rows) / num_blk)
+      start = idx * (len(rows) // num_blk)
+      end = (idx + 1) * (len(rows) // num_blk)
       if idx < extra:
         start += idx
         end += 1 + idx
