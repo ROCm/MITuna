@@ -473,4 +473,5 @@ class FinClass(WorkerInterface):
       self.applicability()
 
     self.multiproc = False
+    return False
 
