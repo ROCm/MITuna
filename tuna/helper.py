@@ -179,6 +179,7 @@ def mysqldb_overwrite_table(table, dict_list, filter_cols):
 
   return ret, insert_ids
 
+
 def session_retry(session, callback, actuator, logger=LOGGER):
   """insert/update dict obj to mysql table"""
   for idx in range(NUM_SQL_RETRIES):
@@ -194,7 +195,8 @@ def session_retry(session, callback, actuator, logger=LOGGER):
       sleep(random.randint(1, 30))
 
   logger.error('All retries have failed.')
-  return None 
+  return None
+
 
 def handle_op_error(logger, error):
   """error handling for sql OperationalError"""

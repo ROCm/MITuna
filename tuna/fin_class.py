@@ -226,16 +226,17 @@ class FinClass(WorkerInterface):
 
       block = int(len(rows) / num_blk)
       extra = len(rows) % num_blk
-      start = idx*block
-      end   = (idx+1)*block
+      start = idx * block
+      end = (idx + 1) * block
       if idx < extra:
         start += idx
-        end   += 1 + idx
+        end += 1 + idx
       else:
         start += extra
-        end   += extra
+        end += extra
 
-      self.logger.info("cfg workdiv: proc %s, start %s, end %s", self.gpu_id, start, end)
+      self.logger.info("cfg workdiv: proc %s, start %s, end %s", self.gpu_id,
+                       start, end)
 
       if start >= len(rows):
         return False
@@ -261,10 +262,10 @@ class FinClass(WorkerInterface):
 
     if "applicability" in self.fin_steps:
       self.logger.info("Creating dumplist for: %s", self.fin_steps[0])
-      idx     = 0
+      idx = 0
       num_blk = 1
       if self.multiproc:
-        idx     = self.gpu_id
+        idx = self.gpu_id
         num_blk = self.num_procs.value
 
       if not self.set_all_configs(idx, num_blk):
@@ -320,7 +321,7 @@ class FinClass(WorkerInterface):
     """Main function in Fin that produces Fin input file"""
 
     self.cnx = self.machine.connect(self.chk_abort_file())
-    ret = False 
+    ret = False
     if outfile is None:
       outfile = "fin_input.json"
     if self.create_dumplist():
@@ -336,11 +337,12 @@ class FinClass(WorkerInterface):
       if "applicable_solvers" in elem.keys():
         #remove old applicability
         query = 'delete from {} where config={} and session={}'.format(
-                self.dbt.solver_app.__tablename__,
-                elem["input"]["config_tuna_id"], self.session_id)
+            self.dbt.solver_app.__tablename__, elem["input"]["config_tuna_id"],
+            self.session_id)
         session.execute(query)
         if not elem["applicable_solvers"]:
-          self.logger.warning("No applicable solvers for %s", elem["input"]["config_tuna_id"])
+          self.logger.warning("No applicable solvers for %s",
+                              elem["input"]["config_tuna_id"])
         for solver in elem["applicable_solvers"]:
           try:
             new_entry = self.dbt.solver_app(
@@ -367,7 +369,7 @@ class FinClass(WorkerInterface):
     with DbSession() as session:
       #self.insert_applicability(session, json_in)
       callback = self.insert_applicability
-      actuator = lambda x : x(session, json_in)
+      actuator = lambda x: x(session, json_in)
       session_retry(session, callback, actuator, self.logger)
 
     with DbSession() as session:
@@ -468,10 +470,9 @@ class FinClass(WorkerInterface):
 
   def step(self):
     """Inner loop for Process run defined in worker_interface"""
-    self.multiproc = True 
+    self.multiproc = True
     if "applicability" in self.fin_steps:
       self.applicability()
 
     self.multiproc = False
     return False
-

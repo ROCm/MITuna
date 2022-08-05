@@ -30,10 +30,7 @@ from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('miopen_db_helpers')
 
-GET_JOB_IDX = [
-    "valid", "reason", "fin_step", "retries", "state",
-    "config"
-]
+GET_JOB_IDX = ["valid", "reason", "fin_step", "retries", "state", "config"]
 GET_COMPILE_JOB_IDX = ["valid", "state", "reason"]
 
 
@@ -78,12 +75,10 @@ def get_conv_config_triggers():
 def get_miopen_indices():
   """Return MIOpen Tuna DB specific indices"""
   idx = []
-  idx.append(
-      "create index idx_get_job on conv_job(valid, reason, fin_step, \
+  idx.append("create index idx_get_job on conv_job(valid, reason, fin_step, \
                 retries, state, config);")
 
-  idx.append(
-      "create index idx_get_compile on conv_job(valid, state, reason);")
+  idx.append("create index idx_get_compile on conv_job(valid, state, reason);")
   return idx
 
 

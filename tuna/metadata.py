@@ -56,7 +56,6 @@ LOG_TIMEOUT = 10 * 60.0  # seconds
 MYSQL_LOCK_WAIT_TIMEOUT = 1205
 NUM_SQL_RETRIES = 10
 
-
 TABLE_COLS_CONV_MAP = {
     '-forw': ('direction', 0),
     'F': ('direction', 0),
