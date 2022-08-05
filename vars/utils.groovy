@@ -517,8 +517,8 @@ def runCodeCov() {
           sh "mv coverage.json ../MITunaX/tests/covscripts/buffer"
           sh "python3 tests/covscripts/parse_attributes.py"
           sh "file= ../MITunaX/tests/covscripts/buffer/coverage_percentage.txt"
-          sh "name=$(cat "$file")"
-          myvar = sh "echo $name"
+          sh "name= $(cat "${file}")"
+          myvar = sh "echo ${name}"
           CODE_COV = 10
           if (CODE_COV > myvar) {
           error "Not added to env: ${item}"
