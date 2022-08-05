@@ -30,14 +30,24 @@ import os
 thelibFolder = os.path.dirname(os.path.realpath(__file__))
 requirementPath = thelibFolder + '/requirements.txt'
 install_requires = []  # Examples: ["gunicorn", "docutils>=0.3", "lxml==0.5a7"]
+
+with open('README.md') as f:
+    readme = f.read()
+
 if os.path.isfile(requirementPath):
   with open(requirementPath) as f:
     install_requires = f.read().splitlines()
 setup(
     #this will be the package name you will see, e.g. the output of 'conda list' in anaconda prompt
-    name='tuna',
+    name='MITuna',
     #some version number you may wish to add - increment this after every update
-    version='1.0',
+    version='0.1',
+    description="Tuna is a distributed tuning infrastructure that provides pre-compiled kernels "\
+                "for MIOpen customers through automated Jenkins pipelines and SLURM scalable "\
+                "architecture.",
+    long_description=readme,
+    license='MIT',
+    url='https://github.com/ROCmSoftwarePlatform/MITuna.git',
     install_requires=install_requires,
 
     # Use one of the below approach to define package and/or module names:
