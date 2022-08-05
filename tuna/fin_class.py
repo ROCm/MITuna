@@ -105,7 +105,7 @@ class FinClass(WorkerInterface):
 
   def exec_command(self, cmd):
     """Definiting cmd execution process"""
-    ins, out, err = self.cnx.exec_command(cmd, timeout, self.chk_abort_file())
+    ins, out, err = self.cnx.exec_command(cmd, abort=self.chk_abort_file())
     if err is not None and hasattr(err, 'channel'):
       err.channel.settimeout(LOG_TIMEOUT)
     return ins, out, err
@@ -332,7 +332,7 @@ class FinClass(WorkerInterface):
     return ret
 
   def insert_applicability(self, session, json_in):
-  """write applicability to sql"""
+    """write applicability to sql"""
     _, solver_id_map_h = get_solver_ids()
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
