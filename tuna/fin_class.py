@@ -37,7 +37,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.db_tables import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.metadata import get_solver_ids, FIN_CACHE
-from tuna.metadata import DOCKER_CMD, LOG_TIMEOUT, INVERS_DIR_MAP
+from tuna.metadata import INVERS_DIR_MAP
 from tuna.fin_utils import compose_config_obj
 from tuna.tables import DBTables
 from tuna.config_type import ConfigType
@@ -206,7 +206,7 @@ class FinClass(WorkerInterface):
           self.dbt.config_table).filter(self.dbt.config_table.valid == 1)
 
       if self.label:
-        query = query.filter(self.dbt_config_table.id == self.dbt_config_tags_table.config)\
+        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
             .filter(self.dbt.config_tags_table.tag == self.label)
 
       #order by id for splitting configs into blocks
