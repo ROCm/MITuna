@@ -344,7 +344,7 @@ class FinClass(WorkerInterface):
         #remove old applicability
         query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
-          .filter(self.dbt.solver_app_config == elem["input"]["config_tuna_id"])
+          .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
         query.delete()
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s",
