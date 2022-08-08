@@ -90,7 +90,7 @@ class FinBuilder(WorkerInterface):
     # JD: while fin can exec multiple jobs at a time, that makes error detection difficult
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('compiling')
-    fin_json = self.run_fin_cmd(is_eval=False)
+    fin_json = self.run_fin_cmd()
 
     failed_job = True
     if fin_json:
