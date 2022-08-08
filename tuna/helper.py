@@ -30,7 +30,6 @@ import random
 from time import sleep
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Query
-import pymysql
 
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
@@ -178,24 +177,6 @@ def mysqldb_overwrite_table(table, dict_list, filter_cols):
       LOGGER.info('Inserting sql... %s', i)
 
   return ret, insert_ids
-
-
-def session_retry(session, callback, actuator, logger=LOGGER):
-  """insert/update dict obj to mysql table"""
-  for idx in range(NUM_SQL_RETRIES):
-    try:
-      return actuator(callback)
-    except OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
-      session.rollback()
-      sleep(random.randint(1, 30))
-    except pymysql.err.OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
-      session.rollback()
-      sleep(random.randint(1, 30))
-
-  logger.error('All retries have failed.')
-  return None
 
 
 def handle_op_error(logger, error):

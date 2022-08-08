@@ -36,13 +36,12 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable
 from tuna.worker_interface import WorkerInterface
 from tuna.db_tables import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
-#from tuna.utils.logger import setup_logger
 from tuna.metadata import get_solver_ids, FIN_CACHE
 from tuna.metadata import DOCKER_CMD, LOG_TIMEOUT, INVERS_DIR_MAP
 from tuna.fin_utils import compose_config_obj
 from tuna.tables import DBTables
 from tuna.config_type import ConfigType
-from tuna.helper import session_retry
+from tuna.utils.db_utility import session_retry
 
 
 class FinClass(WorkerInterface):
@@ -60,7 +59,6 @@ class FinClass(WorkerInterface):
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    #self.logger = setup_logger('fin_class')
     connect_db()
     self.all_configs = []
     self.jobid_to_config = {}
@@ -221,12 +219,15 @@ class FinClass(WorkerInterface):
         ids = tuple([str(job_row.config) for job_row in rows])
         query = query.filter(self.dbt.config_table.id.in_(ids))
 
-      query = query.order_by(self.dbt.config_table.id.asc())
+      #order by id for splitting configs into blocks
+      query = query.order_by(self.dbt.config_table.id)
       rows = query.all()
 
-      extra = len(rows) % num_blk
-      start = idx * (len(rows) // num_blk)
+      #block_size = int(len(rows) // num_blk)
+      extra = len(rows) % num_blk  #leftover configs, don't divide evenly
+      start = idx * (len(rows) // num_blk)  #start of a process block
       end = (idx + 1) * (len(rows) // num_blk)
+      #distributing leftover configs to processes
       if idx < extra:
         start += idx
         end += 1 + idx
@@ -240,6 +241,7 @@ class FinClass(WorkerInterface):
       if start >= len(rows):
         return False
 
+      #copy the configs for this process
       if end >= len(rows):
         subarr = rows[start:]
       else:
@@ -250,6 +252,10 @@ class FinClass(WorkerInterface):
         if self.config_type == ConfigType.batch_norm:
           r_dict['direction'] = row.get_direction()
         self.all_configs.append(r_dict)
+
+    if self.all_configs is None:
+      return False
+
     return True
 
   def create_dumplist(self):
@@ -270,7 +276,6 @@ class FinClass(WorkerInterface):
 
       if not self.set_all_configs(idx, num_blk):
         return False
-      assert self.all_configs is not None
       return self.compose_fin_list()
 
     self.logger.error("Fin steps not recognized: %s", self.fin_steps)
@@ -337,10 +342,10 @@ class FinClass(WorkerInterface):
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
         #remove old applicability
-        query = 'delete from {} where config={} and session={}'.format(
-            self.dbt.solver_app.__tablename__, elem["input"]["config_tuna_id"],
-            self.session_id)
-        session.execute(query)
+        query = session.query(self.dbt.solver_app)\
+          .filter(self.dbt.solver_app.session == self.session_id)\
+          .filter(self.dbt.solver_app_config == elem["input"]["config_tuna_id"])
+        query.delete()
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s",
                               elem["input"]["config_tuna_id"])
@@ -368,7 +373,6 @@ class FinClass(WorkerInterface):
       return False
 
     with DbSession() as session:
-      #self.insert_applicability(session, json_in)
       callback = self.insert_applicability
       actuator = lambda x: x(session, json_in)
       session_retry(session, callback, actuator, self.logger)
