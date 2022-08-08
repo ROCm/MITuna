@@ -107,7 +107,7 @@ def finApplicability(){
         //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
         env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
         env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
-        env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="mysql"
+        env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
         env.OTEL_LOG_LEVEL="debug"
 
         sh "./tuna/go_fish.py -a ${arch} -n ${num_cu} --init_session -l new_session --local_machine"
