@@ -101,13 +101,6 @@ class FinClass(WorkerInterface):
 
     return False
 
-  def exec_command(self, cmd):
-    """Definiting cmd execution process"""
-    ins, out, err = self.cnx.exec_command(cmd, abort=self.chk_abort_file())
-    if err is not None and hasattr(err, 'channel'):
-      err.channel.settimeout(LOG_TIMEOUT)
-    return ins, out, err
-
   def compose_fincmd(self):
     """Helper function to compose fin docker cmd"""
     if self.machine.local_machine:
@@ -155,12 +148,12 @@ class FinClass(WorkerInterface):
 
     if self.prep_fin_input(self.local_file, to_file=True):
       fin_cmd = self.compose_fincmd()
-      if not self.machine.local_machine:
-        fin_cmd = DOCKER_CMD.format(self.docker_name, fin_cmd)
-      ret_code, out, _ = self.exec_command(fin_cmd)
+      ret_code, out, err = self.exec_docker_cmd(fin_cmd)
       if ret_code > 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
         self.logger.warning(out.read())
+        raise Exception('Failed to execute fin cmd: {} err: {}'.format(
+            fin_cmd, err.read()))
 
       result = self.parse_out()
 
@@ -213,20 +206,17 @@ class FinClass(WorkerInterface):
           self.dbt.config_table).filter(self.dbt.config_table.valid == 1)
 
       if self.label:
-        query_cfgs = session.query(self.dbt.config_tags_table)\
+        query = query.filter(self.dbt_config_table.id == self.dbt_config_tags_table.config)\
             .filter(self.dbt.config_tags_table.tag == self.label)
-        rows = query_cfgs.all()
-        ids = tuple([str(job_row.config) for job_row in rows])
-        query = query.filter(self.dbt.config_table.id.in_(ids))
 
       #order by id for splitting configs into blocks
       query = query.order_by(self.dbt.config_table.id)
       rows = query.all()
 
-      #block_size = int(len(rows) // num_blk)
+      block_size = len(rows) // num_blk  #size of the config block
       extra = len(rows) % num_blk  #leftover configs, don't divide evenly
-      start = idx * (len(rows) // num_blk)  #start of a process block
-      end = (idx + 1) * (len(rows) // num_blk)
+      start = idx * block_size  #start of a process block
+      end = (idx + 1) * block_size
       #distributing leftover configs to processes
       if idx < extra:
         start += idx
