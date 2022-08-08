@@ -29,9 +29,11 @@ from setuptools import setup, find_packages
 import os
 thelibFolder = os.path.dirname(os.path.realpath(__file__))
 requirementPath = thelibFolder + '/requirements.txt'
+readmePath = thelibFolder + '/README.md'
 install_requires = []  # Examples: ["gunicorn", "docutils>=0.3", "lxml==0.5a7"]
 
-with open('README.md') as f:
+if os.path.isfile(readmePath):
+  with open(readmePath) as f:
     readme = f.read()
 
 if os.path.isfile(requirementPath):
