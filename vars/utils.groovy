@@ -168,7 +168,7 @@ def finFindCompile(){
         runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -a ${arch} -n ${num_cu} -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
@@ -218,7 +218,7 @@ def finFindEval(){
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --local_machine --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
