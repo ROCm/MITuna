@@ -31,6 +31,7 @@ thelibFolder = os.path.dirname(os.path.realpath(__file__))
 requirementPath = thelibFolder + '/requirements.txt'
 readmePath = thelibFolder + '/README.md'
 install_requires = []  # Examples: ["gunicorn", "docutils>=0.3", "lxml==0.5a7"]
+readme = None
 
 if os.path.isfile(readmePath):
   with open(readmePath) as f:
