@@ -9,13 +9,13 @@ _SOLVER_TO_ID = invert_dict(_ID_TO_SOLVER)
 
 
 def get_solver_counts(findDB_like, use_id=False):
-    """ returns a dictionary that maps a given solver name to the 
-    number of times it occurs in FindDB-like Database """
-    solver_counts = findDB_like['solver'].value_counts()
-    solver_counts_dict = {}
-    for solver_id, count in solver_counts.iteritems():
-        if use_id:
-            solver_counts_dict[ solver_id ] = count
-        else:
-            solver_counts_dict[ _ID_TO_SOLVER[solver_id] ] = count
-    return sort_dict(solver_counts_dict)
+  """ returns a dictionary that maps a given solver name to the 
+  number of times it occurs in FindDB-like Database """
+  solver_counts = findDB_like['solver'].value_counts()
+  solver_counts_dict = {}
+  for solver_id, count in solver_counts.iteritems():
+    if use_id:
+      solver_counts_dict[ solver_id ] = count
+    else:
+      solver_counts_dict[ _ID_TO_SOLVER[solver_id] ] = count
+  return sort_dict(solver_counts_dict)
