@@ -4,20 +4,6 @@ through automated Jenkins pipelines and SLURM scalable architecture.
 
 
 ## Prerequisites
-Install python3.9
-```
-apt-get update && apt-get install software-properties-common
-add-apt-repository ppa:deadsnakes/ppa
-apt install python3.9
-```
-
-Install pip for python3.9
-```
-wget https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-python3.9 get-pip.py
-rm get-pip.py
-```
-
 Install MySQL server
 ```
 apt-get install mysql-server
@@ -48,18 +34,22 @@ Clone the repo using
 ```
 git clone <repo url>
 ```
+Then create a virtual env using 
+```
+virtualenv -p python3 myvenv
+```
 Enter the Tuna directory
 ```
 cd MITunaX
 ```
-Create a virtual envornment, and activate it (by sourcing its `activate` script)
+Activate the virtualenv and source the virtual env for subsequent use
 ```
-virtualenv -p python3.9 myvenv
+virtualenv -p python3 myvenv
 source myvenv/bin/activate
 ```
 Install the required dependencies:
 ```
-python3.9 -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 The above assumes that Tuna lives in the home directory and the virtual environment was created using the command indicated above.
 
@@ -79,7 +69,7 @@ have all-to-all machine communication available and passwords must not be requir
 
 Run the setup scripts:
 ```
-python3.9 setup.py develop
+python3 setup.py develop
 ```
 
 The root tuna folder needs to be appeneded to the PYTHONAPTH:
