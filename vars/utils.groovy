@@ -60,7 +60,7 @@ def addJobs() {
 }
 
 def finSolvers(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     /*
     Note: Does not need
             GPUs
@@ -89,7 +89,7 @@ def finSolvers(){
 }
 
 def finApplicability(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -140,7 +140,7 @@ def finApplicability(){
 }
 
 def finFindCompile(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -196,7 +196,7 @@ def finFindCompile(){
 
 
 def finFindEval(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -259,7 +259,7 @@ def buildTunaDocker(){
 }
 
 def loadJobTest() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -307,7 +307,7 @@ def loadJobTest() {
 }
 
 def perfCompile() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -349,7 +349,7 @@ def perfCompile() {
 }
 
 def perfEval_gfx908() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg MIOPEN_CACHE_DIR=/tmp/miopenpdb/cache --build-arg MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config/miopen .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -398,7 +398,7 @@ def perfEval_gfx908() {
 }
 
 def pytestSuite1() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -435,7 +435,7 @@ def pytestSuite1() {
 }
 
 def pytestSuite2() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -461,7 +461,7 @@ def pytestSuite2() {
 }
 
 def pytestSuite3() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -487,7 +487,7 @@ def pytestSuite3() {
 def runFormat() {
     node {
         checkout scm
-        def tuna_docker = docker.build("ci-tuna:${branch_id}")
+        def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
         tuna_docker.inside("") {
             sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/"
         }
@@ -497,7 +497,7 @@ def runFormat() {
 def runLint() {
     node {
           checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}")
+          def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string='  ' *.py"
           }
@@ -581,7 +581,7 @@ def LoadJobs()
       script_args = script_args + " -t ${params.config_tag} "
   }
   echo "${script_args}"
-  def build_args = " --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
   sh "echo ${build_args}"
   def tuna_docker = docker.build("${tuna_docker_name}", "${build_args}" )
   tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
@@ -592,35 +592,23 @@ def LoadJobs()
       {
         echo "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx1030' and num_cu = 36;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx1030_36"
 
         echo "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx90a' and num_cu = 110;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx90a_110"
 
         echo "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx908' and num_cu = 120;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx908_120"
 
         echo "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx906' and num_cu = 60;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx906_60"
         
         echo "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx900' and num_cu = 56;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx900_56"
       }
       else
       {
         echo "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
         sh "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = '${params.arch}' and num_cu = ${params.num_cu};").toInteger()
-        sh "echo ${num_jobs} new jobs for ${params.arch}_${params.num_cu}"
       }
   }
 }
@@ -630,7 +618,7 @@ def compile()
 {
   backend = "HIPNOGPU"
   def tuna_docker
-  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -645,20 +633,6 @@ def compile()
       env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
       env.TUNA_LOGLEVEL="${tuna_loglevel}"
       sh "pwd"
-      def num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx1030' and num_cu = 36;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx1030_36"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx90a' and num_cu = 110;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx90a_110"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx908' and num_cu = 120;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx908_120"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx906' and num_cu = 60;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx906_60"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx900' and num_cu = 56;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx900_56"
   }
   // push the image 
   tuna_docker.push()
@@ -706,15 +680,16 @@ def compile()
   {
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
+  def s_id = runsql("select id from session where reason='${params.job_label}'")
     // Run the jobs on the cluster
-  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${compile_cmd} -l ${params.job_label} '"
+  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${compile_cmd} -l ${params.job_label} --session_id ${s_id}'"
 }
 
 
 def evaluate()
 {
   def tuna_docker
-  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -762,8 +737,10 @@ def evaluate()
   {
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
+
+  def s_id = runsql("select id from session where reason='${params.job_label}'")  
   
-  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} || scontrol requeue \$SLURM_JOB_ID'"
+  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
 
