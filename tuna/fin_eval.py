@@ -258,7 +258,7 @@ class FinEvaluator(WorkerInterface):
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
     try:
-      fin_json = self.run_fin_cmd(is_eval=True)
+      fin_json = self.run_fin_cmd()
     except AssertionError as err:
       self.set_job_state('errored')
       self.logger.warning('Unable to launch job %s : %s', self.job.id, err)

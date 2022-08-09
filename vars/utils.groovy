@@ -576,35 +576,23 @@ def LoadJobs()
       {
         echo "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx1030' and num_cu = 36;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx1030_36"
 
         echo "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx90a' and num_cu = 110;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx90a_110"
 
         echo "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx908' and num_cu = 120;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx908_120"
 
         echo "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx906' and num_cu = 60;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx906_60"
         
         echo "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
         sh "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
-        num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = 'gfx900' and num_cu = 56;").toInteger()
-        sh "echo ${num_jobs} new jobs for gfx900_56"
       }
       else
       {
         echo "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
         sh "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = '${new_label}' and arch = '${params.arch}' and num_cu = ${params.num_cu};").toInteger()
-        sh "echo ${num_jobs} new jobs for ${params.arch}_${params.num_cu}"
       }
   }
 }
@@ -629,20 +617,6 @@ def compile()
       env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
       env.TUNA_LOGLEVEL="${tuna_loglevel}"
       sh "pwd"
-      def num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx1030' and num_cu = 36;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx1030_36"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx90a' and num_cu = 110;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx90a_110"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx908' and num_cu = 120;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx908_120"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx906' and num_cu = 60;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx906_60"
-
-      num_jobs = runsql("SELECT count(*) from conv_job WHERE valid = TRUE and state = 'new' AND reason = '${params.job_label}' and arch = 'gfx900' and num_cu = 56;").toInteger()
-      sh "echo ${num_jobs} new jobs for gfx900_56"
   }
   // push the image 
   tuna_docker.push()
@@ -690,8 +664,9 @@ def compile()
   {
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
+  def s_id = runsql("select id from session where reason='${params.job_label}'")
     // Run the jobs on the cluster
-  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${compile_cmd} -l ${params.job_label} '"
+  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${compile_cmd} -l ${params.job_label} --session_id ${s_id}'"
 }
 
 
@@ -746,8 +721,10 @@ def evaluate()
   {
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
+
+  def s_id = runsql("select id from session where reason='${params.job_label}'")  
   
-  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} || scontrol requeue \$SLURM_JOB_ID'"
+  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
 
