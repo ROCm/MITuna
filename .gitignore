@@ -3,3 +3,4 @@
 /tuna/dbBase/__pycache__
 /tuna/utils/__pycache__
 htmlcoMITunaX/htmlcov
+tests/coverage
