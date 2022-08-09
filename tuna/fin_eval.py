@@ -73,6 +73,8 @@ class FinEvaluator(WorkerInterface):
       query = session.query(self.dbt.solver_app).filter(
           self.dbt.solver_app.session == self.dbt.session.id,
           self.dbt.solver_app.config == self.job.config,
+          self.dbt.solver_app.arch == self.dbt.session.arch,
+          self.dbt.solver_app.num_cu == self.dbt.session.num_cu,
           self.dbt.solver_app.applicable == 1)
       for slv_entry in query.all():
         slv_name = self.id_solver_map[slv_entry.solver]
@@ -113,7 +115,9 @@ class FinEvaluator(WorkerInterface):
     fjob = _fjob.copy()
     with DbSession() as session:
       fdb_entry = self.dbt.find_db_table()
+      fdb_entry.num_cu = self.dbt.session.num_cu
       fdb_entry.config = self.config.id
+      fdb_entry.arch = self.dbt.session.arch
       fdb_entry.opencl = False
       fdb_entry.session = self.dbt.session.id
       fdb_entry.logger = self.logger
