@@ -378,8 +378,8 @@ def add_new_session(args, worker):
   session_entry = Session()
   session_entry.arch = args.arch
   session_entry.num_cu = args.num_cu
-  session_entry.rocm_v = worker.get_branch_hash()
-  session_entry.miopen_v = worker.get_rocm_v()
+  session_entry.rocm_v = worker.get_rocm_v()
+  session_entry.miopen_v = worker.get_miopen_v()
   session_entry.reason = args.label
   if args.ticket:
     session_entry.ticket = args.ticket
