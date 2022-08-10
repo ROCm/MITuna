@@ -27,8 +27,17 @@
 """Utility module for DB helper functions"""
 
 import enum
+import random
+import pymysql
+from time import sleep
+from sqlalchemy.exc import OperationalError
+
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen_tables import Solver
+from tuna.utils.logger import setup_logger
+from tuna.metadata import NUM_SQL_RETRIES
+
+LOGGER = setup_logger('db_utility')
 
 
 def get_id_solvers():
@@ -44,6 +53,24 @@ def get_id_solvers():
     id_solver_map_h = {val: key for key, val in solver_id_map_h.items()}
 
   return id_solver_map_c, id_solver_map_h
+
+
+def session_retry(session, callback, actuator, logger=LOGGER):
+  """retry handling for a callback function using an actuator (lamda function with params)"""
+  for idx in range(NUM_SQL_RETRIES):
+    try:
+      return actuator(callback)
+    except OperationalError as error:
+      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      session.rollback()
+      sleep(random.randint(1, 30))
+    except pymysql.err.OperationalError as error:
+      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      session.rollback()
+      sleep(random.randint(1, 30))
+
+  logger.error('All retries have failed.')
+  return None
 
 
 class DB_Type(enum.Enum):

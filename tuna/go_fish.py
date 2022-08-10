@@ -442,16 +442,9 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
   worker = None
   kwargs = get_kwargs(gpu_idx, f_vals, args)
 
-  if args.compile:
-    kwargs['fetch_state'] = ['new']
-    worker = Builder(**kwargs)
-  elif args.run_perf:
-    #if no compiled jobs go ahead and start compiling on eval machine
-    kwargs['fetch_state'] = ['compiled']
-    worker = Evaluator(**kwargs)
-  elif args.run_find or args.bin_cache:
-    kwargs['fetch_state'] = ['new']
-    worker = Evaluator(**kwargs)
+  if args.update_applicability:
+    kwargs['fin_steps'] = ['applicability']
+    worker = FinClass(**kwargs)
   elif args.fin_steps:
     if 'miopen_find_compile' in args.fin_steps or 'miopen_perf_compile' in args.fin_steps:
       kwargs['fetch_state'] = ['new']
@@ -465,6 +458,17 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
     worker = WorkerInterface(**kwargs)
     Session().add_new_session(args, worker)
     return True
+  #CE: consider removing these commands:
+  elif args.compile:
+    kwargs['fetch_state'] = ['new']
+    worker = Builder(**kwargs)
+  elif args.run_perf:
+    #if no compiled jobs go ahead and start compiling on eval machine
+    kwargs['fetch_state'] = ['compiled']
+    worker = Evaluator(**kwargs)
+  elif args.run_find or args.bin_cache:
+    kwargs['fetch_state'] = ['new']
+    worker = Evaluator(**kwargs)
   else:
     kwargs['fetch_state'] = ['new']
     worker = Evaluator(**kwargs)
@@ -502,10 +506,6 @@ def do_fin_work(args, gpu, f_vals):
     if not fin_worker.get_solvers():
       LOGGER.error('No solvers returned from Fin class')
 
-  if args.update_applicability:
-    if not fin_worker.applicability():
-      LOGGER.error('Applicability not returned from Fin class')
-
   return True
 
 
@@ -536,7 +536,8 @@ def compose_worker_list(res, args):
       continue
 
     #fin_steps should only contain one step
-    if args.compile or (args.fin_steps and 'compile' in args.fin_steps[0]):
+    if args.compile or args.update_applicability or (
+        args.fin_steps and 'compile' in args.fin_steps[0]):
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
@@ -555,7 +556,7 @@ def compose_worker_list(res, args):
     f_vals = compose_f_vals(args, machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))
 
-    if (args.update_solvers or args.update_applicability) and not fin_work_done:
+    if (args.update_solvers) and not fin_work_done:
       do_fin_work(args, 0, f_vals)
       fin_work_done = True
       break
