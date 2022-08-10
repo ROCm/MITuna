@@ -536,7 +536,8 @@ def compose_worker_list(res, args):
       continue
 
     #fin_steps should only contain one step
-    if args.compile or args.update_applicability or (args.fin_steps and 'compile' in args.fin_steps[0]):
+    if args.compile or args.update_applicability or (
+        args.fin_steps and 'compile' in args.fin_steps[0]):
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
