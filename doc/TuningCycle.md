@@ -40,10 +40,10 @@ build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN}"\
 
 docker build -t ${tuna_docker_name} ${build_args} .
 </pre>
-The FIN_TOKEN is a git token to the ROCmSoftwarePlatform/fin repository.
-Just one of ROCMVERSION and OSD_BKC_VERSION should be specified, and this will determine the rocm install.
-BACKEND should be either HIPNOGPU or HIP, depending on the tuning step.
-MIOPEN_BRANCH and MIOPEN_USE_MLIR determine the MIOpen installation.
+The FIN_TOKEN is a git token to the ROCmSoftwarePlatform/fin repository.  
+Just one of ROCMVERSION and OSD_BKC_VERSION should be specified, and this will determine the rocm install.  
+BACKEND should be either HIPNOGPU or HIP, depending on the tuning step.  
+MIOPEN_BRANCH and MIOPEN_USE_MLIR determine the MIOpen installation.  
 DB_NAME, DB_USER_NAME, DB_USER_PASSWORD, and DB_HOSTNAME are the details of the SQL tuning database.
 
 Run the docker with:
