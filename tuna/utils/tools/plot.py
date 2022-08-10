@@ -1,5 +1,5 @@
 import os
-import seaborn as sns
+#import seaborn as sns
 import matplotlib.pyplot as plt
 
 from tuna.utils import logging
@@ -7,10 +7,11 @@ from tuna.utils.tools.io import safe_save
 
 
 def histogram(data, x, filename=None):
-  if isinstance(data, pd.DataFrame):
-    sns.set_style('white')
-    sns.displot(data=data, x=x, kind='hist')
-    save_or_show(plt, filename)
+  raise NotImplemented('implementation commented out to avoid seaborn as yet another dependency')
+#  if isinstance(data, pd.DataFrame):
+#    sns.set_style('white')
+#    sns.displot(data=data, x=x, kind='hist')
+#    save_or_show(plt, filename)
 
 def save(plot, filename):
   plot.tight_layout()

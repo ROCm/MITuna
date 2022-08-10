@@ -46,7 +46,8 @@ def describe_mlDB(mlDB, tag=''):
     if colname[0].isupper():
       num_conv_params += 1
 
-  logging.info('num of parameters describing each convolution problem: %d' % num_conv_params)
+  logging.info('num of parameters describing each convolution problem: %d (including redundant parameters)' 
+               % num_conv_params)
 
   logging.log( pretty_list(mlDB_columns) )
   logging.log('Note: column names starting with an uppercase letter represent convolution parameters')

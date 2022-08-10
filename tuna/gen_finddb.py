@@ -5,17 +5,16 @@ from enum import Enum
 from sqlalchemy import and_
 
 from tuna.utils import logging
+from tuna.tables import DBTables
 import tuna.utils.tools.io as io_tools
 import tuna.utils.tools.df as df_tools
+from tuna.config_type import ConfigType
 from tuna.utils.helpers import pretty_list
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.find_db import FindDB, ConvolutionFindDB
 
 
 _DEFAULT_OUTPUT_DIR = os.path.join(os.getcwd(), 'findDB_')
-
-_FINDDB_TABLE = { '0.1.0': FindDB,                      # Deprecated
-                  '1.0.0': ConvolutionFindDB }
 
 def load_findDB(findDB_pickle_filename, tag=''):
   findDB = io_tools.safe_load(None, findDB_pickle_filename, df_tools.from_pickle)
@@ -33,11 +32,9 @@ def describe_findDB(findDB, tag=''):
 
 
 def gen_findDB(session_ids=None, valid=None, opencl=None, tuna_v='1.0.0'):
-  if tuna_v not in _FINDDB_TABLE:
-    raise ValueError(f'invalid tuna_v: only tuna versions {_FINDDB_TABLE.keys()} supported')
+  db_tables = DBTables(config_type=ConfigType.convolution)
+  findDB = db_tables.find_db_table
 
-  findDB = _FINDDB_TABLE[tuna_v]
-  logging.info(f'tuna version: {tuna_v}')
   logging.info(f'tuna database name: {os.environ["TUNA_DB_NAME"]}')
   logging.info(f'findDB table name: {findDB.__tablename__}')
 
@@ -45,7 +42,7 @@ def gen_findDB(session_ids=None, valid=None, opencl=None, tuna_v='1.0.0'):
     logging.log(f'quering {findDB.__tablename__}...', end_char='\r')
     query = session.query(findDB)
     query = query.filter(and_(findDB.kernel_time != -1, 
-                 findDB.workspace_sz != -1))
+                              findDB.workspace_sz != -1))
     if session_ids is not None:
       for session_id in session_ids:
         query = query.filter(findDB.session == session_id)
@@ -77,7 +74,6 @@ class FindDBParsing:
     SESSION_IDS = 'session_ids'
     VALID = 'valid'
     OPENCL = 'opencl'
-    TUNA_V = 'tuna_v'
 
   @classmethod
   def set_findDB_args(cls, parser):
@@ -93,11 +89,6 @@ class FindDBParsing:
     parser.add_argument(f'--{FindDBParsing.ARGNAMES.OPENCL.value}', 
         action='store_true', default=False, dest=FindDBParsing.ARGNAMES.OPENCL.value,
         help='use OpenCL extension (default: False)')
-    # TUNA_V
-    parser.add_argument(f'--{FindDBParsing.ARGNAMES.TUNA_V.value}', 
-        type=str, default='1.0.0', dest=FindDBParsing.ARGNAMES.TUNA_V.value,
-        help='tuna version (default: 1.0.0)',
-        choices=_FINDDB_TABLE.keys())
 
     # sign the parser
     setattr(parser, FindDBParsing.SIGNATURE, True)

@@ -4,6 +4,7 @@ import time
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
+from collections.abc import Iterable
 
 from tuna.utils import logging
 import tuna.utils.tools.io as io_tools
@@ -17,7 +18,7 @@ from tuna.utils.progress_bars import ProgressBar
 from tuna.utils.db_utility import get_id_solvers
 from tuna.utils.fdb_key_utils import explode_fdb_keys
 from tuna.utils.finddb_like_utils import get_solver_counts
-from tuna.gen_finddb import _FINDDB_TABLE, gen_findDB, load_findDB, describe_findDB
+from tuna.gen_finddb import gen_findDB, load_findDB, describe_findDB
 from tuna.gen_fastdb import findDB_to_nonthresholded_fastDB, describe_fastDB, check_findDB
 from utils.helpers import sort_dict, invert_dict, print_heading, print_dict_as_table, dict_to_csv, \
     print_title, map_list, proper_dict_of_dicts_to_csv, wierd_ratio, nest, pretty_iterator
@@ -251,8 +252,12 @@ if __name__ == '__main__':
 
   args = parser.parse_args()
 
-  analyzed_findDB_dir = os.path.join(args.out, 
-      f'analysis_{pretty_iterator(args.session_ids)}')
+  if args.session_ids is None:
+    analyzed_findDB_dir = os.path.join(args.out, f'analysis')
+  if isinstance(args.session_ids, Iterable):
+    analyzed_findDB_dir = os.path.join(args.out, f'analysis_{pretty_iterator(args.session_ids, sep="_")}')
+  else:
+    analyzed_findDB_dir = os.path.join(args.out, f'analysis_{args.session_ids}')
 
   if args.input is not None:
     findDB = load_findDB(args.input)
