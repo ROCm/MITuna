@@ -91,6 +91,12 @@ def parse_args():
                       type=str,
                       default='miopentuna',
                       help='Select a docker to run on. (default miopentuna)')
+  parser.add_argument(
+      '--solver_id',
+      type=int,
+      dest='solver_id',
+      default=None,
+      help='Specify solver_id. Use --list_solvers to see options')
   parser.add_argument('--dynamic_solvers_only',
                       dest='dynamic_solvers_only',
                       action='store_true',
