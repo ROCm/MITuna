@@ -20,8 +20,9 @@ def pretty_iterator(iterator: Iterator, sep=', ', max_items=None):
   if max_items is None or max_items >= len(list_like):
     return sep.join([str(item) for item in list_like])
   else:
-    left_substr = pretty_iterator(
-        list_like[:max_items - 1], sep=sep, max_items=None)
+    left_substr = pretty_iterator(list_like[:max_items - 1],
+                                  sep=sep,
+                                  max_items=None)
     return f"{left_substr}{sep}...{sep}{list_like[-1]}"
 
 
@@ -91,8 +92,8 @@ def proper_dict_of_dicts_to_csv(d, filename=None, sep=','):
     csv += f" {sep}{col_keys}\n"
     for row_key, row_dict in d.items():
       line = f"{row_key}"
-      for col_key, col_val in sorted(
-          row_dict.items(), key=lambda item: item[0]):
+      for col_key, col_val in sorted(row_dict.items(),
+                                     key=lambda item: item[0]):
         line += f"{sep}{col_val}"
       csv += f"{line}\n"
 

@@ -27,11 +27,11 @@ def describe_findDB(findDB, tag=''):
   if len(findDB) == 0:
     logging.warning(f'FindDB empty!')
   else:
-    logging.info(f'{tag}FindDB corresponds to session IDs: %s' % pretty_list(
-        findDB['session'].unique()))
+    logging.info(f'{tag}FindDB corresponds to session IDs: %s' %
+                 pretty_list(findDB['session'].unique()))
     logging.info(f'Total entries in {tag}FindDB: %d' % len(findDB))
-    logging.info(f'Total unique solvers in {tag}FindDB: %d' % len(
-        findDB['solver'].unique()))
+    logging.info(f'Total unique solvers in {tag}FindDB: %d' %
+                 len(findDB['solver'].unique()))
 
 
 def gen_findDB(session_ids=None, valid=None, opencl=None, tuna_v='1.0.0'):
@@ -89,19 +89,17 @@ class FindDBParsing:
         'IDs of tuning sessions to fetch findDB for (default: all tuning sessions)'
     )
     # VALID
-    parser.add_argument(
-        f'--{FindDBParsing.ARGNAMES.VALID.value}',
-        action='store_true',
-        default=True,
-        dest=FindDBParsing.ARGNAMES.VALID.value,
-        help='only dump valid kernels (default: True)')
+    parser.add_argument(f'--{FindDBParsing.ARGNAMES.VALID.value}',
+                        action='store_true',
+                        default=True,
+                        dest=FindDBParsing.ARGNAMES.VALID.value,
+                        help='only dump valid kernels (default: True)')
     # OPENCL
-    parser.add_argument(
-        f'--{FindDBParsing.ARGNAMES.OPENCL.value}',
-        action='store_true',
-        default=False,
-        dest=FindDBParsing.ARGNAMES.OPENCL.value,
-        help='use OpenCL extension (default: False)')
+    parser.add_argument(f'--{FindDBParsing.ARGNAMES.OPENCL.value}',
+                        action='store_true',
+                        default=False,
+                        dest=FindDBParsing.ARGNAMES.OPENCL.value,
+                        help='use OpenCL extension (default: False)')
 
     # sign the parser
     setattr(parser, FindDBParsing.SIGNATURE, True)

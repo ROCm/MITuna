@@ -80,8 +80,8 @@ def gen_mlDB(fastDB):
 
   # encode "Direction", "Precision" and "Layout" columns
   logging.reset_line()
-  logging.log(
-      'generating Direction, Precision and Layout encodings...', end_char='\r')
+  logging.log('generating Direction, Precision and Layout encodings...',
+              end_char='\r')
   conv_params['Direction'], direction_encoding = df_tools.encode_series(
       conv_params['Direction'])
   conv_params['Precision'], precision_encoding = df_tools.encode_series(
@@ -229,8 +229,10 @@ if __name__ == '__main__':
       help=
       f'randomly split into train and test according to train_ratio (default: False)'
   )
-  parser.add_argument(
-      '--seed', type=int, default=None, help=f'seed (default: None)')
+  parser.add_argument('--seed',
+                      type=int,
+                      default=None,
+                      help=f'seed (default: None)')
 
   args = parser.parse_args()
 

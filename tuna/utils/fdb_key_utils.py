@@ -18,12 +18,11 @@ _3D_FDB_KEY_PTRN = 'InChannels-InDepth-InHeight-InWidth-FilterDim-OutChannels-Ou
 
 _OPTIONAL_KEYS = ['GroupSize', 'TBA']
 
-_2D_TO_3D_FDB_KEY = Mold(
-    from_ptrn=_2D_FDB_KEY_PTRN,
-    to_ptrn=_3D_FDB_KEY_PTRN,
-    from_sep='-',
-    to_sep='-',
-    filler=1)
+_2D_TO_3D_FDB_KEY = Mold(from_ptrn=_2D_FDB_KEY_PTRN,
+                         to_ptrn=_3D_FDB_KEY_PTRN,
+                         from_sep='-',
+                         to_sep='-',
+                         filler=1)
 
 _NAMES_OF_2D_FDB_KEYS = _2D_FDB_KEY_PTRN.split('-')
 _NAMES_OF_3D_FDB_KEYS = _3D_FDB_KEY_PTRN.split('-')
@@ -108,8 +107,8 @@ def explode_fdb_keys(fdb_keys: pd.Series):
   for colname in conv_params:
     if colname in cols_with_tensor_descriptors:
       logging.reset_line()
-      logging.log(
-          f'exploding tensor descriptors in {colname}...', end_char='\r')
+      logging.log(f'exploding tensor descriptors in {colname}...',
+                  end_char='\r')
       exploded_conv_params.append(
           explode_tensor_descriptors(conv_params[colname]))
     else:

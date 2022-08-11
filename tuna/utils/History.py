@@ -219,16 +219,18 @@ class History(Sequence):
         raise ValueError(
             'Cannot add: the two histories appear to be tracking different data'
         )
-      new_history = History(
-          *self.function_names, title=title, track_stats=track_stats)
+      new_history = History(*self.function_names,
+                            title=title,
+                            track_stats=track_stats)
       for event in self:
         new_history.add_event(**event)
       for event in other:
         new_history.add_event(**event)
     else:
       combined_function_names = self.function_names + other.function_names
-      new_history = History(
-          *combined_function_names, title=title, track_stats=track_stats)
+      new_history = History(*combined_function_names,
+                            title=title,
+                            track_stats=track_stats)
       for event_in_self, event_in_other in zip(self, other):
         new_history.add_event(**event_in_self, **event_in_other)
 

@@ -179,8 +179,8 @@ def renumber_cols(df, start=0):
   if first_duplicate_index == len(df.columns):
     return dfA
   else:
-    dfB = renumber_cols(
-        df.iloc[:, first_duplicate_index:], start=len(dfA.columns))
+    dfB = renumber_cols(df.iloc[:, first_duplicate_index:],
+                        start=len(dfA.columns))
     return pd.concat([dfA, dfB], axis=1)
 
 
@@ -199,8 +199,8 @@ def delete_redundant_cols(df,
         dropped_cols.append(col)
         logging.warning(
             'column %s dropped from dataframe: it had just %d unique entr%s' %
-            (col, len(unique_entries), 'y'
-             if min_num_unique_entries == 2 else 'ies'))
+            (col, len(unique_entries),
+             'y' if min_num_unique_entries == 2 else 'ies'))
       else:
         df = drop_col(df, col, inplace=False)
         dropped_cols.append(col)

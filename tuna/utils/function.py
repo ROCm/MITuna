@@ -49,8 +49,9 @@ class Function(Iterator):
       else:
         raise ValueError("`sorted_along` can either be 'x' or 'y' or `None`")
 
-      return sorted(
-          self, key=lambda pair: pair[coord], reverse=not nondecreasing)
+      return sorted(self,
+                    key=lambda pair: pair[coord],
+                    reverse=not nondecreasing)
 
     else:
       return list(self)
@@ -58,8 +59,8 @@ class Function(Iterator):
   def to_array_of_pairs(self, sorted_along=None, nondecreasing=True):
     if sorted_along is not None:
       return np.array(
-          self.to_list_of_pairs(
-              sorted_along=sorted_along, nondecreasing=nondecreasing))
+          self.to_list_of_pairs(sorted_along=sorted_along,
+                                nondecreasing=nondecreasing))
     else:
       return np.array(self)
 
@@ -76,8 +77,8 @@ class Function(Iterator):
     if set_track_stats is None:
       set_track_stats = self.track_stats
 
-    sorted_pairs = self.to_list_of_pairs(
-        sorted_along=along, nondecreasing=nondecreasing)
+    sorted_pairs = self.to_list_of_pairs(sorted_along=along,
+                                         nondecreasing=nondecreasing)
     f = Function(set_name, track_stats=set_track_stats)
     for x, y in sorted_pairs:
       f.define(x, y)

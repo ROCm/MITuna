@@ -53,13 +53,14 @@ def check_findDB(findDB, cols_with_conv_params=['fdb_key'], strict=False):
           f'data from multiple tuning sessions present in the FindDB')
       issues.append(MULTIPLE_SESSIONS)
 
-  num_duplicates = findDB.duplicated(
-      subset=cols_with_conv_params + ['solver']).sum()
+  num_duplicates = findDB.duplicated(subset=cols_with_conv_params +
+                                     ['solver']).sum()
   if num_duplicates > 0:
-    duplicates = findDB[findDB.duplicated(
-        subset=cols_with_conv_params + ['solver'], keep=False)]
-    duplicates = duplicates.sort_values(
-        cols_with_conv_params + ['solver', 'kernel_time'])
+    duplicates = findDB[findDB.duplicated(subset=cols_with_conv_params +
+                                          ['solver'],
+                                          keep=False)]
+    duplicates = duplicates.sort_values(cols_with_conv_params +
+                                        ['solver', 'kernel_time'])
     duplicates = duplicates.groupby(cols_with_conv_params + ['solver'])
 
     max_duplicates_to_print = 10
@@ -96,8 +97,8 @@ def describe_fastDB(fastDB):
   else:
     logging.info(f'Total entries in FastDB (=unique configs in FindDB): %d' %
                  len(fastDB))
-    logging.info(f'Number of unique solvers in FastDB: %d' % len(
-        fastDB['solver'].unique()))
+    logging.info(f'Number of unique solvers in FastDB: %d' %
+                 len(fastDB['solver'].unique()))
 
 
 def load_fastDB(fastDB_pickle_filename):
@@ -110,8 +111,8 @@ def load_fastDB(fastDB_pickle_filename):
 def findDB_to_nonthresholded_fastDB(findDB,
                                     cols_with_conv_params=['fdb_key'],
                                     n_fastest=1):
-  num_duplicates = findDB.duplicated(
-      subset=cols_with_conv_params + ['solver']).sum()
+  num_duplicates = findDB.duplicated(subset=cols_with_conv_params +
+                                     ['solver']).sum()
   if num_duplicates > 0:
     logging.warning( f'{num_duplicates} duplicate (fdb_key, solver)' +\
             ' pairs in FindDB: resolved them by keeping one with fastest solver' )
@@ -160,9 +161,8 @@ def gen_fastDB(findDB, threshold=0, keep_fundamental=False):
           'threshold too loose: none of the solvers are below threshold')
     else:
       if keep_fundamental:
-        logging.log(
-            'removing non-fundamental solvers below threshold...',
-            end_char='\r')
+        logging.log('removing non-fundamental solvers below threshold...',
+                    end_char='\r')
         solvers_to_remove = filter_out(solvers_below_threshold,
                                        is_fundamental_solver)
       else:

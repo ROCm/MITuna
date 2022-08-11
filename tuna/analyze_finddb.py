@@ -54,13 +54,12 @@ class StatsEntry(History):
   conv_params_names = []
 
   def __init__(self, title):
-    super().__init__(
-        *StatsEntry.conv_params_names,
-        'time_diff',
-        'time_ratio',
-        'alternate_solver',
-        title=title,
-        track_stats='auto')
+    super().__init__(*StatsEntry.conv_params_names,
+                     'time_diff',
+                     'time_ratio',
+                     'alternate_solver',
+                     title=title,
+                     track_stats='auto')
 
 
 def parse_stats_table(d, out_dir, verbosity=0):
@@ -97,10 +96,10 @@ def parse_stats_table(d, out_dir, verbosity=0):
           )
         d[si][sj]['comprehensive'][0].to_csv(
             filename=os.path.join(out_dir, f'{si}', f'{si}_{sj}.csv'))
-        d[si][sj]['comprehensive'][0].plot(
-            filename=os.path.join(out_dir, f'{si}', f'{si}_{sj}.png'),
-            title=f'{si_name} -> {sj_name}',
-            min_unique_entries=1)
+        d[si][sj]['comprehensive'][0].plot(filename=os.path.join(
+            out_dir, f'{si}', f'{si}_{sj}.png'),
+                                           title=f'{si_name} -> {sj_name}',
+                                           min_unique_entries=1)
 
     if len(si_replacement_stats) == 0:
       logging.warning(
@@ -149,18 +148,18 @@ def analyze_explodedFindDB(explodedFindDB,
       si: {
           sj: {
               'concise':
-              StatsEntry(title='concise'),
-              'comprehensive':
-              [StatsEntry(title=i) for i in range(1, len(solver_counts))]
-          }
-          for sj in solver_ids
-      }
-      for si in solver_ids
+                  StatsEntry(title='concise'),
+              'comprehensive': [
+                  StatsEntry(title=i) for i in range(1, len(solver_counts))
+              ]
+          } for sj in solver_ids
+      } for si in solver_ids
   }
 
   temp = explodedFindDB.sort_values(cols_with_conv_params + ['kernel_time'])
-  sorted_explodedFindDB = temp.drop_duplicates(
-      cols_with_conv_params + ['solver'], keep='first')
+  sorted_explodedFindDB = temp.drop_duplicates(cols_with_conv_params +
+                                               ['solver'],
+                                               keep='first')
   if len(sorted_explodedFindDB) < len(temp):
     logging.warning( f'{len(temp)-len(sorted_explodedFindDB)} duplicate (fdb_key, solver)' +\
             ' pairs in FindDB: resolved them by keeping one with fastest solver' )
@@ -171,9 +170,8 @@ def analyze_explodedFindDB(explodedFindDB,
   sorted_explodedFindDB_numeric_grouped = sorted_explodedFindDB_numeric.groupby(
       cols_with_conv_params)
 
-  progressbar = ProgressBar(
-      end_val=len(sorted_explodedFindDB_numeric),
-      title='COLLECTING SLOWDOWN STATS')
+  progressbar = ProgressBar(end_val=len(sorted_explodedFindDB_numeric),
+                            title='COLLECTING SLOWDOWN STATS')
   entries_processed = 0
   for _, df in sorted_explodedFindDB_numeric_grouped:
     fastest = df.iloc[0, :]
@@ -181,10 +179,10 @@ def analyze_explodedFindDB(explodedFindDB,
     entries_processed += 1
     for i in range(1, len(df)):
       alternate = df.iloc[i, :]
-      stats_entry_concise = stats_table[fastest['solver']][alternate['solver']][
-          'concise']
-      stats_entry_comprehensive = stats_table[fastest['solver']][alternate[
-          'solver']]['comprehensive'][i - 1]
+      stats_entry_concise = stats_table[fastest['solver']][
+          alternate['solver']]['concise']
+      stats_entry_comprehensive = stats_table[fastest['solver']][
+          alternate['solver']]['comprehensive'][i - 1]
 
       for stats_entry in [stats_entry_concise, stats_entry_comprehensive]:
         stats_entry.add(
@@ -247,10 +245,9 @@ def analyze_explodedFindDB(explodedFindDB,
                      dict_to_csv)
 
   # parse stats_table and log/dump results
-  parse_stats_table(
-      stats_table,
-      os.path.join(out_dirname, 'slowdown_analysis'),
-      verbosity=verbosity)
+  parse_stats_table(stats_table,
+                    os.path.join(out_dirname, 'slowdown_analysis'),
+                    verbosity=verbosity)
 
 
 def to_explodedFindDB(findDB, direction=None, layout=None, precision=None):
@@ -271,22 +268,19 @@ def to_explodedFindDB(findDB, direction=None, layout=None, precision=None):
 
 
 def set_explodedFindDB_args(parser):
-  parser.add_argument(
-      '--direction',
-      type=str,
-      default=None,
-      help='convolution direction (default: all directions)',
-      choices=['F', 'B', 'W'])
-  parser.add_argument(
-      '--layout',
-      type=str,
-      default=None,
-      help='tensor layout (default: all layouts)')
-  parser.add_argument(
-      '--precision',
-      type=str,
-      default=None,
-      help='precision (default: all precisions)')
+  parser.add_argument('--direction',
+                      type=str,
+                      default=None,
+                      help='convolution direction (default: all directions)',
+                      choices=['F', 'B', 'W'])
+  parser.add_argument('--layout',
+                      type=str,
+                      default=None,
+                      help='tensor layout (default: all layouts)')
+  parser.add_argument('--precision',
+                      type=str,
+                      default=None,
+                      help='precision (default: all precisions)')
 
 
 if __name__ == '__main__':
@@ -306,13 +300,12 @@ if __name__ == '__main__':
   parser.add_argument('-i', '--in', type=str, default=None, dest='input',
       help=f'filename for findDB pickle (default: None). \n' +\
       'Note: This overrides the findDB flags for fetching findDB from the database')
-  parser.add_argument(
-      '-v',
-      '--verbosity',
-      type=int,
-      default=0,
-      help='higher verbosity => more logs and files dumped',
-      choices=[0, 1])
+  parser.add_argument('-v',
+                      '--verbosity',
+                      type=int,
+                      default=0,
+                      help='higher verbosity => more logs and files dumped',
+                      choices=[0, 1])
   FindDBParsing.set_findDB_args(parser)
   set_explodedFindDB_args(parser)
 
@@ -351,12 +344,11 @@ if __name__ == '__main__':
     logging.log(main_dir_name + ' :: ' + sub_dir_name, print_title)
     M = df_tools.select_multiple(explodedFindDB, choice)
     describe_findDB(M)
-    analyze_explodedFindDB(
-        M,
-        cols_with_conv_params,
-        out_dir,
-        verbosity=args.verbosity,
-        solver_counts_writer=SolverCountsWriter(choice))
+    analyze_explodedFindDB(M,
+                           cols_with_conv_params,
+                           out_dir,
+                           verbosity=args.verbosity,
+                           solver_counts_writer=SolverCountsWriter(choice))
 
     io_tools.safe_save(M, os.path.join(out_dir, 'explodedFindDB.pkl'),
                        df_tools.to_pickle)

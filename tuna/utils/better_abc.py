@@ -19,8 +19,7 @@ class ABCMeta(NativeABCMeta):
   def __call__(cls, *args, **kwargs):
     instance = NativeABCMeta.__call__(cls, *args, **kwargs)
     abstract_attributes = {
-        name
-        for name in dir(instance)
+        name for name in dir(instance)
         if getattr(getattr(instance, name), '__is_abstract_attribute__', False)
     }
     if abstract_attributes:
