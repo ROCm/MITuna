@@ -53,7 +53,7 @@ docker_args = "--network host --privileged --device=/dev/kfd --device /dev/dri:/
 
 docker run ${docker_args} ${tuna_docker_name}
 </pre>
-gateway_ip, gateway_port, and gateway_user are the ssh tunneling details for the SQL tuning database server.
+gateway_ip, gateway_port, and gateway_user are the ssh details for bmc / ipmi reset of the tuning machines.
 
 
 ## Tuning Steps
