@@ -61,7 +61,8 @@ class logging:
 
   @staticmethod
   def dump_logs(path=None, clean_slate_after_dump=True, append=False):
-    str_to_dump = as_heading(time.strftime('%l:%M%p %Z on %b %d, %Y')) + '\n' + logging.RUNNING_LOG
+    str_to_dump = as_heading(
+        time.strftime('%l:%M%p %Z on %b %d, %Y')) + '\n' + logging.RUNNING_LOG
 
     if path is None:
       print(str_to_dump)
@@ -73,7 +74,6 @@ class logging:
 
     if clean_slate_after_dump:
       logging.clean_slate()
-
 
 
 # for backwards compatibility (and clean-ish interface)

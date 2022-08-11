@@ -12,7 +12,6 @@ from tuna.utils.fdb_key_utils import explode_fdb_keys
 from tuna.utils.helpers import pretty_list, get_reverse_map, invert_dict,\
     compose, print_heading, merge_dicts
 
-
 _, _ID_TO_SOLVER = get_id_solvers()
 _SOLVER_TO_ID = invert_dict(_ID_TO_SOLVER)
 
@@ -46,11 +45,14 @@ def describe_mlDB(mlDB, tag=''):
     if colname[0].isupper():
       num_conv_params += 1
 
-  logging.info('num of parameters describing each convolution problem: %d (including redundant parameters)' 
-               % num_conv_params)
+  logging.info(
+      'num of parameters describing each convolution problem: %d (including redundant parameters)'
+      % num_conv_params)
 
-  logging.log( pretty_list(mlDB_columns) )
-  logging.log('Note: column names starting with an uppercase letter represent convolution parameters')
+  logging.log(pretty_list(mlDB_columns))
+  logging.log(
+      'Note: column names starting with an uppercase letter represent convolution parameters'
+  )
 
   num_convolution_params = 0
 
@@ -74,18 +76,23 @@ def gen_mlDB(fastDB):
   check_fastDB(fastDB)
 
   # explode fdb keys
-  conv_params = explode_fdb_keys( fastDB['fdb_key'] )
+  conv_params = explode_fdb_keys(fastDB['fdb_key'])
 
   # encode "Direction", "Precision" and "Layout" columns
   logging.reset_line()
-  logging.log('generating Direction, Precision and Layout encodings...', end_char='\r')
-  conv_params['Direction'], direction_encoding = df_tools.encode_series(conv_params['Direction'])
-  conv_params['Precision'], precision_encoding = df_tools.encode_series(conv_params['Precision'])
-  conv_params['Layout'], layout_encoding = df_tools.encode_series(conv_params['Layout'])
+  logging.log(
+      'generating Direction, Precision and Layout encodings...', end_char='\r')
+  conv_params['Direction'], direction_encoding = df_tools.encode_series(
+      conv_params['Direction'])
+  conv_params['Precision'], precision_encoding = df_tools.encode_series(
+      conv_params['Precision'])
+  conv_params['Layout'], layout_encoding = df_tools.encode_series(
+      conv_params['Layout'])
 
   # rename "alg_lib" -> "algorithm",  "solver "->" solver",  "kernel_time" -> "solverTime"
   algos = fastDB['alg_lib'].rename('algorithm')
-  solvers = df_tools.map_series(fastDB['solver'], _ID_TO_SOLVER).rename('solver')
+  solvers = df_tools.map_series(fastDB['solver'],
+                                _ID_TO_SOLVER).rename('solver')
   solver_times = fastDB['kernel_time'].rename('solverTime')
 
   # encode "algorithm" and "solverTime" columns
@@ -95,14 +102,17 @@ def gen_mlDB(fastDB):
   encoded_solvers, solver_encoding = df_tools.encode_series(solvers)
 
   # create mlDB and pack all encodings
-  mlDB = df_tools.combine(conv_params, encoded_algos, encoded_solvers, solver_times)
+  mlDB = df_tools.combine(conv_params, encoded_algos, encoded_solvers,
+                          solver_times)
   mlDB = mlDB.astype('float32')
 
-  mlDB_encodings = {'Direction': direction_encoding,
-           'Precision': precision_encoding,
-           'Layout': layout_encoding,
-           'algorithm': algo_encoding,
-           'solver': solver_encoding}
+  mlDB_encodings = {
+      'Direction': direction_encoding,
+      'Precision': precision_encoding,
+      'Layout': layout_encoding,
+      'algorithm': algo_encoding,
+      'solver': solver_encoding
+  }
 
   logging.reset_line()
   logging.success('MLDB created and encodings packed into single dictionary!')
@@ -116,13 +126,13 @@ def process_mlDB(mlDB, train_ratio, random_split, seed):
   """process mlDB into tunadata"""
   ground_truth_colnames = ['algorithm', 'solver', 'solverTime']
 
-  deleted_cols = df_tools.delete_redundant_cols(mlDB, 
-                         masked_cols=ground_truth_colnames, 
-                         inplace=True)
+  deleted_cols = df_tools.delete_redundant_cols(
+      mlDB, masked_cols=ground_truth_colnames, inplace=True)
 
   overall_features, overall_gt = df_tools.split(mlDB, ground_truth_colnames)
 
-  train_mlDB, test_mlDB = df_tools.train_test_split(mlDB, train_ratio, random_split, seed)
+  train_mlDB, test_mlDB = df_tools.train_test_split(mlDB, train_ratio,
+                                                    random_split, seed)
   train_features, train_gt = df_tools.split(train_mlDB, ground_truth_colnames)
   test_features, test_gt = df_tools.split(test_mlDB, ground_truth_colnames)
 
@@ -136,27 +146,46 @@ def process_mlDB(mlDB, train_ratio, random_split, seed):
   # compute statistics
   logging.log('computing means and stds...', end_char='\r')
 
-  train_features_stats   = { 'mean': df_tools.to_dict(train_features.mean(axis=0)),
-                             'std' : df_tools.to_dict(train_features.std(axis=0)) }
-  test_features_stats    = { 'mean': df_tools.to_dict(test_features.mean(axis=0)),
-                             'std' : df_tools.to_dict(test_features.std(axis=0)) }
-  overall_features_stats = { 'mean': df_tools.to_dict(overall_features.mean(axis=0)),
-                             'std' : df_tools.to_dict(overall_features.std(axis=0)) }
+  train_features_stats = {
+      'mean': df_tools.to_dict(train_features.mean(axis=0)),
+      'std': df_tools.to_dict(train_features.std(axis=0))
+  }
+  test_features_stats = {
+      'mean': df_tools.to_dict(test_features.mean(axis=0)),
+      'std': df_tools.to_dict(test_features.std(axis=0))
+  }
+  overall_features_stats = {
+      'mean': df_tools.to_dict(overall_features.mean(axis=0)),
+      'std': df_tools.to_dict(overall_features.std(axis=0))
+  }
 
-  train_gt_stats    = { 'mean': df_tools.to_dict(train_gt.mean(axis=0)),
-                        'std' : df_tools.to_dict(train_gt.std(axis=0)) }
-  test_gt_stats     = { 'mean': df_tools.to_dict(test_gt.mean(axis=0)),
-                        'std' : df_tools.to_dict(test_gt.std(axis=0)) }
-  overall_gt_stats  = { 'mean': df_tools.to_dict(overall_gt.mean(axis=0)),
-                        'std' : df_tools.to_dict(overall_gt.std(axis=0)) }
+  train_gt_stats = {
+      'mean': df_tools.to_dict(train_gt.mean(axis=0)),
+      'std': df_tools.to_dict(train_gt.std(axis=0))
+  }
+  test_gt_stats = {
+      'mean': df_tools.to_dict(test_gt.mean(axis=0)),
+      'std': df_tools.to_dict(test_gt.std(axis=0))
+  }
+  overall_gt_stats = {
+      'mean': df_tools.to_dict(overall_gt.mean(axis=0)),
+      'std': df_tools.to_dict(overall_gt.std(axis=0))
+  }
 
-  stats = { 'train': { 'features': train_features_stats,
-                       'gt'      : train_gt_stats          },
-            'test'   : { 'features': test_features_stats,
-                         'gt'      : test_gt_stats         },
-            'overall': { 'features': overall_features_stats,
-                         'gt'      : overall_gt_stats      }
-          }
+  stats = {
+      'train': {
+          'features': train_features_stats,
+          'gt': train_gt_stats
+      },
+      'test': {
+          'features': test_features_stats,
+          'gt': test_gt_stats
+      },
+      'overall': {
+          'features': overall_features_stats,
+          'gt': overall_gt_stats
+      }
+  }
 
   logging.success('statistics computed and compiled!')
 
@@ -168,48 +197,75 @@ if __name__ == '__main__':
   default_in_filename = os.path.join(_DEFAULT_INPUT_DIR, 'fastDB.pkl')
 
   parser = argparse.ArgumentParser(description='Generate MLDB from FastDB')
-  parser.add_argument('-i', '--in', type=str, default=default_in_filename, dest='input',
-      help=f'filename for the fastDB Pandas dataframe (current: {default_in_filename})')
-  parser.add_argument('-o', '--out', type=str, default=default_out_dirname, dest='output',
-      help=f'dirname for the output mlDB dataframes (current: {default_out_dirname})')
-  parser.add_argument('--train_ratio', type=float, default=0.7,
-      help=f'a proper fraction (or 0, 1) determining the size of train set (default: 0.7)')
-  parser.add_argument('--random', action='store_true', default=False,
-      help=f'randomly split into train and test according to train_ratio (default: False)')
-  parser.add_argument('--seed', type=int, default=None,
-      help=f'seed (default: None)')
+  parser.add_argument(
+      '-i',
+      '--in',
+      type=str,
+      default=default_in_filename,
+      dest='input',
+      help=
+      f'filename for the fastDB Pandas dataframe (current: {default_in_filename})'
+  )
+  parser.add_argument(
+      '-o',
+      '--out',
+      type=str,
+      default=default_out_dirname,
+      dest='output',
+      help=
+      f'dirname for the output mlDB dataframes (current: {default_out_dirname})'
+  )
+  parser.add_argument(
+      '--train_ratio',
+      type=float,
+      default=0.7,
+      help=
+      f'a proper fraction (or 0, 1) determining the size of train set (default: 0.7)'
+  )
+  parser.add_argument(
+      '--random',
+      action='store_true',
+      default=False,
+      help=
+      f'randomly split into train and test according to train_ratio (default: False)'
+  )
+  parser.add_argument(
+      '--seed', type=int, default=None, help=f'seed (default: None)')
 
   args = parser.parse_args()
 
   fastDB = load_fastDB(args.input)
   mlDB, encodings = gen_mlDB(fastDB)
-  train_features, train_gt, test_features, test_gt, stats = process_mlDB(mlDB, 
-                                     args.train_ratio,
-                                     args.random,
-                                     args.seed)
+  train_features, train_gt, test_features, test_gt, stats = process_mlDB(
+      mlDB, args.train_ratio, args.random, args.seed)
 
-  assert ( train_features.columns == test_features.columns ).all()
-  assert ( train_gt.columns == test_gt.columns ).all()
+  assert (train_features.columns == test_features.columns).all()
+  assert (train_gt.columns == test_gt.columns).all()
 
   # create metadata
-  metadata = { 'session': fastDB['session'].unique().tolist(),
-        'num_algos': len( mlDB['algorithm'].unique() ),
-        'num_solvers': len( mlDB['solver'].unique() ),
-        'conv_params_all': mlDB.columns.tolist(),
-        'conv_params_used_as_features': train_features.columns.tolist(),
-        'encodings': encodings,
-        'stats': stats
-       }
+  metadata = {
+      'session': fastDB['session'].unique().tolist(),
+      'num_algos': len(mlDB['algorithm'].unique()),
+      'num_solvers': len(mlDB['solver'].unique()),
+      'conv_params_all': mlDB.columns.tolist(),
+      'conv_params_used_as_features': train_features.columns.tolist(),
+      'encodings': encodings,
+      'stats': stats
+  }
 
   # dump
   train_dir = os.path.join(args.output, 'train')
   test_dir = os.path.join(args.output, 'test')
 
-  io_tools.safe_save(train_features, os.path.join(train_dir, 'features.csv'), df_tools.to_csv)
-  io_tools.safe_save(train_gt, os.path.join(train_dir, 'gt.csv'), df_tools.to_csv)
-  io_tools.safe_save(test_features, os.path.join(test_dir, 'features.csv'), df_tools.to_csv)
+  io_tools.safe_save(train_features, os.path.join(train_dir, 'features.csv'),
+                     df_tools.to_csv)
+  io_tools.safe_save(train_gt, os.path.join(train_dir, 'gt.csv'),
+                     df_tools.to_csv)
+  io_tools.safe_save(test_features, os.path.join(test_dir, 'features.csv'),
+                     df_tools.to_csv)
   io_tools.safe_save(test_gt, os.path.join(test_dir, 'gt.csv'), df_tools.to_csv)
-  
-  io_tools.safe_save(metadata, os.path.join(args.output, 'metadata.json'), json_tools.save)
+
+  io_tools.safe_save(metadata, os.path.join(args.output, 'metadata.json'),
+                     json_tools.save)
 
   logging.dump_logs(os.path.join(args.output, 'gen_mldb.log'))

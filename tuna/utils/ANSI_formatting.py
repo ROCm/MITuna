@@ -38,7 +38,6 @@ class ANSIColors:
     return "{}{}{}".format(ANSIColors.GREY, string, ANSIColors.END_COLOR)
 
 
-
 class ANSIFormats:
   #  inpired from https://stackoverflow.com/a/287944/5046433
   HEADER = '\033[95m'
@@ -57,12 +56,12 @@ class ANSIFormats:
 
   @staticmethod
   def underline(string):
-    return "{}{}{}".format(ANSIFormats.UNDERLINE, string, ANSIFormats.END_FORMAT)
+    return "{}{}{}".format(ANSIFormats.UNDERLINE, string,
+                           ANSIFormats.END_FORMAT)
 
   @staticmethod
   def reversed(string):
     return "{}{}{}".format(ANSIFormats.REVERSED, string, ANSIFormats.END_FORMAT)
-
 
 
 class ANSITools:

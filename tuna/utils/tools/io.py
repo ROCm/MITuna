@@ -3,9 +3,14 @@ import re
 
 from tuna.utils import logging
 
-def safe_save(obj, filename, save_proc,
-       overwrite=True, create_dir=True, log_to_console=True,
-       strict=False):
+
+def safe_save(obj,
+              filename,
+              save_proc,
+              overwrite=True,
+              create_dir=True,
+              log_to_console=True,
+              strict=False):
 
   if log_to_console:
     logging.log("saving %s..." % filename, end_char='\r')
@@ -44,8 +49,7 @@ def safe_save(obj, filename, save_proc,
   return True
 
 
-def safe_load(obj, filename, load_proc,
-       log_to_console=True, strict=False):
+def safe_load(obj, filename, load_proc, log_to_console=True, strict=False):
 
   if log_to_console:
     logging.log("loading %s..." % filename, end_char='\r')

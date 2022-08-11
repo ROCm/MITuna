@@ -1,5 +1,6 @@
 import re
 
+
 class Mold():
   """Mold to cast strings of one pattern to another.
   disclaimer: there are no *intentional* consistency checks. for example,
@@ -30,14 +31,14 @@ class Mold():
     else:
       self.to_tokens = self.to_ptrn.split(self.to_sep)
 
-    self.token_inds = [] # token_inds[i] tells where to find the ith token of
-              # to_ptrn in from_ptrn
+    self.token_inds = []  # token_inds[i] tells where to find the ith token of
+    # to_ptrn in from_ptrn
 
     for token2 in self.to_tokens:
       try:
-        self.token_inds.append( self.from_tokens.index(token2) )
+        self.token_inds.append(self.from_tokens.index(token2))
       except ValueError:
-        self.token_inds.append( None )
+        self.token_inds.append(None)
 
   def cast(self, from_str):
     if self.from_sep == '':
@@ -59,6 +60,7 @@ class Mold():
 
   def __str__(self):
     return '"%s" -> "%s"' % (self.from_ptrn, self.to_ptrn)
+
 
 ## general example
 #m = Mold('U_A_B_C_A_D_E', 'U-A-F-A-C-E-P-P', '_', '-', 'NaN')

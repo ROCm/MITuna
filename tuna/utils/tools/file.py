@@ -32,8 +32,10 @@ def save(data, path, mode='w'):
   with open(path, mode) as file:
     file.write(data)
 
+
 def write(data, path):
   save(data, path, mode='w')
+
 
 def append(data, path):
   save(data, path, mode='a')
@@ -48,6 +50,7 @@ def load_obj(path):
   with open(path, 'rb') as file:
     obj = dill.load(file)
     return obj
+
 
 def get_size(path, units: SIZE_UNITS = SIZE_UNITS.BYTE):
   size_in_bytes = os.path.getsize(path)

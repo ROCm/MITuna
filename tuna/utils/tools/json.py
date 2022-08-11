@@ -1,8 +1,10 @@
 import json
 
+
 def load(path):
   f = open(path)
   return json.load(f)
+
 
 def save(json_data, path):
   with open(path, 'w') as f:
