@@ -198,8 +198,7 @@ def parse_args():
   if args.fin_steps:
     has_fin = all(x in fin_session_steps for x in args.fin_steps)
 
-  if (args.update_applicability or has_fin or args.compile or
-      args.run_perf) and not args.session_id:
+  if (args.update_applicability or has_fin) and not args.session_id:
     parser.error("session_id must be specified with this operation")
 
   return args
@@ -458,8 +457,8 @@ def compose_worker_list(res, args):
       continue
 
     #fin_steps should only contain one step
-    if args.compile or args.update_applicability or (
-        args.fin_steps and 'compile' in args.fin_steps[0]):
+    if args.update_applicability or (args.fin_steps and
+                                     'compile' in args.fin_steps[0]):
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
