@@ -33,7 +33,6 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
 
@@ -62,32 +61,22 @@ def add_fin_find_compile_job():
 
 
 def test_fin_builder():
-  res = None
+  add_fin_find_compile_job()
 
-  with DbSession() as session:
-    query = session.query(Machine)
-    query = query.filter(Machine.available == 1)
-    res = query.all()
+  num_jobs = 0
+  with DbCursor() as cur:
+    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state='new';"
+    cur.execute(get_jobs)
+    res = cur.fetchall()
+    assert (res[0][0] > 0)
+    num_jobs = res[0][0]
 
-  assert (len(res) > 0)
+  go_fish_run = "{0}/../tuna/go_fish.py --local_machine --fin_steps miopen_find_compile --session_id 1".format(
+      this_path)
+  os.system(go_fish_run)
 
-  for machine in res:
-    add_fin_find_compile_job()
-
-    num_jobs = 0
-    with DbCursor() as cur:
-      get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state='new';"
-      cur.execute(get_jobs)
-      res = cur.fetchall()
-      assert (res[0][0] > 0)
-      num_jobs = res[0][0]
-
-    go_fish_run = "{0}/../tuna/go_fish.py --local_machine --fin_steps miopen_find_compile --session_id 1".format(
-        this_path)
-    os.system(go_fish_run)
-
-    with DbCursor() as cur:
-      get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state in ('compiled');"
-      cur.execute(get_jobs)
-      res = cur.fetchall()
-      assert (res[0][0] == num_jobs)
+  with DbCursor() as cur:
+    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state in ('compiled');"
+    cur.execute(get_jobs)
+    res = cur.fetchall()
+    assert (res[0][0] == num_jobs)
