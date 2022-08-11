@@ -48,10 +48,6 @@ def add_fin_find_compile_job():
   add_cfg = "{0}/../tuna/import_configs.py -t test_fin_builder --mark_recurrent -f {0}/../utils/configs/conv_configs_NCHW.txt".format(
       this_path)
 
-  trun_q = "DELETE FROM conv_job;"
-  with DbCursor() as cur:
-    cur.execute(trun_q)
-
   load_job = "{0}/../tuna/load_job.py -l tuna_pytest_fin_builder -t test_fin_builder \
       --fin_steps 'miopen_find_compile, miopen_find_eval' --session_id 1".format(
       this_path)
