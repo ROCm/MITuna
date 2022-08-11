@@ -44,7 +44,7 @@ def add_job():
   find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='test_builder' GROUP BY tag"
 
   del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, session, fin_steps) \
+  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, session, fin_step) \
         SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1, 'miopen_find_compile,miopen_find_eval' \
         FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'test_builder'"
 
