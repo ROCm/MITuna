@@ -517,12 +517,10 @@ def runCodeCov() {
           env.gateway_ip = "${gateway_ip}"
           env.gateway_port = "${gateway_port}"
           env.gateway_user = "${gateway_user}"
-          env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
           env.PYTHONPATH=env.WORKSPACE
           env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-          //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
-          sshagent (credentials: ['bastion-ssh-key']) { 
-          //sh "cd tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string='  ' *.py"
+          buildSchema()
+
           sh "python3 -m coverage run -m pytest"
           sh "python3 -m coverage json"
           sh "mv coverage.json ../MITunaX/tests/covscripts/buffer"
