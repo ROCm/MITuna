@@ -534,7 +534,7 @@ def runCodeCov() {
     }
     }
     }
-}
+
 
 def getJobReason()
 {
