@@ -509,7 +509,21 @@ def runCodeCov() {
     node {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
-          tuna_docker.inside("") {
+          tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+          env.TUNA_DB_HOSTNAME = "${db_host}"
+          env.TUNA_DB_NAME="${db_name}"
+          env.TUNA_DB_USER_NAME="${db_user}"
+          env.TUNA_DB_PASSWORD="${db_password}"
+          env.gateway_ip = "${gateway_ip}"
+          env.gateway_port = "${gateway_port}"
+          env.gateway_user = "${gateway_user}"
+          env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
+          env.PYTHONPATH=env.WORKSPACE
+          env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+          addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
+          // download the latest perf db
+          //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
+          sshagent (credentials: ['bastion-ssh-key']) { 
           //sh "cd tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string='  ' *.py"
           sh "python3 -m coverage run -m pytest"
           sh "python3 -m coverage json"
@@ -520,8 +534,9 @@ def runCodeCov() {
           CODE_COV = 10
           if (CODE_COV > myvar) {
           error "Not added to env: ${item}"
-          }
-         }
+          }      
+    }
+    }
     }
 }
 
