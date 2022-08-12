@@ -34,10 +34,10 @@ def chk_abort_file(mid, logger, arch=None):
   abort_reason = []
 
   if not arch is None:
-    if os.path.exists('/tmp/miopen_abort_{}'.format(arch)):
+    if os.path.exists(f'/tmp/miopen_abort_{arch}'):
       abort_reason.append(arch)
 
-  if os.path.exists('/tmp/miopen_abort_mid_{}'.format(mid)):
+  if os.path.exists(f'/tmp/miopen_abort_mid_{mid}'):
     abort_reason.append('mid_' + str(mid))
   if abort_reason:
     for reason in abort_reason:

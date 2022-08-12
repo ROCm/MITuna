@@ -89,10 +89,10 @@ class FinClass(WorkerInterface):
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
-    if os.path.exists('/tmp/miopen_abort_{}'.format(self.machine.arch)):
+    if os.path.exists(f'/tmp/miopen_abort_{self.machine.arch}'):
       abort_reason.append(self.machine.arch)
 
-    if os.path.exists('/tmp/miopen_abort_mid_{}'.format(self.machine.id)):
+    if os.path.exists(f'/tmp/miopen_abort_mid_{self.machine.id}'):
       abort_reason.append('mid_' + str(self.machine.id))
     if abort_reason:
       for reason in abort_reason:
@@ -125,7 +125,7 @@ class FinClass(WorkerInterface):
                             fin_ifile)
 
       fin_ofile = FIN_CACHE + "/" + self.fin_outfile
-    bash_cmd = "/opt/rocm/bin/fin -i {0} -o {1}".format(fin_ifile, fin_ofile)
+    bash_cmd = f"/opt/rocm/bin/fin -i {fin_ifile} -o {fin_ofile}"
     self.logger.info('Executing fin cmd: %s', bash_cmd)
     return bash_cmd
 
@@ -152,8 +152,7 @@ class FinClass(WorkerInterface):
       if ret_code > 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
         self.logger.warning(out.read())
-        raise Exception('Failed to execute fin cmd: {} err: {}'.format(
-            fin_cmd, err.read()))
+        raise Exception(f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 
       result = self.parse_out()
 
@@ -166,7 +165,7 @@ class FinClass(WorkerInterface):
     if not self.machine.local_machine:
       fin_outfile = FIN_CACHE + "/" + self.fin_outfile
       # TODO: This should be copied back out using cat is bad # pylint: disable=fixme
-      _, ssh_stdout, _ = self.exec_command("cat {}".format(fin_outfile))
+      _, ssh_stdout, _ = self.exec_command(f"cat {fin_outfile}")
       result_json = []
 
       for line in ssh_stdout:
@@ -177,7 +176,7 @@ class FinClass(WorkerInterface):
         self.logger.warning('Err loading fin json: %s', err)
         return None
     else:
-      with open(self.local_output) as out_file:
+      with open(self.local_output) as out_file: # pylint: disable=unspecified-encoding
         try:
           result = json.load(out_file)
         except Exception as err:
@@ -293,18 +292,17 @@ class FinClass(WorkerInterface):
     if to_file is True:
       if not os.path.exists(outfile):
         os.mknod(outfile)
-      fout = open(outfile, 'w')
-      fout.write("[\n")
-      i = 0
-      while i < len(self.fin_list):
-        json_out = json.dumps(self.fin_list[i])
-        fout.write(json_out)
-        if i != len(self.fin_list) - 1:
-          fout.write(',\n')
-        i += 1
+      with open(outfile, 'w') as fout: # pylint: disable=unspecified-encoding
+        fout.write("[\n")
+        i = 0
+        while i < len(self.fin_list):
+          json_out = json.dumps(self.fin_list[i])
+          fout.write(json_out)
+          if i != len(self.fin_list) - 1:
+            fout.write(',\n')
+          i += 1
 
-      fout.write("\n]")
-      fout.close()
+        fout.write("\n]")
       self.logger.info('Fin input file written to %s', outfile)
     else:
       jdump = json.dumps(self.fin_list)
@@ -332,9 +330,11 @@ class FinClass(WorkerInterface):
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
         #remove old applicability
+        # pylint: disable=comparison-with-callable
         query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
           .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
+        # pylint: enable=comparison-with-callable
         query.delete()
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s",
@@ -364,8 +364,7 @@ class FinClass(WorkerInterface):
 
     with DbSession() as session:
       callback = self.insert_applicability
-      actuator = lambda x: x(session, json_in)
-      session_retry(session, callback, actuator, self.logger)
+      session_retry(session, callback, lambda x: x(session, json_in), self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
