@@ -307,7 +307,7 @@ class WorkerInterface(Process):
     fdb_entry.opencl = False
     fdb_entry.logger = self.logger
     fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
-                                    self.dbt.solver_app, self.dbt.session.id)
+                                    self.dbt.session.id)
     obj = fdb_query.first()
     return obj, fdb_entry
 
@@ -368,10 +368,10 @@ class WorkerInterface(Process):
         status.append(slv_stat)
 
         if fdb_obj[check_str]:
+          #returned entry is added to the table
           fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
           if fdb_obj['reason'] == 'Success':
             self.compose_kernel_entry(fdb_obj, fdb_entry)
-            session.add(fdb_entry)
             self.logger.info('Updating find Db(Build) for job_id=%s',
                              self.job.id)
           else:
