@@ -45,7 +45,7 @@ class FinEvaluator(WorkerInterface):
 
   def __init__(self, **kwargs):
     super().__init__(**kwargs)
-    self.envmt.append("HIP_VISIBLE_DEVICES={}".format(self.gpu_id))
+    self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
 
   def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""
@@ -75,10 +75,13 @@ class FinEvaluator(WorkerInterface):
     with DbSession() as session:
       perf_compile_res = []
 
+      # pylint: disable=comparison-with-callable
       query = session.query(self.dbt.solver_app).filter(
           self.dbt.solver_app.session == self.dbt.session.id,
           self.dbt.solver_app.config == self.job.config,
           self.dbt.solver_app.applicable == 1)
+      # pylint: enable=comparison-with-callable
+
       for slv_entry in query.all():
         slv_name = self.id_solver_map[slv_entry.solver]
         if not self.job.solver or slv_name == self.job.solver:
@@ -174,7 +177,7 @@ class FinEvaluator(WorkerInterface):
     except AssertionError as err:
       self.logger.error('Unable to get compiled objects for job %s : %s',
                         self.job.id, err)
-      raise AssertionError
+      raise AssertionError from err
 
     return self.machine.write_file(json.dumps(fjob, indent=2).encode(),
                                    is_temp=True)
@@ -216,7 +219,7 @@ class FinEvaluator(WorkerInterface):
           status = [{
               'solver': 'all',
               'success': False,
-              'result': 'FinEval: Unable to update Database: {}'.format(err)
+              'result': f'FinEval: Unable to update Database: {err}'
           }]
 
     return status

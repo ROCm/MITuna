@@ -78,16 +78,16 @@ class DriverBase():
         for row in res:
           LOGGER.error(row)
         raise ValueError('Tensor table duplication. Only one row should match')
-      elif not res:
+      if not res:
         raise ValueError('Missing from Tensor table. One row should match')
       ret_id = res[0][0]
     except IntegrityError as err:
       session.rollback()
       LOGGER.error("Error occurred: %s \n", err)
       raise ValueError(
-          'Something went wrong with getting input tensor id from tensor table')
-    except IndexError:
-      raise ValueError(f'Tensor not found in table: {tensor_dict}')
+          'Something went wrong with getting input tensor id from tensor table') from err
+    except IndexError as err:
+      raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
 
     return ret_id
 

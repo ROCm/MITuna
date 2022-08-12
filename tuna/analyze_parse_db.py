@@ -52,7 +52,7 @@ def insert_config_sqlite(cnx, fds):
 def get_config_sqlite(cnx, fds):
   """get the config id from the sqlite table matching the fds conditions"""
   vals = [fds[x] for x in SQLITE_CONFIG_COLS]
-  conditions = ['{} = ?'.format(col) for col in SQLITE_CONFIG_COLS]
+  conditions = [f'{col} = ?' for col in SQLITE_CONFIG_COLS]
   query = 'SELECT id from config where ' + ' AND '.join(conditions) + ';'
   cur = cnx.cursor()
   cur.execute(query, tuple(vals))
@@ -76,12 +76,12 @@ def get_sqlite_data(cnx, table_name, fds):
     for key, val in fds.items():
       if isinstance(val, list):
         val = ','.join([str(item) for item in val])
-        conditions.append('{} in ({})'.format(key, val))
+        conditions.append(f'{key} in ({val})')
       elif isinstance(val, int):
-        conditions.append('{} = {}'.format(key, val))
+        conditions.append(f'{key} = {val}')
       else:
-        conditions.append('{} = \'{}\''.format(key, val))
-  query = 'SELECT * from {}'.format(table_name)
+        conditions.append(f'{key} = \'{val}\'')
+  query = f'SELECT * from {table_name}'
   if conditions:
     query = query + ' where ' + ' AND '.join(conditions)
   query = query + ';'
@@ -97,14 +97,14 @@ def get_sqlite_data(cnx, table_name, fds):
 
 def get_sqlite_table(cnx, table_name, include_id=False):
   """return the sqlite table """
-  query = 'SELECT * from {} LIMIT 1'.format(table_name)
+  query = f'SELECT * from {table_name} LIMIT 1'
   cur = cnx.cursor()
   cur.execute(query)
   if include_id:
     columns = [x[0] for x in cur.description]
   else:
     columns = [x[0] for x in cur.description if x[0] != 'id']
-  query = 'SELECT {} FROM {};'.format(','.join(columns), table_name)
+  query = f"SELECT {','.join(columns)} FROM {table_name};"
   cur.execute(query)
   res = cur.fetchall()
   cur.close()
@@ -113,7 +113,7 @@ def get_sqlite_table(cnx, table_name, include_id=False):
 
 def get_sqlite_row(cnx, table, tid):
   """return the config row for the given id"""
-  query = 'SELECT * from {} where id={}'.format(table, tid)
+  query = f'SELECT * from {table} where id={tid}'
   cur = cnx.cursor()
   cur.execute(query)
   res = cur.fetchall()
@@ -126,7 +126,7 @@ def get_config_mysql(fds, cnx):
   """get the config id from the mysql table matching the fds conditions"""
   cols, vals = zip(*fds.items())
   # before inserting check if the entry already exists
-  conditions = ['{} = %s'.format(col) for col in cols]
+  conditions = [f'{col} = %s' for col in cols]
   query = 'SELECT id from config where config.valid = TRUE AND ' + ' AND '.join(
       conditions) + ';'
   cur = cnx.cursor()
@@ -136,12 +136,12 @@ def get_config_mysql(fds, cnx):
   if len(res) > 1:
     config_id = res[0][0]
     fds_str = ', '.join(
-        ['{}:{}'.format(key, value) for key, value in fds.items()])
+        [f'{key}:{value}' for key, value in fds.items()])
     LOGGER.warning('Duplicate config: %s', fds_str)
     LOGGER.warning('Picking first config id=%u', (config_id))
   elif not res:
     fds_str = ', '.join(
-        ['{}:{}'.format(key, value) for key, value in fds.items()])
+        [f'{key}:{value}' for key, value in fds.items()])
     LOGGER.warning('Adding new config for: %s', fds_str)
     #NOTE: need to add driver class to analyze_parse_db
     #insert_config_v1(cnx, {}, fds) - needs to be reworked to support driver class
@@ -188,7 +188,7 @@ def insert_solver_sqlite(cnx, slv):
     cur.execute(query, (config, solver_id, params))
     cur.close()
   else:
-    query = "update perf_db set params = {mk} ".format(mk=marker) + where_clause
+    query = f"update perf_db set params = {marker} " + where_clause
     cur = cnx.cursor()
     cur.execute(query, (params, config, solver_id))
     cur.close()
@@ -202,9 +202,9 @@ def parse_pdb_filename(fname):
   for item in ARCH_NUM_CU_LIST:
     arch, num_cu = item.split('-')
     num_cu = int(num_cu)
-    db_arch = '{}_{}'.format(arch, num_cu)
+    db_arch = '{arch}_{num_cu}'
     if num_cu > 64:
-      db_arch = '{}{:x}'.format(arch, num_cu)
+      db_arch = f'{arch}{num_cu:x}'
     if db_arch in fname:
       found = True
       break
