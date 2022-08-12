@@ -520,8 +520,6 @@ def runCodeCov() {
           env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
           env.PYTHONPATH=env.WORKSPACE
           env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-          addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
-          // download the latest perf db
           //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
           sshagent (credentials: ['bastion-ssh-key']) { 
           //sh "cd tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string='  ' *.py"
