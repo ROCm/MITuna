@@ -158,7 +158,7 @@ class DriverConvolution(DriverBase):
 
   def __str__(self):
     return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
-        '--{} {}'.format(key, val)
+        f'--{key} {val}'
         for key, val in self.to_dict().items()
         if key in CONV_CONFIG_COLS or key in TENSOR_COLS or
         key in self.get_common_cols())

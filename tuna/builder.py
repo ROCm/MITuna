@@ -89,7 +89,7 @@ class Builder(WorkerInterface):
 
   def kcache_insert(self, cache_dir, cache_name):
     """upload kernel object to mysql db"""
-    cache_path = "{}/{}".format(cache_dir, cache_name)
+    cache_path = f"{cache_dir}/{cache_name}"
     kernel_blob = self.machine.read_file(cache_path, byteread=True)
     self.logger.info("generated cache file %s : %s", cache_path,
                      sys.getsizeof(kernel_blob))
@@ -136,11 +136,10 @@ class Builder(WorkerInterface):
 
     #builder needs to compile to architecture per job
     env_sav = self.envmt[:]
-    cache_dir = "{}/{}".format(KCACHE_DIR, self.job.id)
-    self.envmt.append("MIOPEN_CUSTOM_CACHE_DIR={}".format(cache_dir))
-    self.envmt.append("MIOPEN_DEVICE_CU={}".format(self.dbt.session.num_cu))
-    self.envmt.append("MIOPEN_DEVICE_ARCH={}".format(
-        arch2targetid(self.dbt.session.arch)))
+    cache_dir = f"{KCACHE_DIR}/{self.job.id}"
+    self.envmt.append(f"MIOPEN_CUSTOM_CACHE_DIR={cache_dir}")
+    self.envmt.append(f"MIOPEN_DEVICE_CU={self.dbt.session.num_cu}")
+    self.envmt.append(f"MIOPEN_DEVICE_ARCH={arch2targetid(self.dbt.session.arch)}")
 
     self.set_job_state('compiling')
     _, stdout, _ = self.run_driver_cmd()
@@ -154,8 +153,7 @@ class Builder(WorkerInterface):
     abort_cfg = False
 
     #assert that ukdb file was generated in this step (compilation was a success)
-    chk_ret, chk_out, err = self.exec_command(
-        "ls {} | grep ukdb".format(cache_dir))
+    chk_ret, chk_out, err = self.exec_command(f"ls {cache_dir} | grep ukdb")
     if chk_ret != 0:
       self.logger.warning("Kernel cache failed to generate in directory %s/",
                           cache_dir)

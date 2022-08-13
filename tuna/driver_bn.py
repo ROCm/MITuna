@@ -132,7 +132,7 @@ class DriverBatchNorm(DriverBase):
 
   def __str__(self):
     return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
-        '--{} {}'.format(key, val)
+        f'--{key} {val}'
         for key, val in self.__dict__.items()
         if key in BN_CONFIG_COLS or key in IN_TENSOR_COLS or
         key in self.get_common_cols())

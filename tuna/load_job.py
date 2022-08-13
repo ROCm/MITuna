@@ -135,7 +135,7 @@ def parse_args():
     for solver in solver_arr:
       sid = solver_id_map.get(solver, None)
       if not sid:
-        parser.error('Invalid solver: {}'.format(solver))
+        parser.error(f'Invalid solver: {solver}')
       solver_ids.append((solver, sid))
     args.solvers = solver_ids
   else:
@@ -153,7 +153,7 @@ def test_tag_name(tag, dbt):
     tag_names.append(row.tag)
 
   if tag not in tag_names:
-    raise ValueError("tag '{}' not in config_tags".format(tag))
+    raise ValueError(f"tag '{tag}' not in config_tags")
 
   return True
 
@@ -298,7 +298,7 @@ def main():
 
   add_jobs(args, counts, dbt)
 
-  print('New jobs added: {}'.format(counts['cnt_jobs']))
+  print(f"New jobs added: {counts['cnt_jobs']}")
 
 
 if __name__ == '__main__':

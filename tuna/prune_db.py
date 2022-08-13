@@ -60,27 +60,23 @@ def parse_args():
 def prune_copy_pdb(perf_db, err_json):
   """ export perf db from mysql to sqlite """
   filename = os.path.basename(perf_db)
-  outpath = "{}/{}".format(os.getcwd(), filename)
-  f_out = open(perf_db, 'rb')
-  f_in = open(outpath, 'wb')
-  f_in.write(f_out.read())
-  f_out.close()
-  f_in.close()
+  outpath = f"{os.getcwd()}/{filename}"
+  with open(perf_db, 'rb') as fin, open(outpath, 'wb') as fout:
+    fout.write(fin.read())
 
   json_imp = None
-  with open(err_json) as out_file:
+  with open(err_json) as out_file: # pylint: disable=unspecified-encoding
     json_imp = json.load(out_file)
 
   cnx = sqlite3.connect(outpath)
   cur = cnx.cursor()
 
   num_del = 0
-  db_err_nm = "{}_errors".format(filename)
+  db_err_nm = f"{filename}_errors"
   for elem in json_imp:
     if db_err_nm in elem.keys():
       for ser_err in elem[db_err_nm]:
-        deletion = "DELETE from perf_db where id={}".format(
-            ser_err['perfdb_id'])
+        deletion = f"DELETE from perf_db where id={ser_err['perfdb_id']}"
         LOGGER.warning(deletion)
         cur.execute(deletion)
         num_del += 1
