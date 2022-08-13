@@ -258,7 +258,7 @@ def check_fin_args(args, parser):
   args.fin_steps = f_steps
   for step in args.fin_steps:
     if step not in valid_fin_steps:
-      parser.error("Supported fin steps are: {}".format(valid_fin_steps))
+      parser.error(f"Supported fin steps are: {valid_fin_steps}")
   assert len(args.fin_steps) == 1
 
 
@@ -273,8 +273,8 @@ def check_blacklist(args, parser):
 def load_machines(args):
   """Function to get available machines from the DB"""
   cmd = 'hostname'
-  subp = Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True)
-  hostname = subp.stdout.readline().strip()
+  with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
+    hostname = subp.stdout.readline().strip()
   LOGGER.info('hostname = %s', hostname)
   with DbSession() as session:
     query = session.query(Machine)
@@ -313,7 +313,7 @@ def get_envmt(args):
   envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
 
   if args.find_mode:
-    envmt.append("MIOPEN_FIND_MODE={}".format(args.find_mode))
+    envmt.append(f"MIOPEN_FIND_MODE={args.find_mode}")
 
   if args.compile:
     #env set in builder
@@ -331,7 +331,7 @@ def get_envmt(args):
     envmt.extend(["MIOPEN_FIND_ENFORCE=4", "MIOPEN_DISABLE_CACHE=1"])
 
   if args.blacklist:
-    bk_str = ", ".join(["{}=0".format(arg) for arg in args.blacklist])
+    bk_str = ", ".join([f"{arg}=0" for arg in args.blacklist])
     for bk_var in bk_str.split(','):
       envmt.append(bk_var)
 
@@ -347,8 +347,7 @@ def check_docker(worker, dockername="miopentuna"):
   if out2.channel.exit_status > 0:
     LOGGER.warning("docker not installed or failed to run with sudo .... ")
   else:
-    _, out, _ = worker.exec_command(
-        "sudo docker images | grep {}".format(dockername))
+    _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
     line = None
     for line in out.readlines():
       if line.find(dockername) != -1:
@@ -378,8 +377,7 @@ def check_status(worker, b_first, gpu_idx, machine, dockername="miopentuna"):
   if out.channel.exit_status > 0:
     check_docker(worker, dockername)
   else:
-    _, out, _ = worker.exec_command(
-        "docker images | grep {}".format(dockername))
+    _, out, _ = worker.exec_command(f"docker images | grep {dockername}")
     line = None
     for line in out.readlines():
       if line.find(dockername) != -1:

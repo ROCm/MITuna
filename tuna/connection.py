@@ -73,7 +73,7 @@ class Connection():
     if bin_str in self.inst_bins:
       return self.inst_bins[bin_str]
 
-    cmd = "which {}".format(bin_str)
+    cmd = f"which {bin_str}"
     _, out, _ = self.exec_command(cmd)
     if not out:
       return False
@@ -136,19 +136,14 @@ class Connection():
     """Function to exec commands"""
     # pylint: disable=broad-except
     if not self.test_cmd_str(cmd):
-      raise Exception('Machine {} failed, missing binary: {}'.format(
-          self.id, cmd))
+      raise Exception('Machine {self.id} failed, missing binary: {cmd}')
 
     if self.local_machine:
       #universal_newlines corrects output format to utf-8
-      self.subp = Popen(cmd,
-                        stdout=PIPE,
-                        stderr=STDOUT,
-                        shell=True,
-                        close_fds=True,
-                        universal_newlines=True)
-      stdout, stderr = self.subp.stdout, self.subp.stderr
-      return 0, stdout, stderr
+      with Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True,
+                 close_fds=True, universal_newlines=True) as self.subp:
+        stdout, stderr = self.subp.stdout, self.subp.stderr
+        return 0, stdout, stderr
 
     for cmd_idx in range(NUM_CMD_RETRIES):
       try:
@@ -184,6 +179,7 @@ class Connection():
       return 1, o_var, e_var
 
     if not proc_line:
+      # pylint: disable-next=unnecessary-lambda-assignment ; more readable
       proc_line = lambda x: self.logger.info(line.strip())
     ret_out = StringIO()
     ret_err = e_var

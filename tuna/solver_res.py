@@ -30,7 +30,8 @@ from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('solver_res')
 RES_FILENAME = 'solverres.csv'
-RES_FILE = open(RES_FILENAME, 'w')
+# pylint: disable=consider-using-with ; @alex tough making sure a global resource is closed?
+RES_FILE = open(RES_FILENAME, 'w') # pylint: disable=unspecified-encoding)
 
 
 def parse_row(row, count, cfg_cnt, prn_header):

@@ -58,33 +58,32 @@ def main():
   table_cols_conv_invmap = {v: k for k, v in TABLE_COLS_CONV_MAP.items()}
   table_cols_fusion_invmap = {v: k for k, v in TABLE_COLS_FUSION_MAP.items()}
 
-  outfile = open(file_name, "w")
-  sub_cmd_idx = None
-  with DbCursor() as cur:
-    cur.execute(
-        "select config.* from job inner join config on config.id = job.config where \
-            job.arch = %s and reason = 'corrupt';", (arch,))
-    sub_cmd_idx = cur.column_names.index('cmd')
-    count = 0
+  with open(file_name, "w") as outfile: # pylint: disable=unspecified-encoding
+    sub_cmd_idx = None
+    with DbCursor() as cur:
+      cur.execute(
+          "select config.* from job inner join config on config.id = job.config where \
+              job.arch = %s and reason = 'corrupt';", (arch,))
+      sub_cmd_idx = cur.column_names.index('cmd')
+      count = 0
 
-    for row in cur:
-      sub_cmd = row[sub_cmd_idx]
-      bash_cmd = 'echo {}; ./bin/MIOpenDriver {} -V 0 '.format(row[0], sub_cmd)
-      for idx, fds in enumerate(row):
-        if cur.column_names[idx] in ['id', 'cmd']:
-          continue
-        if fds is not None:
-          if sub_cmd in ['conv', 'convfp16']:
-            arg_name = table_cols_conv_invmap[cur.column_names[idx]]
-            bash_cmd += ' -' + arg_name + ' ' + fds
-          elif sub_cmd in ['CBAInfer', 'CBAInferfp16']:
-            arg_name = table_cols_fusion_invmap[cur.column_names[idx]]
-            bash_cmd += ' -' + arg_name + ' ' + fds
-      outfile.write(bash_cmd + '\n')
-      count += 1
+      for row in cur:
+        sub_cmd = row[sub_cmd_idx]
+        bash_cmd = f'echo {row[0]}; ./bin/MIOpenDriver {sub_cmd} -V 0 '
+        for idx, fds in enumerate(row):
+          if cur.column_names[idx] in ['id', 'cmd']:
+            continue
+          if fds is not None:
+            if sub_cmd in ['conv', 'convfp16']:
+              arg_name = table_cols_conv_invmap[cur.column_names[idx]]
+              bash_cmd += ' -' + arg_name + ' ' + fds
+            elif sub_cmd in ['CBAInfer', 'CBAInferfp16']:
+              arg_name = table_cols_fusion_invmap[cur.column_names[idx]]
+              bash_cmd += ' -' + arg_name + ' ' + fds
+        outfile.write(bash_cmd + '\n')
+        count += 1
 
-  outfile.close()
-  LOGGER.warning("Added {} entries".format(count))
+  LOGGER.warning(f"Added {count} entries")
 
 
 if __name__ == '__main__':

@@ -68,14 +68,14 @@ def main():
       if row[1:] == row2[1:]:
         # duplicate row
         # mark as invalid
-        print("UPDATE job SET valid = False WHERE id = {}".format(row2[0]))
+        print(f"UPDATE job SET valid = False WHERE id = {row2[0]}")
         if not args.dry_run:
           with DbCursor() as cur:
             cur.execute("UPDATE job SET valid = False WHERE id = %s",
                         (row2[0],))
         cnt_dup_jobs += 1
 
-  print('Total duplicate jobs: {}'.format(cnt_dup_jobs))
+  print(f'Total duplicate jobs: {cnt_dup_jobs}')
 
 
 if __name__ == '__main__':

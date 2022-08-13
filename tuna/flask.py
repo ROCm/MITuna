@@ -39,9 +39,8 @@ LOGGER = setup_logger('flask')
 SOLVER_ID_MAP_C, SOLVER_ID_MAP_H = get_solver_ids()
 ID_SOLVER_MAP_C, ID_SOLVER_MAP_H = get_id_solvers()
 ENV_VARS = get_env_vars()
-ENGINE = create_engine("mysql+pymysql://{}:{}@{}:3306/{}".format(
-    ENV_VARS['user_name'], ENV_VARS['user_password'], ENV_VARS['db_hostname'],
-    ENV_VARS['db_name']))
+ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
+                       f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
 
 CFTable = ConvolutionConfig
 CFTTable = ConvolutionConfigTags
@@ -51,7 +50,7 @@ def get_tag_data(grafana_req, data):
   """Addresses Tag to driver cmd panel query from Grafana"""
   tag_like = None
   if grafana_req[2] != '':
-    tag_like = "%{}%".format(grafana_req[2])
+    tag_like = f"%{grafana_req[2]}%"
   if '(' in grafana_req[1]:
     tags = grafana_req[1][1:-1].split('|')
   else:
@@ -71,11 +70,13 @@ def get_tag_data(grafana_req, data):
     try:
       if query_tags != ['']:
         LOGGER.info(query_tags)
+        # pylint: disable=no-member ; @alex conv_config table has no column 'fusion_mode'
         configs = session.query(CFTable, CFTTable.tag)\
                               .filter(CFTable.id == CFTTable.config)\
                               .filter(CFTTable.tag.in_(query_tags))\
                               .filter(CFTable.fusion_mode == -1)\
                               .filter(CFTable.valid == 1).all()
+        # pylint: enable=no-member ; @alex conv_config table has no column 'fusion_mode'
         for conv_config, tag in configs:
           values.append(
               [tag,
@@ -83,11 +84,13 @@ def get_tag_data(grafana_req, data):
 
       if tag_like is not None:
         LOGGER.info(tag_like)
+        # pylint: disable=no-member ; @alex conv_config table has no column 'fusion_mode'
         extra_configs = session.query(CFTable, CFTTable.tag)\
                             .filter(CFTable.id == CFTTable.config)\
                             .filter(CFTTable.tag.like(tag_like))\
                             .filter(CFTable.fusion_mode == -1)\
                             .filter(CFTable.valid == 1).all()
+        # pylint: enable=no-member ; @alex conv_config table has no column 'fusion_mode'
         for conv_config, tag in extra_configs:
           values.append(
               [tag,

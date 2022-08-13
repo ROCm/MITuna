@@ -61,12 +61,11 @@ class Evaluator(WorkerInterface):
     self.last_fetch_state = 'new'
     super().__init__(**kwargs)
 
-    self.envmt.append("HIP_VISIBLE_DEVICES={}".format(self.gpu_id))
+    self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
 
     dir_name = os.path.join(
         TUNA_LOG_DIR, 'evaluator', self.machine.arch,
-        "{}cu_{}_{}p".format(self.machine.num_cu, self.hostname,
-                             self.machine.port))
+        f"{self.machine.num_cu}cu_{self.hostname}_{self.machine.port}p")
     if not os.path.exists(dir_name):
       os.makedirs(dir_name)
     logger_name = os.path.join(dir_name, str(self.gpu_id))
@@ -139,10 +138,10 @@ class Evaluator(WorkerInterface):
 
       if res:
         cache_obj = res[0]
-        self.exec_command('mkdir -p {}'.format(cache_dir))
-        file_path = "{}/{}".format(cache_dir, cache_obj.cache_name)
+        self.exec_command('mkdir -p {cache_dir}')
+        file_path = f"{cache_dir}/{cache_obj.cache_name}"
         self.machine.write_file(cache_obj.kernel_blob, file_path)
-        ret_code, _, err = self.exec_command("stat {}".format(file_path))
+        ret_code, _, err = self.exec_command(f"stat {file_path}")
         if ret_code != 0:
           self.logger.warning(err.read())
           self.logger.warning("Failed to download Kernel cache %s", file_path)
@@ -195,7 +194,7 @@ class Evaluator(WorkerInterface):
 
   def get_miopen_udb(self):
     """locate or download miopen.udb created by perf run"""
-    miopen_udb = 'miopen_{}.udb'.format(MIOPEN_DB_VERSION)
+    miopen_udb = f'miopen_{MIOPEN_DB_VERSION}.udb'
 
     if not self.machine.local_machine:
       files = []
@@ -208,14 +207,14 @@ class Evaluator(WorkerInterface):
         else:
           raise
     else:
-      files = [f for f in os.listdir(self.miopen_user_db_path)]
+      files = os.listdir(self.miopen_user_db_path)
 
     for fname in files:
       arch = self.dbt.session.arch
       len_arch = len(arch)
-      num_cu = "{}".format(self.dbt.session.num_cu)
+      num_cu = f"{self.dbt.session.num_cu}"
       if self.dbt.session.num_cu > 64:
-        num_cu = "{:x}".format(self.dbt.session.num_cu)
+        num_cu = f"{self.dbt.session.num_cu:x}"
       if arch in fname:
         if num_cu in fname[len_arch:]:
           if fname.endswith('.udb'):
@@ -254,9 +253,9 @@ class Evaluator(WorkerInterface):
       self.set_job_state('not_tunable')
       return True
 
-    cache_dir = "{}/{}".format(KCACHE_DIR, self.job.id)
-    self.exec_command('sudo chown -R {0}:{0} {1}'.format(
-        self.machine.user, KCACHE_DIR))
+    cache_dir = f"{KCACHE_DIR}/{self.job.id}"
+    # pylint: disable-next=consider-using-f-string ; concise + more readable
+    self.exec_command('sudo chown -R {0}:{0} {1}'.format(self.machine.user, KCACHE_DIR))
     if not self.bin_cache:
       good_tx = self.kcache_download(cache_dir)
       if not good_tx:
@@ -267,7 +266,7 @@ class Evaluator(WorkerInterface):
 
     env_sav = self.envmt[:]
     if not self.bin_cache:
-      self.envmt.append("MIOPEN_CUSTOM_CACHE_DIR={}".format(cache_dir))
+      self.envmt.append(f"MIOPEN_CUSTOM_CACHE_DIR={cache_dir}")
 
     self.set_job_state('evaluating')
     _, stdout, ret_err = self.run_driver_cmd()
