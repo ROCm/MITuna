@@ -108,7 +108,6 @@ class WorkerInterface(Process):
     self.job_queue = None
     self.queue_lock = Lock()
     self.is_fdb = False
-    self.find_db = None
     self.fetch_state = ['new']
     self.compile_only = False
     self.docker_name = TUNA_DOCKER_NAME
