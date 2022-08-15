@@ -136,7 +136,6 @@ class WorkerInterface(Process):
     self.envmt.append("MIOPEN_USER_DB_PATH={}".format(self.miopen_user_db_path))
 
     self.hostname = self.machine.hostname
-    self.poll_retries = 0
     self.job = None
     self.config = None
     self.solver = None
@@ -845,13 +844,7 @@ class WorkerInterface(Process):
         # the step member is defined in the derived class
         ret = self.step()  # pylint: disable=no-member
         self.logger.info("proc %s step %s", self.gpu_id, ret)
-        if not ret and (self.poll_retries > 0 and self.poll_retries < 120):
-          pass
-        elif not ret and (self.poll_retries == 0 or self.poll_retries >= 120):
-          if self.poll_retries >= 120:
-            self.logger.warning(
-                'Max poll retries number(120) reached, quiting...')
-            return False
+        if not ret:
           self.logger.warning('No more steps, quiting...')
           return True
     except KeyboardInterrupt as err:
