@@ -41,14 +41,7 @@ pipeline {
            }
            }
         }
-        stage("coverage") {
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-           script {
-           utils.runCodeCov()
-           }
-           }
-        }
+
         stage("fin get solver"){
 	      agent{  label "gfx908" }
         steps {
@@ -104,6 +97,14 @@ pipeline {
             utils.perfEval_gfx908()
             }
             }
+        }
+        stage("coverage") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+           script {
+           utils.runCodeCov()
+           }
+           }
         }
         stage("pytest1"){
         agent{  label "gfx908" }
