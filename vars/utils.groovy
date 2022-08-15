@@ -66,16 +66,16 @@ def finSolvers(){
             GPUs
     */
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
-        //env.TUNA_DB_HOSTNAME = "${db_host}"
-        //env.TUNA_DB_NAME="${db_name}"
-        //env.TUNA_DB_USER_NAME="${db_user}"
-        //env.TUNA_DB_PASSWORD="${db_password}"
-        //env.gateway_ip = "${gateway_ip}"
-        //env.gateway_port = "${gateway_port}"
-        //env.gateway_user = "${gateway_user}"
-        //env.PYTHONPATH=env.WORKSPACE
-        //env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        //buildSchema()
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        buildSchema()
 
         sh "ls /opt/rocm/bin/fin"
         sh "ls /opt/rocm/bin/"
