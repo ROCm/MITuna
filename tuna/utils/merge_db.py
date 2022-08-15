@@ -186,7 +186,7 @@ def load_master_list(master_file):
   if master_file is not None:
     LOGGER.info('Loading master file: %s', master_file)
     cnt = 0
-    with open(master_file) as master_fp: # pylint: disable=unspecified-encoding
+    with open(master_file) as master_fp:  # pylint: disable=unspecified-encoding
       for line in master_fp:
         key, vals = parse_jobline(line)
         master_list[key] = vals
@@ -288,7 +288,7 @@ def multi_job_merge(master_list, machine_id, key, vals, res):
 def update_master_list(master_list, local_paths, mids, arch, num_cu, keep_keys):
   """merge data in master_list with values from the file at local_path"""
   for local_path, machine_id in zip(local_paths, mids):
-    with open(local_path) as local_file: # pylint: disable=unspecified-encoding
+    with open(local_path) as local_file:  # pylint: disable=unspecified-encoding
       LOGGER.info('Processing file: %s', local_path)
       # read the file get rid of the duplicates by keeping the first entry
       for line in local_file:
@@ -309,8 +309,9 @@ def write_merge_results(master_list, final_file, copy_files):
   """write merge results to file"""
   # serialize the file out
   LOGGER.info('Begin writing to file: %s', final_file)
-  with open(final_file, "w") as out_file: # pylint: disable=unspecified-encoding
-    for perfdb_key, solvers in sorted(master_list.items(), key=lambda kv: kv[0]):
+  with open(final_file, "w") as out_file:  # pylint: disable=unspecified-encoding
+    for perfdb_key, solvers in sorted(master_list.items(),
+                                      key=lambda kv: kv[0]):
       params = []
       for solver_id, solver_params in sorted(
           solvers.items(), key=lambda kv: float(kv[1].split(',')[1])):
@@ -348,7 +349,7 @@ def merge_text_file(master_file, copy_only, keep_keys, target_file=None):
   return final_file
 
 
-def merge_sqlite_pdb(cnx_to, local_paths): # pylint: disable=too-many-locals
+def merge_sqlite_pdb(cnx_to, local_paths):  # pylint: disable=too-many-locals
   """sqlite merge for perf db"""
   for local_path in local_paths:
     LOGGER.info('Processing file: %s', local_path)
@@ -429,7 +430,7 @@ def merge_sqlite(master_file, copy_only, target_file=None):
   bin_cache = False
 
   db_name = os.path.basename(master_file)
-  arch, num_cu = parse_pdb_filename(db_name) # pylint: disable=unused-variable ; @chris relics?
+  arch, num_cu = parse_pdb_filename(db_name)  # pylint: disable=unused-variable ; @chris relics?
   arch_cu = db_name.split('.')[0]
   if 'kdb' in master_file:
     final_file = f'{os.getcwd()}/{arch_cu}.kdb'

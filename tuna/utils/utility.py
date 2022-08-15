@@ -53,9 +53,9 @@ def get_filter_time(time_arr):
   warm_times = time_arr[rmid:]
   warm_mean = sum(warm_times) / len(warm_times)
 
-  variance = sum((pow(x_var - warm_mean, 2) for x_var in warm_times
-                 )) / len(warm_times)
-  std_dev = pow(variance, 1/2)
+  variance = sum(
+      (pow(x_var - warm_mean, 2) for x_var in warm_times)) / len(warm_times)
+  std_dev = pow(variance, 1 / 2)
   filter_warm = []
   for time in warm_times:
     if abs(time - warm_mean) <= std_dev:

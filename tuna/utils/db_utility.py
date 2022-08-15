@@ -74,7 +74,7 @@ def session_retry(session, callback, actuator, logger=LOGGER):
   return None
 
 
-class DB_Type(enum.Enum): # pylint: disable=invalid-name ; @chris rename, maybe?
+class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?
   """@alex defines the types of databases produced in tuning sessions?"""
   FIND_DB = 1
   KERN_DB = 2

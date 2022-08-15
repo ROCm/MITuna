@@ -62,8 +62,8 @@ class BASE():
     if ommit_ts:
       if 'update_ts' in self.__dict__:
         copy_dict.pop('update_ts')
-      if 'insert_ts' in self.__dict__: # @alex why not use vars(self) instead of self.__dict__?
-                                       # legacy code or some software optimization mumbo jumbo?
+      if 'insert_ts' in self.__dict__:  # @alex why not use vars(self) instead of self.__dict__?
+        # legacy code or some software optimization mumbo jumbo?
         copy_dict.pop('insert_ts')
     return copy_dict
 
