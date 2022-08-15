@@ -146,20 +146,19 @@ def parse_text_fdb_name(master_file):
   backend = lst[1]
   if '_' in lst[0]:
     arch, num_cu = lst[0].split('_')
-    final_file = '{}/{}_{}.{}.fdb.txt'.format(os.getcwd(), arch, num_cu,
-                                              backend)
+    final_file = f'{os.getcwd()}/{arch}_{num_cu}.{backend}.fdb.txt'
   elif 'gfx' in lst[0]:
     arch = lst[0][0:6]
     num_cu = int(lst[0][6:], 16)
-    final_file = '{}/{}.{}.fdb.txt'.format(os.getcwd(), lst[0], backend)
+    final_file = f'{os.getcwd()}/{lst[0]}.{backend}.fdb.txt'
 
   copy_files = []
 
-  targ = '{}_{}'.format(arch, num_cu)
+  targ = f'{arch}_{num_cu}'
   if targ in DB_ALIAS.values():
     setups = [key for key, val in DB_ALIAS.items() if val == targ]
     for setup in setups:
-      file = '{}.{}.fdb.txt'.format(setup, backend)
+      file = f'{setup}.{backend}.fdb.txt'
       copy_files.append(file)
 
   return arch, num_cu, final_file, copy_files
@@ -168,14 +167,14 @@ def parse_text_fdb_name(master_file):
 def parse_text_pdb_name(master_file):
   """parse out the perf db filename, list remote files, create destination file """
   (arch, num_cu) = parse_pdb_filename(master_file)
-  final_file = '{}/{}_{}.cd.pdb.txt'.format(os.getcwd(), arch, num_cu)
+  final_file = f'{os.getcwd()}/{arch}_{num_cu}.cd.pdb.txt'
   copy_files = []
 
-  targ = '{}_{}'.format(arch, num_cu)
+  targ = f'{arch}_{num_cu}'
   if targ in DB_ALIAS.values():
     setups = [key for key, val in DB_ALIAS.items() if val == targ]
     for setup in setups:
-      file = '{}.cd.pdb.txt'.format(setup)
+      file = f'{setup}.cd.pdb.txt'
       copy_files.append(file)
 
   return arch, num_cu, final_file, copy_files
@@ -186,12 +185,12 @@ def load_master_list(master_file):
   master_list = {}
   if master_file is not None:
     LOGGER.info('Loading master file: %s', master_file)
-    master_fp = open(master_file)
     cnt = 0
-    for line in master_fp:
-      key, vals = parse_jobline(line)
-      master_list[key] = vals
-      cnt += 1
+    with open(master_file) as master_fp: # pylint: disable=unspecified-encoding
+      for line in master_fp:
+        key, vals = parse_jobline(line)
+        master_list[key] = vals
+        cnt += 1
     LOGGER.info('Master file loading complete with %u lines', cnt)
     LOGGER.info('Master file has %u unique entries', len(master_list))
 
@@ -199,10 +198,11 @@ def load_master_list(master_file):
 
 
 def best_solver(vals):
+  """returns the fastest solver"""
   min_time = float("inf")
   b_solver = None
-  for k, v in vals.items():
-    solver, time, ws, algo, _ = v.split(',')
+  for val in vals.values():
+    solver, time, _, _, _ = val.split(',')
     if float(time) < min_time:
       min_time = float(time)
       b_solver = solver
@@ -212,6 +212,7 @@ def best_solver(vals):
 
 def target_merge(master_list, key, vals, keep_keys):
   """merge for explicit target file"""
+  # pylint: disable-next=invalid-name ; @chris 'v' can use a better name, though
   fds, v, precision, direction, _ = parse_pdb_key(key, version='1.0.0')
   driver_cmd = build_driver_cmd(fds, v, precision, DIR_MAP[direction])
   if key not in master_list:
@@ -283,40 +284,40 @@ def multi_job_merge(master_list, machine_id, key, vals, res):
           master_list[key][s_id] = s_val
 
 
+# pylint: disable-next=unused-argument ; @chris arch, num_cu -- relics from old code?
 def update_master_list(master_list, local_paths, mids, arch, num_cu, keep_keys):
   """merge data in master_list with values from the file at local_path"""
   for local_path, machine_id in zip(local_paths, mids):
-    local_file = open(local_path)
-    LOGGER.info('Processing file: %s', local_path)
-
-    # read the file get rid of the duplicates by keeping the first entry
-    for line in local_file:
-      key, vals = parse_jobline(line)
-      res = []
-      if machine_id < 0:
-        #a file was selected explicitly to merge mid = -1
-        target_merge(master_list, key, vals, keep_keys)
-      elif not res:
-        no_job_merge(master_list, key, vals)
-      elif len(res) == 1:
-        single_job_merge(master_list, machine_id, key, vals, res)
-      elif len(res) > 1:
-        multi_job_merge(master_list, machine_id, key, vals, res)
+    with open(local_path) as local_file: # pylint: disable=unspecified-encoding
+      LOGGER.info('Processing file: %s', local_path)
+      # read the file get rid of the duplicates by keeping the first entry
+      for line in local_file:
+        key, vals = parse_jobline(line)
+        res = []
+        if machine_id < 0:
+          #a file was selected explicitly to merge mid = -1
+          target_merge(master_list, key, vals, keep_keys)
+        elif not res:
+          no_job_merge(master_list, key, vals)
+        elif len(res) == 1:
+          single_job_merge(master_list, machine_id, key, vals, res)
+        elif len(res) > 1:
+          multi_job_merge(master_list, machine_id, key, vals, res)
 
 
 def write_merge_results(master_list, final_file, copy_files):
   """write merge results to file"""
   # serialize the file out
   LOGGER.info('Begin writing to file: %s', final_file)
-  out_file = open(final_file, "w")
-  for perfdb_key, solvers in sorted(master_list.items(), key=lambda kv: kv[0]):
-    params = []
-    for solver_id, solver_params in sorted(
-        solvers.items(), key=lambda kv: float(kv[1].split(',')[1])):
-      params.append('{}:{}'.format(solver_id, solver_params))
-    perf_line = '{}={}'.format(perfdb_key, ';'.join(params))
-    out_file.write(perf_line + '\n')
-  out_file.close()
+  with open(final_file, "w") as out_file: # pylint: disable=unspecified-encoding
+    for perfdb_key, solvers in sorted(master_list.items(), key=lambda kv: kv[0]):
+      params = []
+      for solver_id, solver_params in sorted(
+          solvers.items(), key=lambda kv: float(kv[1].split(',')[1])):
+        params.append(f'{solver_id}:{solver_params}')
+      # pylint: disable-next=consider-using-f-string ; more readble
+      perf_line = '{}={}'.format(perfdb_key, ';'.join(params))
+      out_file.write(perf_line + '\n')
   LOGGER.info('Finished writing to file: %s', final_file)
 
   for copy in copy_files:
@@ -338,7 +339,7 @@ def merge_text_file(master_file, copy_only, keep_keys, target_file=None):
 
   if copy_only:
     LOGGER.warning('Skipping file processing due to copy_only argument')
-    return
+    return None
 
   update_master_list(master_list, local_paths, mids, arch, num_cu, keep_keys)
 
@@ -347,7 +348,7 @@ def merge_text_file(master_file, copy_only, keep_keys, target_file=None):
   return final_file
 
 
-def merge_sqlite_pdb(cnx_to, local_paths):
+def merge_sqlite_pdb(cnx_to, local_paths): # pylint: disable=too-many-locals
   """sqlite merge for perf db"""
   for local_path in local_paths:
     LOGGER.info('Processing file: %s', local_path)
@@ -363,12 +364,12 @@ def merge_sqlite_pdb(cnx_to, local_paths):
       res, col = get_sqlite_data(cnx_to, 'config', prune_cfg_dims(cfg))
       if res:
         cfg = dict(zip(col, res[0]))
-        if (len(res) > 1):
+        if len(res) > 1:
           LOGGER.warning("DUPLICATE CONFIG:%s", res)
           dupe_ids = [dict(zip(col, row))['id'] for row in res]
           dupe_ids.sort()
           list_id = ','.join([str(item) for item in dupe_ids[1:]])
-          query = "delete from perf_db where config in ({});".format(list_id)
+          query = f"delete from perf_db where config in ({list_id});"
           LOGGER.warning("query: %s", query)
           cur = cnx_to.cursor()
           cur.execute(query)
@@ -404,6 +405,7 @@ def merge_sqlite_bin_cache(cnx_to, local_paths):
 
     db_rows, db_cols = get_sqlite_table(cnx_from, 'kern_db', include_id=False)
     cur_to = cnx_to.cursor()
+    # pylint: disable-next=consider-using-f-string ; more readable
     query = "INSERT INTO `kern_db`({}) VALUES({})".format(
         ','.join(db_cols), ','.join(['?'] * len(db_cols)))
     for row in db_rows:
@@ -411,9 +413,11 @@ def merge_sqlite_bin_cache(cnx_to, local_paths):
         cur_to.execute(query, tuple(row))
       except sqlite3.IntegrityError:
         dup_count += 1
+        # pylint: disable=consider-using-f-string ; more readable
         cur_to.execute(
             "INSERT OR REPLACE INTO `kern_db`({}) VALUES({})".format(
                 ','.join(db_cols), ','.join(['?'] * len(db_cols))), tuple(row))
+        # pylint: enable=consider-using-f-string
     cnx_to.commit()
     cur_to.close()
     LOGGER.warning('Duplicate Count: %d', dup_count)
@@ -423,17 +427,15 @@ def merge_sqlite(master_file, copy_only, target_file=None):
   """merge db sqlite files"""
   LOGGER.info('SQL db')
   bin_cache = False
-  arch = None
-  num_cu = None
 
   db_name = os.path.basename(master_file)
-  arch, num_cu = parse_pdb_filename(db_name)
+  arch, num_cu = parse_pdb_filename(db_name) # pylint: disable=unused-variable ; @chris relics?
   arch_cu = db_name.split('.')[0]
   if 'kdb' in master_file:
-    final_file = '{}/{}.kdb'.format(os.getcwd(), arch_cu)
+    final_file = f'{os.getcwd()}/{arch_cu}.kdb'
     bin_cache = True
   else:
-    final_file = '{}/{}.db'.format(os.getcwd(), arch_cu)
+    final_file = f'{os.getcwd()}/{arch_cu}.db'
 
   LOGGER.info('Destination file: %s', final_file)
 
@@ -441,7 +443,7 @@ def merge_sqlite(master_file, copy_only, target_file=None):
 
   if copy_only:
     LOGGER.warning('Skipping file processing due to copy_only argument')
-    return
+    return None
 
   if not final_file == master_file:
     copyfile(master_file, final_file)
@@ -488,7 +490,7 @@ def get_file_list(args):
         if not name.endswith('.db'):
           continue
       lst = name.split('.')
-      if lst[0] in DB_ALIAS.keys():
+      if lst[0] in DB_ALIAS:
         continue
       name = os.path.join(args.master_file, name)
       files.append(name)

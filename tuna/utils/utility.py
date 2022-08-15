@@ -26,9 +26,9 @@
 ###############################################################################
 """Utility module for helper functions"""
 
+import os
 from tuna.utils.logger import setup_logger
 from tuna.sql import DbCursor
-import os
 
 LOGGER = setup_logger('utility')
 
@@ -41,9 +41,9 @@ def arch2targetid(arch):
   if arch == 'gfx1030':
     targetid = arch
   elif arch == 'gfx900':
-    targetid = '{}:xnack-'.format(arch)
+    targetid = f'{arch}:xnack-'
   else:
-    targetid = '{}:sram-ecc+:xnack-'.format(arch)
+    targetid = f'{arch}:sram-ecc+:xnack-'
   return targetid
 
 
@@ -53,9 +53,9 @@ def get_filter_time(time_arr):
   warm_times = time_arr[rmid:]
   warm_mean = sum(warm_times) / len(warm_times)
 
-  variance = sum([pow(x_var - warm_mean, 2) for x_var in warm_times
-                 ]) / len(warm_times)
-  std_dev = pow(variance, 1 / 2)
+  variance = sum((pow(x_var - warm_mean, 2) for x_var in warm_times
+                 )) / len(warm_times)
+  std_dev = pow(variance, 1/2)
   filter_warm = []
   for time in warm_times:
     if abs(time - warm_mean) <= std_dev:
@@ -75,6 +75,7 @@ def check_qts(hostname, logger=LOGGER):
 
   inner_qts = False
   with DbCursor() as cur:
+    # pylint: disable=consider-using-f-string
     query = "SELECT local_ip FROM machine WHERE remarks='{0}' OR hostname='{0}'"\
             " OR local_ip='{0}';".format(hostname)
     cur.execute(query)
@@ -118,6 +119,7 @@ def get_env_vars():
   return env_vars
 
 
+# pylint: disable=dangerous-default-value ; @ chris, might want to reconsider though
 def get_mmi_env_vars(env_vars={}):
   """Utility function to get machine management interface specific env vars"""
   if 'gateway_ip' in os.environ:

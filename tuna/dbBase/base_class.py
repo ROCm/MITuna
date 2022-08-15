@@ -31,7 +31,7 @@ from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy import Column, Integer, DateTime, text
 
 
-class BASE(object):
+class BASE():
   """Base class for our own common functionalities among tables"""
   __table_args__ = {'mysql_engine': 'InnoDB'}
   __mapper_args__ = {'always_refresh': True}
@@ -56,19 +56,20 @@ class BASE(object):
       exclude_cols.remove('valid')
 
     for col in exclude_cols:
-      if col in self.__dict__.keys():
+      if col in self.__dict__:
         copy_dict.pop(col)
 
     if ommit_ts:
-      if 'update_ts' in self.__dict__.keys():
+      if 'update_ts' in self.__dict__:
         copy_dict.pop('update_ts')
-      if 'insert_ts' in self.__dict__.keys():
+      if 'insert_ts' in self.__dict__: # @alex why not use vars(self) instead of self.__dict__?
+                                       # legacy code or some software optimization mumbo jumbo?
         copy_dict.pop('insert_ts')
     return copy_dict
 
   def __repr__(self):
-    return "Table name: {0}\nTable columns: {1}".format(self.__table__,
-                                                        self.__table__.columns)
+    # pylint: disable-next=no-member ; @alex no __init__, so unclear whr __table__'s coming from
+    return f"Table name: {self.__table__}\nTable columns: {self.__table__.columns}"
 
 
 BASE = declarative_base(cls=BASE)
