@@ -30,8 +30,6 @@ from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('solver_res')
 RES_FILENAME = 'solverres.csv'
-# pylint: disable-next=consider-using-with ; @alex tough making sure a global resource is closed?
-RES_FILE = open(RES_FILENAME, 'w')  # pylint: disable=unspecified-encoding)
 
 
 def parse_row(row, count, cfg_cnt, prn_header):
@@ -41,16 +39,17 @@ def parse_row(row, count, cfg_cnt, prn_header):
   with DbCursor() as config_cur:
     config_cur.execute("select * from config where id = %s", (row[0],))
     config = config_cur.fetchall()
-  # config_cur.column_names has names of the columns
+    # config_cur.column_names has names of the columns
 
   # get all the solver results for this config
-  with DbCursor() as solver_cur:
+  # pylint: disable-next=unspecified-encoding)
+  with DbCursor() as solver_cur, open(RES_FILENAME, 'w') as res_file:
     solver_cur.execute("select * from solver_search where config = %s",
                        (row[0],))
     if prn_header:
       header = config_cur.column_names + solver_cur.column_names
       header_str = ';'.join(header) + '\n'
-      RES_FILE.write(header_str)
+      res_file.write(header_str)
       prn_header = False
 
     for sol in solver_cur:
@@ -59,7 +58,8 @@ def parse_row(row, count, cfg_cnt, prn_header):
         LOGGER.info('%s lines written', count)
       row = config[0] + sol
       row = [str(x) for x in row]
-      RES_FILE.write(';'.join(row) + '\n')
+      res_file.write(';'.join(row) + '\n')
+
   cfg_cnt += 1
   LOGGER.warning('%s configs done', cfg_cnt)
 
