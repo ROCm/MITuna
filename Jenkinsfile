@@ -41,6 +41,14 @@ pipeline {
            }
            }
         }
+        stage("doxygen"){
+        agent{ label utils.rocmnode("tunatest") }
+        steps{
+            script{
+            utils.doxygen()
+            }
+            }
+        }    
         stage("fin get solver"){
 	      agent{  label "gfx908" }
         steps {

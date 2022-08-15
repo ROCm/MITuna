@@ -727,6 +727,21 @@ def evaluate()
   sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
+def doxygen() {
+    node {
+          checkout scm
+          def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+          tuna_docker.inside("") {
+            sh "cd doc && doxygen Doxyfile"
+            def empty = sh returnStdout: true, script: "ls doc | wc -l"
+            echo "${empty}"
+            if (empty.toInteger() == 0){
+              error("Unable to generate Doxygen file")
+            }
+          }
+    }
+}
+
 
 
 
