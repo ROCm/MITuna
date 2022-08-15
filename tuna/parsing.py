@@ -223,8 +223,7 @@ def build_driver_cmd_from_config(conv_config, non_driver_cols):
     if fusion_col in cc_dict.keys():
       cc_dict.pop(fusion_col)
   arg_strs = [
-      f'--{key} {value}'
-      for key, value in cc_dict.items()
+      f'--{key} {value}' for key, value in cc_dict.items()
       if key not in non_driver_cols
   ]
   conv = cc_dict['cmd']
@@ -414,7 +413,8 @@ def compose_fds(fds, tok, line):
       if conv_arg_valid(tok1[0], tok2):
         fds[tok1[0]] = tok2
       else:
-        raise ValueError(f'Invalid command line arg: {tok1[0]} - {tok2} line: {line}')
+        raise ValueError(
+            f'Invalid command line arg: {tok1[0]} - {tok2} line: {line}')
     elif fds['cmd'] in ['CBAInfer', 'CBAInferfp16']:
       tok1 = get_fd_name(tok1, TABLE_COLS_FUSION_MAP)
       if arg_valid(tok1[0], tok2):
@@ -424,7 +424,8 @@ def compose_fds(fds, tok, line):
       if arg_valid(tok1[0], tok2):
         fds[tok1[0]] = tok2
       else:
-        raise ValueError(f'Invalid command line arg: {tok1[0]} - {tok2} line: {line}')
+        raise ValueError(
+            f'Invalid command line arg: {tok1[0]} - {tok2} line: {line}')
     else:
       return {}
 

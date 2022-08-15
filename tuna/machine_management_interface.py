@@ -116,7 +116,7 @@ class SSHTunnel():  # pylint: disable=too-few-public-methods
 class MgmtBackend(Enum):
   """ Supported Backends """
   IPMI = 1
-  OpenBMC = 2 # pylint: disable=invalid-name ; more readable than all-uppercase
+  OpenBMC = 2  # pylint: disable=invalid-name ; more readable than all-uppercase
 
 
 class MachineManagementInterface():
@@ -194,11 +194,14 @@ class MachineManagementInterface():
     cmd = 'ipmitool -H {} -U {} -P {} -p {} {}'.format(self.mgmt_ip,
                                                        self.mgmt_user,
                                                        self.mgmt_password,
-                                                       self.mgmt_port,
-                                                       command)
+                                                       self.mgmt_port, command)
     # pylint: enable=consider-using-f-string
     self.logger.info('Running IPMI command: %s', cmd)
-    with Popen(cmd, stdout=PIPE, stderr=PIPE, shell=True, universal_newlines=True) as subp:
+    with Popen(cmd,
+               stdout=PIPE,
+               stderr=PIPE,
+               shell=True,
+               universal_newlines=True) as subp:
       out_ch = subp.stdout
       err_ch = subp.stderr
       error = [x.strip() for x in err_ch.readlines()]

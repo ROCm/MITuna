@@ -140,8 +140,12 @@ class Connection():
 
     if self.local_machine:
       #universal_newlines corrects output format to utf-8
-      with Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True,
-                 close_fds=True, universal_newlines=True) as self.subp:
+      with Popen(cmd,
+                 stdout=PIPE,
+                 stderr=STDOUT,
+                 shell=True,
+                 close_fds=True,
+                 universal_newlines=True) as self.subp:
         stdout, stderr = self.subp.stdout, self.subp.stderr
         return 0, stdout, stderr
 

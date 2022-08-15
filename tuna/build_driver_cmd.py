@@ -71,5 +71,6 @@ def main():
       fout.write(outstr)
   # pylint: enable=unspecified-encoding
 
+
 if __name__ == '__main__':
   main()

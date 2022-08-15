@@ -79,6 +79,7 @@ def main():
       query = f"SELECT config.* FROM job INNER JOIN conv_config as config \
           ON config.id = job.config WHERE config.valid = TRUE AND job.valid = TRUE \
           AND arch = %s AND ({args.query})"
+
       cur.execute(query, (args.arch,))
     # cur.execute("select * from config where valid = TRUE;")
     sub_cmd_idx = cur.column_names.index('cmd')

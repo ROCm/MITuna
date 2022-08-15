@@ -39,8 +39,9 @@ LOGGER = setup_logger('flask')
 SOLVER_ID_MAP_C, SOLVER_ID_MAP_H = get_solver_ids()
 ID_SOLVER_MAP_C, ID_SOLVER_MAP_H = get_id_solvers()
 ENV_VARS = get_env_vars()
-ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
-                       f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+ENGINE = create_engine(
+    f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
+    f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
 
 CFTable = ConvolutionConfig
 CFTTable = ConvolutionConfigTags

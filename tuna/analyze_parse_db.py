@@ -135,13 +135,11 @@ def get_config_mysql(fds, cnx):
   cur.close()
   if len(res) > 1:
     config_id = res[0][0]
-    fds_str = ', '.join(
-        [f'{key}:{value}' for key, value in fds.items()])
+    fds_str = ', '.join([f'{key}:{value}' for key, value in fds.items()])
     LOGGER.warning('Duplicate config: %s', fds_str)
     LOGGER.warning('Picking first config id=%u', (config_id))
   elif not res:
-    fds_str = ', '.join(
-        [f'{key}:{value}' for key, value in fds.items()])
+    fds_str = ', '.join([f'{key}:{value}' for key, value in fds.items()])
     LOGGER.warning('Adding new config for: %s', fds_str)
     #NOTE: need to add driver class to analyze_parse_db
     #insert_config_v1(cnx, {}, fds) - needs to be reworked to support driver class

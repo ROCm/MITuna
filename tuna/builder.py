@@ -139,7 +139,8 @@ class Builder(WorkerInterface):
     cache_dir = f"{KCACHE_DIR}/{self.job.id}"
     self.envmt.append(f"MIOPEN_CUSTOM_CACHE_DIR={cache_dir}")
     self.envmt.append(f"MIOPEN_DEVICE_CU={self.dbt.session.num_cu}")
-    self.envmt.append(f"MIOPEN_DEVICE_ARCH={arch2targetid(self.dbt.session.arch)}")
+    self.envmt.append(
+        f"MIOPEN_DEVICE_ARCH={arch2targetid(self.dbt.session.arch)}")
 
     self.set_job_state('compiling')
     _, stdout, _ = self.run_driver_cmd()

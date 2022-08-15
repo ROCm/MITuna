@@ -255,7 +255,8 @@ class Evaluator(WorkerInterface):
 
     cache_dir = f"{KCACHE_DIR}/{self.job.id}"
     # pylint: disable-next=consider-using-f-string ; concise + more readable
-    self.exec_command('sudo chown -R {0}:{0} {1}'.format(self.machine.user, KCACHE_DIR))
+    self.exec_command('sudo chown -R {0}:{0} {1}'.format(
+        self.machine.user, KCACHE_DIR))
     if not self.bin_cache:
       good_tx = self.kcache_download(cache_dir)
       if not good_tx:

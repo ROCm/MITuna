@@ -152,7 +152,8 @@ class FinClass(WorkerInterface):
       if ret_code > 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
         self.logger.warning(out.read())
-        raise Exception(f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
+        raise Exception(
+            f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 
       result = self.parse_out()
 
@@ -176,7 +177,7 @@ class FinClass(WorkerInterface):
         self.logger.warning('Err loading fin json: %s', err)
         return None
     else:
-      with open(self.local_output) as out_file: # pylint: disable=unspecified-encoding
+      with open(self.local_output) as out_file:  # pylint: disable=unspecified-encoding
         try:
           result = json.load(out_file)
         except Exception as err:
@@ -292,7 +293,7 @@ class FinClass(WorkerInterface):
     if to_file is True:
       if not os.path.exists(outfile):
         os.mknod(outfile)
-      with open(outfile, 'w') as fout: # pylint: disable=unspecified-encoding
+      with open(outfile, 'w') as fout:  # pylint: disable=unspecified-encoding
         fout.write("[\n")
         i = 0
         while i < len(self.fin_list):
@@ -364,7 +365,8 @@ class FinClass(WorkerInterface):
 
     with DbSession() as session:
       callback = self.insert_applicability
-      session_retry(session, callback, lambda x: x(session, json_in), self.logger)
+      session_retry(session, callback, lambda x: x(session, json_in),
+                    self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))

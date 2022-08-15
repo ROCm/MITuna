@@ -129,7 +129,8 @@ class WorkerInterface(Process):
                         config_type=self.config_type)
 
     self.miopen_user_db_path = f"/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
-    self.envmt.append(f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
+    self.envmt.append(
+        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
     self.envmt.append(f"MIOPEN_USER_DB_PATH={self.miopen_user_db_path}")
 
     self.hostname = self.machine.hostname
@@ -414,7 +415,9 @@ class WorkerInterface(Process):
     # pylint: enable=comparison-with-callable
 
     if len(ids) != len(job_cfgs):
-      raise Exception(f'Failed to load job queue. #ids: {len(ids)} - #job_cgfs: {len(job_cfgs)}')
+      raise Exception(
+          f'Failed to load job queue. #ids: {len(ids)} - #job_cgfs: {len(job_cfgs)}'
+      )
     for job, config in job_cfgs:
       if job.solver:
         query = session.query(self.dbt.solver_table)\
@@ -618,7 +621,7 @@ class WorkerInterface(Process):
     """Setting up local_envmt var"""
     # pylint: disable=too-many-nested-blocks
     lcl_envmt = []
-    solver_id_map, _ = get_solver_ids() # pylint: disable=unused-variable ; false alarm
+    solver_id_map, _ = get_solver_ids()  # pylint: disable=unused-variable ; false alarm
     if solver not in FIND_ONLY_EXCEPTION:
       lcl_envmt.append("MIOPEN_DEBUG_FIND_ONLY_SOLVER={solver_id_map[solver]}")
       for key, env_var in FIND_ONLY_EXCEPTION.items():

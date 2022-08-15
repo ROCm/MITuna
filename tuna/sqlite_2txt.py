@@ -76,7 +76,7 @@ def main():
         perf_db[key] = [':'.join([solver, params])]
     LOGGER.info('Writing file for %s_%s', arch, num_cu)
     filename = f'{arch}_{num_cu}.cd.pdb.txt'
-    with open(filename, 'w') as f_file: # pylint: disable=unspecified-encoding
+    with open(filename, 'w') as f_file:  # pylint: disable=unspecified-encoding
       cnt = 0
       for key, vals in perf_db.items():
         if not vals:

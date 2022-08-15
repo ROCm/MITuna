@@ -262,7 +262,8 @@ def get_tid(session, tensor_dict):
   except IntegrityError as err:
     LOGGER.error("Error occurred: %s \n", err)
     raise ValueError(
-        'Something went wrong with getting input tensor id from tensor table') from err
+        'Something went wrong with getting input tensor id from tensor table'
+    ) from err
   except IndexError as err:
     raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
 

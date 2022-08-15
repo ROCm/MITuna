@@ -37,8 +37,9 @@ from tuna.utils.utility import get_env_vars
 
 LOGGER = setup_logger('nonstandard_layouts')
 ENV_VARS = get_env_vars()
-ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
-                       f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+ENGINE = create_engine(
+    f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
+    f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
 
 
 def parse_args():

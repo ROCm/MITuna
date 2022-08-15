@@ -65,7 +65,7 @@ def prune_copy_pdb(perf_db, err_json):
     fout.write(fin.read())
 
   json_imp = None
-  with open(err_json) as out_file: # pylint: disable=unspecified-encoding
+  with open(err_json) as out_file:  # pylint: disable=unspecified-encoding
     json_imp = json.load(out_file)
 
   cnx = sqlite3.connect(outpath)

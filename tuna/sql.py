@@ -38,7 +38,7 @@ class DbConnection():
         http://stackoverflow.com/questions/477096/python-import-coding-style/4789963#4789963
         for my reason to use this.
         '''
-    import os # pylint: disable=import-outside-toplevel
+    import os  # pylint: disable=import-outside-toplevel
     if 'TUNA_DB_USER_NAME' in os.environ:
       self.db_user_name = os.environ['TUNA_DB_USER_NAME']
     else:

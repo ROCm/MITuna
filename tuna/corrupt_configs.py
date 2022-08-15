@@ -58,7 +58,7 @@ def main():
   table_cols_conv_invmap = {v: k for k, v in TABLE_COLS_CONV_MAP.items()}
   table_cols_fusion_invmap = {v: k for k, v in TABLE_COLS_FUSION_MAP.items()}
 
-  with open(file_name, "w") as outfile: # pylint: disable=unspecified-encoding
+  with open(file_name, "w") as outfile:  # pylint: disable=unspecified-encoding
     sub_cmd_idx = None
     with DbCursor() as cur:
       cur.execute(

@@ -251,7 +251,7 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   FDBRecord = namedtuple('FDBRecord',
                          'alg_lib solver_id kernel_time workspace_sz')
 
-  with open(file_name, 'w') as out: # pylint: disable=unspecified-encoding
+  with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
       solvers.sort(key=lambda x: float(x[2]))
       lst = []

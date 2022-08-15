@@ -86,7 +86,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     self.cnx_list = {}
     self.log_list = {}
     self.num_cpus = 0
-    if self.local_machine: # pylint: disable=no-member ; false alarm
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
       self.logger = setup_logger(f'Machine_{self.hostname}')
       self.connect()
       self.mmi = None
@@ -151,7 +151,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         'user': self.user,
         'password': self.password,
         'port': self.port,
-        'local_machine': self.local_machine, # pylint: disable=no-member ; false alarm
+        'local_machine': self.local_machine,  # pylint: disable=no-member ; false alarm
         'chk_abort_file': chk_abort_file
     }
     keys['logger'] = logger
@@ -292,7 +292,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       _, filename = tempfile.mkstemp()
     else:
       assert filename is not None
-    if self.local_machine: # pylint: disable=no-member ; false alarm
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
       with open(filename, 'wb') as fout:
         fout.write(contents)
         fout.flush()
@@ -308,7 +308,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     Read a file from this machine and return the contents
     """
-    if self.local_machine: # pylint: disable=no-member ; false alarm
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
       # pylint: disable-next=unspecified-encoding
       with open(filename, 'rb' if byteread else 'r') as rfile:
         return rfile.read()
@@ -337,7 +337,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     logger = self.get_logger()
     if isinstance(command, list):
       command = ' '.join(command)
-    if not self.local_machine: # pylint: disable=no-member ; false alarm
+    if not self.local_machine:  # pylint: disable=no-member ; false alarm
       assert docker_name
       command = DOCKER_CMD.format(docker_name, command)
     logger.info('Running command: %s', command)
@@ -419,8 +419,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       return False
     logger.info('Checking GPU %u status', gpu_id)
     _, stdout, _ = cnx.exec_command(
-        f'GPU_DEVICE_ORDINAL={gpu_id} {CLINFO} | grep gfx',
-        timeout=30)
+        f'GPU_DEVICE_ORDINAL={gpu_id} {CLINFO} | grep gfx', timeout=30)
     if stdout is None:
       return False
     if hasattr(stdout, 'channel'):
@@ -448,7 +447,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """examine used space on disk"""
     logger = self.get_logger()
     logger.info("Getting free space")
-    if self.local_machine: # pylint: disable=no-member ; false alarm
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
       file_stat = os.statvfs('/')
       total = file_stat.f_blocks * file_stat.f_frsize
       used = (file_stat.f_blocks - file_stat.f_bfree) * file_stat.f_frsize
