@@ -133,13 +133,17 @@ class Connection():
       return not self.out_channel.exit_status_ready()
 
   def exec_command_unparsed(self, cmd, timeout=SSH_TIMEOUT, abort=None):
-    """Function to exec commands"""
+    """Function to exec commands
+
+    warning: leaky! client code responsible for closing the resources!
+    """
     # pylint: disable=broad-except
     if not self.test_cmd_str(cmd):
       raise Exception('Machine {self.id} failed, missing binary: {cmd}')
 
     if self.local_machine:
       #universal_newlines corrects output format to utf-8
+      # pylint: disable=consider-using-with ; see exec_command_unparsed's docstring
       self.subp = Popen(cmd,
                         stdout=PIPE,
                         stderr=STDOUT,
@@ -176,44 +180,50 @@ class Connection():
     return None, None, None
 
   def exec_command(self, cmd, timeout=SSH_TIMEOUT, abort=None, proc_line=None):
+    # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
     _, o_var, e_var = self.exec_command_unparsed(cmd, timeout, abort)
-
-    if not o_var:
-      return 1, o_var, e_var
-
-    if not proc_line:
-      # pylint: disable-next=unnecessary-lambda-assignment ; more readable
-      proc_line = lambda x: self.logger.info(line.strip())
-    ret_out = StringIO()
-    ret_err = e_var
     try:
-      while True:
-        line = o_var.readline()
-        if line == '' and not self.is_alive():
-          break
-        if line:
-          proc_line(line)
-          ret_out.write(line)
-      ret_out.seek(0)
-      if self.local_machine:
-        ret_code = self.subp.returncode
-        if ret_out:
-          ret_out.seek(0)
-          ret_err = StringIO()
-          err_str = ret_out.readlines()
-          for line in err_str[-5:]:
-            ret_err.write(line)
-          ret_err.seek(0)
-          ret_out.seek(0)
-      else:
-        ret_code = self.out_channel.recv_exit_status()
-    except (socket.timeout, socket.error) as exc:
-      self.logger.warning('Exception occurred %s', exc)
-      ret_code = 1
-      ret_out = None
+      if not o_var:
+        return 1, o_var, e_var
 
-    return ret_code, ret_out, ret_err
+      if not proc_line:
+        # pylint: disable-next=unnecessary-lambda-assignment ; more readable
+        proc_line = lambda x: self.logger.info(line.strip())
+      ret_out = StringIO()
+      ret_err = e_var
+      try:
+        while True:
+          line = o_var.readline()
+          if line == '' and not self.is_alive():
+            break
+          if line:
+            proc_line(line)
+            ret_out.write(line)
+        ret_out.seek(0)
+        if self.local_machine:
+          ret_code = self.subp.returncode
+          if ret_out:
+            ret_out.seek(0)
+            ret_err = StringIO()
+            err_str = ret_out.readlines()
+            for line in err_str[-5:]:
+              ret_err.write(line)
+            ret_err.seek(0)
+            ret_out.seek(0)
+        else:
+          ret_code = self.out_channel.recv_exit_status()
+      except (socket.timeout, socket.error) as exc:
+        self.logger.warning('Exception occurred %s', exc)
+        ret_code = 1
+        ret_out = None
+
+      return ret_code, ret_out, ret_err
+    finally:
+      if o_var and hasattr(o_var, "close"):
+        o_var.close()
+      if e_var and hasattr(e_var, "close"):
+        e_var.close()
 
   def connect(self, abort=None):
     """Establishing new connecion"""
