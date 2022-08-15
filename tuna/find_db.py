@@ -26,7 +26,7 @@
 ###############################################################################
 """find db class"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, orm
-from sqlalchemy import Float, BigInteger, Boolean, and_, Text
+from sqlalchemy import Float, BigInteger, Boolean, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -65,11 +65,10 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
 
     # CE: Solver applicability can change between miopen versions
     # find if this fdb entry is currently applicable
-    query = sess.query(fdb_obj).filter(
-        fdb_obj.session == session_id,
-        fdb_obj.config == self.config, 
-        fdb_obj.opencl == self.opencl,
-        fdb_obj.valid == 1)
+    query = sess.query(fdb_obj).filter(fdb_obj.session == session_id,
+                                       fdb_obj.config == self.config,
+                                       fdb_obj.opencl == self.opencl,
+                                       fdb_obj.valid == 1)
 
     if self.solver:
       query = query.filter(fdb_obj.solver == self.solver)
