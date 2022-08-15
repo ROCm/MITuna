@@ -38,7 +38,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 
 
 def add_fin_find_compile_job():
-  del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest_fin_builder'"
+  del_q = "DELETE FROM conv_job WHERE session = 1"
   del_q2 = "DELETE FROM conv_config_tags WHERE tag = 'test_fin_builder'"
 
   with DbCursor() as cur:
