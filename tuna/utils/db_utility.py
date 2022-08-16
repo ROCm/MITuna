@@ -70,7 +70,7 @@ def session_retry(session, callback, actuator, logger=LOGGER):
       sleep(random.randint(1, 30))
 
   logger.error('All retries have failed.')
-  return None
+  return False
 
 
 class DB_Type(enum.Enum):

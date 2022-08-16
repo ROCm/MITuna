@@ -35,6 +35,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.fin_utils import fin_job
 from tuna.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.db_utility import session_retry
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -179,6 +180,34 @@ class FinEvaluator(WorkerInterface):
     return self.machine.write_file(json.dumps(fjob, indent=2).encode(),
                                    is_temp=True)
 
+  def update_fdb_eval_entry(self, session, fdb_obj):
+    """update fdb if individual fin json entry"""
+    if fdb_obj['evaluated']:
+      obj, _ = self.get_fdb_entry(
+          session, self.solver_id_map[fdb_obj['solver_name']])
+      if not obj:
+        self.logger.info(
+            'Unable to find fdb entry for config: %s, solver: %s, '\
+            'arch: %s, num_cu: %s, direction: %s',
+            self.config.id, self.solver_id_map[fdb_obj['solver_name']],
+            self.dbt.session.arch, self.dbt.session.num_cu, self.config.direction)
+        raise ValueError("Unable to query find db entry")
+      fdb_entry = obj
+      fdb_entry.alg_lib = fdb_obj['algorithm']
+      fdb_entry.kernel_time = fdb_obj['time']
+      fdb_entry.workspace_sz = fdb_obj['workspace']
+      fdb_entry.session = self.dbt.session.id
+      fdb_entry.params = fdb_obj['params']
+    else:
+      self.logger.warning("Not evaluated: job(%s), solver(%s), %s",
+                          self.job.id, fdb_obj['solver_name'],
+                          fdb_obj['reason'])
+
+    self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
+    session.commit()
+
+    return True
+
   def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
     """process find db eval json results"""
     status = []
@@ -186,38 +215,20 @@ class FinEvaluator(WorkerInterface):
       self.logger.info('Processing object: %s', fdb_obj)
       slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
       status.append(slv_stat)
-      with DbSession() as session:
-        if fdb_obj['evaluated']:
-          obj, _ = self.get_fdb_entry(
-              session, self.solver_id_map[fdb_obj['solver_name']])
-          if not obj:
-            self.logger.info(
-                'Unable to find fdb entry for config: %s, solver: %s, '\
-                'arch: %s, num_cu: %s, direction: %s',
-                self.config.id, self.solver_id_map[fdb_obj['solver_name']],
-                self.dbt.session.arch, self.dbt.session.num_cu, self.config.direction)
-            raise ValueError("Unable to query find db entry")
-          fdb_entry = obj
-          fdb_entry.alg_lib = fdb_obj['algorithm']
-          fdb_entry.kernel_time = fdb_obj['time']
-          fdb_entry.workspace_sz = fdb_obj['workspace']
-          fdb_entry.session = self.dbt.session.id
-          fdb_entry.params = fdb_obj['params']
-        else:
-          self.logger.warning("Not evaluated: job(%s), solver(%s), %s",
-                              self.job.id, fdb_obj['solver_name'],
-                              fdb_obj['reason'])
 
-        self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
-        try:
-          session.commit()
-        except OperationalError as err:
-          self.logger.warning('FinEval: Unable to update Database: %s', err)
-          status = [{
-              'solver': 'all',
-              'success': False,
-              'result': 'FinEval: Unable to update Database: {}'.format(err)
-          }]
+      with DbSession() as session:
+        callback = self.update_fdb_eval_entry
+        actuator = lambda x: x(session, fdb_obj)
+        #retry returns false on failure, callback return on success
+        ret = session_retry(session, callback, actuator, self.logger)
+
+    if not ret:
+      self.logger.warning('FinEval: Unable to update Database')
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'FinEval: Unable to update Database'
+      }]
 
     return status
 
