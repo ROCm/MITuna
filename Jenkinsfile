@@ -61,7 +61,7 @@ pipeline {
         agent{ label "gfx908"}
         steps{
             script {
-            utils.finFindCompile()
+            //utils.finFindCompile()
             }
             }
         }
@@ -69,7 +69,7 @@ pipeline {
         agent{  label "gfx908" }
         steps {
             script {
-            utils.finFindEval()
+            //utils.finFindEval()
             }
             }
         }
@@ -77,7 +77,7 @@ pipeline {
         agent{ label "gfx908"} 
         steps {
             script {
-            utils.loadJobTest()
+            //utils.loadJobTest()
             }
             }
         }
@@ -85,7 +85,7 @@ pipeline {
 	      agent{  label "gfx908" }
         steps {
             script {
-            utils.perfCompile()
+            //utils.perfCompile()
             }
             }
         }
@@ -93,7 +93,7 @@ pipeline {
         agent{  label "gfx908" }
         steps{
             script {
-            utils.perfEval_gfx908()
+            //utils.perfEval_gfx908()
             }
             }
         }
