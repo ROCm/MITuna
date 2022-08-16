@@ -62,6 +62,7 @@ pipeline {
         steps{
             script {
             //utils.finFindCompile()
+	    sh "echo pass"
             }
             }
         }
@@ -70,6 +71,7 @@ pipeline {
         steps {
             script {
             //utils.finFindEval()
+	    sh "echo pass"
             }
             }
         }
@@ -78,6 +80,7 @@ pipeline {
         steps {
             script {
             //utils.loadJobTest()
+	    sh "echo pass"
             }
             }
         }
@@ -86,6 +89,7 @@ pipeline {
         steps {
             script {
             //utils.perfCompile()
+	    sh "echo pass"
             }
             }
         }
@@ -94,6 +98,7 @@ pipeline {
         steps{
             script {
             //utils.perfEval_gfx908()
+	    sh "echo pass"
             }
             }
         }
