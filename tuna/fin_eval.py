@@ -215,10 +215,9 @@ class FinEvaluator(WorkerInterface):
       for fdb_obj in fin_json[result_str]:
         self.logger.info('Processing object: %s', fdb_obj)
         slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
-        callback = self.update_fdb_eval_entry
-        actuator = lambda x: x(session, fdb_obj)
         #retry returns false on failure, callback return on success
-        ret = session_retry(session, callback, actuator, self.logger)
+        ret = session_retry(session, self.update_fdb_eval_entry,
+                            lambda x: x(session, fdb_obj), self.logger)
         if not ret:
           self.logger.warning('FinEval: Unable to update Database')
           slv_stat['success'] = False
