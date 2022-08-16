@@ -42,8 +42,9 @@ LOGGER = setup_logger('import_configs')
 
 def parse_args():
   """Parsing arguments"""
-  parser = setup_arg_parser('Import MIOpenDriver commands and MIOpen performance DB entries.',
-                            [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+  parser = setup_arg_parser(
+      'Import MIOpenDriver commands and MIOpen performance DB entries.',
+      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
   parser.add_argument(
       '-c',
       '--command',
