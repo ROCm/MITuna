@@ -107,14 +107,6 @@ pipeline {
             }
             }
         }
-       stage("coverage") {
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-           script {
-           utils.runCodeCov()
-           }
-           }
-        }
 
         stage("pytest2"){
         agent{ label utils.rocmnode("tunatest") }
@@ -131,9 +123,18 @@ pipeline {
             utils.pytestSuite3()
             }
             }
-        }    
-    }
+        }
+       stage("coverage") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+           script {
+           utils.runCodeCov()
+           }
+           }
+        }
+        }
 }
+
 
 
 

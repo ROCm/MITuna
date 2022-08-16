@@ -428,7 +428,7 @@ def pytestSuite1() {
            sh "pytest tests/test_fin_utils.py"                     
            sh "pytest tests/test_add_session.py"                     
            sh "pytest tests/test_merge_db.py"
-
+/*
           sh "python3 -m coverage run -m pytest"
           sh "python3 -m coverage json"
           sh "mv coverage.json ../MITunaX/tests/covscripts/buffer"
@@ -438,7 +438,7 @@ def pytestSuite1() {
           CODE_COV = 10
           if (CODE_COV > myvar) {
           error "Not added to env: ${item}"
-
+*/
 
 
            // The OBMC host used in the following test is down
@@ -544,7 +544,8 @@ def runCodeCov() {
           CODE_COV = 10
           if (CODE_COV > myvar) {
           error "Not added to env: ${item}"
-          }      
+          }
+
     }
     }
     }
