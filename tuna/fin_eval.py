@@ -183,8 +183,8 @@ class FinEvaluator(WorkerInterface):
   def update_fdb_eval_entry(self, session, fdb_obj):
     """update fdb if individual fin json entry"""
     if fdb_obj['evaluated']:
-      obj, _ = self.get_fdb_entry(
-          session, self.solver_id_map[fdb_obj['solver_name']])
+      obj, _ = self.get_fdb_entry(session,
+                                  self.solver_id_map[fdb_obj['solver_name']])
       if not obj:
         self.logger.info(
             'Unable to find fdb entry for config: %s, solver: %s, '\
@@ -199,9 +199,8 @@ class FinEvaluator(WorkerInterface):
       fdb_entry.session = self.dbt.session.id
       fdb_entry.params = fdb_obj['params']
     else:
-      self.logger.warning("Not evaluated: job(%s), solver(%s), %s",
-                          self.job.id, fdb_obj['solver_name'],
-                          fdb_obj['reason'])
+      self.logger.warning("Not evaluated: job(%s), solver(%s), %s", self.job.id,
+                          fdb_obj['solver_name'], fdb_obj['reason'])
 
     self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
     session.commit()
