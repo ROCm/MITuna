@@ -402,20 +402,20 @@ def pytestSuite1() {
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
-           sh "pytest tests/test_abort_file.py "
+           sh "pytest tests/test_abort_file.py -s"
            //sh "pytest tests/test_analyze_parse_db.py "
 
-           sh "pytest tests/test_connection.py "
+           sh "pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
-           sh "pytest tests/test_importconfigs.py "
-           sh "pytest tests/test_worker.py "
-           sh "pytest tests/test_machine.py "
-           sh "pytest tests/test_dbBase.py "
-           sh "pytest tests/test_driver.py "
-           sh "pytest tests/test_fin_class.py"                     
-           sh "pytest tests/test_fin_utils.py"                     
-           sh "pytest tests/test_add_session.py"                     
-           sh "pytest tests/test_merge_db.py"
+           sh "pytest tests/test_importconfigs.py -s"
+           sh "pytest tests/test_worker.py -s"
+           sh "pytest tests/test_machine.py -s"
+           sh "pytest tests/test_dbBase.py -s"
+           sh "pytest tests/test_driver.py -s"
+           sh "pytest tests/test_fin_class.py -s"
+           sh "pytest tests/test_fin_utils.py -s"
+           sh "pytest tests/test_add_session.py -s"
+           sh "pytest tests/test_merge_db.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -465,7 +465,7 @@ def pytestSuite3() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_fin_evaluator.py "                     
+           sh "pytest tests/test_fin_evaluator.py -s"
         }
         def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
         sh "${cmd}"        
