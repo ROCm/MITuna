@@ -54,6 +54,27 @@ def fin_job(steps, dynamic_only, job, config, dbt):
   return return_dict
 
 
+def get_fin_slv_status(json_obj, check_str):
+  """Retrieve status information from fin json output, each represents a solver"""
+  slv_stat = {}
+  slv_stat['solver'] = json_obj['solver_name']
+  slv_stat['success'] = json_obj[check_str]
+  slv_stat['result'] = json_obj['reason']
+  return slv_stat
+
+
+def get_fin_result(status):
+  """construct result string from status, and single success boolean"""
+  result_str = ''
+  success = False
+  if True in [x['success'] for x in status]:
+    success = True
+  for slv, res in [[x['solver'], x['result']] for x in status]:
+    result_str += ' ({}: {})'.format(slv, res)
+
+  return success, result_str
+
+
 def compose_config_obj(config, config_type=ConfigType.convolution):
   """Helper function to compose non-conv config obj"""
   return_config = {}

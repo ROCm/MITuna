@@ -362,7 +362,7 @@ class JobMixin():
   compile_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_start = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  result = Column(String(length=60), nullable=False, server_default="")
+  result = Column(Text)
   reason = Column(String(length=60), nullable=False, server_default="")
   machine_id = Column(Integer, nullable=False, server_default="-1")
   eval_mid = Column(Integer, server_default="-1")
@@ -445,81 +445,6 @@ class SolverFusionApplicability(BASE, SolverApplicabilityMixin):
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
 
-class PerfConfigMixin():
-  """Represents perf_db config table mixin"""
-  config = Column(Integer, ForeignKey("config.id"), nullable=False)
-  layout = Column(String(60), nullable=False, server_default="NCHW")
-  data_type = Column(String(60), nullable=False, server_default="FP32")
-  bias = Column(Integer, nullable=False, server_default="0")
-  valid = Column(TINYINT(1), nullable=False, server_default="1")
-
-
-class ConvPerfConfig(BASE, PerfConfigMixin):
-  """Represents perf_db config table for convolutions"""
-  __tablename__ = "conv_perf_config"
-  __table_args__ = (UniqueConstraint("config",
-                                     "layout",
-                                     "data_type",
-                                     "bias",
-                                     name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-
-
-class BNPerfConfig(BASE, PerfConfigMixin):
-  """Represents perf_db config table for batch norm"""
-  __tablename__ = "bn_perf_config"
-  __table_args__ = (UniqueConstraint("config",
-                                     "layout",
-                                     "data_type",
-                                     "bias",
-                                     name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
-
-
-class PerfDBMixin():
-  """perf databades"""
-
-  @declared_attr
-  def solver(self):
-    """solver column"""
-    return Column(Integer, ForeignKey("solver.id"), nullable=False)
-
-  @declared_attr
-  def session(self):
-    """session column"""
-    return Column(Integer, ForeignKey("session.id"), nullable=False)
-
-  params = Column(Text, nullable=False)
-
-
-class ConvPerfDB(BASE, PerfDBMixin):
-  """perf db for convolutions"""
-  __tablename__ = "conv_perf_db"
-  __table_args__ = (UniqueConstraint("solver",
-                                     "miopen_config",
-                                     "session",
-                                     name="uq_idx"),)
-
-  miopen_config = Column(Integer,
-                         ForeignKey("conv_perf_config.id"),
-                         nullable=False)
-
-
-class BNPerfDB(BASE, PerfDBMixin):
-  """perf db for batch norm"""
-  __tablename__ = "bn_perf_db"
-  __table_args__ = (UniqueConstraint("solver",
-                                     "miopen_config",
-                                     "session",
-                                     name="uq_idx"),)
-
-  miopen_config = Column(Integer,
-                         ForeignKey("bn_perf_config.id"),
-                         nullable=False)
-
-
 class GoldenMixin():
   """Mixin for golden table"""
 
@@ -548,7 +473,6 @@ class ConvolutionGolden(BASE, GoldenMixin):
   """Golden table for convolution"""
   __tablename__ = "conv_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "perf_db",
                                      "find_db",
                                      "config",
                                      "session",
@@ -556,7 +480,6 @@ class ConvolutionGolden(BASE, GoldenMixin):
                                      "num_cu",
                                      name="uq_idx"),)
 
-  perf_db = Column(Integer, ForeignKey("conv_perf_db.id"), nullable=False)
   find_db = Column(Integer, ForeignKey("conv_find_db.id"), nullable=False)
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
 
@@ -565,7 +488,6 @@ class BNGolden(BASE, GoldenMixin):
   """Golden table for batch norm"""
   __tablename__ = "bn_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "perf_db",
                                      "find_db",
                                      "config",
                                      "session",
@@ -573,7 +495,6 @@ class BNGolden(BASE, GoldenMixin):
                                      "num_cu",
                                      name="uq_idx"),)
 
-  perf_db = Column(Integer, ForeignKey("bn_perf_db.id"), nullable=False)
   find_db = Column(Integer, ForeignKey("bn_find_db.id"), nullable=False)
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
@@ -586,8 +507,6 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvSolverApplicability())
   miopen_tables.append(ConvolutionFindDB)
   miopen_tables.append(ConvolutionKernelCache())
-  miopen_tables.append(ConvPerfConfig())
-  miopen_tables.append(ConvPerfDB())
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
   miopen_tables.append(ConvolutionGolden())
@@ -611,8 +530,6 @@ def add_bn_tables(miopen_tables):
   miopen_tables.append(BNSolverApplicability())
   miopen_tables.append(BNFindDB())
   miopen_tables.append(BNKernelCache())
-  miopen_tables.append(BNPerfConfig())
-  miopen_tables.append(BNPerfDB())
   miopen_tables.append(BNJobCache())
   miopen_tables.append(BNFinJobCache())
   miopen_tables.append(BNGolden())
