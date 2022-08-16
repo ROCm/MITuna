@@ -181,7 +181,7 @@ class FinEvaluator(WorkerInterface):
                                    is_temp=True)
 
   def update_fdb_eval_entry(self, session, fdb_obj):
-    """update fdb if individual fin json entry"""
+    """update fdb with individual fin json entry"""
     if fdb_obj['evaluated']:
       obj, _ = self.get_fdb_entry(session,
                                   self.solver_id_map[fdb_obj['solver_name']])
@@ -210,24 +210,21 @@ class FinEvaluator(WorkerInterface):
   def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
     """process find db eval json results"""
     status = []
-    for fdb_obj in fin_json[result_str]:
-      self.logger.info('Processing object: %s', fdb_obj)
-      slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
-      status.append(slv_stat)
-
-      with DbSession() as session:
+    fdb_obj = None
+    with DbSession() as session:
+      for fdb_obj in fin_json[result_str]:
+        self.logger.info('Processing object: %s', fdb_obj)
+        slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
         callback = self.update_fdb_eval_entry
         actuator = lambda x: x(session, fdb_obj)
         #retry returns false on failure, callback return on success
         ret = session_retry(session, callback, actuator, self.logger)
+        if not ret:
+          self.logger.warning('FinEval: Unable to update Database')
+          slv_stat['success'] = False
+          slv_stat['result'] = 'FinEval: Unable to update Database'
 
-    if not ret:
-      self.logger.warning('FinEval: Unable to update Database')
-      status = [{
-          'solver': 'all',
-          'success': False,
-          'result': 'FinEval: Unable to update Database'
-      }]
+        status.append(slv_stat)
 
     return status
 
