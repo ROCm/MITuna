@@ -107,7 +107,7 @@ pipeline {
             }
             }
         }
-        stage("coverage") {
+ /*       stage("coverage") {
         agent{  label utils.rocmnode("tunatest") }
         steps {
            script {
@@ -115,7 +115,7 @@ pipeline {
            }
            }
         }
-
+*/
         stage("pytest2"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
