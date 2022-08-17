@@ -576,7 +576,7 @@ def runCodeCovTest() {
            sh "pytest tests/test_connection.py "
            // builder then evaluator in sequence
            sh "pytest tests/test_importconfigs.py "
-           sh "pytest tests/test_worker.py "
+           //sh "pytest tests/test_worker.py "
            sh "pytest tests/test_machine.py "
            sh "pytest tests/test_dbBase.py "
            sh "pytest tests/test_driver.py "
