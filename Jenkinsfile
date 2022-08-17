@@ -98,6 +98,7 @@ pipeline {
             }
             }
         }
+/*
         stage("coverage") {
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -106,6 +107,7 @@ pipeline {
            }
            }
         }
+*/
         stage("pytest1"){
         agent{  label "gfx908" }
         steps{

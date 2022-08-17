@@ -110,3 +110,12 @@ In order for a PR to be accepted the following `pylint` command needs to result 
 cd MITunaX/tuna
 pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
 ```
+## Coverage 
+
+To extract coverage percentage from the underlying code base prior to opening Pull Request:
+
+```
+cd MITunaX/tuna
+bash tests/covscripts/coverage_script.sh
+```
+

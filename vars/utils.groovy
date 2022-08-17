@@ -428,17 +428,6 @@ def pytestSuite1() {
            sh "pytest tests/test_fin_utils.py"                     
            sh "pytest tests/test_add_session.py"                     
            sh "pytest tests/test_merge_db.py"
-/*
-          sh "python3 -m coverage run -m pytest"
-          sh "python3 -m coverage json"
-          sh "mv coverage.json ../MITunaX/tests/covscripts/buffer"
-          sh "python3 tests/covscripts/parse_attributes.py"
-          sh "file= ../MITunaX/tests/covscripts/buffer/coverage_percentage.txt"
-          myvar = sh "\$(cat "$file")"
-          CODE_COV = 10
-          if (CODE_COV > myvar) {
-          error "Not added to env: ${item}"
-*/
 
 
            // The OBMC host used in the following test is down
@@ -524,16 +513,16 @@ def runCodeCov() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
-          //env.TUNA_DB_HOSTNAME = "${db_host}"
-          //env.TUNA_DB_NAME="${db_name}"
-          //env.TUNA_DB_USER_NAME="${db_user}"
-          //env.TUNA_DB_PASSWORD="${db_password}"
-          //env.gateway_ip = "${gateway_ip}"
-          //env.gateway_port = "${gateway_port}"
-          //env.gateway_user = "${gateway_user}"
-          //env.PYTHONPATH=env.WORKSPACE
-          //env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-          //buildSchema()
+          env.TUNA_DB_HOSTNAME = "${db_host}"
+          env.TUNA_DB_NAME="${db_name}"
+          env.TUNA_DB_USER_NAME="${db_user}"
+          env.TUNA_DB_PASSWORD="${db_password}"
+          env.gateway_ip = "${gateway_ip}"
+          env.gateway_port = "${gateway_port}"
+          env.gateway_user = "${gateway_user}"
+          env.PYTHONPATH=env.WORKSPACE
+          env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+          buildSchema()
 
           sh "python3 -m coverage run -m pytest"
           sh "python3 -m coverage json"
@@ -549,58 +538,6 @@ def runCodeCov() {
     }
     }
     }
-
-
-def runCodeCovTest() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
-        env.TUNA_DB_HOSTNAME = "${db_host}"
-        env.TUNA_DB_NAME="${db_name}"
-        env.TUNA_DB_USER_NAME="${db_user}"
-        env.TUNA_DB_PASSWORD="${db_password}"
-        env.gateway_ip = "${gateway_ip}"
-        env.gateway_port = "${gateway_port}"
-        env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
-        env.PYTHONPATH=env.WORKSPACE
-        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-
-        addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
-        // download the latest perf db
-        //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
-        sshagent (credentials: ['bastion-ssh-key']) {
-           // test fin builder and test fin builder conv in sequence
-          sh "pytest tests/test_abort_file.py "
-           //sh "pytest tests/test_analyze_parse_db.py "
-
-           sh "pytest tests/test_connection.py "
-           // builder then evaluator in sequence
-           sh "pytest tests/test_importconfigs.py "
-           //sh "pytest tests/test_worker.py "
-           sh "pytest tests/test_machine.py "
-           sh "pytest tests/test_dbBase.py "
-           sh "pytest tests/test_driver.py "
-           sh "pytest tests/test_fin_class.py"
-           sh "pytest tests/test_fin_utils.py"
-           sh "pytest tests/test_add_session.py"
-           sh "pytest tests/test_merge_db.py"
-           sh "pytest tests/test_fin_builder.py "
-           sh "pytest tests/test_fin_evaluator.py "
-           sh "python3 -m coverage run -m pytest"
-           sh "python3 -m coverage json"
-           sh "mv coverage.json ../MITunaX/tests/covscripts/buffer"
-           sh "python3 tests/covscripts/parse_attributes.py"
-           sh "file= ../MITunaX/tests/covscripts/buffer/coverage_percentage.txt"
-           myvar = sh "\$(cat "$file")"
-           CODE_COV = 10
-           if (CODE_COV > myvar) {
-           error "Not added to env: ${item}"
-           }
-        }
-        //def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-        //sh "${cmd}"
-    }
-}
 
 def getJobReason()
 {
