@@ -30,7 +30,7 @@ import enum
 import random
 import pymysql
 from time import sleep
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen_tables import Solver
@@ -68,9 +68,13 @@ def session_retry(session, callback, actuator, logger=LOGGER):
       logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
       session.rollback()
       sleep(random.randint(1, 30))
+    except IntegrityError as error:
+      logger.error('Query failed: %s', error)
+      session.rollback()
+      return False
 
   logger.error('All retries have failed.')
-  return None
+  return False
 
 
 class DB_Type(enum.Enum):
