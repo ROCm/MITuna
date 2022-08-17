@@ -446,7 +446,7 @@ def pytestSuite1() {
         }
     }
 }
-}
+
 
 def pytestSuite2() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= .")
