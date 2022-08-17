@@ -26,7 +26,7 @@
 ###############################################################################
 """find db class"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, orm
-from sqlalchemy import Float, BigInteger, Boolean, and_
+from sqlalchemy import Float, BigInteger, Boolean, and_, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -43,16 +43,17 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   __mapper_args__ = {'always_refresh': True}
 
   @declared_attr
-  def solver(self):
-    """solver column"""
-    return Column(Integer, ForeignKey("solver.id"), nullable=False)
-
-  @declared_attr
   def session(self):
     """session column"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
+  @declared_attr
+  def solver(self):
+    """solver column"""
+    return Column(Integer, ForeignKey("solver.id"), nullable=False)
+
   fdb_key = Column(String(length=128), nullable=True)
+  params = Column(Text, nullable=False)
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
   alg_lib = Column(String(length=64), nullable=True)

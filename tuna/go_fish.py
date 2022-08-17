@@ -229,11 +229,10 @@ def parse_args():
     args.machines = [int(x) for x in args.machines.split(',')
                     ] if ',' in args.machines else [int(args.machines)]
 
-  if args.init_session and not (args.arch and args.num_cu and args.label and
-                                args.local_machine):
+  if args.init_session and not (args.label and args.local_machine):
     parser.error(
         "When setting up a new tunning session the following must be specified: "\
-        "arch, num_cu, reason, local_machine.")
+        "label, local_machine.")
 
   fin_session_steps = [
       'miopen_find_compile', 'miopen_find_eval', 'miopen_perf_compile',
@@ -437,10 +436,6 @@ def get_kwargs(gpu_idx, f_vals, args):
     @param args The command line arguments
   """
   envmt = f_vals["envmt"].copy()
-  # JD: Move it down to the evaluator class
-  if not args.compile:
-    #compile don't use the gpu
-    envmt.append("HIP_VISIBLE_DEVICES={}".format(gpu_idx))
   if args.config_type is None:
     args.config_type = ConfigType.convolution
 
@@ -480,16 +475,9 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
   worker = None
   kwargs = get_kwargs(gpu_idx, f_vals, args)
 
-  if args.compile:
-    kwargs['fetch_state'] = ['new']
-    worker = Builder(**kwargs)
-  elif args.run_perf:
-    #if no compiled jobs go ahead and start compiling on eval machine
-    kwargs['fetch_state'] = ['compiled']
-    worker = Evaluator(**kwargs)
-  elif args.run_find or args.bin_cache:
-    kwargs['fetch_state'] = ['new']
-    worker = Evaluator(**kwargs)
+  if args.update_applicability:
+    kwargs['fin_steps'] = ['applicability']
+    worker = FinClass(**kwargs)
   elif args.fin_steps:
     if 'miopen_find_compile' in args.fin_steps or 'miopen_perf_compile' in args.fin_steps:
       kwargs['fetch_state'] = ['new']
@@ -503,6 +491,17 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
     worker = WorkerInterface(**kwargs)
     Session().add_new_session(args, worker)
     return True
+  #CE: consider removing these commands:
+  elif args.compile:
+    kwargs['fetch_state'] = ['new']
+    worker = Builder(**kwargs)
+  elif args.run_perf:
+    #if no compiled jobs go ahead and start compiling on eval machine
+    kwargs['fetch_state'] = ['compiled']
+    worker = Evaluator(**kwargs)
+  elif args.run_find or args.bin_cache:
+    kwargs['fetch_state'] = ['new']
+    worker = Evaluator(**kwargs)
   else:
     kwargs['fetch_state'] = ['new']
     worker = Evaluator(**kwargs)
@@ -544,10 +543,6 @@ def do_fin_work(args, gpu, f_vals):
     if not fin_worker.get_solvers():
       LOGGER.error('No solvers returned from Fin class')
 
-  if args.update_applicability:
-    if not fin_worker.applicability():
-      LOGGER.error('Applicability not returned from Fin class')
-
   return True
 
 
@@ -582,7 +577,10 @@ def compose_worker_list(res, args):
     if args.restart_machine:
       machine.restart_server(wait=False)
       continue
-    if args.compile:
+
+    #fin_steps should only contain one step
+    if args.compile or args.update_applicability or (
+        args.fin_steps and 'compile' in args.fin_steps[0]):
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
@@ -596,16 +594,12 @@ def compose_worker_list(res, args):
         return None
       worker_ids = range(num_procs)
     else:
-      worker_ids = machine.avail_gpus
+      worker_ids = machine.get_avail_gpus()
 
     f_vals = compose_f_vals(args, machine)
-    if worker_ids:  # This machine has GPUs
-      f_vals["num_procs"] = Value('i', len(worker_ids))
-    else:
-      f_vals["num_procs"] = Value('i', machine.get_num_cpus())
-      worker_ids = range(machine.get_num_cpus())
+    f_vals["num_procs"] = Value('i', len(worker_ids))
 
-    if (args.update_solvers or args.update_applicability) and not fin_work_done:
+    if (args.update_solvers) and not fin_work_done:
       do_fin_work(args, 0, f_vals)
       fin_work_done = True
       break

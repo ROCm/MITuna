@@ -67,7 +67,7 @@ This should be updated when an MIOpen version modifies solvers.
 Session will track the architecture and skew, as well as the miopen version and 
 rocm version for the tuning session.
 
-This command will need to be run from inside the tuning environment eg MITunaX docker
+This command will need to be run from inside the tuning environment eg MITuna docker
 and will populate the table with the version and architecture information.
 
 <pre>
