@@ -47,6 +47,11 @@ def parse_args():
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
+  parser.add_argument('--golden_v',
+                      action='store',
+                      type=int,
+                      dest='golden_v',
+                      help='Golden miopen version')
   args = parser.parse_args()
   return args
 
@@ -65,23 +70,27 @@ def add_golden_entries(args, dbt):
   """! Retrieve fdb entries and populate golden table"""
   query = get_query(dbt)
   with DbSession() as session:
-    try:
-      for fdb_entry in query.all():
-        golden_entry = dbt.golden_table()
-        golden_entry.session = args.session_id
-        golden_entry.config = fdb_entry.config
-        golden_entry.fdb_key = fdb_entry.fdb_key
-        golden_entry.params = fdb_entry.params
-        golden_entry.kernel_time = fdb_entry.kernel_time
-        golden_entry.alg_lib = fdb_entry.alg_lib
-        golden_entry.open_cl = fdb_entry.open_cl
+    for fdb_entry in query.all():
+      golden_entry = dbt.golden_table()
+      golden_entry.session = args.session_id
+      golden_entry.config = fdb_entry.config
+      golden_entry.fdb_key = fdb_entry.fdb_key
+      golden_entry.params = fdb_entry.params
+      golden_entry.kernel_time = fdb_entry.kernel_time
+      golden_entry.alg_lib = fdb_entry.alg_lib
+      golden_entry.opencl = fdb_entry.opencl
+      golden_entry.workspace_sz = fdb_entry.workspace_sz
+      golden_entry.golden_miopen_v = args.golden_v
+      golden_entry.solver_id = fdb_entry.solver
+      try:
         session.add(golden_entry)
-      #bulk commit
-      session.commit()
-    except OperationalError as oerror:
-      LOGGER.warning('DB error: %s', oerror)
-    except IntegrityError as ierror:
-      LOGGER.warning('DB error: %s', ierror)
+        session.commit()
+      except OperationalError as oerror:
+        LOGGER.warning('DB error: %s', oerror)
+      except IntegrityError as ierror:
+        LOGGER.warning('DB error: %s', ierror)
+        session.rollback()
+        continue
 
   return True
 

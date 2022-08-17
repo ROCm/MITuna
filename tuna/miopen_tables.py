@@ -461,9 +461,9 @@ class GoldenMixin():
                   ForeignKey("solver.id",
                              onupdate="CASCADE",
                              ondelete="CASCADE"),
-                  nullable=False)
+                  nullable=True)
 
-  golden_miopen_v = Column(String(length=64), nullable=False)
+  golden_miopen_v = Column(Integer, nullable=False)
 
 
 class ConvolutionGolden(BASE, GoldenMixin):
@@ -475,12 +475,13 @@ class ConvolutionGolden(BASE, GoldenMixin):
                                      "session",
                                      "params",
                                      "alg_lib",
-                                     "opencl"
+                                     "opencl",
+                                     "solver_id",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
   fdb_key = Column(String(length=128), nullable=True)
-  params = Column(Text, nullable=False)
+  params = Column(String(length=128), nullable=True)
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
   alg_lib = Column(String(length=64), nullable=True)
@@ -493,7 +494,7 @@ class BNGolden(BASE, GoldenMixin):
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "config",
                                      "session",
-                                     "solver",
+                                     "solver_id",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
