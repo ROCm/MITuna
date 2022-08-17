@@ -1,0 +1,23 @@
+.. MITuna documentation master file, created by
+   sphinx-quickstart on Wed Aug 17 09:54:41 2022.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to MITuna's documentation!
+==================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   readme
+   doxygen_files
+   
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
