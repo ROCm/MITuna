@@ -473,9 +473,6 @@ class ConvolutionGolden(BASE, GoldenMixin):
                                      "fdb_key",
                                      "config",
                                      "session",
-                                     "params",
-                                     "alg_lib",
-                                     "opencl",
                                      "solver_id",
                                      name="uq_idx"),)
 
