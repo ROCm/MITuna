@@ -382,6 +382,16 @@ def perfEval_gfx908() {
             echo "#errored jobs: ${errored_conv_jobs}"
             error("Unable to eval all conv jobs")
         }
+
+        sh "./tuna/populate_golden.py --session_id ${sesh1}"
+        def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
+        def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
+        if(golden_entries.toInteger() != fdb_entries.toInteger())
+        {
+            echo "#fdb jobs: ${fdb_entries}"
+            echo "#goden jobs: ${golden_entries}"
+            error("FDB entries and golden entries do not match")
+        }
     }
 }
 
@@ -466,6 +476,7 @@ def pytestSuite3() {
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
            sh "pytest tests/test_fin_evaluator.py "                     
+           sh "pytest tests/test_populate_golden.py "                     
         }
         def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
         sh "${cmd}"        
