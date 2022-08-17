@@ -464,19 +464,18 @@ class GoldenMixin():
                   nullable=False)
 
   golden_miopen_v = Column(String(length=64), nullable=False)
-  arch = Column(String(length=20), nullable=False, server_default="")
-  num_cu = Column(Integer, nullable=False, server_default="0")
 
 
 class ConvolutionGolden(BASE, GoldenMixin):
   """Golden table for convolution"""
   __tablename__ = "conv_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "find_db",
+                                     "fdb_key",
                                      "config",
                                      "session",
-                                     "arch",
-                                     "num_cu",
+                                     "params",
+                                     "alg_lib",
+                                     "opencl"
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
@@ -492,14 +491,11 @@ class BNGolden(BASE, GoldenMixin):
   """Golden table for batch norm"""
   __tablename__ = "bn_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "find_db",
                                      "config",
                                      "session",
-                                     "arch",
-                                     "num_cu",
+                                     "solver",
                                      name="uq_idx"),)
 
-  find_db = Column(Integer, ForeignKey("bn_find_db.id"), nullable=False)
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
