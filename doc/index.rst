@@ -3,21 +3,23 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to MITuna's documentation!
-==================================
+Welcome to MITuna
+==================
+**Advanced Micro Devices, Inc's tuning library.**
+
+Sources and binaries can be found at `MIOpen's GitHub site <https://github.com/ROCmSoftwarePlatform/MITunaX>`_.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 8
    :caption: Contents:
 
-   readme
-   doxygen_files
+   src/readme
+   src/tuningcycle
+   src/findocs
+   src/flaskapp
    
-
-
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

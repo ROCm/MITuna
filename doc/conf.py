@@ -15,7 +15,8 @@ release = '0.1.0'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ['sphinx.ext.autodoc', 'breathe']
-breathe_projects = { "MITuna": "../tuna" }
+breathe_projects = { "MITuna": "xml/" }
+#breathe_projects_source = { "tuna": "xml/" }
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'breathe/*']

@@ -1,4 +1,0 @@
-Doxygen Files
-=============
-.. autodoxygenindex::
-
