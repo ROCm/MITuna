@@ -34,6 +34,7 @@ from dummy_args import DummyArgs
 from populate_golden import add_golden_entries, get_query
 from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.config_type import ConfigType
 
 this_path = os.path.dirname(__file__)
 
@@ -42,6 +43,7 @@ def test_populate_golden():
   res = None
   args = DummyArgs()
   args.session_id = 1
+  args.config_type = ConfigType.convolution
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
   assert (get_query(dbt))
   assert (add_golden_entries(args, dbt))
