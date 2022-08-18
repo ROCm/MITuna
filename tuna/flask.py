@@ -71,13 +71,10 @@ def get_tag_data(grafana_req, data):
     try:
       if query_tags != ['']:
         LOGGER.info(query_tags)
-        # pylint: disable=no-member ; @alex conv_config table has no column 'fusion_mode'
         configs = session.query(CFTable, CFTTable.tag)\
                               .filter(CFTable.id == CFTTable.config)\
                               .filter(CFTTable.tag.in_(query_tags))\
-                              .filter(CFTable.fusion_mode == -1)\
                               .filter(CFTable.valid == 1).all()
-        # pylint: enable=no-member ; @alex conv_config table has no column 'fusion_mode'
         for conv_config, tag in configs:
           values.append(
               [tag,
@@ -85,13 +82,10 @@ def get_tag_data(grafana_req, data):
 
       if tag_like is not None:
         LOGGER.info(tag_like)
-        # pylint: disable=no-member ; @alex conv_config table has no column 'fusion_mode'
         extra_configs = session.query(CFTable, CFTTable.tag)\
                             .filter(CFTable.id == CFTTable.config)\
                             .filter(CFTTable.tag.like(tag_like))\
-                            .filter(CFTable.fusion_mode == -1)\
                             .filter(CFTable.valid == 1).all()
-        # pylint: enable=no-member ; @alex conv_config table has no column 'fusion_mode'
         for conv_config, tag in extra_configs:
           values.append(
               [tag,

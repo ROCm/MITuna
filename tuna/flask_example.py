@@ -51,11 +51,8 @@ def get_table_example(grafana_req, data):
 
   #To populate the table with data from your DB:
   with DbSession() as session:
-    # pylint: disable=no-member ; @alex, conv_find_db has no rocm_v, miopen_v columns
-    query = session.query(ConvolutionFindDB.rocm_v, ConvolutionFindDB.miopen_v,
-                          ConvolutionFindDB.valid,
+    query = session.query(ConvolutionFindDB.valid,
                           ConvolutionFindDB.kernel_time).limit(5).all()
-    # pylint: enable=no-member
     for res in query:
       EXAMPLE_TABLE['rows'].append([res[0], res[1], res[2], res[3]])
 

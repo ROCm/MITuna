@@ -200,7 +200,7 @@ def parse_pdb_filename(fname):
   for item in ARCH_NUM_CU_LIST:
     arch, num_cu = item.split('-')
     num_cu = int(num_cu)
-    db_arch = '{arch}_{num_cu}'
+    db_arch = f'{arch}_{num_cu}'
     if num_cu > 64:
       db_arch = f'{arch}{num_cu:x}'
     if db_arch in fname:

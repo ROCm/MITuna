@@ -685,7 +685,7 @@ class WorkerInterface(Process):
 
     sub_cmd = PREC_TO_CMD[self.config_type][self.config.input_t.data_type]
 
-    bash_cmd = 'MIOpenDriver {sub_cmd} -V 0 -i 1'
+    bash_cmd = f'MIOpenDriver {sub_cmd} -V 0 -i 1'
 
     driver_args = self.config_dict
     if "direction" in driver_args:
@@ -700,7 +700,7 @@ class WorkerInterface(Process):
       elif sub_cmd in ['CBAInfer', 'CBAInferfp16']:
         if field in TABLE_COLS_FUSION_INVMAP:
           arg_name = TABLE_COLS_FUSION_INVMAP[field]
-          bash_cmd += " -{arg_name} {val}"
+          bash_cmd += f" -{arg_name} {val}"
 
     lcl_envmt = self.envmt[:]
 
@@ -783,12 +783,6 @@ class WorkerInterface(Process):
 
         if self.label:
           query = query.filter(self.dbt.job_table.reason == self.label)
-        if self.machine.arch:
-          # pylint: disable-next=no-member ; @alex conv_job table appears to have no member 'arch'
-          query = query.filter(self.dbt.job_table.arch == self.machine.arch)
-        if self.machine.num_cu:
-          # pylint: disable-next=no-member ; @alex conv_job table appears to have no member 'num_cu'
-          query = query.filter(self.dbt.job_table.num_cu == self.machine.num_cu)
         if self.fin_steps:
           query = query.filter(
               self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))

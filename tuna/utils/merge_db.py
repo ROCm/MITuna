@@ -284,8 +284,7 @@ def multi_job_merge(master_list, machine_id, key, vals, res):
           master_list[key][s_id] = s_val
 
 
-# pylint: disable-next=unused-argument ; @chris arch, num_cu -- relics from old code?
-def update_master_list(master_list, local_paths, mids, arch, num_cu, keep_keys):
+def update_master_list(master_list, local_paths, mids, keep_keys):
   """merge data in master_list with values from the file at local_path"""
   for local_path, machine_id in zip(local_paths, mids):
     with open(local_path) as local_file:  # pylint: disable=unspecified-encoding
@@ -329,9 +328,9 @@ def write_merge_results(master_list, final_file, copy_files):
 def merge_text_file(master_file, copy_only, keep_keys, target_file=None):
   """merge db text files"""
   if master_file.endswith('.fdb.txt'):
-    arch, num_cu, final_file, copy_files = parse_text_fdb_name(master_file)
+    _, _, final_file, copy_files = parse_text_fdb_name(master_file)
   else:
-    arch, num_cu, final_file, copy_files = parse_text_pdb_name(master_file)
+    _, _, final_file, copy_files = parse_text_pdb_name(master_file)
 
   master_list = load_master_list(master_file)
 
@@ -342,7 +341,7 @@ def merge_text_file(master_file, copy_only, keep_keys, target_file=None):
     LOGGER.warning('Skipping file processing due to copy_only argument')
     return None
 
-  update_master_list(master_list, local_paths, mids, arch, num_cu, keep_keys)
+  update_master_list(master_list, local_paths, mids, keep_keys)
 
   write_merge_results(master_list, final_file, copy_files)
 
@@ -430,7 +429,6 @@ def merge_sqlite(master_file, copy_only, target_file=None):
   bin_cache = False
 
   db_name = os.path.basename(master_file)
-  arch, num_cu = parse_pdb_filename(db_name)  # pylint: disable=unused-variable ; @chris relics?
   arch_cu = db_name.split('.')[0]
   if 'kdb' in master_file:
     final_file = f'{os.getcwd()}/{arch_cu}.kdb'

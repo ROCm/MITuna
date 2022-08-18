@@ -27,6 +27,7 @@
 """Fin Evaluator class implements the worker interface. The purpose of this class
 is to run fin commands in benchmarking mode"""
 from time import sleep
+import functools
 import json
 
 from sqlalchemy.exc import OperationalError
@@ -215,14 +216,14 @@ class FinEvaluator(WorkerInterface):
     status = []
     fdb_obj = None
     with DbSession() as session:
+      def actuator(func, fdb_obj):
+        return func(session, fdb_obj)
       for fdb_obj in fin_json[result_str]:
         self.logger.info('Processing object: %s', fdb_obj)
         slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
         #retry returns false on failure, callback return on success
-        # pylint: disable=cell-var-from-loop
         ret = session_retry(session, self.update_fdb_eval_entry,
-                            lambda x: x(session, fdb_obj), self.logger)
-        # pylint: enable=cell-var-from-loop
+                            functools.partial(actuator, fdb_obj=fdb_obj), self.logger)
         if not ret:
           self.logger.warning('FinEval: Unable to update Database')
           slv_stat['success'] = False
