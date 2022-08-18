@@ -26,12 +26,10 @@
 ###############################################################################
 """Utility module for DB helper functions"""
 
-from time import sleep
-
 import enum
 import random
-import pymysql
 from time import sleep
+import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession

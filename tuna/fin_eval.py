@@ -219,8 +219,10 @@ class FinEvaluator(WorkerInterface):
         self.logger.info('Processing object: %s', fdb_obj)
         slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
         #retry returns false on failure, callback return on success
+        # pylint: disable=cell-var-from-loop
         ret = session_retry(session, self.update_fdb_eval_entry,
                             lambda x: x(session, fdb_obj), self.logger)
+        # pylint: enable=cell-var-from-loop
         if not ret:
           self.logger.warning('FinEval: Unable to update Database')
           slv_stat['success'] = False
