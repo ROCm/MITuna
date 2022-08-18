@@ -51,12 +51,12 @@ from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
 from tuna.metadata import FIND_ONLY_EXCEPTION
 from tuna.metadata import get_solver_ids, TENSOR_PRECISION
+from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from tuna.config_type import ConfigType
 
 MAX_JOB_RETRIES = 10
-NUM_SQL_RETRIES = 10
 
 TABLE_COLS_CONV_INVMAP = {}
 for clarg, cnvparam in TABLE_COLS_CONV_MAP.items():

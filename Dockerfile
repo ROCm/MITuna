@@ -104,6 +104,9 @@ RUN pip3 install /tmp/mysql_connector/*.whl
 RUN pip3 install --quiet pylint
 RUN pip3 install --quiet nosexcover
 
+# opentelemetry
+RUN opentelemetry-bootstrap -a install
+
 # Setup ubsan environment to printstacktrace
 RUN ln -s /usr/bin/llvm-symbolizer-3.8 /usr/local/bin/llvm-symbolizer
 ENV UBSAN_OPTIONS=print_stacktrace=1

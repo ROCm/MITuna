@@ -38,7 +38,7 @@ from tuna.utils.utility import check_qts
 from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, CONV_CONFIG_COLS, TENSOR_PRECISION
 from tuna.metadata import BN_DEFAULTS, BN_CONFIG_COLS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
-from tuna.worker_interface import NUM_SQL_RETRIES
+from tuna.metadata import NUM_SQL_RETRIES
 from tuna.miopen_tables import TensorTable, Session
 from tuna.config_type import ConfigType
 from tuna.metadata import get_solver_ids

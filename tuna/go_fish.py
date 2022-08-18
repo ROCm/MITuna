@@ -25,9 +25,10 @@
 #
 ###############################################################################
 """Script to launch tuning jobs, or execute commands on available machines"""
+import sys
 from multiprocessing import Value, Lock, Queue as mpQueue
 from subprocess import Popen, PIPE
-import sys
+from sqlalchemy.exc import InterfaceError
 
 from tuna.machine import Machine
 from tuna.utils.logger import setup_logger
@@ -276,31 +277,35 @@ def load_machines(args):
   subp = Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True)
   hostname = subp.stdout.readline().strip()
   LOGGER.info('hostname = %s', hostname)
-  with DbSession() as session:
-    query = session.query(Machine)
-    if args.arch:
-      query = query.filter(Machine.arch == args.arch)
-    if args.num_cu:
-      query = query.filter(Machine.num_cu == args.num_cu)
-    if not args.machines and not args.local_machine:
-      query = query.filter(Machine.available == 1)
-    if args.machines:
-      query = query.filter(Machine.id.in_(args.machines))
-    if args.local_machine:
-      query = query.filter(Machine.remarks == hostname)
+  try:
+    with DbSession() as session:
+      query = session.query(Machine)
+      if args.arch:
+        query = query.filter(Machine.arch == args.arch)
+      if args.num_cu:
+        query = query.filter(Machine.num_cu == args.num_cu)
+      if not args.machines and not args.local_machine:
+        query = query.filter(Machine.available == 1)
+      if args.machines:
+        query = query.filter(Machine.id.in_(args.machines))
+      if args.local_machine:
+        query = query.filter(Machine.remarks == hostname)
 
-    res = query.all()
+      res = query.all()
 
-    if args.local_machine:
-      if res:
-        res[0].local_machine = True
-      else:
-        res = [Machine(hostname=hostname, local_machine=True)]
-        LOGGER.info(
-            'Local machine not in database, continue with incomplete details')
+      if args.local_machine:
+        if res:
+          res[0].local_machine = True
+        else:
+          res = [Machine(hostname=hostname, local_machine=True)]
+          LOGGER.info(
+              'Local machine not in database, continue with incomplete details')
 
-    if not res:
-      LOGGER.info('No machine found for specified requirements')
+      if not res:
+        LOGGER.info('No machine found for specified requirements')
+  except InterfaceError as ierr:
+    LOGGER.warning(ierr)
+    session.rollback()
 
   return res
 
@@ -442,16 +447,9 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
   worker = None
   kwargs = get_kwargs(gpu_idx, f_vals, args)
 
-  if args.compile:
-    kwargs['fetch_state'] = ['new']
-    worker = Builder(**kwargs)
-  elif args.run_perf:
-    #if no compiled jobs go ahead and start compiling on eval machine
-    kwargs['fetch_state'] = ['compiled']
-    worker = Evaluator(**kwargs)
-  elif args.run_find or args.bin_cache:
-    kwargs['fetch_state'] = ['new']
-    worker = Evaluator(**kwargs)
+  if args.update_applicability:
+    kwargs['fin_steps'] = ['applicability']
+    worker = FinClass(**kwargs)
   elif args.fin_steps:
     if 'miopen_find_compile' in args.fin_steps or 'miopen_perf_compile' in args.fin_steps:
       kwargs['fetch_state'] = ['new']
@@ -465,6 +463,17 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
     worker = WorkerInterface(**kwargs)
     Session().add_new_session(args, worker)
     return True
+  #CE: consider removing these commands:
+  elif args.compile:
+    kwargs['fetch_state'] = ['new']
+    worker = Builder(**kwargs)
+  elif args.run_perf:
+    #if no compiled jobs go ahead and start compiling on eval machine
+    kwargs['fetch_state'] = ['compiled']
+    worker = Evaluator(**kwargs)
+  elif args.run_find or args.bin_cache:
+    kwargs['fetch_state'] = ['new']
+    worker = Evaluator(**kwargs)
   else:
     kwargs['fetch_state'] = ['new']
     worker = Evaluator(**kwargs)
@@ -502,10 +511,6 @@ def do_fin_work(args, gpu, f_vals):
     if not fin_worker.get_solvers():
       LOGGER.error('No solvers returned from Fin class')
 
-  if args.update_applicability:
-    if not fin_worker.applicability():
-      LOGGER.error('Applicability not returned from Fin class')
-
   return True
 
 
@@ -536,7 +541,8 @@ def compose_worker_list(res, args):
       continue
 
     #fin_steps should only contain one step
-    if args.compile or (args.fin_steps and 'compile' in args.fin_steps[0]):
+    if args.compile or args.update_applicability or (
+        args.fin_steps and 'compile' in args.fin_steps[0]):
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
@@ -555,7 +561,7 @@ def compose_worker_list(res, args):
     f_vals = compose_f_vals(args, machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))
 
-    if (args.update_solvers or args.update_applicability) and not fin_work_done:
+    if (args.update_solvers) and not fin_work_done:
       do_fin_work(args, 0, f_vals)
       fin_work_done = True
       break
