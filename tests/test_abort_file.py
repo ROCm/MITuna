@@ -34,7 +34,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.builder import Builder
+from tuna.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.tables import ConfigType
@@ -44,8 +44,8 @@ def add_job():
   find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='test_builder' GROUP BY tag"
 
   del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, session) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1 \
+  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, session, fin_step) \
+        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1, 'miopen_find_compile,miopen_find_eval' \
         FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'test_builder'"
 
   print(ins_q)
@@ -110,7 +110,7 @@ def test_builder():
           'session_id': 1
       }
 
-    w = Builder(**kwargs)
+    w = FinBuilder(**kwargs)
     add_job()
 
     num_jobs = 0
