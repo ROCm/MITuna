@@ -11,5 +11,4 @@ Steps. Navigate to a clone of Tuna and run:
 5. cd Tuna/tuna
 6. ./go_fish.py --update_solver --local_machine
 7. ./go_fish.py --update_applicability --local_machine
-
 ```

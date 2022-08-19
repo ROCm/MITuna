@@ -7,16 +7,16 @@ Welcome to MITuna
 ==================
 **Advanced Micro Devices, Inc's tuning library.**
 
-Sources and binaries can be found at `MIOpen's GitHub site <https://github.com/ROCmSoftwarePlatform/MITunaX>`_.
+Sources and binaries can be found at `MITuna's GitHub site <https://github.com/ROCmSoftwarePlatform/MITunaX>`_.
 
 .. toctree::
    :maxdepth: 8
    :caption: Contents:
 
-   src/readme
-   src/tuningcycle
-   src/findocs
-   src/flaskapp
+   readme
+   findocs
+   flaskapp
+   tuningcycle
    
 Indices and tables
 ==================

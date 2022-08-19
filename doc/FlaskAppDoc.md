@@ -6,25 +6,24 @@ How start a Flask instance on your local machine (Example using headnode):
 * Map a port(4000) on headnode, sample: `ssh <user>@<IP> -p <port_number> -L <port_mapping>:localhost:<port_mapping>`
 * Install the Tuna venv and source it `source ~/myvenv/bin/activate`
 * Set Flask app env variables as such:
-  *export FLASK_APP=example_app
-  *export FLASK_ENV=development
-  *export FLASK_DEBUG=1
+*export FLASK_APP=example_app
+*export FLASK_ENV=development
+*export FLASK_DEBUG=1
 * Navigate to `example_app.py` and run the application on a designated port: **flask run --host=0.0.0.0 -p <port_mapping>**
 This terminal session will now represent the flask backend.
+```
 
 
 In a different terminal session:
 * Install the flaskapp module in /tuna/flaskapp by running:
-  ```bash
-  python3 setup.py 
-  ```
+```bash
+python3 setup.py 
 ```
 Any changes in /tuna/flaskapp/example_grafana.py will now be visible in the flask backend. This represents 
 the entrypoint for Grafana.
 
 ## Connect your dev box to a Grafana instance.
 The following steps will show how to set up your own Flask application and connect it to Grafana.
-```
 1. Start a local Flask session on your deb box. Details on how to do this in the previous section.
 Chose a port that is unused on your box. It is advised to run this in a permanent session like tmux.
 2. Create an ssh tunnel from headnode (this is where Grafana runs) to your local dev box. Instructions
