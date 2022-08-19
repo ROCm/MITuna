@@ -24,31 +24,26 @@
 #
 ###############################################################################
 
-import os
 import sys
-
-sys.path.append("../tuna")
-sys.path.append("tuna")
-
 from dummy_args import DummyArgs
-from populate_golden import add_golden_entries, get_query
+from tuna.populate_golden import add_golden_entries, get_query
 from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
+from tuna.miopen_tables import ConvolutionGolden
 
-this_path = os.path.dirname(__file__)
-
+sys.path.append("../tuna")
+sys.path.append("tuna")
 
 def test_populate_golden():
   res = None
   args = DummyArgs()
   args.session_id = 1
   args.config_type = ConfigType.convolution
-  args.golden_v = 1
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
-  assert (get_query(dbt))
-  assert (add_golden_entries(args, dbt))
+  assert get_query(dbt)
+  assert add_golden_entries(args, dbt)
   with DbSession() as session:
     query = session.query(ConvolutionGolden)
     res = query.all()
-  assert (len(res) > 0)
+  assert len(res) is not None
