@@ -52,16 +52,20 @@ def parse_args():
       default=None,
       dest='target_file',
       required=True,
-      help='Supply an absolute path to the file. This file will be imported.')
-  parser.add_argument(
-      '--session_id',
-      action='store',
-      required=True,
-      type=int,
-      dest='session_id',
-      help=
-      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
-  )
+      help='Supply an absolute path to the performance database file. This file will be imported.')
+  parser.add_argument('--rocm_v',
+                      dest='rocm_v',
+                      type=str,
+                      default=None,
+                      required=True,
+                      help='Specify rocm version for perf db')
+  parser.add_argument('--miopen_v',
+                      dest='miopen_v',
+                      type=str,
+                      default=None,
+                      required=True,
+                      help='Specify MIOpen version for perf db')
+
   args = parser.parse_args()
 
   return args
@@ -134,8 +138,6 @@ def insert_perf_db(context, perf_rows, perf_cols, cvrt):
 def record_perfdb(args, cfg_filter=None):
   """insert perf_db entry from sqlite file to mysql"""
   cnx = sqlite3.connect(args.target_file)
-
-  arch, num_cu = parse_pdb_filename(args.target_file)
 
   config_rows, config_cols = get_sqlite_data(cnx, 'config', cfg_filter)
   ret = record_perfdb_v2(args, cnx, config_rows, config_cols, cfg_filter)
@@ -211,6 +213,11 @@ def print_sqlite_rows(cnx, cfg_filter):
 def main():
   """main"""
   args = parse_args()
+
+  args.label = "imported perf db"
+  args.arch, args.num_cu = parse_pdb_filename(args.target_file)
+  args.session_id = Session().add_new_session(args, worker)
+
   dbt = DBTables(session_id=args.session_id)
   args.table_cfg = dbt.config_table
   args.table_perf_db = dbt.find_db_table
