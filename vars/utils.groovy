@@ -602,7 +602,7 @@ def compile()
 
   if(params.base_image != '')
   {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} -f dockerfiles/rocm_base/Dockerfile"
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
   }
 
   sh "echo ${build_args}"
@@ -673,7 +673,7 @@ def evaluate()
 
   if(params.base_image != '')
   {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} -f dockerfiles/rocm_base/Dockerfile"
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
   }
 
   sh "echo ${build_args}"

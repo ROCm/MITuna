@@ -90,15 +90,16 @@ class WorkerInterface(Process):
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'fin_steps', 'fin_infile', 'fin_outfile', 'job_queue',
-        'queue_lock', 'label', 'fetch_state', 'docker_name', 'bin_cache',
-        'end_jobs', 'config_type', 'dynamic_solvers_only', 'session_id'
+        'queue_lock', 'label', 'fetch_state', 'docker_name', 'end_jobs',
+        'config_type', 'dynamic_solvers_only', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
     self.machine = None
     self.gpu_id = None
-    self.num_procs = self.barred = None
+    self.num_procs = None
+    self.barred = None
     self.bar_lock = Lock()
     self.envmt = []
     self.fin_steps = []
@@ -107,12 +108,10 @@ class WorkerInterface(Process):
     self.job_queue = None
     self.queue_lock = Lock()
     self.is_fdb = False
-    self.find_db = None
     self.fetch_state = ['new']
     self.compile_only = False
     self.docker_name = TUNA_DOCKER_NAME
     self.gpu = None
-    self.bin_cache = False
     self.label = None
     self.end_jobs = None
     self.solver_id_map, _ = get_solver_ids()

@@ -28,7 +28,6 @@
 Script for adding jobs to the MySQL database
 """
 
-import mysql.connector  # pylint: disable=unused-import
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
 
@@ -50,8 +49,7 @@ def parse_args():
   #pylint: disable=duplicate-code
   parser = setup_arg_parser(
       'Insert jobs into MySQL db by tag from" \
-      " config_tags table.',
-      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
   config_filter = parser.add_mutually_exclusive_group(required=True)
   solver_filter = parser.add_mutually_exclusive_group()
   config_filter.add_argument(
