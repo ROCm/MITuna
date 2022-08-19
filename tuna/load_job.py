@@ -28,7 +28,6 @@
 Script for adding jobs to the MySQL database
 """
 
-import mysql.connector  # pylint: disable=unused-import
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
 

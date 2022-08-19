@@ -25,9 +25,10 @@
 #
 ###############################################################################
 """Script to launch tuning jobs, or execute commands on available machines"""
+import sys
 from multiprocessing import Value, Lock, Queue as mpQueue
 from subprocess import Popen, PIPE
-import sys
+from sqlalchemy.exc import InterfaceError
 
 from tuna.machine import Machine
 from tuna.utils.logger import setup_logger
@@ -55,6 +56,7 @@ def parse_args():
   parser = setup_arg_parser(
       'Run Performance Tuning on a certain architecture',
       [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+
   parser.add_argument(
       '--find_mode',
       dest='find_mode',
@@ -121,6 +123,7 @@ def parse_args():
                       dest='reset_interval',
                       required=False,
                       help='Restart interval for job in hours.')
+
   group = parser.add_mutually_exclusive_group()
   group.add_argument('--init_session',
                      action='store_true',
@@ -135,6 +138,7 @@ def parse_args():
                      action='store_true',
                      dest='list_solvers',
                      help='List of solvers from the solver table')
+
   # JD: implement the following two using fin_steps
   group.add_argument('--update_solvers',
                      dest='update_solvers',
@@ -233,31 +237,35 @@ def load_machines(args):
   with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
     hostname = subp.stdout.readline().strip()
   LOGGER.info('hostname = %s', hostname)
-  with DbSession() as session:
-    query = session.query(Machine)
-    if args.arch:
-      query = query.filter(Machine.arch == args.arch)
-    if args.num_cu:
-      query = query.filter(Machine.num_cu == args.num_cu)
-    if not args.machines and not args.local_machine:
-      query = query.filter(Machine.available == 1)
-    if args.machines:
-      query = query.filter(Machine.id.in_(args.machines))
-    if args.local_machine:
-      query = query.filter(Machine.remarks == hostname)
+  try:
+    with DbSession() as session:
+      query = session.query(Machine)
+      if args.arch:
+        query = query.filter(Machine.arch == args.arch)
+      if args.num_cu:
+        query = query.filter(Machine.num_cu == args.num_cu)
+      if not args.machines and not args.local_machine:
+        query = query.filter(Machine.available == 1)
+      if args.machines:
+        query = query.filter(Machine.id.in_(args.machines))
+      if args.local_machine:
+        query = query.filter(Machine.remarks == hostname)
 
-    res = query.all()
+      res = query.all()
 
-    if args.local_machine:
-      if res:
-        res[0].local_machine = True
-      else:
-        res = [Machine(hostname=hostname, local_machine=True)]
-        LOGGER.info(
-            'Local machine not in database, continue with incomplete details')
+      if args.local_machine:
+        if res:
+          res[0].local_machine = True
+        else:
+          res = [Machine(hostname=hostname, local_machine=True)]
+          LOGGER.info(
+              'Local machine not in database, continue with incomplete details')
 
-    if not res:
-      LOGGER.info('No machine found for specified requirements')
+      if not res:
+        LOGGER.info('No machine found for specified requirements')
+  except InterfaceError as ierr:
+    LOGGER.warning(ierr)
+    session.rollback()
 
   return res
 
