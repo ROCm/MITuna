@@ -26,7 +26,6 @@
 
 import os
 import sys
-from multiprocessing import Value, Lock, Queue
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -35,6 +34,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.go_fish import load_machines, compose_worker_list
 
 
 def add_fin_find_compile_job():
@@ -67,9 +67,15 @@ def test_fin_builder():
     assert (res[0][0] > 0)
     num_jobs = res[0][0]
 
-  go_fish_run = "{0}/../tuna/go_fish.py --local_machine --fin_steps miopen_find_compile --session_id 1".format(
-      this_path)
-  os.system(go_fish_run)
+  args = object()
+  args.local_machine = True
+  args.fin_steps = "miopen_find_compile"
+  args.session_id = 1
+
+  res = load_machines(args)
+  worker_lst = compose_worker_list(res, args)
+  for worker in worker_lst:
+    worker.join()
 
   with DbCursor() as cur:
     get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state in ('compiled');"
