@@ -1,4 +1,4 @@
 FIN Documentation
 ******************
 
-.. include:: FinDocs.md 
+.. include:: src/FinDocs.md
