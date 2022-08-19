@@ -53,9 +53,8 @@ class FinClass(WorkerInterface):
     """Constructor"""
     super().__init__(**kwargs)
     allowed_keys = set([
-        'fin_steps', 'arch_num_cu_list', 'local_file', 'fin_outfile',
-        'fin_infile', 'machine', 'docker_name', 'version', 'config_type',
-        'label', 'session_id'
+        'fin_steps', 'local_file', 'fin_outfile', 'fin_infile', 'machine',
+        'docker_name', 'version', 'config_type', 'label', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
@@ -69,7 +68,6 @@ class FinClass(WorkerInterface):
     self.fin_infile = self.local_file.split("/tmp/", 1)[1] + ".json"
     _, self.local_output = tempfile.mkstemp()
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
-    self.arch_num_cu_list = None
     self.fin_steps = []
     self.machine = None
     self.docker_name = None

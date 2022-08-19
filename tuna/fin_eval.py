@@ -52,7 +52,7 @@ class FinEvaluator(WorkerInterface):
   def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""
     self.logger.info('find job: %s', find_state)
-    if not super().get_job(find_state, set_state, self.label):
+    if not super().get_job(find_state, set_state, imply_end):
       with self.bar_lock:
         self.num_procs.value -= 1
       return False
@@ -252,9 +252,9 @@ class FinEvaluator(WorkerInterface):
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
-    ret = self.get_job("compiled", "eval_start", True)
-    if not ret:
+    if not self.get_job("compiled", "eval_start", True):
       return False
+
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
