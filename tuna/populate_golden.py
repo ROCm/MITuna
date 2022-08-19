@@ -77,8 +77,6 @@ def add_golden_entries(args, dbt):
       golden_entry.fdb_key = fdb_entry.fdb_key
       golden_entry.params = fdb_entry.params
       golden_entry.kernel_time = fdb_entry.kernel_time
-      golden_entry.alg_lib = fdb_entry.alg_lib
-      golden_entry.opencl = fdb_entry.opencl
       golden_entry.workspace_sz = fdb_entry.workspace_sz
       golden_entry.golden_miopen_v = args.golden_v
       golden_entry.solver_id = fdb_entry.solver

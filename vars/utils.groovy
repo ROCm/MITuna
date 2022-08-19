@@ -383,7 +383,7 @@ def perfEval_gfx908() {
             error("Unable to eval all conv jobs")
         }
 
-        sh "./tuna/populate_golden.py --session_id ${sesh1}"
+        sh "./tuna/populate_golden.py --session_id --golden_miopen_v 1 ${sesh1}"
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())

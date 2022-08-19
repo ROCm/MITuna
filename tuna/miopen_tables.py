@@ -481,8 +481,6 @@ class ConvolutionGolden(BASE, GoldenMixin):
   params = Column(String(length=128), nullable=True)
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
-  alg_lib = Column(String(length=64), nullable=True)
-  opencl = Column(Boolean, nullable=False)
 
 
 class BNGolden(BASE, GoldenMixin):
