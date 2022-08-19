@@ -43,7 +43,7 @@ LOGGER = setup_logger('import_db')
 
 def parse_args():
   """command line parsing"""
-  parser = setup_arg_parser('Merge Performance DBs once tunning is finished',
+  parser = setup_arg_parser('Import Performance DBs once tunning is finished',
                             [TunaArgs.VERSION])
   parser.add_argument(
       '-t',
@@ -135,7 +135,7 @@ def record_perfdb(args, cfg_filter=None):
   """insert perf_db entry from sqlite file to mysql"""
   cnx = sqlite3.connect(args.target_file)
 
-  _, _ = parse_pdb_filename(args.target_file)
+  arch, num_cu = parse_pdb_filename(args.target_file)
 
   config_rows, config_cols = get_sqlite_data(cnx, 'config', cfg_filter)
   ret = record_perfdb_v2(args, cnx, config_rows, config_cols, cfg_filter)

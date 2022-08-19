@@ -162,6 +162,7 @@ class BNFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attribute
                                      "fdb_key",
                                      "alg_lib",
                                      "opencl",
+                                     "session",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
