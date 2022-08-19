@@ -52,15 +52,16 @@ LOGGER = setup_logger('go_fish')
 def parse_args():
   # pylint: disable=too-many-statements
   """Function to parse arguments"""
-  parser = setup_arg_parser('Run Performance Tuning on a certain architecture',
-                            [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
-                            TunaArgs.CONFIG_TYPE])
-  parser.add_argument('--find_mode',
-                      dest='find_mode',
-                      type=int,
-                      default=1,
-                      help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
-                      choices=[1, 3])
+  parser = setup_arg_parser(
+      'Run Performance Tuning on a certain architecture',
+      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+  parser.add_argument(
+      '--find_mode',
+      dest='find_mode',
+      type=int,
+      default=1,
+      help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
+      choices=[1, 3])
   parser.add_argument('--session_id',
                       action='store',
                       type=int,
@@ -73,7 +74,8 @@ def parse_args():
                       action='store_true',
                       default=False,
                       help='Run the process on this machine')
-  parser.add_argument('-l', '--label',
+  parser.add_argument('-l',
+                      '--label',
                       dest='label',
                       type=str,
                       default=None,
@@ -88,43 +90,47 @@ def parse_args():
                       type=str,
                       default='miopentuna',
                       help='Select a docker to run on. (default miopentuna)')
-  parser.add_argument('--solver_id',
-                      type=int,
-                      dest='solver_id',
-                      default=None,
-                      help='Specify solver_id. Use --list_solvers to see options')
+  parser.add_argument(
+      '--solver_id',
+      type=int,
+      dest='solver_id',
+      default=None,
+      help='Specify solver_id. Use --list_solvers to see options')
   parser.add_argument('--dynamic_solvers_only',
                       dest='dynamic_solvers_only',
                       action='store_true',
                       default=False,
                       help='Only tune dynamic solvers.')
-  parser.add_argument('-B', '--blacklist',
-                      dest='blacklist',
+  parser.add_argument(
+      '-B',
+      '--blacklist',
+      dest='blacklist',
+      type=str,
+      default=None,
+      help='MIOpen blacklist algorithm, if multiple then comma separate')
+  parser.add_argument('-m',
+                      '--machines',
+                      dest='machines',
                       type=str,
                       default=None,
-                      help='MIOpen blacklist algorithm, if multiple then comma separate')
-  parser.add_argument('-m',
-                       '--machines',
-                       dest='machines',
-                       type=str,
-                       default=None,
-                       required=False,
-                       help='Specify machine ids to use, comma separated')
+                      required=False,
+                      help='Specify machine ids to use, comma separated')
   parser.add_argument('-i',
                       '--reset_interval',
                       type=int,
                       dest='reset_interval',
                       required=False,
-                      help='Restart interval for job in hours.') 
+                      help='Restart interval for job in hours.')
   group = parser.add_mutually_exclusive_group()
   group.add_argument('--init_session',
-                      action='store_true',
-                      dest='init_session',
-                      help='Set up a new tuning session.')
-  group.add_argument('--fin_steps',
-                      type=str,
-                      dest='fin_steps',
-                      help='Specify fin steps. Multiple steps should be comma separated.')
+                     action='store_true',
+                     dest='init_session',
+                     help='Set up a new tuning session.')
+  group.add_argument(
+      '--fin_steps',
+      type=str,
+      dest='fin_steps',
+      help='Specify fin steps. Multiple steps should be comma separated.')
   group.add_argument('--list_solvers',
                      action='store_true',
                      dest='list_solvers',
@@ -138,23 +144,27 @@ def parse_args():
                      dest='update_applicability',
                      action='store_true',
                      help='Update the applicability table in the database')
-  group.add_argument('-r', '--restart',
+  group.add_argument('-r',
+                     '--restart',
                      dest='restart_machine',
                      action='store_true',
                      default=False,
                      help='Restart machines')
-  group.add_argument('-s', '--status',
+  group.add_argument('-s',
+                     '--status',
                      dest='check_status',
                      action='store_true',
                      default=False,
                      help='Check the status of machines')
 
-  group.add_argument('-d', '--docker_exec',
+  group.add_argument('-d',
+                     '--docker_exec',
                      dest='execute_docker_cmd',
                      type=str,
                      default=None,
                      help='execute in a docker on each machine')
-  group.add_argument('-e', '--exec',
+  group.add_argument('-e',
+                     '--exec',
                      dest='execute_cmd',
                      type=str,
                      default=None,
@@ -382,7 +392,7 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
     worker.start()
     worker_lst.append(worker)
     return True
-  elif args.update_applicability:
+  if args.update_applicability:
     kwargs['fin_steps'] = ['applicability']
     worker = FinClass(**kwargs)
     worker.start()
@@ -447,7 +457,8 @@ def compose_worker_list(res, args):
       continue
 
     #fin_steps should only contain one step
-    if args.update_applicability or (args.fin_steps and 'compile' in args.fin_steps[0]):
+    if args.update_applicability or (args.fin_steps and
+                                     'compile' in args.fin_steps[0]):
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
