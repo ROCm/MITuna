@@ -116,6 +116,6 @@ To extract coverage percentage from the underlying code base prior to opening Pu
 
 ```
 cd MITunaX/tuna
-bash tests/covscripts/coverage_script.sh
+./tests/covscripts/coverage_script.sh
 ```
 
