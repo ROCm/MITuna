@@ -26,11 +26,8 @@
 import json
 import sys
 
-
 sys.path.append("../tuna")
 sys.path.append("tuna")
-
-
 
 coverage_file = open('./utils/coverage_files/coverage.json')
 coverage_data = json.load(coverage_file)
