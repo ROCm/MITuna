@@ -7,11 +7,6 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import sphinx_rtd_theme
 
-project = 'MITuna'
-copyright = '2022, Alexandra Bara'
-author = 'Alexandra Bara'
-release = '0.1.0'
-
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -36,6 +31,7 @@ breathe_projects = { "MITuna": "xml/" }
 project = u'MITuna'
 copyright = u'2022, Advanced Micro Devices, Inc. All rights reserved'
 author = u'Advanced Micro Devices, Inc'
+release = '0.1.0'
 
 templates_path = ['_templates']
 
@@ -56,4 +52,3 @@ todo_include_todos = False
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
