@@ -28,7 +28,7 @@
 import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
 from sqlalchemy import Text, Enum
-from sqlalchemy import Float, BigInteger, Boolean
+from sqlalchemy import Float, BigInteger
 from sqlalchemy.databases import mysql
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
 from sqlalchemy.orm import relationship
