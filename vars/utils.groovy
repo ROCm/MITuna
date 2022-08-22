@@ -101,6 +101,14 @@ def finApplicability(){
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.OTEL_METRICS_EXPORTER="none"
+        env.OTEL_TRACES_EXPORTER="console"
+        //Jager port
+        //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
+        env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
+        env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
+        env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
+        env.OTEL_LOG_LEVEL="debug"
 
         sh "./tuna/go_fish.py --init_session -l new_session --local_machine"
         def sesh1 = runsql("select id from session order by id asc limit 1")
@@ -111,12 +119,12 @@ def finApplicability(){
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt"
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
-        sh "./tuna/import_configs.py -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt"
+        sh "opentelemetry-instrument python3 ./tuna/import_configs.py -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt"
         runsql("TRUNCATE table conv_solver_applicability")
 
         def num_cfg = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg}"
-        sh "./tuna/go_fish.py --update_applicability --session_id ${sesh1} --local_machine"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --update_applicability --session_id ${sesh1} --local_machine"
         def num_solvers = runsql("SELECT count(*) from solver;")
         println "Number of solvers: ${num_solvers}"
         def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${sesh1};")
@@ -160,7 +168,7 @@ def finFindCompile(){
         runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
@@ -210,7 +218,7 @@ def finFindEval(){
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --local_machine --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
@@ -605,7 +613,7 @@ def compile()
 
   if(params.base_image != '')
   {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} -f dockerfiles/rocm_base/Dockerfile"
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
   }
 
   sh "echo ${build_args}"
@@ -676,7 +684,7 @@ def evaluate()
 
   if(params.base_image != '')
   {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} -f dockerfiles/rocm_base/Dockerfile"
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
   }
 
   sh "echo ${build_args}"

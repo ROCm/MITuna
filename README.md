@@ -82,7 +82,7 @@ Run the setup scripts:
 python3.9 setup.py develop
 ```
 
-The root tuna folder needs to be appeneded to the PYTHONAPTH:
+The root tuna folder needs to be appended to the PYTHONAPTH:
 ```
 export PYTHONPATH=/<path_to_MITuna>/:$PYTHONPATH
 ```

@@ -1,11 +1,12 @@
-FROM ubuntu:18.04
+#default image to ubuntu + install rocm
+ARG BASEIMAGE=ubuntu:18.04
+ARG ROCM_PRE=0
+#ARG IMG_VER=$([[ $BASEIMAGE == "ubuntu:18.04" ]]; echo $?)
 
+FROM ubuntu:18.04 as dtuna-ver-0
+#install rocm
 ARG ROCMVERSION=5.1
 ARG OSDB_BKC_VERSION
-
-RUN set -xe
-
-ARG BUILD_THREADS=8
 ARG DEB_ROCM_REPO=http://repo.radeon.com/rocm/apt/.apt_$ROCMVERSION/
 # Add rocm repository
 RUN apt-get update
@@ -18,11 +19,22 @@ RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
     else \
        sh -c "echo deb [arch=amd64] $DEB_ROCM_REPO ubuntu main > /etc/apt/sources.list.d/rocm.list" ;\
     fi
-RUN wget --no-check-certificate -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add -
-RUN sh -c "echo deb https://apt.kitware.com/ubuntu/ bionic main | tee -a /etc/apt/sources.list"
 
 ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
 ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
+
+
+FROM $BASEIMAGE as dtuna-ver-1
+#do nothing, assume rocm is installed here
+
+
+FROM dtuna-ver-${ROCM_PRE} as final
+#finish building off previous image
+RUN set -xe
+
+RUN wget --no-check-certificate -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add -
+RUN sh -c "echo deb https://apt.kitware.com/ubuntu/ bionic main | tee -a /etc/apt/sources.list"
+
 ADD requirements.txt requirements.txt
 # Install dependencies
 RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-properties-common && add-apt-repository -y ppa:deadsnakes/ppa && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated \
@@ -92,6 +104,9 @@ RUN pip3 install /tmp/mysql_connector/*.whl
 RUN pip3 install --quiet pylint
 RUN pip3 install --quiet nosexcover
 
+# opentelemetry
+RUN opentelemetry-bootstrap -a install
+
 # Setup ubsan environment to printstacktrace
 RUN ln -s /usr/bin/llvm-symbolizer-3.8 /usr/local/bin/llvm-symbolizer
 ENV UBSAN_OPTIONS=print_stacktrace=1
@@ -152,7 +167,7 @@ RUN cmake -P install_deps.cmake
 WORKDIR $FIN_DIR/_hip
 RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$MIOPEN_DEPS $FIN_DIR
 
-RUN make -j ${BUILD_THREADS}
+RUN make -j $(nproc)
 RUN make install
 
 
