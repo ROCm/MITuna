@@ -68,9 +68,9 @@ def test_fin_builder():
     num_jobs = res[0][0]
 
   args = object()
-  args.local_machine = True
-  args.fin_steps = "miopen_find_compile"
-  args.session_id = 1
+  setattr(args, 'local_machine', True)
+  setattr(args, 'fin_steps', "miopen_find_compile")
+  setattr(args, 'session_id', 1)
 
   res = load_machines(args)
   worker_lst = compose_worker_list(res, args)
