@@ -17,6 +17,8 @@ mccabe==0.6.1
 myst-parser==0.15.1
 more-itertools==8.3.0
 numpy==1.22.0
+opentelemetry-distro==0.32b0
+opentelemetry-exporter-otlp-proto-http==1.11.1
 packaging==20.4
 paramiko==2.10.1
 parso==0.3.1
