@@ -35,6 +35,7 @@ from tuna.miopen_tables import ConvolutionGolden
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
+
 def test_populate_golden():
   res = None
   args = DummyArgs()
