@@ -411,10 +411,8 @@ def pytestSuite1() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            sh "pytest tests/test_abort_file.py "
-           //sh "pytest tests/test_analyze_parse_db.py "
-
+           sh "pytest tests/test_analyze_parse_db.py "
            sh "pytest tests/test_connection.py "
-           // builder then evaluator in sequence
            sh "pytest tests/test_importconfigs.py "
            sh "pytest tests/test_worker.py "
            sh "pytest tests/test_machine.py "

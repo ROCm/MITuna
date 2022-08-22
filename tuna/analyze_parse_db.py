@@ -210,8 +210,7 @@ def parse_pdb_filename(fname):
       break
 
   if not found:
-    LOGGER.error('Invalid perf db filename')
-    sys.exit(-1)
+    raise ValueError('Invalid perf db filename')
 
   return (arch, num_cu)
 

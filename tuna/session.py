@@ -69,27 +69,27 @@ class Session(BASE):
     """Add new session entry"""
     self.reason = args.label
     self.docker = args.docker_name
-    if args.arch:
+    if hasattr(args, 'arch'):
       self.arch = args.arch
     else:
       self.arch = worker.machine.arch
 
-    if args.num_cu:
+    if hasattr(args, 'num_cu'):
       self.num_cu = args.num_cu
     else:
       self.num_cu = worker.machine.num_cu
 
-    if args.rocm_v:
+    if hasattr(args, 'rocm_v'):
       self.rocm_v = args.rocm_v
     else:
       self.rocm_v = worker.get_rocm_v()
 
-    if args.miopen_v:
+    if hasattr(args, 'miopen_v'):
       self.miopen_v = args.miopen_v
     else:
       self.miopen_v = worker.get_miopen_v()
 
-    if args.ticket:
+    if hasattr(args, 'ticket'):
       self.ticket = args.ticket
     if args.solver_id:
       self.solver_id = args.solver_id
