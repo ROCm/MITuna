@@ -52,7 +52,9 @@ def parse_args():
       default=None,
       dest='target_file',
       required=True,
-      help='Supply an absolute path to the performance database file. This file will be imported.')
+      help=
+      'Supply an absolute path to the performance database file. This file will be imported.'
+  )
   parser.add_argument('--rocm_v',
                       dest='rocm_v',
                       type=str,
