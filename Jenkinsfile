@@ -57,6 +57,14 @@ pipeline {
             }
             }
         }
+        stage("load jobs"){
+        agent{ label "gfx908"} 
+        steps {
+            script {
+            utils.loadJobTest()
+            }
+            }
+        }
         stage("fin find compile"){
         agent{ label "gfx908"}
         steps{
@@ -70,14 +78,6 @@ pipeline {
         steps {
             script {
             utils.finFindEval()
-            }
-            }
-        }
-        stage("load jobs"){
-        agent{ label "gfx908"} 
-        steps {
-            script {
-            utils.loadJobTest()
             }
             }
         }
