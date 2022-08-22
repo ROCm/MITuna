@@ -37,6 +37,7 @@ from tuna.tables import DBTables
 from tuna.helper import compose_tensors, valid_cfg_dims
 from tuna.helper import mysqldb_insert_dict, mysqldb_overwrite_table
 from tuna.parse_args import TunaArgs, setup_arg_parser
+from tuna.session import Session
 
 LOGGER = setup_logger('import_db')
 
@@ -218,7 +219,7 @@ def main():
 
   args.label = "imported perf db"
   args.arch, args.num_cu = parse_pdb_filename(args.target_file)
-  args.session_id = Session().add_new_session(args, worker)
+  args.session_id = Session().add_new_session(args, None)
 
   dbt = DBTables(session_id=args.session_id)
   args.table_cfg = dbt.config_table
