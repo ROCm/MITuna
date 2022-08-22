@@ -57,6 +57,7 @@ def test_prune_cfg_dims():
   for key in SQLITE_CONFIG_COLS:
     assert (key in pruned.keys())
 
+
 def test_parse_pdb_filename():
 
   #pass
@@ -68,13 +69,13 @@ def test_parse_pdb_filename():
   nm5 = 'gfx908_70.db'
 
   arch, num_cu = parse_pdb_filename(nm1)
-  assert (arch =='gfx908')
+  assert (arch == 'gfx908')
   assert (num_cu == 120)
   arch, num_cu = parse_pdb_filename(nm2)
-  assert (arch =='gfx90a')
+  assert (arch == 'gfx90a')
   assert (num_cu == 110)
   arch, num_cu = parse_pdb_filename(nm3)
-  assert (arch =='gfx906')
+  assert (arch == 'gfx906')
   assert (num_cu == 60)
 
   err_throw = False
@@ -90,5 +91,3 @@ def test_parse_pdb_filename():
   except ValueError:
     err_throw = True
   assert (err_throw)
-
-
