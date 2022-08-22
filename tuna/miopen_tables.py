@@ -464,16 +464,18 @@ class GoldenMixin():
                   nullable=True)
 
   golden_miopen_v = Column(Integer, nullable=False)
+  arch = Column(String(length=20), nullable=False, server_default="")
+  num_cu = Column(Integer, nullable=False, server_default="0")
 
 
 class ConvolutionGolden(BASE, GoldenMixin):
   """Golden table for convolution"""
   __tablename__ = "conv_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "fdb_key",
                                      "config",
-                                     "session",
                                      "solver_id",
+                                     "arch",
+                                     "num_cu",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
