@@ -62,12 +62,12 @@ class DriverBatchNorm(DriverBase):
       self._cmd = cmd
 
   @property
-  def cmd(self):
+  def cmd_bn(self):
     """Setting 'private' attribute"""
     return self._cmd
 
-  @cmd.setter
-  def cmd(self, value):
+  @cmd_bn.setter
+  def cmd_bn(self, value):
     """Checking allowed BN cmd values"""
     print(value)
     if value not in SUPPORTED_BN_CMDS:
@@ -131,7 +131,7 @@ class DriverBatchNorm(DriverBase):
     return BNConfig(**self.compose_tensors(keep_id))
 
   def __str__(self):
-    return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
+    return "./bin/MIOpenDriver " + self.cmd_bn + " " + " ".join(
         '--{} {}'.format(key, val)
         for key, val in self.__dict__.items()
         if key in BN_CONFIG_COLS or key in IN_TENSOR_COLS or

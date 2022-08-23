@@ -207,9 +207,9 @@ def config_query(args, session, dbt):
       .filter(dbt.config_tags_table.tag == args.tag).subquery()
     cfg_query = cfg_query.filter(dbt.config_table.id.in_(tag_query))
 
-  if args.cmd:
+  if args.cmd_conv:
     cfg_query = cfg_query.filter(
-        dbt.config_table.input_t.data_type == TENSOR_PRECISION[args.cmd])
+        dbt.config_table.input_t.data_type == TENSOR_PRECISION[args.cmd_conv])
 
   return cfg_query
 

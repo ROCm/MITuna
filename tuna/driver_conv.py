@@ -79,12 +79,12 @@ class DriverConvolution(DriverBase):
       self._cmd = cmd
 
   @property
-  def cmd(self):
+  def cmd_conv(self):
     """Setting 'private' variable"""
     return self._cmd
 
-  @cmd.setter
-  def cmd(self, value):
+  @cmd_conv.setter
+  def cmd_conv(self, value):
     """Checking for allowed conv values"""
     if value not in SUPPORTED_CONV_CMDS:
       raise ValueError(
@@ -157,7 +157,7 @@ class DriverConvolution(DriverBase):
     return ConvolutionConfig(**self.compose_tensors(keep_id))
 
   def __str__(self):
-    return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
+    return "./bin/MIOpenDriver " + self.cmd_conv + " " + " ".join(
         '--{} {}'.format(key, val)
         for key, val in self.to_dict().items()
         if key in CONV_CONFIG_COLS or key in TENSOR_COLS or
