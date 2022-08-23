@@ -27,9 +27,10 @@
 # This file builds and runs the docker for Tuna
 # This docker contains a MySQL server with the schema pre-populated 
 # This docker can be run unattended 
-# The name of the docker instance is mysql_tuna
-docker rm mysql_tuna
+# The name of the docker instance is tuna_dev
+
+docker rm tuna_dev
 docker build -t tuna_dev  . 
-docker run --network host -v "$HOME":/data --name mysql_tuna tuna_dev
 
-
+# Prompt into the docker container (user's home directory will be hooked to /data in container)
+docker run -it --network host -v "$HOME":/data --device=/dev/kfd --device=/dev/dri --group-add video tuna_dev
