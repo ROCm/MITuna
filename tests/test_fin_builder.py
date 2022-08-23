@@ -56,6 +56,24 @@ def add_fin_find_compile_job():
   os.system(load_job)
 
 
+class Args():
+  local_machine = None
+  fin_steps = None
+  session_id = None
+  arch = None
+  num_cu = None
+  machines = None
+  restart_machine = None
+  update_applicability = None
+  find_mode = None
+  blacklist = None
+  update_solvers = None
+  config_type = None
+  reset_interval = None
+  dynamic_solvers_only = False
+  label = None
+  docker_name = None
+
 def test_fin_builder():
   add_fin_find_compile_job()
 
@@ -67,10 +85,10 @@ def test_fin_builder():
     assert (res[0][0] > 0)
     num_jobs = res[0][0]
 
-  args = object()
-  setattr(args, 'local_machine', True)
-  setattr(args, 'fin_steps', "miopen_find_compile")
-  setattr(args, 'session_id', 1)
+  args = Args()
+  args.local_machine = True
+  args.fin_steps = "miopen_find_compile"
+  args.session_id = 1
 
   res = load_machines(args)
   worker_lst = compose_worker_list(res, args)
