@@ -41,6 +41,7 @@ def test_populate_golden():
   args = DummyArgs()
   args.session_id = 1
   args.config_type = ConfigType.convolution
+  args.golden_v = 1
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
   assert get_query(dbt)
   assert add_golden_entries(args, dbt)
