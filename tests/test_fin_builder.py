@@ -82,7 +82,7 @@ def test_fin_builder():
       assert (res[0][0] > 0)
       num_jobs = res[0][0]
 
-    go_fish_run = "{0}/../tuna/go_fish.py --local_machine --fin_steps miopen_find_compile --session_id 1".format(
+    go_fish_run = "{0}/../tuna/go_fish.py --fin_steps miopen_find_compile --session_id 1".format(
         this_path)
     os.system(go_fish_run)
 
