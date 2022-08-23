@@ -62,9 +62,6 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   def get_query(self, sess, fdb_obj, session_id):
     """Construct a Db query for the find object
     """
-
-    # CE: Solver applicability can change between miopen versions
-    # find if this fdb entry is currently applicable
     query = sess.query(fdb_obj).filter(fdb_obj.session == session_id,
                                        fdb_obj.config == self.config,
                                        fdb_obj.opencl == self.opencl,
@@ -141,7 +138,7 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs['logger'] if 'logger' in kwargs.keys() else None  #pylint: disable=multiple-statements
+    self.logger = kwargs['logger'] if 'logger' in kwargs else None  #pylint: disable=multiple-statements
     self.fdb_slv_dir = {}
 
 

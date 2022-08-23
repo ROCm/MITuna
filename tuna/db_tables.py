@@ -38,9 +38,9 @@ from tuna.utils.utility import get_env_vars
 #pylint: disable=too-few-public-methods
 LOGGER = setup_logger('db_tables')
 ENV_VARS = get_env_vars()
-ENGINE = create_engine("mysql+pymysql://{}:{}@{}:3306/{}".format(
-    ENV_VARS['user_name'], ENV_VARS['user_password'], ENV_VARS['db_hostname'],
-    ENV_VARS['db_name']),
+
+ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" +\
+                         f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}",
                        encoding="utf8")
 
 
@@ -53,18 +53,18 @@ def connect_db():
     raise ValueError('DB name must be specified in env variable: TUNA_DB_NAME')
 
   try:
-    ENGINE.execute('Use {}'.format(db_name))
+    ENGINE.execute(f'Use {db_name}')
     return
   except OperationalError:  # as err:
     LOGGER.warning('Database %s does not exist, attempting to create database',
                    db_name)
 
   try:
-    ENGINE.execute('Create database if not exists {}'.format(db_name))
+    ENGINE.execute(f'Create database if not exists {db_name}')
   except OperationalError as err:
     LOGGER.error('Database creation failed %s for username: %s', err,
                  ENV_VARS['user_name'])
-  ENGINE.execute('Use {}'.format(db_name))
+  ENGINE.execute(f'Use {db_name}')
   ENGINE.execute('SET GLOBAL max_allowed_packet=4294967296')
 
 
@@ -73,7 +73,7 @@ def recreate_triggers(drop_triggers, create_triggers):
 
   with ENGINE.connect() as conn:
     for dtg in drop_triggers:
-      conn.execute("drop trigger if exists {}".format(dtg))
+      conn.execute(f"drop trigger if exists {dtg}")
     for trg in create_triggers:
       try:
         conn.execute(trg)
