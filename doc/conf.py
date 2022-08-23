@@ -14,6 +14,7 @@ extensions = [
     'breathe',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'myst_parser',
     'sphinx_rtd_theme',
 ]
 
@@ -31,7 +32,8 @@ breathe_projects = { "MITuna": "xml/" }
 project = u'MITuna'
 copyright = u'2022, Advanced Micro Devices, Inc. All rights reserved'
 author = u'Advanced Micro Devices, Inc'
-release = '0.1.0'
+version = '0.1.0'
+release = version
 
 templates_path = ['_templates']
 
@@ -52,3 +54,12 @@ todo_include_todos = False
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
+
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+html_theme_options = {
+    'collapse_navigation': False,
+    'display_version': True,
+}
+
