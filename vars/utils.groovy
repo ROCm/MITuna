@@ -449,7 +449,7 @@ def pytestSuite2() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_fin_builder.py -s"
+           sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
         }
         //def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
         //sh "${cmd}"
