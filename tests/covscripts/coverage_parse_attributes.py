@@ -1,4 +1,3 @@
-# pylint: skip-file
 ###############################################################################
 #
 # MIT License
@@ -24,3 +23,19 @@
 # SOFTWARE.
 #
 ###############################################################################
+import json
+import sys
+
+sys.path.append("../tuna")
+sys.path.append("tuna")
+
+coverage_file = open('./utils/coverage_files/coverage.json')
+coverage_data = json.load(coverage_file)
+
+percent_covered = coverage_data['totals']['percent_covered']
+percent_covered = '{:.2f}'.format(percent_covered)
+
+file = open("./utils/coverage_files/coverage_percentage.txt", "w")
+file.write(percent_covered)
+
+file.close()
