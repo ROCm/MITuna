@@ -41,13 +41,14 @@ pipeline {
            }
            }
         }
+
         stage("fin get solver"){
 	      agent{  label "gfx908" }
         steps {
             script {
             utils.finSolvers()
             }
-            }
+            } 
         }
         stage("pytest1"){
         agent{  label "gfx908" }
@@ -124,6 +125,7 @@ pipeline {
         }
     }
 }
+
 
 
 
