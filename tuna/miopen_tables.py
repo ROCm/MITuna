@@ -463,7 +463,7 @@ class GoldenMixin():
                   ForeignKey("solver.id",
                              onupdate="CASCADE",
                              ondelete="CASCADE"),
-                  nullable=True)
+                  nullable=False)
 
   golden_miopen_v = Column(Integer, nullable=False)
   arch = Column(String(length=20), nullable=False, server_default="")
