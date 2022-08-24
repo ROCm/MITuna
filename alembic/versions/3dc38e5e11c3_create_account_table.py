@@ -1,6 +1,5 @@
 #Copyright 2009-2021 Sony Pictures Imageworks, Inc. and
 #Industrial Light and Magic, a division of Lucasfilm Entertainment Company Ltd.
-
 """create account table
 
 Revision ID: 3dc38e5e11c3
@@ -10,7 +9,6 @@ Create Date: 2022-08-23 14:17:57.009323
 """
 from alembic import op
 import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision = '3dc38e5e11c3'
