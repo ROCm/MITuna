@@ -49,6 +49,31 @@ pipeline {
             }
             }
         }
+        stage("pytest1"){
+        agent{  label "gfx908" }
+        steps{
+            script{
+            utils.pytestSuite1()
+            }
+            }
+        }
+        stage("pytest2"){
+        //agent{ label utils.rocmnode("tunatest") }
+        agent{  label "gfx908" }
+        steps{
+            script{
+            utils.pytestSuite2()
+            }
+            }
+        }
+        stage("pytest3"){
+        agent{  label "gfx908" }
+        steps{
+            script{
+            utils.pytestSuite3()
+            }
+            }
+        }    
         stage("fin applicability"){
 	      agent{  label "gfx908" }
         steps {
@@ -97,30 +122,6 @@ pipeline {
             }
             }
         }
-        stage("pytest1"){
-        agent{  label "gfx908" }
-        steps{
-            script{
-            utils.pytestSuite1()
-            }
-            }
-        }
-        stage("pytest2"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps{
-            script{
-            utils.pytestSuite2()
-            }
-            }
-        }
-        stage("pytest3"){
-        agent{  label "gfx908" }
-        steps{
-            script{
-            utils.pytestSuite3()
-            }
-            }
-        }    
     }
 }
 
