@@ -61,7 +61,7 @@ def key_from_file():
   ]:
     # ~/ssh/ is for windows
     for directory in [".ssh", "ssh"]:
-      full_path = os.path.expanduser("~/{}/id_{}".format(directory, name))
+      full_path = os.path.expanduser(f"~/{directory}/id_{name}")
       if os.path.isfile(full_path):
         keyfiles.append((keytype, full_path))
         keys.append(keytype.from_private_key_file(full_path))
@@ -116,7 +116,7 @@ class SSHTunnel():  # pylint: disable=too-few-public-methods
 class MgmtBackend(Enum):
   """ Supported Backends """
   IPMI = 1
-  OpenBMC = 2
+  OpenBMC = 2  # pylint: disable=invalid-name ; more readable than all-uppercase
 
 
 class MachineManagementInterface():
@@ -183,50 +183,52 @@ class MachineManagementInterface():
       MachineManagementInterface.obmc_tunnels[(self.mgmt_ip,
                                                self.mgmt_port)] = tunnel
     self.logger.info('Running OBMC command: %s', command)
-    (output, retcode) = tunnel.run('/usr/sbin/obmcutil {}'.format(command))
+    (output, retcode) = tunnel.run(f'/usr/sbin/obmcutil {command}')
     self.logger.info('OBMC output: %s', output)
     self.logger.info('OBMC return code: %s', retcode)
     return retcode
 
   def run_ipmi_command(self, command):
     """ Exec an IPMI command on the remote host """
+    # pylint: disable=consider-using-f-string ; more-readable this way
     cmd = 'ipmitool -H {} -U {} -P {} -p {} {}'.format(self.mgmt_ip,
                                                        self.mgmt_user,
                                                        self.mgmt_password,
                                                        self.mgmt_port, command)
+    # pylint: enable=consider-using-f-string
     self.logger.info('Running IPMI command: %s', cmd)
-    subp = Popen(cmd,
-                 stdout=PIPE,
-                 stderr=PIPE,
-                 shell=True,
-                 universal_newlines=True)
-    out_ch = subp.stdout
-    err_ch = subp.stderr
-    error = [x.strip() for x in err_ch.readlines()]
-    error = '\n'.join(error)
-    exit_status = 0
-    if error:
-      exit_status = 1
-      try:
-        if (not MachineManagementInterface.gateway_session or
-            not MachineManagementInterface.gateway_session.get_transport(
-            ).is_active()):
-          MachineManagementInterface.gateway_session = self.connect_to_gateway(
-              GATEWAY_IP, GATEWAY_PORT, GATEWAY_USER)
+    with Popen(cmd,
+               stdout=PIPE,
+               stderr=PIPE,
+               shell=True,
+               universal_newlines=True) as subp:
+      out_ch = subp.stdout
+      err_ch = subp.stderr
+      error = [x.strip() for x in err_ch.readlines()]
+      error = '\n'.join(error)
+      exit_status = 0
+      if error:
+        exit_status = 1
+        try:
+          if (not MachineManagementInterface.gateway_session or
+              not MachineManagementInterface.gateway_session.get_transport(
+              ).is_active()):
+            MachineManagementInterface.gateway_session = self.connect_to_gateway(
+                GATEWAY_IP, GATEWAY_PORT, GATEWAY_USER)
 
-        ssh = MachineManagementInterface.gateway_session
-        _, out_ch, err_ch = ssh.exec_command(cmd, timeout=SSH_TIMEOUT)
-        error = [x.strip() for x in err_ch.readlines()]
-        error = '\n'.join(error)
-        exit_status = out_ch.channel.exit_status
-      except paramiko.ssh_exception.SSHException:
-        self.logger.warning('Failed to execute ipmitool command')
+          ssh = MachineManagementInterface.gateway_session
+          _, out_ch, err_ch = ssh.exec_command(cmd, timeout=SSH_TIMEOUT)
+          error = [x.strip() for x in err_ch.readlines()]
+          error = '\n'.join(error)
+          exit_status = out_ch.channel.exit_status
+        except paramiko.ssh_exception.SSHException:
+          self.logger.warning('Failed to execute ipmitool command')
 
-    output = [x.strip() for x in out_ch.readlines()]
-    output = '\n'.join(output)
-    self.logger.warning('IPMI std output: %s', output)
-    self.logger.warning('IPMI err output: %s', error)
-    return exit_status
+      output = [x.strip() for x in out_ch.readlines()]
+      output = '\n'.join(output)
+      self.logger.warning('IPMI std output: %s', output)
+      self.logger.warning('IPMI err output: %s', error)
+      return exit_status
 
   def restart_server(self):
     """ Method to restart a remote machine """

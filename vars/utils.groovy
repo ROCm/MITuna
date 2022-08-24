@@ -440,6 +440,7 @@ def pytestSuite1() {
     }
 }
 
+
 def pytestSuite2() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
@@ -510,12 +511,6 @@ def runLint() {
           }
     }
 }
-
-
-
-
-
-
 
 def getJobReason()
 {

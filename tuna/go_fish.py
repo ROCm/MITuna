@@ -53,9 +53,10 @@ LOGGER = setup_logger('go_fish')
 def parse_args():
   # pylint: disable=too-many-statements
   """Function to parse arguments"""
-  parser = setup_arg_parser('Run Performance Tuning on a certain ' \
-      'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
-                       TunaArgs.CONFIG_TYPE])
+  parser = setup_arg_parser(
+      'Run Performance Tuning on a certain architecture',
+      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+
   parser.add_argument(
       '--find_mode',
       dest='find_mode',
@@ -63,14 +64,13 @@ def parse_args():
       default=1,
       help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
       choices=[1, 3])
-  parser.add_argument(
-      '--session_id',
-      action='store',
-      type=int,
-      dest='session_id',
-      help=
-      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
-  )
+  parser.add_argument('--session_id',
+                      action='store',
+                      type=int,
+                      dest='session_id',
+                      help=
+                      'Session ID to be used as tuning tracker. ' \
+                      'Allows to correlate DB results to tuning sessions')
   parser.add_argument('--local_machine',
                       dest='local_machine',
                       action='store_true',
@@ -148,7 +148,6 @@ def parse_args():
                      dest='update_applicability',
                      action='store_true',
                      help='Update the applicability table in the database')
-
   group.add_argument('-r',
                      '--restart',
                      dest='restart_machine',
@@ -220,7 +219,7 @@ def check_fin_args(args, parser):
   args.fin_steps = f_steps
   for step in args.fin_steps:
     if step not in valid_fin_steps:
-      parser.error("Supported fin steps are: {}".format(valid_fin_steps))
+      parser.error(f"Supported fin steps are: {valid_fin_steps}")
   assert len(args.fin_steps) == 1
 
 
@@ -235,8 +234,8 @@ def check_blacklist(args, parser):
 def load_machines(args):
   """Function to get available machines from the DB"""
   cmd = 'hostname'
-  subp = Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True)
-  hostname = subp.stdout.readline().strip()
+  with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
+    hostname = subp.stdout.readline().strip()
   LOGGER.info('hostname = %s', hostname)
   try:
     with DbSession() as session:
@@ -279,10 +278,10 @@ def get_envmt(args):
   envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
 
   if args.find_mode:
-    envmt.append("MIOPEN_FIND_MODE={}".format(args.find_mode))
+    envmt.append(f"MIOPEN_FIND_MODE={args.find_mode}")
 
   if args.blacklist:
-    bk_str = ", ".join(["{}=0".format(arg) for arg in args.blacklist])
+    bk_str = ", ".join([f"{arg}=0" for arg in args.blacklist])
     for bk_var in bk_str.split(','):
       envmt.append(bk_var)
 
@@ -298,8 +297,7 @@ def check_docker(worker, dockername="miopentuna"):
   if out2.channel.exit_status > 0:
     LOGGER.warning("docker not installed or failed to run with sudo .... ")
   else:
-    _, out, _ = worker.exec_command(
-        "sudo docker images | grep {}".format(dockername))
+    _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
     line = None
     for line in out.readlines():
       if line.find(dockername) != -1:
@@ -329,8 +327,7 @@ def check_status(worker, b_first, gpu_idx, machine, dockername="miopentuna"):
   if out.channel.exit_status > 0:
     check_docker(worker, dockername)
   else:
-    _, out, _ = worker.exec_command(
-        "docker images | grep {}".format(dockername))
+    _, out, _ = worker.exec_command(f"docker images | grep {dockername}")
     line = None
     for line in out.readlines():
       if line.find(dockername) != -1:
@@ -403,7 +400,7 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
     worker.start()
     worker_lst.append(worker)
     return True
-  elif args.update_applicability:
+  if args.update_applicability:
     kwargs['fin_steps'] = ['applicability']
     worker = FinClass(**kwargs)
     worker.start()

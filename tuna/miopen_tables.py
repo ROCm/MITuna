@@ -311,6 +311,7 @@ class FusionConfigTags(BASE, ConfigTagMixin):
 
 class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
+  # pylint: disable=invalid-name ; names represent entries in job_enum column
   new = 1
   started = 2
   running = 3
@@ -337,6 +338,7 @@ class JobEnum(enum.Enum):
 
 class FinStep(enum.Enum):
   """ Allowed Fin Steps """
+  # pylint: disable=invalid-name ; tuna/go_fish.py names valid fin steps as FinStep.__members__
   find_compile = 1
   find_eval = 2
   get_solvers = 3
