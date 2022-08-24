@@ -485,7 +485,7 @@ def runFormat() {
         checkout scm
         def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
         tuna_docker.inside("") {
-            sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/"
+            sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/"
         }
     }
 }
