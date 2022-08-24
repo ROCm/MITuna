@@ -70,7 +70,7 @@ def get_fin_result(status):
   if True in [x['success'] for x in status]:
     success = True
   for slv, res in [[x['solver'], x['result']] for x in status]:
-    result_str += ' ({}: {})'.format(slv, res)
+    result_str += f' ({slv}: {res})'
 
   return success, result_str
 

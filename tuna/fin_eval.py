@@ -27,6 +27,7 @@
 """Fin Evaluator class implements the worker interface. The purpose of this class
 is to run fin commands in benchmarking mode"""
 from time import sleep
+import functools
 import json
 
 from sqlalchemy.exc import OperationalError
@@ -46,7 +47,7 @@ class FinEvaluator(WorkerInterface):
 
   def __init__(self, **kwargs):
     super().__init__(**kwargs)
-    self.envmt.append("HIP_VISIBLE_DEVICES={}".format(self.gpu_id))
+    self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
 
   def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""
@@ -76,10 +77,13 @@ class FinEvaluator(WorkerInterface):
     with DbSession() as session:
       perf_compile_res = []
 
+      # pylint: disable=comparison-with-callable
       query = session.query(self.dbt.solver_app).filter(
           self.dbt.solver_app.session == self.dbt.session.id,
           self.dbt.solver_app.config == self.job.config,
           self.dbt.solver_app.applicable == 1)
+      # pylint: enable=comparison-with-callable
+
       for slv_entry in query.all():
         slv_name = self.id_solver_map[slv_entry.solver]
         if not self.job.solver or slv_name == self.job.solver:
@@ -175,7 +179,7 @@ class FinEvaluator(WorkerInterface):
     except AssertionError as err:
       self.logger.error('Unable to get compiled objects for job %s : %s',
                         self.job.id, err)
-      raise AssertionError
+      raise AssertionError from err
 
     return self.machine.write_file(json.dumps(fjob, indent=2).encode(),
                                    is_temp=True)
@@ -212,12 +216,17 @@ class FinEvaluator(WorkerInterface):
     status = []
     fdb_obj = None
     with DbSession() as session:
+
+      def actuator(func, fdb_obj):
+        return func(session, fdb_obj)
+
       for fdb_obj in fin_json[result_str]:
         self.logger.info('Processing object: %s', fdb_obj)
         slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
         #retry returns false on failure, callback return on success
         ret = session_retry(session, self.update_fdb_eval_entry,
-                            lambda x: x(session, fdb_obj), self.logger)
+                            functools.partial(actuator, fdb_obj=fdb_obj),
+                            self.logger)
         if not ret:
           self.logger.warning('FinEval: Unable to update Database')
           slv_stat['success'] = False
