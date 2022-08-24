@@ -1,3 +1,6 @@
+#Copyright 2009-2021 Sony Pictures Imageworks, Inc. and
+#Industrial Light and Magic, a division of Lucasfilm Entertainment Company Ltd.
+
 """create account table
 
 Revision ID: 3dc38e5e11c3

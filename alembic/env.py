@@ -1,3 +1,6 @@
+#Copyright 2009-2021 Sony Pictures Imageworks, Inc. and
+#Industrial Light and Magic, a division of Lucasfilm Entertainment Company Ltd.
+
 import os
 from logging.config import fileConfig
 
