@@ -492,6 +492,8 @@ class BNGolden(BASE, GoldenMixin):
                                      "config",
                                      "session",
                                      "solver_id",
+                                     "arch",
+                                     "num_cu",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
