@@ -409,12 +409,12 @@ class SolverApplicabilityMixin():
   """Represents Mixin class for solver_applicability tables"""
 
   @declared_attr
-  def solver(self):
+  def solver_appmixmin(self):
     """solver column"""
     return Column(Integer, ForeignKey("solver.id"), nullable=False)
 
   @declared_attr
-  def session(self):
+  def session_appmixmin(self):
     """session key"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
@@ -482,12 +482,12 @@ class PerfDBMixin():
   """perf databades"""
 
   @declared_attr
-  def solver(self):
+  def solver_perfdbmixin(self):
     """solver column"""
     return Column(Integer, ForeignKey("solver.id"), nullable=False)
 
   @declared_attr
-  def session(self):
+  def session_perfdbmixin(self):
     """session column"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 

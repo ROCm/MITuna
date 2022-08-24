@@ -43,12 +43,12 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   __mapper_args__ = {'always_refresh': True}
 
   @declared_attr
-  def solver(self):
+  def solver_find_dbmixin(self):
     """solver column"""
     return Column(Integer, ForeignKey("solver.id"), nullable=False)
 
   @declared_attr
-  def session(self):
+  def session_find_dbmixin(self):
     """session column"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
