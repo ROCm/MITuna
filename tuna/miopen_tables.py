@@ -452,13 +452,13 @@ class GoldenMixin():
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
   @declared_attr
-  def solver_id(self):
-    """solver_id foreign key"""
+  def solver(self):
+    """solver foreign key"""
     return Column(Integer,
                   ForeignKey("solver.id",
                              onupdate="CASCADE",
                              ondelete="CASCADE"),
-                  nullable=True)
+                  nullable=False)
 
   golden_miopen_v = Column(Integer, nullable=False)
   arch = Column(String(length=20), nullable=False, server_default="")
@@ -470,7 +470,7 @@ class ConvolutionGolden(BASE, GoldenMixin):
   __tablename__ = "conv_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "config",
-                                     "solver_id",
+                                     "solver",
                                      "arch",
                                      "num_cu",
                                      name="uq_idx"),)
@@ -490,7 +490,7 @@ class BNGolden(BASE, GoldenMixin):
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "config",
                                      "session",
-                                     "solver_id",
+                                     "solver",
                                      "arch",
                                      "num_cu",
                                      name="uq_idx"),)
