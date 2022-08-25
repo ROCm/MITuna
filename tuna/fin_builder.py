@@ -91,6 +91,13 @@ class FinBuilder(WorkerInterface):
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+
+    try:
+      self.check_env()
+    except ValueError as verr:
+      self.logger.error(verr)
+      return False
+
     if not self.get_job("new", "compile_start", True):
       return False
 

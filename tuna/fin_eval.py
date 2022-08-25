@@ -213,6 +213,12 @@ class FinEvaluator(WorkerInterface):
 
   def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
     """process find db eval json results"""
+    try:
+      self.check_env()
+    except ValueError as verr:
+      self.logger.error(verr)
+      return False
+
     status = []
     fdb_obj = None
     with DbSession() as session:
