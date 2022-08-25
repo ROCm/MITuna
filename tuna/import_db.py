@@ -53,7 +53,7 @@ def parse_args():
       dest='target_file',
       required=True,
       help='Supply an absolute path to the file. This file will be imported.')
-  parser.add_argument(
+  parser.add_argument(# pylint: disable=duplicate-code
       '--session_id',
       action='store',
       required=True,

@@ -107,6 +107,8 @@ def parse_args():
                       help='Label to annontate the jobs.',
                       default='new')
   parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
+  #pylint: disable-all
+  #disable pylint warnings for this line due to duplication in import_db
   parser.add_argument(
       '--session_id',
       action='store',
@@ -116,6 +118,8 @@ def parse_args():
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
+  #pylint: enable-all
+  #enables pylint checks for the rest of the file
 
   args = parser.parse_args()
 
