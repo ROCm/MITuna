@@ -137,19 +137,14 @@ class ConvolutionKernelCache(BASE, KernelCacheMixin):
   """Represents kernel_cache table for convolutions"""
   __tablename__ = "conv_kernel_cache"
 
-  conv_find_db_key = Column(Integer,
-                            ForeignKey("conv_find_db.id"),
-                            nullable=False)
-  conv_find_db_entries = relationship("ConvolutionFindDB",
-                                      back_populates="blobs")
+  kernel_group = Column(Integer, nullable=True)
 
 
 class BNKernelCache(BASE, KernelCacheMixin):
   """Represents kernel_cache table for batch_norm"""
   __tablename__ = "bn_kernel_cache"
 
-  bn_find_db_key = Column(Integer, ForeignKey("bn_find_db.id"), nullable=False)
-  bn_find_db_entries = relationship("BNFindDB", back_populates="blobs")
+  kernel_group = Column(Integer, nullable=True)
 
 
 class Solver(BASE):
@@ -486,6 +481,8 @@ class ConvolutionGolden(BASE, GoldenMixin):
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
 
+  kernel_group = Column(Integer, nullable=True)
+
 
 class BNGolden(BASE, GoldenMixin):
   """Golden table for batch norm"""
@@ -500,6 +497,8 @@ class BNGolden(BASE, GoldenMixin):
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
+  kernel_group = Column(Integer, nullable=True)
+
 
 def add_conv_tables(miopen_tables):
   """Append Convolution specific MIOpen DB tables"""
@@ -507,10 +506,10 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvolutionJob)
   miopen_tables.append(ConvolutionConfigTags())
   miopen_tables.append(ConvSolverApplicability())
-  miopen_tables.append(ConvolutionFindDB)
   miopen_tables.append(ConvolutionKernelCache())
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
+  miopen_tables.append(ConvolutionFindDB)
   miopen_tables.append(ConvolutionGolden())
   return miopen_tables
 
@@ -530,10 +529,10 @@ def add_bn_tables(miopen_tables):
   miopen_tables.append(BNJob())
   miopen_tables.append(BNConfigTags())
   miopen_tables.append(BNSolverApplicability())
-  miopen_tables.append(BNFindDB())
   miopen_tables.append(BNKernelCache())
   miopen_tables.append(BNJobCache())
   miopen_tables.append(BNFinJobCache())
+  miopen_tables.append(BNFindDB())
   miopen_tables.append(BNGolden())
   return miopen_tables
 
