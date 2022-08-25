@@ -132,11 +132,11 @@ class DriverConvolution(DriverBase):
   def config_set_defaults(self):
     """Setting config DB defaults to avoid duplicates through SELECT"""
     if self.spatial_dim == 3:
-      self.set_defaults(CONV_3D_DEFAULTS)
+      self.set_defaults_conv(CONV_3D_DEFAULTS)
     else:
-      self.set_defaults(CONV_2D_DEFAULTS)
+      self.set_defaults_conv(CONV_2D_DEFAULTS)
 
-  def set_defaults(self, defaults):
+  def set_defaults_conv(self, defaults):
     """Set fds defaults"""
     for k, val in self.to_dict().items():
       if val is None and k in defaults.keys():

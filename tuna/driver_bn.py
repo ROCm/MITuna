@@ -108,9 +108,9 @@ class DriverBatchNorm(DriverBase):
 
   def config_set_defaults(self):
     """Setting config DB defaults to avoid duplicates through SELECT"""
-    self.set_defaults(BN_DEFAULTS)
+    self.set_defaults_bn(BN_DEFAULTS)
 
-  def set_defaults(self, defaults):
+  def set_defaults_bn(self, defaults):
     """Set fds defaults"""
     for k, val in self.to_dict().items():
       if val is None and k in defaults.keys():

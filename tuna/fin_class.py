@@ -74,6 +74,8 @@ class FinClass():
     self.machine = None
     self.docker_name = None
     self.cnx = None
+    # pylint: disable-all
+    # pylint false-flags this line as duplicate code
     self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
     self.label = None
     self.session_id = None
@@ -83,7 +85,7 @@ class FinClass():
 
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
-
+    # pylint: enable-all
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []

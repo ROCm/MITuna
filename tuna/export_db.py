@@ -57,6 +57,8 @@ def parse_args():
                       action='store_true',
                       help='Use OpenCL extension',
                       default=False)
+  # pylint: disable-all
+  # pylint false flag this as duplicate with line 134 in go_fish file
   parser.add_argument(
       '--session_id',
       action='store',
@@ -65,6 +67,7 @@ def parse_args():
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
+  # pylint: enable-all
   parser.add_argument('--config_tag',
                       dest='config_tag',
                       type=str,
