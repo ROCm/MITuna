@@ -42,15 +42,20 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   __table_args__ = {'mysql_engine': 'InnoDB'}
   __mapper_args__ = {'always_refresh': True}
 
+  # pylint: disable-all
+  # disable pylint warnings for this line due to duplication in miopen_tables
   @declared_attr
-  def solver_find_dbmixin(self):
+  def solver(self):
     """solver column"""
     return Column(Integer, ForeignKey("solver.id"), nullable=False)
 
   @declared_attr
-  def session_find_dbmixin(self):
+  def session(self):
     """session column"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
+
+  # pylint: enable-all
+  # enables pylint checks for the rest of the file
 
   fdb_key = Column(String(length=128), nullable=True)
   kernel_time = Column(Float, nullable=False)
