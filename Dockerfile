@@ -187,11 +187,11 @@ ENV TUNA_DB_USER_PASSWORD=${DB_USER_PASSWORD}
 ENV TUNA_DB_HOSTNAME=${DB_HOSTNAME}
 
 RUN mkdir /tuna
-ADD setup.py /tuna/
-ADD tuna /tuna/tuna/
-ADD tests /tuna/tests/
-ADD utils /tuna/utils/
-ADD requirements.txt /tuna/
+COPY setup.py /tuna/
+COPY tuna /tuna/tuna/
+COPY tests /tuna/tests/
+COPY utils /tuna/utils/
+COPY requirements.txt /tuna/
 WORKDIR /tuna
 RUN python3.9 setup.py install
 

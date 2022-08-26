@@ -71,11 +71,6 @@ class LdJobArgs():
 
 
 def add_fin_find_compile_job(session):
-  del_q = f"DELETE FROM conv_job WHERE session = {session}"
-
-  with DbCursor() as cur:
-    cur.execute(del_q)
-
   #import configs
   args = CfgImportArgs()
   args.tag = 'test_fin_builder'
