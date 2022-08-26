@@ -33,7 +33,6 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.go_fish import load_machines, compose_worker_list, compose_f_vals, get_kwargs
 from tuna.worker_interface import WorkerInterface
@@ -132,7 +131,10 @@ def test_fin_builder():
   f_vals["num_procs"] = Value('i', len(worker_ids))
   kwargs = get_kwargs(0, f_vals, args)
   worker = WorkerInterface(**kwargs)
+  worker.machine.arch='gfx908'
+  worker.machine.num_cu=120
   args.session_id = Session().add_new_session(args, worker)
+  assert (args.session_id)
 
   #update solvers
   kwargs = get_kwargs(0, f_vals, args)
@@ -142,31 +144,29 @@ def test_fin_builder():
   #load jobs
   add_fin_find_compile_job(args.session_id)
   num_jobs = 0
-  with DbCursor() as cur:
+  with DbSession() as session:
     get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state='new';"
-    cur.execute(get_jobs)
-    res = cur.fetchall()
-    assert (res[0][0] > 0)
-    num_jobs = res[0][0]
+    res = session.execute(get_jobs)
+    for row in res:
+      assert (row[0] > 0)
+      num_jobs = row[0]
 
   #get applicability
   args.update_applicability = True
   args.label = None
   worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
-    print(worker.fin_steps)
     worker.join()
 
   #compile
   args.update_applicability = False
-  args.fin_steps = "miopen_find_compile"
+  args.fin_steps = ["miopen_find_compile"]
   worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
-    print(worker.fin_steps)
     worker.join()
 
-  with DbCursor() as cur:
+  with DbSession() as session:
     get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state in ('compiled');"
-    cur.execute(get_jobs)
-    res = cur.fetchall()
-    assert (res[0][0] == num_jobs)
+    row = session.execute(get_jobs)
+    for row in res:
+      assert (row[0] == num_jobs)
