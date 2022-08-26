@@ -229,6 +229,7 @@ def compose_tensors(fds, args, keep_id=False):
 
 
 #DEPRECATED
+# pylint: disable-all
 def insert_tensor(fds, tensor_dict):
   """Insert new row into tensor table and return primary key"""
 
@@ -246,7 +247,7 @@ def insert_tensor(fds, tensor_dict):
       ret_id = get_tid(session, tensor_dict)
 
   return ret_id
-
+# pylint: enable-all
 
 #DEPRECATED
 def get_tid(session, tensor_dict):

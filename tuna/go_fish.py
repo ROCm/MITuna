@@ -132,6 +132,7 @@ def parse_args():
       default=1,
       help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
       choices=[1, 3])
+  # pylint: disable-all
   parser.add_argument(
       '--session_id',
       action='store',
@@ -140,6 +141,7 @@ def parse_args():
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
+  # pylint: enable-all
   parser.add_argument('--init_session',
                       action='store_true',
                       dest='init_session',

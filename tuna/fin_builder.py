@@ -52,6 +52,9 @@ class FinBuilder(WorkerInterface):
                                         is_temp=True)
     return fin_input
 
+  # pylint: disable-all
+  #disable pylint false positive duplicate code warnings
+
   def compose_job_cache_entrys(self, session, pdb_obj):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
@@ -68,6 +71,8 @@ class FinBuilder(WorkerInterface):
     session.commit()
 
     return True
+
+  # pylint: enable-all
 
   def process_pdb_compile(self, session, fin_json):
     """retrieve perf db compile json results"""
