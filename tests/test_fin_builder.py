@@ -44,6 +44,7 @@ from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 
+
 class CfgImportArgs():
   config_type = ConfigType.convolution,
   command = None
@@ -53,6 +54,7 @@ class CfgImportArgs():
   mark_recurrent = False
   tag = None
   tag_only = False
+
 
 class LdJobArgs():
   config_type = ConfigType.convolution,
@@ -66,6 +68,7 @@ class LdJobArgs():
   label = None
   fin_steps = None
   session_id = None
+
 
 def add_fin_find_compile_job(session):
   del_q = f"DELETE FROM conv_job WHERE session = {session}"
@@ -103,7 +106,7 @@ def add_fin_find_compile_job(session):
 
 
 class GoFishArgs():
-  local_machine = True 
+  local_machine = True
   fin_steps = None
   session_id = None
   arch = None
@@ -117,7 +120,7 @@ class GoFishArgs():
   config_type = None
   reset_interval = None
   dynamic_solvers_only = False
-  label = 'pytest_fin_builder' 
+  label = 'pytest_fin_builder'
   docker_name = None
   ticket = None
   solver_id = None
@@ -139,7 +142,7 @@ def test_fin_builder():
   #update solvers
   kwargs = get_kwargs(0, f_vals, args)
   fin_worker = FinClass(**kwargs)
-  assert( fin_worker.get_solvers() )
+  assert (fin_worker.get_solvers())
 
   #load jobs
   add_fin_find_compile_job(args.session_id)
@@ -160,7 +163,7 @@ def test_fin_builder():
     worker.join()
 
   #compile
-  args.update_applicability = False 
+  args.update_applicability = False
   args.fin_steps = "miopen_find_compile"
   worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
