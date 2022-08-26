@@ -247,6 +247,8 @@ def insert_tensor(fds, tensor_dict):
       ret_id = get_tid(session, tensor_dict)
 
   return ret_id
+
+
 # pylint: enable-all
 #DEPRECATED
 def get_tid(session, tensor_dict):
