@@ -131,8 +131,8 @@ def test_fin_builder():
   f_vals["num_procs"] = Value('i', len(worker_ids))
   kwargs = get_kwargs(0, f_vals, args)
   worker = WorkerInterface(**kwargs)
-  worker.machine.arch='gfx908'
-  worker.machine.num_cu=120
+  worker.machine.arch = 'gfx908'
+  worker.machine.num_cu = 120
   args.session_id = Session().add_new_session(args, worker)
   assert (args.session_id)
 
