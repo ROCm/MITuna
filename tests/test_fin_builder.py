@@ -26,6 +26,7 @@
 
 import os
 import sys
+from multiprocessing import Value
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -34,30 +35,75 @@ this_path = os.path.dirname(__file__)
 
 from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.go_fish import load_machines, compose_worker_list
+from tuna.go_fish import load_machines, compose_worker_list, compose_f_vals, get_kwargs
+from tuna.worker_interface import WorkerInterface
+from tuna.fin_class import FinClass
+from tuna.session import Session
+from tuna.tables import DBTables, ConfigType
+from tuna.db_tables import connect_db
+from import_configs import import_cfgs
+from load_job import test_tag_name as tag_name_test, add_jobs
 
+class CfgImportArgs():
+  config_type = ConfigType.convolution,
+  command = None
+  batches = None
+  batch_list = []
+  file_name = None
+  mark_recurrent = False
+  tag = None
+  tag_only = False
 
-def add_fin_find_compile_job():
-  del_q = "DELETE FROM conv_job WHERE session = 1"
-  del_q2 = "DELETE FROM conv_config_tags WHERE tag = 'test_fin_builder'"
+class LdJobArgs():
+  config_type = ConfigType.convolution,
+  tag = None
+  all_configs = False
+  algo = None
+  solvers = [('', None)]
+  only_app = False
+  tunable = False
+  cmd = None
+  label = None
+  fin_steps = None
+  session_id = None
+
+def add_fin_find_compile_job(session):
+  del_q = f"DELETE FROM conv_job WHERE session = {session}"
 
   with DbCursor() as cur:
     cur.execute(del_q)
-    cur.execute(del_q2)
 
-  add_cfg = "{0}/../tuna/import_configs.py -t test_fin_builder --mark_recurrent -f {0}/../utils/configs/conv_configs_NCHW.txt".format(
-      this_path)
+  #import configs
+  args = CfgImportArgs()
+  args.tag = 'test_fin_builder'
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  load_job = "{0}/../tuna/load_job.py -l tuna_pytest_fin_builder -t test_fin_builder \
-      --fin_steps 'miopen_find_compile, miopen_find_eval' --session_id 1".format(
-      this_path)
+  dbt = DBTables(session_id=session, config_type=args.config_type)
+  counts = import_cfgs(args, dbt)
 
-  os.system(add_cfg)
-  os.system(load_job)
+  #load jobs
+  args = LdJobArgs
+  args.label = 'tuna_pytest_fin_builder'
+  args.tag = 'test_fin_builder'
+  args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
+  args.session_id = session
+
+  connect_db()
+  counts = {}
+  counts['cnt_jobs'] = 0
+  dbt = DBTables(session_id=None, config_type=args.config_type)
+  if args.tag:
+    try:
+      tag_name_test(args.tag, dbt)
+    except ValueError as terr:
+      LOGGER.error(terr)
+
+  add_jobs(args, counts, dbt)
 
 
-class Args():
-  local_machine = None
+class GoFishArgs():
+  local_machine = True 
   fin_steps = None
   session_id = None
   arch = None
@@ -71,33 +117,58 @@ class Args():
   config_type = None
   reset_interval = None
   dynamic_solvers_only = False
-  label = None
+  label = 'pytest_fin_builder' 
   docker_name = None
+  ticket = None
+  solver_id = None
 
 
 def test_fin_builder():
-  add_fin_find_compile_job()
+  args = GoFishArgs()
+  machine_lst = load_machines(args)
+  machine = machine_lst[0]
 
+  #create a session
+  worker_ids = range(machine.get_num_cpus())
+  f_vals = compose_f_vals(args, machine)
+  f_vals["num_procs"] = Value('i', len(worker_ids))
+  kwargs = get_kwargs(0, f_vals, args)
+  worker = WorkerInterface(**kwargs)
+  args.session_id = Session().add_new_session(args, worker)
+
+  #update solvers
+  kwargs = get_kwargs(0, f_vals, args)
+  fin_worker = FinClass(**kwargs)
+  assert( fin_worker.get_solvers() )
+
+  #load jobs
+  add_fin_find_compile_job(args.session_id)
   num_jobs = 0
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state='new';"
+    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state='new';"
     cur.execute(get_jobs)
     res = cur.fetchall()
     assert (res[0][0] > 0)
     num_jobs = res[0][0]
 
-  args = Args()
-  args.local_machine = True
-  args.fin_steps = "miopen_find_compile"
-  args.session_id = 1
-
-  res = load_machines(args)
-  worker_lst = compose_worker_list(res, args)
+  #get applicability
+  args.update_applicability = True
+  args.label = None
+  worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
+    print(worker.fin_steps)
+    worker.join()
+
+  #compile
+  args.update_applicability = False 
+  args.fin_steps = "miopen_find_compile"
+  worker_lst = compose_worker_list(machine_lst, args)
+  for worker in worker_lst:
+    print(worker.fin_steps)
     worker.join()
 
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state in ('compiled');"
+    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state in ('compiled');"
     cur.execute(get_jobs)
     res = cur.fetchall()
     assert (res[0][0] == num_jobs)
