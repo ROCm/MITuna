@@ -40,6 +40,11 @@ def buildSchema(){
     sh "./tuna/db_tables.py"
 }
 
+def cleanup() {
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
+    sh "${cmd}"        
+}
+
 def getMachine() {
     def arch, cu, count
     for(String arch_cu :  sh(script:'bin/arch_cu.sh', returnStdout: true).split("\n")) { // is multiline
@@ -452,8 +457,6 @@ def pytestSuite2() {
            // test fin builder and test fin builder conv in sequence
            sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
         }
-        //def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-        //sh "${cmd}"
     }
 }
 
@@ -476,8 +479,6 @@ def pytestSuite3() {
            // test fin builder and test fin builder conv in sequence
            sh "pytest tests/test_fin_evaluator.py -s"
         }
-        def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-        sh "${cmd}"        
     }
 }
 
