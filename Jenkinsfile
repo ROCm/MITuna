@@ -49,6 +49,14 @@ pipeline {
             }
             } 
         }
+        stage("fin applicability"){
+	      agent{  label "gfx908" }
+        steps {
+            script{
+            utils.finApplicability()
+            }
+            }
+        }
         stage("pytest1"){
         agent{  label "gfx908" }
         steps{
@@ -73,14 +81,6 @@ pipeline {
             }
             }
         }    
-        stage("fin applicability"){
-	      agent{  label "gfx908" }
-        steps {
-            script{
-            utils.finApplicability()
-            }
-            }
-        }
         stage("fin find compile"){
         agent{ label "gfx908"}
         steps{
