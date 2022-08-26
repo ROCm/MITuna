@@ -248,7 +248,6 @@ def insert_tensor(fds, tensor_dict):
 
   return ret_id
 # pylint: enable-all
-
 #DEPRECATED
 def get_tid(session, tensor_dict):
   """Return tensor id based on dict"""

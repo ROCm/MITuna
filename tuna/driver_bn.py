@@ -117,6 +117,7 @@ class DriverBatchNorm(DriverBase):
     for k, val in self.to_dict().items():
       if val is None and k in defaults.keys():
         setattr(self, k, defaults[k])
+
   # pylint: enable-all
   @staticmethod
   def get_params(tok1):
