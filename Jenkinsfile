@@ -41,13 +41,14 @@ pipeline {
            }
            }
         }
+
         stage("fin get solver"){
 	      agent{  label "gfx908" }
         steps {
             script {
             utils.finSolvers()
             }
-            }
+            } 
         }
         stage("fin applicability"){
 	      agent{  label "gfx908" }
@@ -105,6 +106,7 @@ pipeline {
             }
             }
         }
+
         stage("pytest2"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
@@ -120,9 +122,10 @@ pipeline {
             utils.pytestSuite3()
             }
             }
-        }    
-    }
+        }
+        }
 }
+
 
 
 

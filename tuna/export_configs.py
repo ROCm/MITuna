@@ -69,24 +69,24 @@ def main():
   table_cols_conv_invmap = {v[0]: k for k, v in TABLE_COLS_CONV_MAP.items()}
   table_cols_fusion_invmap = {v[0]: k for k, v in TABLE_COLS_FUSION_MAP.items()}
 
-  outfile = open(args.filename, "w")
-
-  with DbCursor() as cur:
+  # pylint: disable=unspecified-encoding
+  with open(args.filename, "w") as outfile, DbCursor() as cur:
     count = 0
     if args.full_query is not None:
       query = args.full_query
       cur.execute(query)
     else:
-      query = "SELECT config.* FROM job INNER JOIN conv_config as config \
+      query = f"SELECT config.* FROM job INNER JOIN conv_config as config \
           ON config.id = job.config WHERE config.valid = TRUE AND job.valid = TRUE \
-          AND arch = %s AND ({})".format(args.query)
+          AND arch = %s AND ({args.query})"
+
       cur.execute(query, (args.arch,))
     # cur.execute("select * from config where valid = TRUE;")
     sub_cmd_idx = cur.column_names.index('cmd')
 
     for row in cur:
       sub_cmd = row[sub_cmd_idx]
-      bash_cmd = './bin/MIOpenDriver {} -V 0 '.format(sub_cmd)
+      bash_cmd = f'./bin/MIOpenDriver {sub_cmd} -V 0 '
       for idx, val in enumerate(row):
         if cur.column_names[idx] in ['id', 'cmd', 'valid']:
           continue
@@ -101,7 +101,6 @@ def main():
       outfile.write(bash_cmd + '\n')
       count += 1
 
-  outfile.close()
   logger.warning("Added %s entries", count)
 
 

@@ -210,13 +210,13 @@ def import_cfgs(args, dbt):
   counts = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
-  infile = open(os.path.expanduser(args.file_name), "r")
-  for line in infile:
-    try:
-      parse_line(args, line, counts, dbt)
-    except ValueError as err:
-      LOGGER.warning(err)
-      continue
+  with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+    for line in infile:
+      try:
+        parse_line(args, line, counts, dbt)
+      except ValueError as err:
+        LOGGER.warning(err)
+        continue
 
   return counts
 

@@ -79,7 +79,7 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
       self.logger.warning(
           "No applicable fdb entries for config %s, session id %s", self.config,
           session_id)
-    ids = tuple([str(fdb_e.id) for fdb_e, _ in fdb_entries])
+    ids = tuple((str(fdb_e.id) for fdb_e, _ in fdb_entries))
     query = sess.query(fdb_obj).filter(fdb_obj.id.in_(ids))
 
     return query
@@ -150,7 +150,7 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs['logger'] if 'logger' in kwargs.keys() else None  #pylint: disable=multiple-statements
+    self.logger = kwargs['logger'] if 'logger' in kwargs else None  #pylint: disable=multiple-statements
     self.fdb_slv_dir = {}
 
 

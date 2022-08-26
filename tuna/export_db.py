@@ -123,7 +123,7 @@ def fdb_query(dbt, args):
       tag_query = session.query(config_tags_table.config).filter(
           config_tags_table.tag == args.config_tag)
       tag_rows = tag_query.all()
-      ids = tuple([str(tag_row.config) for tag_row in tag_rows])
+      ids = tuple((str(tag_row.config) for tag_row in tag_rows))
       query = query.filter(find_db_table.config.in_(ids))
 
   return query
@@ -220,23 +220,24 @@ def export_kdb(dbt, args):
 def get_filename(arch, num_cu, filename, ocl, db_type):
   """Helper function to compose filename"""
   version = "1.0.0"
-  tuna_dir = 'tuna_{}'.format(version)
+  tuna_dir = f'tuna_{version}'
   if not os.path.exists(tuna_dir):
     os.makedirs(tuna_dir)
-  final_name = "{}/{}_{}".format(tuna_dir, arch, num_cu)
+  final_name = f"{tuna_dir}/{arch}_{num_cu}"
   if num_cu > 64:
-    final_name = '{}/{}{:x}'.format(tuna_dir, arch, num_cu)
+    final_name = f'{tuna_dir}/{arch}{num_cu:x}'
   if filename:
-    final_name = '{}/{}'.format(tuna_dir, filename)
+    final_name = f'{tuna_dir}/{filename}'
 
   if db_type == DB_Type.FIND_DB:
+    # pylint: disable-next=consider-using-f-string ; more readable
     extension = '.{}.fdb.txt'.format('OpenCL' if ocl else 'HIP')
   elif db_type == DB_Type.KERN_DB:
     extension = '.kdb'
   else:
     extension = ".db"
 
-  final_name = "{}{}".format(final_name, extension)
+  final_name = f"{final_name}{extension}"
 
   return final_name
 
@@ -250,20 +251,21 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   FDBRecord = namedtuple('FDBRecord',
                          'alg_lib solver_id kernel_time workspace_sz')
 
-  with open(file_name, 'w') as out:
+  with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
       solvers.sort(key=lambda x: float(x[2]))
       lst = []
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
         rec = FDBRecord(*rec)
+        # pylint: disable-next=consider-using-f-string ; more reable
         lst.append('{alg}:{},{},{},{alg},{}'.format(
             id_solver_map_h[rec.solver_id],
             rec.kernel_time,
             rec.workspace_sz,
             'not used',
             alg=rec.alg_lib))
-      out.write('{}={}\n'.format(key, ';'.join(lst)))
+      out.write(f"{key}={';'.join(lst)}\n")
   return file_name
 
 
@@ -412,7 +414,7 @@ def get_pdb_query(dbt, args):
       LOGGER.info("config_tag : %s", args.config_tag)
       tag_query = session.query(dbt.config_tags_table.config).filter(
           dbt.config_tags_table.tag == args.config_tag)
-      ids = tuple([str(tag_row.config) for tag_row in tag_query.all()])
+      ids = tuple((str(tag_row.config) for tag_row in tag_query.all()))
       query = query.filter(dbt.config_table.id.in_(ids))
 
   return query

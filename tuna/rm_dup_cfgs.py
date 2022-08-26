@@ -47,12 +47,11 @@ def main():
         with DbCursor() as cur:
           # duplicate row
           # mark as invalid
-          print("UPDATE config SET valid = False WHERE id = {}".format(row2[0]))
+          print(f"UPDATE config SET valid = False WHERE id = {row2[0]}")
           cur.execute("UPDATE config SET valid = False WHERE id = %s",
                       (row2[0],))
           # update job table to point to first config
-          print("UPDATE job SET config = {} WHERE config = {}".format(
-              row[0], row2[0]))
+          print(f"UPDATE job SET config = {row[0]} WHERE config = {row2[0]}")
           cur.execute("UPDATE job SET config = %s WHERE config = %s",
                       (row[0], row2[0]))
     count += 1
@@ -71,12 +70,11 @@ def main():
         with DbCursor() as cur:
           # duplicate row
           # mark as invalid
-          print("UPDATE config SET valid = False WHERE id = {}".format(row2[0]))
+          print(f"UPDATE config SET valid = False WHERE id = {row2[0]}")
           cur.execute("UPDATE config SET valid = False WHERE id = %s",
                       (row2[0],))
           # update job table to point to first config
-          print("UPDATE job SET config = {} WHERE config = {}".format(
-              row[0], row2[0]))
+          print(f"UPDATE job SET config = {row[0]} WHERE config = {row2[0]}")
           cur.execute("UPDATE job SET config = %s WHERE config = %s",
                       (row[0], row2[0]))
     count += 1
