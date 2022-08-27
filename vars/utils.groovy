@@ -116,9 +116,9 @@ def finApplicability(){
         env.OTEL_LOG_LEVEL="debug"
 
         sh "./tuna/go_fish.py --init_session -l new_session --local_machine"
-        def sesh1 = runsql("select id from session order by id asc limit 1")
+        def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
         sh "./tuna/go_fish.py --init_session -l new_session2 --local_machine"
-        def sesh2 = runsql("select id from session order by id desc limit 1")
+        def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt"
@@ -286,8 +286,8 @@ def loadJobTest() {
         // setup version table
         runsql("SELECT * from machine;")
         echo "${arch} : ${num_cu}"
-        def sesh1 = runsql("select id from session order by id asc limit 1")
-        def sesh2 = runsql("select id from session order by id desc limit 1")
+        def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
+        def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
