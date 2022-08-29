@@ -36,6 +36,7 @@ from tuna.miopen_tables import Solver  # pylint: disable=unused-import
 from tuna.tables import DBTables
 from tuna.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
+from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
@@ -304,11 +305,21 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
       "`uncompressed_size` INT NOT NULL);")
   cur.execute(
       "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
+
+  arch_ext = arch2targetid(arch)
   for kern in kern_db:
+    name = kern.kernel_name
+    args = kern.kernel_args
+    #check if extensions should be added
+    if not name.endswith('.o') and not "-mcpu=" in args:
+      if not name.endswith('.mlir'):
+        args += f" -mcpu={arch_ext}"
+      name += ".o"
+    
     cur.execute(
         "INSERT INTO kern_db (kernel_name, kernel_args, kernel_blob, kernel_hash, "
         "uncompressed_size) VALUES(?, ?, ?, ?, ?);",
-        (kern.kernel_name, kern.kernel_args, base64.b64decode(
+        (name, args, base64.b64decode(
             kern.kernel_blob), kern.kernel_hash, kern.uncompressed_size))
   conn.commit()
   cur.close()
