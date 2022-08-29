@@ -74,10 +74,10 @@ def get_fin_result(status):
   if len(status) > 0:
     res = status[0]['result']
     res_list = [res == val['result'] for val in status]
-    unanimous = False not in res_list 
+    unanimous = False not in res_list
 
   if unanimous:
-    result_str = status[0]['result'] 
+    result_str = status[0]['result']
   else:
     for slv, res in [[x['solver'], x['result']] for x in status]:
       result_str += f' ({slv}: {res})'

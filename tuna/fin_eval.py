@@ -149,7 +149,7 @@ class FinEvaluator(WorkerInterface):
           }
           kernel_objects = []
           blobs = session.query(self.dbt.kernel_cache).filter(
-                  self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group) 
+              self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
           for obj in blobs.all():
             kernel_objects.append({
                 'blob': obj.kernel_blob.decode('utf-8'),

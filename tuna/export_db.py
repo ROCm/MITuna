@@ -48,6 +48,7 @@ LOGGER = setup_logger('export_db')
 
 _, ID_SOLVER_MAP = get_id_solvers()
 
+
 def parse_args():
   """Function to parse arguments"""
   parser = setup_arg_parser('Convert MYSQL find_db to text find_dbs' \
@@ -62,10 +63,10 @@ def parse_args():
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
   group_ver.add_argument(
-          '--golden_v',
-          dest='golden_v',
-          type=int,
-          help='export from the golden table using this version number')
+      '--golden_v',
+      dest='golden_v',
+      type=int,
+      help='export from the golden table using this version number')
 
   parser.add_argument('--config_tag',
                       dest='config_tag',
@@ -152,7 +153,7 @@ def get_fdb_query(dbt, args):
       query = query.filter(src_table.session == dbt.session.id)
       LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
       LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
-        
+
     query = query.filter(src_table.config == dbt.config_table.id)\
         .filter(src_table.solver == dbt.solver_table.id)\
         .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
@@ -192,8 +193,9 @@ def get_fdb_alg_lists(query):
     if fdb_key not in solvers:
       solvers[fdb_key] = {}
     if fdb_entry.solver in solvers[fdb_key].keys():
-      LOGGER.warning("Skipped duplicate solver: %s : %s with ts %s vs prev %s", fdb_key,
-                     fdb_entry.solver, fdb_entry.update_ts, solvers[fdb_key][fdb_entry.solver])
+      LOGGER.warning("Skipped duplicate solver: %s : %s with ts %s vs prev %s",
+                     fdb_key, fdb_entry.solver, fdb_entry.update_ts,
+                     solvers[fdb_key][fdb_entry.solver])
       continue
     solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
 
@@ -224,7 +226,8 @@ def build_miopen_fdb(fdb_alg_lists):
     else:
       lst.append(fastest_entry)
 
-    LOGGER.info("MIOpen fdb: %s, cfg: %s, slv: %s", fastest_entry.fdb_key, fastest_entry.config, ID_SOLVER_MAP[fastest_entry.solver])
+    LOGGER.info("MIOpen fdb: %s, cfg: %s, slv: %s", fastest_entry.fdb_key,
+                fastest_entry.config, ID_SOLVER_MAP[fastest_entry.solver])
 
   LOGGER.warning("Total number of entries in Find DB: %s", num_fdb_entries)
 
@@ -244,12 +247,11 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
         # pylint: disable-next=consider-using-f-string ; more reable
-        lst.append('{alg}:{},{},{},{alg},{}'.format(
-            ID_SOLVER_MAP[rec.solver],
-            rec.kernel_time,
-            rec.workspace_sz,
-            'not used',
-            alg=rec.alg_lib))
+        lst.append('{alg}:{},{},{},{alg},{}'.format(ID_SOLVER_MAP[rec.solver],
+                                                    rec.kernel_time,
+                                                    rec.workspace_sz,
+                                                    'not used',
+                                                    alg=rec.alg_lib))
       out.write(f"{key}={';'.join(lst)}\n")
   return file_name
 
@@ -270,7 +272,7 @@ def build_miopen_kdb(dbt, find_db):
   """
   num_fdb_entries = 0
   num_kdb_blobs = 0
-  kern_db = [] 
+  kern_db = []
   for fdb_key, entries in find_db.items():
     for fdb_entry in entries:
       num_fdb_entries += 1
@@ -306,7 +308,8 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
     cur.execute(
         "INSERT INTO kern_db (kernel_name, kernel_args, kernel_blob, kernel_hash, "
         "uncompressed_size) VALUES(?, ?, ?, ?, ?);",
-        (kern.kernel_name, kern.kernel_args, base64.b64decode(kern.kernel_blob), kern.kernel_hash, kern.uncompressed_size))
+        (kern.kernel_name, kern.kernel_args, base64.b64decode(
+            kern.kernel_blob), kern.kernel_hash, kern.uncompressed_size))
   conn.commit()
   cur.close()
   conn.close()

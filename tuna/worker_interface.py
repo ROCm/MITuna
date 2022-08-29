@@ -316,8 +316,9 @@ class WorkerInterface(Process):
     if obj:  # existing entry in db
       # This can be removed if we implement the delete orphan cascade
       fdb_entry = obj
-      session.query(self.dbt.kernel_cache).filter(
-          self.dbt.kernel_cache.kernel_group == fdb_entry.kernel_group).delete()
+      session.query(
+          self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
+                                        fdb_entry.kernel_group).delete()
     else:
       # Insert the above entry
       session.add(fdb_entry)
@@ -326,8 +327,7 @@ class WorkerInterface(Process):
   def compose_fdb_entry(self, session, fin_json, fdb_obj):
     """Compose a FindDB table entry from fin_output"""
     solver = self.solver_id_map[fdb_obj['solver_name']]
-    fdb_entry = self.update_fdb_entry(
-        session, solver)
+    fdb_entry = self.update_fdb_entry(session, solver)
     fdb_entry.fdb_key = fin_json['db_key']
     fdb_entry.alg_lib = fdb_obj['algorithm']
     fdb_entry.params = fdb_obj['params']

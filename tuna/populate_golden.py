@@ -69,6 +69,7 @@ def get_fdb_query(dbt):
 
   return query
 
+
 def get_golden_query(dbt, golden_version):
   """! Compose query to get all entries for a golden miopen version"""
   with DbSession() as session:
@@ -81,10 +82,10 @@ def get_golden_query(dbt, golden_version):
 
 def latest_golden_v(dbt):
   """Get highest golden version in the table """
-  version = -1 
+  version = -1
   with DbSession() as session:
     query = session.query(dbt.golden_table).order_by(
-            dbt.golden_table.golden_miopen_v.desc()).limit(1)
+        dbt.golden_table.golden_miopen_v.desc()).limit(1)
     obj = query.first()
     if obj:
       version = obj.golden_miopen_v
@@ -136,11 +137,11 @@ def main():
   new_golden = False
   last_golden_v = latest_golden_v(dbt)
 
-  if not args.golden_v: 
-    new_golden = True 
+  if not args.golden_v:
+    new_golden = True
     args.golden_v = last_golden_v + 1
   elif args.golden_v > last_golden_v:
-    new_golden = True 
+    new_golden = True
 
   if new_golden:
     query = get_golden_query(dbt, last_golden_v)
