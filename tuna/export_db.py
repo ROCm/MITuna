@@ -315,7 +315,7 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
       if not name.endswith('.mlir'):
         args += f" -mcpu={arch_ext}"
       name += ".o"
-    
+
     cur.execute(
         "INSERT INTO kern_db (kernel_name, kernel_args, kernel_blob, kernel_hash, "
         "uncompressed_size) VALUES(?, ?, ?, ?, ?);",
