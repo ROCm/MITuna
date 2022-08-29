@@ -46,6 +46,7 @@ DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
 # Setup logging
 LOGGER = setup_logger('export_db')
 
+_, ID_SOLVER_MAP = get_id_solvers()
 
 def parse_args():
   """Function to parse arguments"""
@@ -199,9 +200,9 @@ def get_fdb_alg_lists(query):
     fdb_key_alg = (fdb_entry.fdb_key, fdb_entry.alg_lib)
     lst = find_db.get(fdb_key_alg)
     if not lst:
-      find_db[fdb_key_alg] = fdb_entry 
+      find_db[fdb_key_alg] = [fdb_entry]
     else:
-      lst.append(slv_entry)
+      lst.append(fdb_entry)
 
   return find_db
 
@@ -223,6 +224,8 @@ def build_miopen_fdb(fdb_alg_lists):
     else:
       lst.append(fastest_entry)
 
+    LOGGER.info("MIOpen fdb: %s, cfg: %s, slv: %s", fastest_entry.fdb_key, fastest_entry.config, ID_SOLVER_MAP[fastest_entry.solver])
+
   LOGGER.warning("Total number of entries in Find DB: %s", num_fdb_entries)
 
   return miopen_fdb
@@ -232,18 +235,17 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   """
   Serialize find_db map to plain text file in MIOpen format
   """
-  _, id_solver_map_h = get_id_solvers()
   file_name = get_filename(arch, num_cu, filename, ocl, DB_Type.FIND_DB)
 
   with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
-      solvers.sort(key=lambda x: float(x[2]))
+      solvers.sort(key=lambda x: float(x.kernel_time))
       lst = []
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
         # pylint: disable-next=consider-using-f-string ; more reable
         lst.append('{alg}:{},{},{},{alg},{}'.format(
-            id_solver_map_h[rec.solver],
+            ID_SOLVER_MAP[rec.solver],
             rec.kernel_time,
             rec.workspace_sz,
             'not used',
@@ -276,7 +278,7 @@ def build_miopen_kdb(dbt, find_db):
         query = session.query(dbt.kernel_cache)\
             .filter(dbt.kernel_cache.kernel_group == fdb_entry.kernel_group)
         for kinder in query.all():
-          kern_db.add(kinder)
+          kern_db.append(kinder)
           num_kdb_blobs += 1
 
   LOGGER.warning("Total number of FDB entries: %s", num_fdb_entries)
