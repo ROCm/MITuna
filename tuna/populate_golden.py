@@ -97,9 +97,10 @@ def merge_golden_entries(dbt, golden_v, entries):
   with DbSession() as session:
     for copy_entry in entries:
       golden_entry = dbt.golden_table()
-      golden_entry.golden_miopen_v = golden_v
       golden_entry.session = copy_entry.session
 
+      #unique identifiers
+      golden_entry.golden_miopen_v = golden_v
       golden_entry.config = copy_entry.config
       golden_entry.solver = copy_entry.solver
       golden_entry.arch = dbt.session.arch

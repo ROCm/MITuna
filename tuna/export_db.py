@@ -51,29 +51,37 @@ def parse_args():
   """Function to parse arguments"""
   parser = setup_arg_parser('Convert MYSQL find_db to text find_dbs' \
     'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION])
+
+  group_ver = parser.add_mutually_exclusive_group(required=True)
+  group_ver.add_argument(
+      '--session_id',
+      dest='session_id',
+      type=int,
+      help=
+      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
+  )
+  group_ver.add_argument(
+          '--golden_v',
+          dest='golden_v',
+          type=int,
+          help='export from the golden table using this version number')
+
+  parser.add_argument('--config_tag',
+                      dest='config_tag',
+                      type=str,
+                      help='import configs based on config tag',
+                      default=None)
   parser.add_argument('-c',
                       '--opencl',
                       dest='opencl',
                       action='store_true',
                       help='Use OpenCL extension',
                       default=False)
-  parser.add_argument(
-      '--session_id',
-      action='store',
-      type=int,
-      dest='session_id',
-      help=
-      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
-  )
-  parser.add_argument('--config_tag',
-                      dest='config_tag',
-                      type=str,
-                      help='import configs based on config tag',
-                      default=None)
   parser.add_argument('--filename',
                       dest='filename',
                       help='Custom filename for DB dump',
                       default=None)
+
   group = parser.add_mutually_exclusive_group(required=True)
   group.add_argument('-k',
                      '--kern_db',
@@ -94,6 +102,9 @@ def parse_args():
                      help='Serialize Perf Database',
                      default=False)
   args = parser.parse_args()
+
+  if args.golden_v and not (args.arch and args.num_cu):
+    parser.error('arch and num_cu must be set with golden_v')
 
   return args
 
@@ -396,26 +407,33 @@ def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
 
 def get_pdb_query(dbt, args):
   """Compose query to get perf_db rows based on filters from args"""
-  with DbSession() as session:
-    query = session.query(dbt.find_db_table,
-                          dbt.config_table, dbt.tensor_table)\
-        .filter(dbt.find_db_table.session == dbt.session.id)\
-        .filter(dbt.find_db_table.valid == 1)\
-        .filter(dbt.find_db_table.kernel_time != -1)\
-        .filter(dbt.find_db_table.params != '')\
-        .filter(dbt.find_db_table.config == dbt.config_table.id)\
-        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
-        .filter(dbt.find_db_table.solver == dbt.solver_table.id)\
-        .filter(dbt.solver_table.tunable == 1)
+  src_table = dbt.find_db_table
+  if args.golden_v is not None:
+    src_table = dbt.golden_table
 
-    LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
-    LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
+  with DbSession() as session:
+    query = session.query(src_table, dbt.config_table, dbt.tensor_table)\
+        .filter(src_table.valid == 1)
+    if args.golden_v is not None:
+      query = query.filter(src_table.golden_miopen_v == args.golden_v)\
+              .filter(src_table.arch == args.arch)\
+              .filter(src_table.num_cu == args.num_cu)
+    else:
+      query = query.filter(src_table.session == dbt.session.id)
+      LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
+      LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
+        
+    query = query.filter(src_table.config == dbt.config_table.id)\
+        .filter(src_table.solver == dbt.solver_table.id)\
+        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
+        .filter(src_table.kernel_time != -1)\
+        .filter(dbt.solver_table.tunable == 1)\
+        .filter(src_table.params != '')
+
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
-      tag_query = session.query(dbt.config_tags_table.config).filter(
-          dbt.config_tags_table.tag == args.config_tag)
-      ids = tuple((str(tag_row.config) for tag_row in tag_query.all()))
-      query = query.filter(dbt.config_table.id.in_(ids))
+      query = query.filter(dbt.config_tags_table.tag == args.config_tag)\
+          .filter(dbt.config_table.config == dbt.config_table.id)
 
   return query
 
@@ -428,8 +446,7 @@ def export_pdb(dbt, args):
     query = get_pdb_query(dbt, args)
     cfg_map = {}
     for perf_db_entry, cfg_entry, tensor_entry in query.all():
-      LOGGER.info("%s, %s, %s", dbt.session.miopen_v, dbt.session.rocm_v,
-                  cfg_entry.id)
+      LOGGER.info("%s", cfg_entry.id)
 
       if cfg_entry.id in cfg_map:
         ins_cfg_id = cfg_map[cfg_entry.id]
@@ -453,8 +470,9 @@ def main():
   result_file = ''
   dbt = DBTables(session_id=args.session_id)
 
-  args.arch = dbt.session.arch
-  args.num_cu = dbt.session.num_cu
+  if args.session_id:
+    args.arch = dbt.session.arch
+    args.num_cu = dbt.session.num_cu
 
   if args.kern_db:
     result_file = export_kdb(dbt, args)

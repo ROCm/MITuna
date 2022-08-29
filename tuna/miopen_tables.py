@@ -489,7 +489,6 @@ class BNGolden(BASE, GoldenMixin):
   __tablename__ = "bn_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "config",
-                                     "session",
                                      "solver",
                                      "arch",
                                      "num_cu",
