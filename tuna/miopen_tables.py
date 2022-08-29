@@ -28,7 +28,7 @@
 import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
 from sqlalchemy import Text, Enum
-from sqlalchemy import Float, BigInteger
+from sqlalchemy import Float, BigInteger, Boolean
 from sqlalchemy.databases import mysql
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
 from sqlalchemy.orm import relationship
@@ -476,10 +476,13 @@ class ConvolutionGolden(BASE, GoldenMixin):
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+
   fdb_key = Column(String(length=128), nullable=True)
   params = Column(String(length=128), nullable=True)
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
+  alg_lib = Column(String(length=64), nullable=True)
+  opencl = Column(Boolean, nullable=False)
 
   kernel_group = Column(Integer, nullable=True)
 

@@ -110,6 +110,8 @@ def merge_golden_entries(dbt, golden_v, entries):
       golden_entry.params = copy_entry.params
       golden_entry.kernel_time = copy_entry.kernel_time
       golden_entry.workspace_sz = copy_entry.workspace_sz
+      golden_entry.alg_lib = copy_entry.alg_lib
+      golden_entry.opencl = copy_entry.opencl
 
       golden_entry.kernel_group = copy_entry.kernel_group
 

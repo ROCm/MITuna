@@ -109,125 +109,6 @@ def parse_args():
   return args
 
 
-def fdb_query(dbt, args):
-  """ Helper function to create find db query
-  """
-  find_db_table = dbt.find_db_table
-  config_tags_table = dbt.config_tags_table
-  solver_app = dbt.solver_app
-  with DbSession() as session:
-    query = session.query(find_db_table, solver_app).filter(
-        and_(find_db_table.session == dbt.session.id,
-             solver_app.session == dbt.session.id,
-             find_db_table.kernel_time != -1, find_db_table.workspace_sz != -1,
-             find_db_table.opencl == args.opencl, find_db_table.valid == 1))\
-             .filter(find_db_table.solver == solver_app.solver,
-                     find_db_table.config == solver_app.config)\
-             .order_by(find_db_table.config, find_db_table.update_ts.desc())
-
-    LOGGER.info("Collecting %s entries.", find_db_table.__tablename__)
-    query = query.filter(solver_app.applicable == 1)
-    LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
-    LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
-    if args.config_tag:
-      LOGGER.info("config_tag : %s", args.config_tag)
-      tag_query = session.query(config_tags_table.config).filter(
-          config_tags_table.tag == args.config_tag)
-      tag_rows = tag_query.all()
-      ids = tuple((str(tag_row.config) for tag_row in tag_rows))
-      query = query.filter(find_db_table.config.in_(ids))
-
-  return query
-
-
-def write_kdb(arch, num_cu, kern_db, filename=None):
-  """
-  Write blob map to sqlite
-  """
-  file_name = get_filename(arch, num_cu, filename, None, DB_Type.KERN_DB)
-  if os.path.isfile(file_name):
-    os.remove(file_name)
-
-  conn = sqlite3.connect(file_name)
-  cur = conn.cursor()
-  cur.execute(
-      "CREATE TABLE `kern_db` (`id` INTEGER PRIMARY KEY ASC,`kernel_name` TEXT NOT NULL,"
-      "`kernel_args` TEXT NOT NULL,`kernel_blob` BLOB NOT NULL,`kernel_hash` TEXT NOT NULL,"
-      "`uncompressed_size` INT NOT NULL);")
-  cur.execute(
-      "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
-  for (name, args), (blob, kern_hash, kern_size) in kern_db.items():
-    cur.execute(
-        "INSERT INTO kern_db (kernel_name, kernel_args, kernel_blob, kernel_hash, "
-        "uncompressed_size) VALUES(?, ?, ?, ?, ?);",
-        (name, args, base64.b64decode(blob), kern_hash, kern_size))
-  conn.commit()
-  cur.close()
-  conn.close()
-  return file_name
-
-
-def build_miopen_kdb(find_db):
-  """ create miopen kernel db object for export
-  """
-  num_fdb_entries = 0
-  num_kdb_blobs = 0
-  kern_db = OrderedDict()
-  for _, fdb_row in find_db.items():
-    fastest_time = float("inf")
-    fastest_entry = None
-    num_fdb_entries += 1
-    for kinder in fdb_row:
-      if kinder.kernel_time < fastest_time:
-        fastest_time = kinder.kernel_time
-        fastest_entry = kinder
-    for blob in fastest_entry.blobs:
-      key = (blob.kernel_name, blob.kernel_args)
-      kinder = kern_db.get(key)
-      if kinder:
-        continue
-      num_kdb_blobs += 1
-      kern_db[key] = (blob.kernel_blob, blob.kernel_hash,
-                      blob.uncompressed_size)
-
-  LOGGER.warning("Total number of FDB entries: %s", num_fdb_entries)
-  LOGGER.warning("Total number of blobs: %s", num_kdb_blobs)
-  return kern_db
-
-
-def export_kdb(dbt, args):
-  """
-  Function to export the kernel cache
-  """
-  query = fdb_query(dbt, args)
-
-  find_db = OrderedDict()
-  solvers = {}
-  for fdb_entry, _ in query.all():
-    fdb_key = fdb_entry.fdb_key
-    if fdb_key not in solvers:
-      solvers[fdb_key] = {}
-    #skip if there is a solver for this key
-    if fdb_entry.solver in solvers[fdb_key].keys():
-      #LOGGER.warning("skipped duplicate solver: %s : %s : %s vs stored: %s", fdb_key,
-      #               fdb_entry.solver, fdb_entry.update_ts,
-      #               solvers[fdb_key][fdb_entry.solver])
-      continue
-    #record found solver for key
-    solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
-    lst = find_db.get(fdb_key)
-    if not lst:
-      find_db[fdb_key] = [fdb_entry]
-    else:
-      lst.append(fdb_entry)
-
-  LOGGER.info("Building kdb.")
-  kern_db = build_miopen_kdb(find_db)
-
-  LOGGER.info("write kdb to file.")
-  return write_kdb(args.arch, args.num_cu, kern_db, args.filename)
-
-
 def get_filename(arch, num_cu, filename, ocl, db_type):
   """Helper function to compose filename"""
   version = "1.0.0"
@@ -253,44 +134,89 @@ def get_filename(arch, num_cu, filename, ocl, db_type):
   return final_name
 
 
-def write_fdb(arch, num_cu, ocl, find_db, filename=None):
+def get_fdb_query(dbt, args):
+  """ Helper function to create find db query
   """
-  Serialize find_db map to plain text file in MIOpen format
-  """
-  _, id_solver_map_h = get_id_solvers()
-  file_name = get_filename(arch, num_cu, filename, ocl, DB_Type.FIND_DB)
-  FDBRecord = namedtuple('FDBRecord',
-                         'alg_lib solver_id kernel_time workspace_sz')
+  src_table = dbt.find_db_table
+  if args.golden_v is not None:
+    src_table = dbt.golden_table
 
-  with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
-    for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
-      solvers.sort(key=lambda x: float(x[2]))
-      lst = []
-      # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
-      for rec in solvers:
-        rec = FDBRecord(*rec)
-        # pylint: disable-next=consider-using-f-string ; more reable
-        lst.append('{alg}:{},{},{},{alg},{}'.format(
-            id_solver_map_h[rec.solver_id],
-            rec.kernel_time,
-            rec.workspace_sz,
-            'not used',
-            alg=rec.alg_lib))
-      out.write(f"{key}={';'.join(lst)}\n")
-  return file_name
+  with DbSession() as session:
+    query = session.query(src_table, dbt.config_table, dbt.tensor_table)
+    if args.golden_v is not None:
+      query = query.filter(src_table.golden_miopen_v == args.golden_v)\
+              .filter(src_table.arch == args.arch)\
+              .filter(src_table.num_cu == args.num_cu)
+    else:
+      query = query.filter(src_table.session == dbt.session.id)
+      LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
+      LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
+        
+    query = query.filter(src_table.config == dbt.config_table.id)\
+        .filter(src_table.solver == dbt.solver_table.id)\
+        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
+        .filter(src_table.valid == 1)\
+        .filter(src_table.kernel_time != -1)\
+        .filter(src_table.workspace_sz != -1)\
+        .filter(src_table.opencl == args.opencl)
+
+    if args.config_tag:
+      LOGGER.info("config_tag : %s", args.config_tag)
+      query = query.filter(dbt.config_tags_table.tag == args.config_tag)\
+          .filter(dbt.config_table.config == dbt.config_table.id)
+
+    query = query.order_by(src_table.config, src_table.update_ts.desc())
+
+  return query
 
 
-def build_miopen_fdb(find_key_alg_lists):
+def get_pdb_query(dbt, args):
+  """Compose query to get perf_db rows based on filters from args"""
+  src_table = dbt.find_db_table
+  if args.golden_v is not None:
+    src_table = dbt.golden_table
+  query = get_fdb_query(dbt, args)
+  query = query.filter(dbt.solver_table.tunable == 1)\
+        .filter(src_table.params != '')
+
+  return query
+
+
+def get_fdb_alg_lists(query):
+  """return dict with key: fdb_key + alg_lib, val: solver list"""
+  find_db = OrderedDict()
+  solvers = {}
+  for fdb_entry, _, _ in query.all():
+    fdb_key = fdb_entry.fdb_key
+    if fdb_key not in solvers:
+      solvers[fdb_key] = {}
+    if fdb_entry.solver in solvers[fdb_key].keys():
+      LOGGER.warning("Skipped duplicate solver: %s : %s with ts %s vs prev %s", fdb_key,
+                     fdb_entry.solver, fdb_entry.update_ts, solvers[fdb_key][fdb_entry.solver])
+      continue
+    solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
+
+    fdb_key_alg = (fdb_entry.fdb_key, fdb_entry.alg_lib)
+    lst = find_db.get(fdb_key_alg)
+    if not lst:
+      find_db[fdb_key_alg] = fdb_entry 
+    else:
+      lst.append(slv_entry)
+
+  return find_db
+
+
+def build_miopen_fdb(fdb_alg_lists):
   """ create miopen find db object for export
   """
   num_fdb_entries = 0
   miopen_fdb = OrderedDict()
-  for fdb_key_alg, items in find_key_alg_lists.items():
-    fdb_key = fdb_key_alg[0]
+  for fdbkey_alg, alg_entries in fdb_alg_lists.items():
+    fdb_key = fdbkey_alg[0]
     num_fdb_entries += 1
     #pick fastest solver for each algorithm
-    items.sort(key=lambda x: float(x[2]))
-    fastest_entry = items[0]
+    alg_entries.sort(key=lambda x: float(x.kernel_time))
+    fastest_entry = alg_entries[0]
     lst = miopen_fdb.get(fdb_key)
     if not lst:
       miopen_fdb[fdb_key] = [fastest_entry]
@@ -302,41 +228,102 @@ def build_miopen_fdb(find_key_alg_lists):
   return miopen_fdb
 
 
-def get_find_key_alg_lists(query):
-  """Function to compose find_db entries"""
-  find_db = OrderedDict()
-  solvers = {}
-  for fdb_entry, _ in query.all():
-    fdb_key = fdb_entry.fdb_key
-    if fdb_key not in solvers:
-      solvers[fdb_key] = {}
-    if fdb_entry.solver in solvers[fdb_key].keys():
-      #LOGGER.warning("skipped duplicate solver: %s : %s : %s vs stored: %s", fdb_key,
-      #               fdb_entry.solver, fdb_entry.update_ts, solvers[fdb_key][fdb_entry.solver])
-      continue
-    solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
+def write_fdb(arch, num_cu, ocl, find_db, filename=None):
+  """
+  Serialize find_db map to plain text file in MIOpen format
+  """
+  _, id_solver_map_h = get_id_solvers()
+  file_name = get_filename(arch, num_cu, filename, ocl, DB_Type.FIND_DB)
 
-    new_entry = (fdb_entry.alg_lib, fdb_entry.solver, fdb_entry.kernel_time,
-                 fdb_entry.workspace_sz)
-    fdb_key_alg = (fdb_entry.fdb_key, fdb_entry.alg_lib)
-    lst = find_db.get(fdb_key_alg)
-    if not lst:
-      find_db[fdb_key_alg] = [new_entry]
-    else:
-      lst.append(new_entry)
-
-  return find_db
+  with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
+    for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
+      solvers.sort(key=lambda x: float(x[2]))
+      lst = []
+      # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
+      for rec in solvers:
+        # pylint: disable-next=consider-using-f-string ; more reable
+        lst.append('{alg}:{},{},{},{alg},{}'.format(
+            id_solver_map_h[rec.solver],
+            rec.kernel_time,
+            rec.workspace_sz,
+            'not used',
+            alg=rec.alg_lib))
+      out.write(f"{key}={';'.join(lst)}\n")
+  return file_name
 
 
 def export_fdb(dbt, args):
   """Function to export find_db to txt file
   """
-  query = fdb_query(dbt, args)
-  find_key_alg_lists = get_find_key_alg_lists(query)
-  miopen_fdb = build_miopen_fdb(find_key_alg_lists)
+  query = get_fdb_query(dbt, args)
+  fdb_alg_lists = get_fdb_alg_lists(query)
+  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
 
   return write_fdb(args.arch, args.num_cu, args.opencl, miopen_fdb,
                    args.filename)
+
+
+def build_miopen_kdb(dbt, find_db):
+  """ create miopen kernel db object for export
+  """
+  num_fdb_entries = 0
+  num_kdb_blobs = 0
+  kern_db = [] 
+  for fdb_key, entries in find_db.items():
+    for fdb_entry in entries:
+      num_fdb_entries += 1
+      with DbSession() as session:
+        query = session.query(dbt.kernel_cache)\
+            .filter(dbt.kernel_cache.kernel_group == fdb_entry.kernel_group)
+        for kinder in query.all():
+          kern_db.add(kinder)
+          num_kdb_blobs += 1
+
+  LOGGER.warning("Total number of FDB entries: %s", num_fdb_entries)
+  LOGGER.warning("Total number of blobs: %s", num_kdb_blobs)
+  return kern_db
+
+
+def write_kdb(arch, num_cu, kern_db, filename=None):
+  """
+  Write blob map to sqlite
+  """
+  file_name = get_filename(arch, num_cu, filename, None, DB_Type.KERN_DB)
+  if os.path.isfile(file_name):
+    os.remove(file_name)
+
+  conn = sqlite3.connect(file_name)
+  cur = conn.cursor()
+  cur.execute(
+      "CREATE TABLE `kern_db` (`id` INTEGER PRIMARY KEY ASC,`kernel_name` TEXT NOT NULL,"
+      "`kernel_args` TEXT NOT NULL,`kernel_blob` BLOB NOT NULL,`kernel_hash` TEXT NOT NULL,"
+      "`uncompressed_size` INT NOT NULL);")
+  cur.execute(
+      "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
+  for kern in kern_db:
+    cur.execute(
+        "INSERT INTO kern_db (kernel_name, kernel_args, kernel_blob, kernel_hash, "
+        "uncompressed_size) VALUES(?, ?, ?, ?, ?);",
+        (kern.kernel_name, kern.kernel_args, base64.b64decode(kern.kernel_blob), kern.kernel_hash, kern.uncompressed_size))
+  conn.commit()
+  cur.close()
+  conn.close()
+  return file_name
+
+
+def export_kdb(dbt, args):
+  """
+  Function to export the kernel cache
+  """
+  query = get_fdb_query(dbt, args)
+  fdb_alg_lists = get_fdb_alg_lists(query)
+  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
+
+  LOGGER.info("Building kdb.")
+  kern_db = build_miopen_kdb(dbt, miopen_fdb)
+
+  LOGGER.info("write kdb to file.")
+  return write_kdb(args.arch, args.num_cu, kern_db, args.filename)
 
 
 def create_sqlite_tables(arch, num_cu, filename=None):
@@ -405,39 +392,6 @@ def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
   LOGGER.info("Inserting row in perf_db: %s", perf_db_dict)
 
 
-def get_pdb_query(dbt, args):
-  """Compose query to get perf_db rows based on filters from args"""
-  src_table = dbt.find_db_table
-  if args.golden_v is not None:
-    src_table = dbt.golden_table
-
-  with DbSession() as session:
-    query = session.query(src_table, dbt.config_table, dbt.tensor_table)\
-        .filter(src_table.valid == 1)
-    if args.golden_v is not None:
-      query = query.filter(src_table.golden_miopen_v == args.golden_v)\
-              .filter(src_table.arch == args.arch)\
-              .filter(src_table.num_cu == args.num_cu)
-    else:
-      query = query.filter(src_table.session == dbt.session.id)
-      LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
-      LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
-        
-    query = query.filter(src_table.config == dbt.config_table.id)\
-        .filter(src_table.solver == dbt.solver_table.id)\
-        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
-        .filter(src_table.kernel_time != -1)\
-        .filter(dbt.solver_table.tunable == 1)\
-        .filter(src_table.params != '')
-
-    if args.config_tag:
-      LOGGER.info("config_tag : %s", args.config_tag)
-      query = query.filter(dbt.config_tags_table.tag == args.config_tag)\
-          .filter(dbt.config_table.config == dbt.config_table.id)
-
-  return query
-
-
 def export_pdb(dbt, args):
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
@@ -474,10 +428,10 @@ def main():
     args.arch = dbt.session.arch
     args.num_cu = dbt.session.num_cu
 
-  if args.kern_db:
-    result_file = export_kdb(dbt, args)
-  elif args.find_db:
+  if args.find_db:
     result_file = export_fdb(dbt, args)
+  elif args.kern_db:
+    result_file = export_kdb(dbt, args)
   elif args.perf_db:
     result_file = export_pdb(dbt, args)
 
