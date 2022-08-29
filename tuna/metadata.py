@@ -41,7 +41,7 @@ MIOPEN_USER_DB_PATH = "/tmp/miopenpdb/config/miopen"
 MIOPEN_CACHE_DIR = "/tmp/miopenpdb/cache"
 if 'MIOPEN_CACHE_DIR' in os.environ:
   MIOPEN_CACHE_DIR = os.environ['MIOPEN_CACHE_DIR']
-KCACHE_DIR = "{}/tuna_kcache".format(MIOPEN_CACHE_DIR)
+KCACHE_DIR = f"{MIOPEN_CACHE_DIR}/tuna_kcache"
 FIN_CACHE = "/tmp/miopenpdb/cache"
 TUNA_LOG_DIR = os.path.expanduser("~/tmp/tuna_logs")
 if 'TUNA_LOG_DIR' in os.environ:
@@ -54,6 +54,7 @@ if 'FIN_CACHE' in os.environ:
 
 LOG_TIMEOUT = 10 * 60.0  # seconds
 MYSQL_LOCK_WAIT_TIMEOUT = 1205
+NUM_SQL_RETRIES = 10
 
 TABLE_COLS_CONV_MAP = {
     '-forw': ('direction', 0),

@@ -33,32 +33,31 @@ import paramiko
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 
+from tuna.worker_interface import WorkerInterface
 from tuna.db_tables import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.logger import setup_logger
 from tuna.metadata import get_solver_ids, FIN_CACHE
-from tuna.metadata import DOCKER_CMD, LOG_TIMEOUT, INVERS_DIR_MAP
+from tuna.metadata import INVERS_DIR_MAP
 from tuna.fin_utils import compose_config_obj
 from tuna.tables import DBTables
 from tuna.config_type import ConfigType
+from tuna.utils.db_utility import session_retry
 
 
-class FinClass():
+class FinClass(WorkerInterface):
   """Class to provide Tuna support for Fin"""
 
   # pylint: disable=too-many-instance-attributes
 
   def __init__(self, **kwargs):
     """Constructor"""
-    # super().__init__(**kwargs)
+    super().__init__(**kwargs)
     allowed_keys = set([
-        'fin_steps', 'arch_num_cu_list', 'local_file', 'fin_outfile',
-        'fin_infile', 'machine', 'docker_name', 'version', 'config_type',
-        'label', 'session_id'
+        'fin_steps', 'local_file', 'fin_outfile', 'fin_infile', 'machine',
+        'docker_name', 'version', 'config_type', 'label', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    self.logger = setup_logger('fin_class')
     connect_db()
     self.all_configs = []
     self.jobid_to_config = {}
@@ -69,7 +68,6 @@ class FinClass():
     self.fin_infile = self.local_file.split("/tmp/", 1)[1] + ".json"
     _, self.local_output = tempfile.mkstemp()
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
-    self.arch_num_cu_list = None
     self.fin_steps = []
     self.machine = None
     self.docker_name = None
@@ -80,6 +78,8 @@ class FinClass():
     self.label = None
     self.session_id = None
 
+    self.multiproc = False
+
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
@@ -89,10 +89,10 @@ class FinClass():
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
-    if os.path.exists('/tmp/miopen_abort_{}'.format(self.machine.arch)):
+    if os.path.exists(f'/tmp/miopen_abort_{self.machine.arch}'):
       abort_reason.append(self.machine.arch)
 
-    if os.path.exists('/tmp/miopen_abort_mid_{}'.format(self.machine.id)):
+    if os.path.exists(f'/tmp/miopen_abort_mid_{self.machine.id}'):
       abort_reason.append('mid_' + str(self.machine.id))
     if abort_reason:
       for reason in abort_reason:
@@ -100,13 +100,6 @@ class FinClass():
       return True
 
     return False
-
-  def exec_command(self, cmd, timeout=LOG_TIMEOUT):
-    """Definiting cmd execution process"""
-    ins, out, err = self.cnx.exec_command(cmd, timeout, self.chk_abort_file())
-    if err is not None and hasattr(err, 'channel'):
-      err.channel.settimeout(LOG_TIMEOUT)
-    return ins, out, err
 
   def compose_fincmd(self):
     """Helper function to compose fin docker cmd"""
@@ -132,7 +125,7 @@ class FinClass():
                             fin_ifile)
 
       fin_ofile = FIN_CACHE + "/" + self.fin_outfile
-    bash_cmd = "/opt/rocm/bin/fin -i {0} -o {1}".format(fin_ifile, fin_ofile)
+    bash_cmd = f"/opt/rocm/bin/fin -i {fin_ifile} -o {fin_ofile}"
     self.logger.info('Executing fin cmd: %s', bash_cmd)
     return bash_cmd
 
@@ -153,23 +146,16 @@ class FinClass():
     # pylint: disable=broad-except
     result = None
 
-    self.run(self.local_file, to_file=True)
-    fin_cmd = self.compose_fincmd()
-    if not self.machine.local_machine:
-      fin_cmd = DOCKER_CMD.format(self.docker_name, fin_cmd)
-    ret_code, out, _ = self.exec_command(fin_cmd)
-    if ret_code > 0:
-      self.logger.warning('Err executing cmd: %s', fin_cmd)
-      self.logger.warning(out.read())
+    if self.prep_fin_input(self.local_file, to_file=True):
+      fin_cmd = self.compose_fincmd()
+      ret_code, out, err = self.exec_docker_cmd(fin_cmd)
+      if ret_code > 0:
+        self.logger.warning('Err executing cmd: %s', fin_cmd)
+        self.logger.warning(out.read())
+        raise Exception(
+            f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 
-    while True:
-      line = out.readline()
-      if line == '' and not self.cnx.is_alive():
-        break
-      if line:
-        self.logger.info(line.strip())
-
-    result = self.parse_out()
+      result = self.parse_out()
 
     return result
 
@@ -180,7 +166,7 @@ class FinClass():
     if not self.machine.local_machine:
       fin_outfile = FIN_CACHE + "/" + self.fin_outfile
       # TODO: This should be copied back out using cat is bad # pylint: disable=fixme
-      _, ssh_stdout, _ = self.exec_command("cat {}".format(fin_outfile))
+      _, ssh_stdout, _ = self.exec_command(f"cat {fin_outfile}")
       result_json = []
 
       for line in ssh_stdout:
@@ -191,7 +177,7 @@ class FinClass():
         self.logger.warning('Err loading fin json: %s', err)
         return None
     else:
-      with open(self.local_output) as out_file:
+      with open(self.local_output) as out_file:  # pylint: disable=unspecified-encoding
         try:
           result = json.load(out_file)
         except Exception as err:
@@ -213,25 +199,53 @@ class FinClass():
 
     return True
 
-  def set_all_configs(self):
+  def set_all_configs(self, idx=0, num_blk=1):
     """Gathering all configs from Tuna DB to set up fin input file"""
     with DbSession() as session:
       query = session.query(
           self.dbt.config_table).filter(self.dbt.config_table.valid == 1)
 
       if self.label:
-        query_cfgs = session.query(self.dbt.job_table)\
-            .filter(self.dbt.job_table.reason == self.label)
-        rows = query_cfgs.all()
-        ids = tuple([str(job_row.config) for job_row in rows])
-        query = query.filter(self.dbt.config_table.id.in_(ids))
+        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
+            .filter(self.dbt.config_tags_table.tag == self.label)
 
+      #order by id for splitting configs into blocks
+      query = query.order_by(self.dbt.config_table.id)
       rows = query.all()
-      for row in rows:
+
+      block_size = len(rows) // num_blk  #size of the config block
+      extra = len(rows) % num_blk  #leftover configs, don't divide evenly
+      start = idx * block_size  #start of a process block
+      end = (idx + 1) * block_size
+      #distributing leftover configs to processes
+      if idx < extra:
+        start += idx
+        end += 1 + idx
+      else:
+        start += extra
+        end += extra
+
+      self.logger.info("cfg workdiv: proc %s, start %s, end %s", self.gpu_id,
+                       start, end)
+
+      if start >= len(rows):
+        return False
+
+      #copy the configs for this process
+      if end >= len(rows):
+        subarr = rows[start:]
+      else:
+        subarr = rows[start:end]
+
+      for row in subarr:
         r_dict = compose_config_obj(row, self.config_type)
         if self.config_type == ConfigType.batch_norm:
           r_dict['direction'] = row.get_direction()
         self.all_configs.append(r_dict)
+
+    if self.all_configs is None:
+      return False
+
     return True
 
   def create_dumplist(self):
@@ -244,9 +258,14 @@ class FinClass():
 
     if "applicability" in self.fin_steps:
       self.logger.info("Creating dumplist for: %s", self.fin_steps[0])
-      if not self.set_all_configs():
+      idx = 0
+      num_blk = 1
+      if self.multiproc:
+        idx = self.gpu_id
+        num_blk = self.num_procs.value
+
+      if not self.set_all_configs(idx, num_blk):
         return False
-      assert self.all_configs is not None
       return self.compose_fin_list()
 
     self.logger.error("Fin steps not recognized: %s", self.fin_steps)
@@ -274,18 +293,17 @@ class FinClass():
     if to_file is True:
       if not os.path.exists(outfile):
         os.mknod(outfile)
-      fout = open(outfile, 'w')
-      fout.write("[\n")
-      i = 0
-      while i < len(self.fin_list):
-        json_out = json.dumps(self.fin_list[i])
-        fout.write(json_out)
-        if i != len(self.fin_list) - 1:
-          fout.write(',\n')
-        i += 1
+      with open(outfile, 'w') as fout:  # pylint: disable=unspecified-encoding
+        fout.write("[\n")
+        i = 0
+        while i < len(self.fin_list):
+          json_out = json.dumps(self.fin_list[i])
+          fout.write(json_out)
+          if i != len(self.fin_list) - 1:
+            fout.write(',\n')
+          i += 1
 
-      fout.write("\n]")
-      fout.close()
+        fout.write("\n]")
       self.logger.info('Fin input file written to %s', outfile)
     else:
       jdump = json.dumps(self.fin_list)
@@ -293,62 +311,69 @@ class FinClass():
 
     return True
 
-  def run(self, outfile=None, to_file=True):
+  def prep_fin_input(self, outfile=None, to_file=True):
     """Main function in Fin that produces Fin input file"""
 
     self.cnx = self.machine.connect(self.chk_abort_file())
-    ret = ''
+    ret = False
     if outfile is None:
       outfile = "fin_input.json"
     if self.create_dumplist():
       ret = self.dump_json(outfile, to_file)
     else:
-      self.logger.error("Could not create dumplist for Fin input file")
+      self.logger.warning("Could not create dumplist for Fin input file")
 
     return ret
+
+  def insert_applicability(self, session, json_in):
+    """write applicability to sql"""
+    _, solver_id_map_h = get_solver_ids()
+    for elem in json_in:
+      if "applicable_solvers" in elem.keys():
+        #remove old applicability
+        # pylint: disable=comparison-with-callable
+        query = session.query(self.dbt.solver_app)\
+          .filter(self.dbt.solver_app.session == self.session_id)\
+          .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
+        # pylint: enable=comparison-with-callable
+        query.delete()
+        if not elem["applicable_solvers"]:
+          self.logger.warning("No applicable solvers for %s",
+                              elem["input"]["config_tuna_id"])
+        for solver in elem["applicable_solvers"]:
+          try:
+            new_entry = self.dbt.solver_app(
+                solver=solver_id_map_h[solver],
+                config=elem["input"]["config_tuna_id"],
+                session=self.session_id)
+            session.add(new_entry)
+          except KeyError:
+            self.logger.warning('Solver %s not found in solver table', solver)
+            self.logger.info("Please run 'go_fish.py --update_solver' first")
+            return False
+
+    self.logger.info('Commit bulk transaction, please wait')
+    session.commit()
+    return True
 
   def parse_applicability(self, json_in):
     """Function to parse fin outputfile and populate DB with results"""
     self.logger.info('Parsing fin solver applicability output...')
-    _, solver_id_map_h = get_solver_ids()
     if json_in is None:
       self.logger.error("JSON file returned from Fin is empty")
       return False
-    idx = 0
+
     with DbSession() as session:
-      for elem in json_in:
-        if idx % 100 == 0:
-          self.logger.info('.')
-        idx += 1
-        if "applicable_solvers" in elem.keys():
-          #remove old applicability
-          session.execute(
-              'delete from {} where config={} and session={}'.format(
-                  self.dbt.solver_app.__tablename__,
-                  elem["input"]["config_tuna_id"], self.dbt.session.id))
-          for solver in elem["applicable_solvers"]:
-            try:
-              new_entry = self.dbt.solver_app(
-                  solver=solver_id_map_h[solver],
-                  config=elem["input"]["config_tuna_id"],
-                  session=self.session_id)
-              session.add(new_entry)
-            except KeyError:
-              self.logger.warning('Solver %s not found in solver table', solver)
-              self.logger.info("Please run 'go_fish.py --update_solver' first")
-              return False
-      self.logger.info('Commit bulk transaction, please wait')
-      try:
-        session.commit()
-      except IntegrityError as err:
-        self.logger.warning("DB err occurred commiting bulk transaction %s",
-                            err)
+      callback = self.insert_applicability
+      session_retry(session, callback, lambda x: x(session, json_in),
+                    self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
       sapp_count = query.one()[0]
       self.logger.info("Solver applicability table updated to %d entries",
                        sapp_count)
+
     self.logger.info('Done parsing fin solver applicability output')
     return True
 
@@ -438,3 +463,12 @@ class FinClass():
       self.logger.info("Current invalid solvers: %s", solver_ids_invalid)
 
     return True
+
+  def step(self):
+    """Inner loop for Process run defined in worker_interface"""
+    self.multiproc = True
+    if "applicability" in self.fin_steps:
+      self.applicability()
+
+    self.multiproc = False
+    return False

@@ -55,21 +55,21 @@ def parse_args():
 def main():
   """Main module function"""
   args = parse_args()
-  fin = open(args.infile, 'r')
-  fout = open(args.outfile, 'w')
 
-  for line in fin:
-    if '=' in line:
-      elem = line.split('=')
-      fds, vals, precision, direction, _ = parse_pdb_key(elem[0])
-      cmd = build_driver_cmd(fds, vals, precision, direction)
-      outstr = '"{}",{}'.format(cmd, elem[1])
-    else:
-      outstr = line
-    fout.write(outstr)
-
-  fin.close()
-  fout.close()
+  # pylint: disable=unspecified-encoding
+  with open(args.infile, 'r') as fin, \
+       open(args.outfile, 'w') as fout:
+    # pylint: enable=unspecified-encoding
+    for line in fin:
+      if '=' in line:
+        elem = line.split('=')
+        fds, vals, precision, direction, _ = parse_pdb_key(elem[0])
+        cmd = build_driver_cmd(fds, vals, precision, direction)
+        outstr = f'"{cmd}",{elem[1]}'
+      else:
+        outstr = line
+      fout.write(outstr)
+  # pylint: enable=unspecified-encoding
 
 
 if __name__ == '__main__':

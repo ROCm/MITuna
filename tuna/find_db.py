@@ -26,7 +26,7 @@
 ###############################################################################
 """find db class"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, orm
-from sqlalchemy import Float, BigInteger, Boolean, and_
+from sqlalchemy import Float, BigInteger, Boolean, and_, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -45,19 +45,19 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   # pylint: disable-all
   # disable pylint warnings for this line due to duplication in miopen_tables
   @declared_attr
-  def solver(self):
-    """solver column"""
-    return Column(Integer, ForeignKey("solver.id"), nullable=False)
-
-  @declared_attr
   def session(self):
     """session column"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
   # pylint: enable-all
-  # enables pylint checks for the rest of the file
+  @declared_attr
+  def solver(self):
+    """solver column"""
+    return Column(Integer, ForeignKey("solver.id"), nullable=False)
+
 
   fdb_key = Column(String(length=128), nullable=True)
+  params = Column(Text, nullable=False)
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
   alg_lib = Column(String(length=64), nullable=True)
@@ -83,7 +83,7 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
       self.logger.warning(
           "No applicable fdb entries for config %s, session id %s", self.config,
           session_id)
-    ids = tuple([str(fdb_e.id) for fdb_e, _ in fdb_entries])
+    ids = tuple((str(fdb_e.id) for fdb_e, _ in fdb_entries))
     query = sess.query(fdb_obj).filter(fdb_obj.id.in_(ids))
 
     return query
@@ -154,7 +154,7 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs['logger'] if 'logger' in kwargs.keys() else None  #pylint: disable=multiple-statements
+    self.logger = kwargs['logger'] if 'logger' in kwargs else None  #pylint: disable=multiple-statements
     self.fdb_slv_dir = {}
 
 

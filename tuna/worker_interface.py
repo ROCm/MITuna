@@ -45,17 +45,18 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import get_id_solvers
 from tuna.abort import chk_abort_file
 from tuna.fin_utils import compose_config_obj
+from tuna.fin_utils import get_fin_slv_status
 from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME, PREC_TO_CMD
 from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR_MAP
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
 from tuna.metadata import FIND_ONLY_EXCEPTION
 from tuna.metadata import get_solver_ids, TENSOR_PRECISION
+from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from tuna.config_type import ConfigType
 
 MAX_JOB_RETRIES = 10
-NUM_SQL_RETRIES = 10
 
 TABLE_COLS_CONV_INVMAP = {}
 for clarg, cnvparam in TABLE_COLS_CONV_MAP.items():
@@ -89,15 +90,16 @@ class WorkerInterface(Process):
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'fin_steps', 'fin_infile', 'fin_outfile', 'job_queue',
-        'queue_lock', 'label', 'fetch_state', 'docker_name', 'bin_cache',
-        'end_jobs', 'config_type', 'dynamic_solvers_only', 'session_id'
+        'queue_lock', 'label', 'fetch_state', 'docker_name', 'end_jobs',
+        'config_type', 'dynamic_solvers_only', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
     self.machine = None
     self.gpu_id = None
-    self.num_procs = self.barred = None
+    self.num_procs = None
+    self.barred = None
     self.bar_lock = Lock()
     self.envmt = []
     self.fin_steps = []
@@ -106,12 +108,10 @@ class WorkerInterface(Process):
     self.job_queue = None
     self.queue_lock = Lock()
     self.is_fdb = False
-    self.find_db = None
     self.fetch_state = ['new']
     self.compile_only = False
     self.docker_name = TUNA_DOCKER_NAME
     self.gpu = None
-    self.bin_cache = False
     self.label = None
     self.end_jobs = None
     self.solver_id_map, _ = get_solver_ids()
@@ -127,12 +127,10 @@ class WorkerInterface(Process):
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
 
-    self.miopen_user_db_path = "/tmp/miopenpdb/thread-{}/config/miopen".format(
-        self.gpu_id)
+    self.miopen_user_db_path = f"/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
     self.envmt.append(
-        "MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{}/cache".format(
-            self.gpu_id))
-    self.envmt.append("MIOPEN_USER_DB_PATH={}".format(self.miopen_user_db_path))
+        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
+    self.envmt.append(f"MIOPEN_USER_DB_PATH={self.miopen_user_db_path}")
 
     self.hostname = self.machine.hostname
     self.poll_retries = 0
@@ -145,7 +143,7 @@ class WorkerInterface(Process):
 
     dir_name = os.path.join(TUNA_LOG_DIR,
                             type(self).__name__,
-                            "{}_{}p".format(self.hostname, self.machine.port))
+                            f"{self.hostname}_{self.machine.port}p")
     if not os.path.exists(dir_name):
       os.makedirs(dir_name)
     logger_name = os.path.join(dir_name, str(self.gpu_id))
@@ -274,12 +272,14 @@ class WorkerInterface(Process):
 
     return success
 
-  def compose_query(self, find_state, session):
+  def compose_job_query(self, find_state, session):
     """Helper function to compose query"""
+    # pylint: disable=comparison-with-callable
     query = session.query(self.dbt.job_table, self.dbt.config_table)\
                           .filter(self.dbt.job_table.session == self.dbt.session.id)\
                           .filter(self.dbt.job_table.valid == 1)\
                           .filter(self.dbt.config_table.valid == 1)
+    # pylint: enable=comparison-with-callable
 
     if self.label:
       query = query.filter(self.dbt.job_table.reason == self.label)
@@ -305,7 +305,6 @@ class WorkerInterface(Process):
     fdb_entry.session = self.dbt.session.id
     fdb_entry.opencl = False
     fdb_entry.logger = self.logger
-    fdb_entry.session = self.dbt.session.id
     fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
                                     self.dbt.solver_app, self.dbt.session.id)
     obj = fdb_query.first()
@@ -329,16 +328,19 @@ class WorkerInterface(Process):
     fdb_entry = self.update_fdb_entry(
         session, self.solver_id_map[fdb_obj['solver_name']])
     fdb_entry.fdb_key = fin_json['db_key']
-    fdb_entry.kernel_time = -1
     fdb_entry.alg_lib = fdb_obj['algorithm']
-    fdb_entry.workspace_sz = -1
-    fdb_entry.session = self.dbt.session.id
+    fdb_entry.params = fdb_obj['params']
+    fdb_entry.workspace_sz = fdb_obj['workspace']
+    fdb_entry.valid = True
+
+    fdb_entry.kernel_time = -1
+    if 'time' in fdb_obj:
+      fdb_entry.kernel_time = fdb_obj['time']
+
     return fdb_entry
 
   def compose_kernel_entry(self, fdb_obj, fdb_entry):
     """Compose a new Kernel Cache entry from fin input"""
-    fdb_entry.valid = True
-    fdb_entry.workspace_sz = fdb_obj['workspace']
     # Now we have the ID, lets add the binary cache objects
     fdb_entry.blobs = []
     for kern_obj in fdb_obj['kernel_objects']:
@@ -352,88 +354,49 @@ class WorkerInterface(Process):
       fdb_entry.blobs.append(kernel_obj)
     return True
 
-  def process_fdb_compile(self,
-                          session,
-                          fin_json,
-                          result_str='miopen_find_compile_result',
-                          check_str='find_compiled'):
+  def process_fdb_w_kernels(self,
+                            session,
+                            fin_json,
+                            result_str='miopen_find_compile_result',
+                            check_str='find_compiled'):
     """retrieve find db compile json results"""
-    success = False
-    for fdb_obj in fin_json[result_str]:
-      if fdb_obj[check_str]:
-        fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
-        if fdb_obj['reason'] == 'Success':
-          success = self.compose_kernel_entry(fdb_obj, fdb_entry)
-          session.add(fdb_entry)
-          self.logger.info('Updating find Db(Build) for job_id=%s', self.job.id)
+    status = []
+    if fin_json[result_str]:
+      for fdb_obj in fin_json[result_str]:
+        slv_stat = get_fin_slv_status(fdb_obj, check_str)
+        status.append(slv_stat)
+
+        if fdb_obj[check_str]:
+          fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
+          if fdb_obj['reason'] == 'Success':
+            self.compose_kernel_entry(fdb_obj, fdb_entry)
+            session.add(fdb_entry)
+            self.logger.info('Updating find Db(Build) for job_id=%s',
+                             self.job.id)
+          else:
+            # JD: add info about reason to the logs table
+            fdb_entry.valid = False
         else:
-          # JD: add info about reason to the logs table
-          fdb_entry.valid = False
-      else:
-        self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
-                            fin_json['config_tuna_id'], fdb_obj)
+          self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
+                              fin_json['config_tuna_id'], fdb_obj)
+    else:
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Find Compile: No results'
+      }]
 
     try:
       session.commit()
     except OperationalError as err:
       self.logger.warning('FinEval: Unable to update Database: %s', err)
-      success = False
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': f'FinEval: Unable to update Database: {err}'
+      }]
 
-    return success
-
-  def update_pdb_config(self, session, layout, data_type, bias):
-    """ update and retrieve perf_config entry from mysql """
-    perf_config_table = self.dbt.perf_config_table
-
-    perf_config_dict = {
-        'layout': layout,
-        'data_type': data_type,
-        'bias': bias,
-        'config': self.config.id,
-        'session': self.dbt.session.id
-    }
-
-    self.logger.info('Updating %s for job_id=%s',
-                     perf_config_table.__tablename__, self.job.id)
-    res = session.query(perf_config_table).filter_by(**perf_config_dict).all()
-    if not res:
-      session.add(perf_config_table(**perf_config_dict))
-      session.commit()
-
-    perf_config_entry = session.query(perf_config_table).filter_by(
-        **perf_config_dict).one()
-    return perf_config_entry
-
-  def update_pdb_entry(self, session, solver, layout, data_type, bias, params):
-    """ update and retrieve perf_db entry from mysql """
-    perf_table = self.dbt.perf_db_table
-
-    perf_config_entry = self.update_pdb_config(session, layout, data_type, bias)
-
-    perf_db_dict = {
-        'solver': solver,
-        'miopen_config': perf_config_entry.id,
-        'session': self.dbt.session.id
-    }
-    update_dict = {'params': params, 'session': self.dbt.session.id}
-    self.logger.info('Updating %s for job_id=%s', perf_table.__tablename__,
-                     self.job.id)
-    num_rows = session.query(perf_table).filter_by(
-        **perf_db_dict).update(update_dict)
-    perf_db_dict.update(update_dict)
-    if num_rows == 0:
-      self.logger.info('insert %s for job_id=%s', perf_db_dict, self.job.id)
-      session.add(perf_table(**perf_db_dict))
-    else:
-      self.logger.info('%u update %s for job_id=%s', num_rows, perf_db_dict,
-                       self.job.id)
-
-    session.commit()
-
-    query = session.query(perf_table).filter_by(**perf_db_dict)
-    perf_entry = query.one()
-
-    return perf_config_entry, perf_entry
+    return status
 
   def queue_end_reset(self):
     """resets end queue flag"""
@@ -442,29 +405,34 @@ class WorkerInterface(Process):
 
   def load_job_queue(self, session, ids):
     """load job_queue with info for job ids"""
+    # pylint: disable=comparison-with-callable
     job_cfgs = session.query(self.dbt.job_table, self.dbt.config_table)\
       .filter(self.dbt.job_table.valid == 1)\
       .filter(self.dbt.job_table.session == self.dbt.session.id)\
       .filter(self.dbt.config_table.id == self.dbt.job_table.config)\
       .filter(self.dbt.job_table.id.in_(ids)).all()
+    # pylint: enable=comparison-with-callable
+
     if len(ids) != len(job_cfgs):
       raise Exception(
-          'Failed to load job queue. #ids: {} - #job_cgfs: {}'.format(
-              len(ids), len(job_cfgs)))
+          f'Failed to load job queue. #ids: {len(ids)} - #job_cgfs: {len(job_cfgs)}'
+      )
     for job, config in job_cfgs:
       if job.solver:
         query = session.query(self.dbt.solver_table)\
-            .filter(self.dbt.solver_table.session == self.dbt.session.id)\
             .filter(self.dbt.solver_table.solver == job.solver)
         solver = query.one()
       else:
-        query = session.query(self.dbt.solver_app, self.dbt.solver_table)\
-            .filter(self.dbt.solver_app.session == self.dbt.session.id)\
-            .filter(self.dbt.solver_app.applicable == 1)\
-            .filter(self.dbt.solver_table.tunable == 1)\
-            .filter(self.dbt.solver_app.config == job.config)\
-            .filter(self.dbt.solver_app.solver == self.dbt.solver_table.id)\
-            .filter(self.dbt.solver_table.tunable == 1)
+        query = session.query(self.dbt.solver_app, self.dbt.solver_table)
+
+        # pylint: disable=comparison-with-callable
+        query = query.filter(self.dbt.solver_app.session == self.dbt.session.id)\
+                     .filter(self.dbt.solver_app.applicable == 1)\
+                     .filter(self.dbt.solver_table.tunable == 1)\
+                     .filter(self.dbt.solver_app.config == job.config)\
+                     .filter(self.dbt.solver_app.solver == self.dbt.solver_table.id)\
+                     .filter(self.dbt.solver_table.tunable == 1)
+        # pylint: enable=comparison-with-callable
 
         app_solver_desc = query.all()
         ids = [solver.id for _, solver in app_solver_desc]
@@ -493,7 +461,7 @@ class WorkerInterface(Process):
           if self.job_queue.empty():
             ids = ()
             with DbSession() as session:
-              query = self.compose_query(find_state, session)
+              query = self.compose_job_query(find_state, session)
               job_cfgs = query.all()
 
               if not job_cfgs:
@@ -505,7 +473,7 @@ class WorkerInterface(Process):
                   self.end_jobs.value = 1
                 return False
 
-              ids = tuple([str(job_row.id) for job_row, _ in job_cfgs])
+              ids = tuple((str(job_row.id) for job_row, _ in job_cfgs))
               self.logger.info("%s jobs %s", find_state, ids)
               if set_state == "eval_start":
                 session.query(self.dbt.job_table).filter(
@@ -555,7 +523,7 @@ class WorkerInterface(Process):
     return False
 
   # JD: This should take a session obj as an input to remove the creation of an extraneous session
-  def set_job_state(self, state, increment_retries=False):
+  def set_job_state(self, state, increment_retries=False, result=''):
     """Interface function to update job state for builder/evaluator"""
     self.logger.info('Setting job id %s state to %s', self.job.id, state)
     for idx in range(NUM_SQL_RETRIES):
@@ -565,13 +533,18 @@ class WorkerInterface(Process):
             session.query(self.dbt.job_table).filter(
                 self.dbt.job_table.id == self.job.id).update({
                     self.dbt.job_table.state: state,
+                    self.dbt.job_table.result: result
                 })
           else:
             if increment_retries:
               session.query(self.dbt.job_table).filter(
                   self.dbt.job_table.id == self.job.id).update({
-                      self.dbt.job_table.state: state,
-                      self.dbt.job_table.retries: self.dbt.job_table.retries + 1
+                      self.dbt.job_table.state:
+                          state,
+                      self.dbt.job_table.retries:
+                          self.dbt.job_table.retries + 1,
+                      self.dbt.job_table.result:
+                          result
                   })
             else:
               # JD: When would this happen ?
@@ -583,7 +556,8 @@ class WorkerInterface(Process):
               session.query(self.dbt.job_table).filter(
                   self.dbt.job_table.id == self.job.id).update({
                       self.dbt.job_table.state: state,
-                      self.dbt.job_table.cache_loc: cache_loc
+                      self.dbt.job_table.cache_loc: cache_loc,
+                      self.dbt.job_table.result: result
                   })
           session.commit()
           return True
@@ -627,7 +601,7 @@ class WorkerInterface(Process):
       self.logger.info(err)
     return ret_code, out, err
 
-  def get_branch_hash(self):
+  def get_miopen_v(self):
     """Interface function to get new branch hash"""
     _, out, _ = self.exec_docker_cmd(
         "cat /opt/rocm/miopen/include/miopen/version.h "
@@ -644,25 +618,23 @@ class WorkerInterface(Process):
   @staticmethod
   def compose_lcl_envmt(solver):
     """Setting up local_envmt var"""
-    # JD: Move HIP_VISIBLE_DEVICES here
     # pylint: disable=too-many-nested-blocks
     lcl_envmt = []
-    solver_id_map, _ = get_solver_ids()
+    solver_id_map, _ = get_solver_ids()  # pylint: disable=unused-variable ; false alarm
     if solver not in FIND_ONLY_EXCEPTION:
-      lcl_envmt.append("MIOPEN_DEBUG_FIND_ONLY_SOLVER={}".format(
-          solver_id_map[solver]))
+      lcl_envmt.append("MIOPEN_DEBUG_FIND_ONLY_SOLVER={solver_id_map[solver]}")
       for key, env_var in FIND_ONLY_EXCEPTION.items():
-        lcl_envmt.append("{}=0".format(env_var))
+        lcl_envmt.append(f"{env_var}=0")
     else:
       for key, sol_group in ENV_SLVGRP_MAP.items():
         if solver not in sol_group:
-          lcl_envmt.append("{}=0".format(key))
+          lcl_envmt.append(f"{key}=0")
         else:
           for item in sol_group:
             if item != solver and item in SLV_ENV_MAP:
               if solver not in SLV_ENV_MAP or SLV_ENV_MAP[item] != SLV_ENV_MAP[
                   solver]:
-                cnstr = "{}=0".format(SLV_ENV_MAP[item])
+                cnstr = f"{SLV_ENV_MAP[item]}=0"
                 if cnstr not in lcl_envmt:
                   lcl_envmt.append(cnstr)
     return lcl_envmt
@@ -712,7 +684,7 @@ class WorkerInterface(Process):
 
     sub_cmd = PREC_TO_CMD[self.config_type][self.config.input_t.data_type]
 
-    bash_cmd = 'MIOpenDriver {} -V 0 -i 1'.format(sub_cmd)
+    bash_cmd = f'MIOpenDriver {sub_cmd} -V 0 -i 1'
 
     driver_args = self.config_dict
     if "direction" in driver_args:
@@ -720,14 +692,14 @@ class WorkerInterface(Process):
     for field, val in driver_args.items():
       if val is None:
         continue
-      if sub_cmd in TENSOR_PRECISION.keys():
-        if field in TABLE_COLS_CONV_INVMAP.keys():
+      if sub_cmd in TENSOR_PRECISION:
+        if field in TABLE_COLS_CONV_INVMAP:
           arg_name = TABLE_COLS_CONV_INVMAP[field]
-          bash_cmd += " -{} {}".format(arg_name, val)
+          bash_cmd += f" -{arg_name} {val}"
       elif sub_cmd in ['CBAInfer', 'CBAInferfp16']:
-        if field in TABLE_COLS_FUSION_INVMAP.keys():
+        if field in TABLE_COLS_FUSION_INVMAP:
           arg_name = TABLE_COLS_FUSION_INVMAP[field]
-          bash_cmd += " -{} {}".format(arg_name, val)
+          bash_cmd += f" -{arg_name} {val}"
 
     lcl_envmt = self.envmt[:]
 
@@ -739,13 +711,13 @@ class WorkerInterface(Process):
 
     # create environment string for the command to execute,
     # remote ssh is rejecting the env setting using dicts
-    export_all = ["{}".format(x) for x in lcl_envmt]
+    export_all = [f"{x}" for x in lcl_envmt]
     env_str = " ".join(export_all)
 
     bash_cmd = bash_cmd + ' 2>&1 '
     # p = os.path.join('/home',self.user, 'MLOpen')
 
-    cmd = "{env} {wrk}".format(env=env_str, wrk=bash_cmd)
+    cmd = f"{env_str} {bash_cmd}"
 
     self.logger.warning("Machine: %s, GPU ID: %s, Executing: %s", self.hostname,
                         self.gpu_id, cmd)
@@ -800,17 +772,16 @@ class WorkerInterface(Process):
     when the evaluator should stop waiting for jobs to compile"""
     with DbSession() as session:
       try:
+        # pylint: disable=comparison-with-callable
         query = session.query(sqlalchemy_func.count(self.dbt.job_table.id))\
             .filter(self.dbt.job_table.valid == 1)\
             .filter(self.dbt.job_table.session == self.dbt.session.id)\
             .filter(self.dbt.job_table.state.in_(('new', 'started', 'compile_start', 'compiling',
                                                   'compiled')))
+        # pylint: enable=comparison-with-callable
+
         if self.label:
           query = query.filter(self.dbt.job_table.reason == self.label)
-        if self.machine.arch:
-          query = query.filter(self.dbt.job_table.arch == self.machine.arch)
-        if self.machine.num_cu:
-          query = query.filter(self.dbt.job_table.num_cu == self.machine.num_cu)
         if self.fin_steps:
           query = query.filter(
               self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))

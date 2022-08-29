@@ -126,7 +126,7 @@ def fdb_query(dbt, args):
       tag_query = session.query(config_tags_table.config).filter(
           config_tags_table.tag == args.config_tag)
       tag_rows = tag_query.all()
-      ids = tuple([str(tag_row.config) for tag_row in tag_rows])
+      ids = tuple((str(tag_row.config) for tag_row in tag_rows))
       query = query.filter(find_db_table.config.in_(ids))
 
   return query
@@ -223,23 +223,24 @@ def export_kdb(dbt, args):
 def get_filename(arch, num_cu, filename, ocl, db_type):
   """Helper function to compose filename"""
   version = "1.0.0"
-  tuna_dir = 'tuna_{}'.format(version)
+  tuna_dir = f'tuna_{version}'
   if not os.path.exists(tuna_dir):
     os.makedirs(tuna_dir)
-  final_name = "{}/{}_{}".format(tuna_dir, arch, num_cu)
+  final_name = f"{tuna_dir}/{arch}_{num_cu}"
   if num_cu > 64:
-    final_name = '{}/{}{:x}'.format(tuna_dir, arch, num_cu)
+    final_name = f'{tuna_dir}/{arch}{num_cu:x}'
   if filename:
-    final_name = '{}/{}'.format(tuna_dir, filename)
+    final_name = f'{tuna_dir}/{filename}'
 
   if db_type == DB_Type.FIND_DB:
+    # pylint: disable-next=consider-using-f-string ; more readable
     extension = '.{}.fdb.txt'.format('OpenCL' if ocl else 'HIP')
   elif db_type == DB_Type.KERN_DB:
     extension = '.kdb'
   else:
     extension = ".db"
 
-  final_name = "{}{}".format(final_name, extension)
+  final_name = f"{final_name}{extension}"
 
   return final_name
 
@@ -253,20 +254,21 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   FDBRecord = namedtuple('FDBRecord',
                          'alg_lib solver_id kernel_time workspace_sz')
 
-  with open(file_name, 'w') as out:
+  with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
       solvers.sort(key=lambda x: float(x[2]))
       lst = []
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
         rec = FDBRecord(*rec)
+        # pylint: disable-next=consider-using-f-string ; more reable
         lst.append('{alg}:{},{},{},{alg},{}'.format(
             id_solver_map_h[rec.solver_id],
             rec.kernel_time,
             rec.workspace_sz,
             'not used',
             alg=rec.alg_lib))
-      out.write('{}={}\n'.format(key, ';'.join(lst)))
+      out.write(f"{key}={';'.join(lst)}\n")
   return file_name
 
 
@@ -364,13 +366,19 @@ def create_sqlite_tables(arch, num_cu, filename=None):
   return cnx, local_path
 
 
-def get_cfg_dict(cfg_entry, perf_cfg_entry):
+def get_cfg_dict(cfg_entry, tensor_entry):
   """compose config_dict"""
   cfg_dict = compose_config_obj(cfg_entry)
-  cfg_dict.update(perf_cfg_entry.to_dict())
 
   if cfg_entry.valid == 1:
     cfg_dict = mysql_to_sqlite_cfg(cfg_dict)
+
+  ext_dict = tensor_entry.to_dict(ommit_valid=True)
+  ext_dict.pop('id')
+  cfg_dict.update(ext_dict)
+
+  #bias is always 0
+  cfg_dict['bias'] = 0
 
   return dict(cfg_dict)
 
@@ -389,25 +397,28 @@ def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
   LOGGER.info("Inserting row in perf_db: %s", perf_db_dict)
 
 
-def get_query(dbt, args):
+def get_pdb_query(dbt, args):
   """Compose query to get perf_db rows based on filters from args"""
   with DbSession() as session:
-    query = session.query(dbt.perf_db_table, dbt.perf_config_table,
-                          dbt.config_table)\
-        .filter(dbt.perf_db_table.valid == 1)\
-        .filter(dbt.perf_db_table.session == dbt.session.id)\
-        .filter(dbt.perf_db_table.miopen_config == dbt.perf_config_table.id)\
-        .filter(dbt.perf_config_table.config == dbt.config_table.id)
+    query = session.query(dbt.find_db_table,
+                          dbt.config_table, dbt.tensor_table)\
+        .filter(dbt.find_db_table.session == dbt.session.id)\
+        .filter(dbt.find_db_table.valid == 1)\
+        .filter(dbt.find_db_table.kernel_time != -1)\
+        .filter(dbt.find_db_table.params != '')\
+        .filter(dbt.find_db_table.config == dbt.config_table.id)\
+        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
+        .filter(dbt.find_db_table.solver == dbt.solver_table.id)\
+        .filter(dbt.solver_table.tunable == 1)
 
     LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
     LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
-    query = query.filter(dbt.perf_db_table.session == dbt.session.id)
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
       tag_query = session.query(dbt.config_tags_table.config).filter(
           dbt.config_tags_table.tag == args.config_tag)
-      ids = tuple([str(tag_row.config) for tag_row in tag_query.all()])
-      query = query.filter(dbt.perf_config_table.config.in_(ids))
+      ids = tuple((str(tag_row.config) for tag_row in tag_query.all()))
+      query = query.filter(dbt.config_table.id.in_(ids))
 
   return query
 
@@ -417,19 +428,19 @@ def export_pdb(dbt, args):
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
   with DbSession() as session:
-    query = get_query(dbt, args)
+    query = get_pdb_query(dbt, args)
     cfg_map = {}
-    for perf_db_entry, perf_cfg_entry, cfg_entry in query.all():
+    for perf_db_entry, cfg_entry, tensor_entry in query.all():
       LOGGER.info("%s, %s, %s", dbt.session.miopen_v, dbt.session.rocm_v,
-                  perf_db_entry.miopen_config)
+                  cfg_entry.id)
 
-      if perf_cfg_entry.id in cfg_map:
-        ins_cfg_id = cfg_map[perf_cfg_entry.id]
+      if cfg_entry.id in cfg_map:
+        ins_cfg_id = cfg_map[cfg_entry.id]
       else:
-        cfg_dict = get_cfg_dict(cfg_entry, perf_cfg_entry)
+        cfg_dict = get_cfg_dict(cfg_entry, tensor_entry)
         #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
         ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
-        cfg_map[perf_cfg_entry.id] = ins_cfg_id
+        cfg_map[cfg_entry.id] = ins_cfg_id
 
       insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id)
       num_perf += 1
@@ -444,6 +455,9 @@ def main():
   args = parse_args()
   result_file = ''
   dbt = DBTables(session_id=args.session_id)
+
+  args.arch = dbt.session.arch
+  args.num_cu = dbt.session.num_cu
 
   if args.kern_db:
     result_file = export_kdb(dbt, args)

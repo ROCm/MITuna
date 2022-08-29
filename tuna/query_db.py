@@ -78,11 +78,13 @@ def parse_args():
     if args.driver_cmd:
       LOGGER.error('driver commands cannot be specified when filename is given')
 
-    infile = open(os.path.expanduser(args.file_name), "r")
-    args.driver_cmd = []
-    for cmd in infile:
-      if 'conv' in cmd:
-        args.driver_cmd.append(cmd)
+    # pylint: disable-next=unspecified-encoding
+    with open(os.path.expanduser(args.file_name), "r") as infile:
+      args.driver_cmd = []
+      for cmd in infile:
+        if 'conv' in cmd:
+          args.driver_cmd.append(cmd)
+
   return args
 
 
@@ -123,7 +125,7 @@ def print_results(db_cursor):
     columns.append(cd_var[0])
 
   for width in widths:
-    tavnit += " %-" + "%ss |" % (width,)
+    tavnit += " %-" + f"{width}s |"
     separator += '-' * width + '--+'
 
   print(separator)
@@ -152,11 +154,10 @@ def print_fdb_res(prefix, fdb_store, key):
   fdb = fdb_store.get(key, None)
   if fdb:
     vals = parse_fdb_value(fdb)[0]
-    print('{}:{}: Algo: {}, Solver: {}, Kernel_Time: {}, "\
-      "Workspace_Size: {} '.format(prefix, key, vals[0], vals[1], vals[2],
-                                   vals[3]))
+    print(f'{prefix}:{key}: Algo: {vals[0]}, Solver: {vals[1]}, ' +\
+            f'Kernel_Time: {vals[2]}, Workspace_Size: {vals[3]} ')
   else:
-    print('{}:{}: Key Not present'.format(prefix, key))
+    print(f'{prefix}:{key}: Key Not present')
 
 
 def dev_fil_query(query, args, table):
@@ -173,16 +174,17 @@ def main():
   args = parse_args()
   fdb_store = {}
   if args.fdb_filename:
-    fdbfile = open(os.path.expanduser(args.fdb_filename), "r")
-    for line in fdbfile:
-      if not line:
-        continue
-      lst = line.split('=')
-      if len(lst) == 2:
-        key, value = lst
-        fdb_store[key] = value.strip()
-      else:
-        print('WARNING: Ill formed fdb line; ', line)
+    # pylint: disable-next=unspecified-encoding
+    with open(os.path.expanduser(args.fdb_filename), "r") as fdbfile:
+      for line in fdbfile:
+        if not line:
+          continue
+        lst = line.split('=')
+        if len(lst) == 2:
+          key, value = lst
+          fdb_store[key] = value.strip()
+        else:
+          print('WARNING: Ill formed fdb line; ', line)
 
   for cmd in args.driver_cmd:
     main_impl(args, cmd, fdb_store)

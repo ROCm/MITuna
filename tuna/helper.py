@@ -38,7 +38,7 @@ from tuna.utils.utility import check_qts
 from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, CONV_CONFIG_COLS, TENSOR_PRECISION
 from tuna.metadata import BN_DEFAULTS, BN_CONFIG_COLS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
-from tuna.worker_interface import NUM_SQL_RETRIES
+from tuna.metadata import NUM_SQL_RETRIES
 from tuna.miopen_tables import TensorTable, Session
 from tuna.config_type import ConfigType
 from tuna.metadata import get_solver_ids
@@ -72,7 +72,7 @@ def print_solvers():
   """Pretty print solvers list"""
   slv_dict, _ = get_solver_ids()
   for name, sid in slv_dict.items():
-    print("{0:>4} - {1}".format(sid, name))
+    print(f"{sid:>4} - {name}")
 
 
 # fill in the missing columns with defaults to avoid duplicate entries
@@ -264,9 +264,10 @@ def get_tid(session, tensor_dict):
   except IntegrityError as err:
     LOGGER.error("Error occurred: %s \n", err)
     raise ValueError(
-        'Something went wrong with getting input tensor id from tensor table')
-  except IndexError:
-    raise ValueError('Tensor not found in table: {}'.format(tensor_dict))
+        'Something went wrong with getting input tensor id from tensor table'
+    ) from err
+  except IndexError as err:
+    raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
 
   return ret_id
 
@@ -380,8 +381,8 @@ def add_new_session(args, worker):
   session_entry = Session()
   session_entry.arch = args.arch
   session_entry.num_cu = args.num_cu
-  session_entry.rocm_v = worker.get_branch_hash()
-  session_entry.miopen_v = worker.get_rocm_v()
+  session_entry.rocm_v = worker.get_rocm_v()
+  session_entry.miopen_v = worker.get_miopen_v()
   session_entry.reason = args.label
   if args.ticket:
     session_entry.ticket = args.ticket
