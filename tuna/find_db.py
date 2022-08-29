@@ -48,8 +48,8 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   def session(self):
     """session column"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
-  # pylint: enable-all
 
+  # pylint: enable-all
   @declared_attr
   def solver(self):
     """solver column"""
