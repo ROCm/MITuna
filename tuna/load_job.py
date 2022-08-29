@@ -28,7 +28,6 @@
 Script for adding jobs to the MySQL database
 """
 
-import mysql.connector  # pylint: disable=unused-import
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
 
@@ -50,8 +49,7 @@ def parse_args():
   #pylint: disable=duplicate-code
   parser = setup_arg_parser(
       'Insert jobs into MySQL db by tag from" \
-      " config_tags table.',
-      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
   config_filter = parser.add_mutually_exclusive_group(required=True)
   solver_filter = parser.add_mutually_exclusive_group()
   config_filter.add_argument(
@@ -140,7 +138,7 @@ def parse_args():
     for solver in solver_arr:
       sid = solver_id_map.get(solver, None)
       if not sid:
-        parser.error('Invalid solver: {}'.format(solver))
+        parser.error(f'Invalid solver: {solver}')
       solver_ids.append((solver, sid))
     args.solvers = solver_ids
   else:
@@ -158,7 +156,7 @@ def test_tag_name(tag, dbt):
     tag_names.append(row.tag)
 
   if tag not in tag_names:
-    raise ValueError("tag '{}' not in config_tags".format(tag))
+    raise ValueError(f"tag '{tag}' not in config_tags")
 
   return True
 
@@ -303,7 +301,7 @@ def main():
 
   add_jobs(args, counts, dbt)
 
-  print('New jobs added: {}'.format(counts['cnt_jobs']))
+  print(f"New jobs added: {counts['cnt_jobs']}")
 
 
 if __name__ == '__main__':

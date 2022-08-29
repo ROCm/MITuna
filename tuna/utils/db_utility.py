@@ -27,8 +27,17 @@
 """Utility module for DB helper functions"""
 
 import enum
+import random
+from time import sleep
+import pymysql
+from sqlalchemy.exc import OperationalError, IntegrityError
+
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen_tables import Solver
+from tuna.utils.logger import setup_logger
+from tuna.metadata import NUM_SQL_RETRIES
+
+LOGGER = setup_logger('db_utility')
 
 
 def get_id_solvers():
@@ -46,7 +55,30 @@ def get_id_solvers():
   return id_solver_map_c, id_solver_map_h
 
 
-class DB_Type(enum.Enum):
+def session_retry(session, callback, actuator, logger=LOGGER):
+  """retry handling for a callback function using an actuator (lamda function with params)"""
+  for idx in range(NUM_SQL_RETRIES):
+    try:
+      return actuator(callback)
+    except OperationalError as error:
+      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      session.rollback()
+      sleep(random.randint(1, 30))
+    except pymysql.err.OperationalError as error:
+      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      session.rollback()
+      sleep(random.randint(1, 30))
+    except IntegrityError as error:
+      logger.error('Query failed: %s', error)
+      session.rollback()
+      return False
+
+  logger.error('All retries have failed.')
+  return False
+
+
+class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?
+  """@alex defines the types of databases produced in tuning sessions?"""
   FIND_DB = 1
   KERN_DB = 2
   PERF_DB = 3

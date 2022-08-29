@@ -31,6 +31,7 @@ from enum import Enum
 #pylint: disable=too-few-public-methods
 class ConfigType(Enum):
   """Enumerate supported configuration types"""
+  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
   convolution = "convolution"
   batch_norm = "batch_norm"
 

@@ -157,11 +157,17 @@ class DriverConvolution(DriverBase):
     return ConvolutionConfig(**self.compose_tensors(keep_id))
 
   def __str__(self):
+<<<<<<< HEAD
     return "./bin/MIOpenDriver " + self.cmd_conv + " " + " ".join(
         '--{} {}'.format(key, val)
         for key, val in self.to_dict().items()
         if key in CONV_CONFIG_COLS or key in TENSOR_COLS or
         key in self.get_common_cols())
+=======
+    return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
+        f'--{key} {val}' for key, val in self.to_dict().items() if key in
+        CONV_CONFIG_COLS or key in TENSOR_COLS or key in self.get_common_cols())
+>>>>>>> develop
 
   @staticmethod
   def test_skip_arg(tok1):

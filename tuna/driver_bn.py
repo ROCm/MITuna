@@ -134,9 +134,14 @@ class DriverBatchNorm(DriverBase):
     return BNConfig(**self.compose_tensors(keep_id))
 
   def __str__(self):
+<<<<<<< HEAD
     return "./bin/MIOpenDriver " + self.cmd_bn + " " + " ".join(
         '--{} {}'.format(key, val)
         for key, val in self.__dict__.items()
+=======
+    return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
+        f'--{key} {val}' for key, val in self.__dict__.items()
+>>>>>>> develop
         if key in BN_CONFIG_COLS or key in IN_TENSOR_COLS or
         key in self.get_common_cols())
 
