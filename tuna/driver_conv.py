@@ -161,7 +161,6 @@ class DriverConvolution(DriverBase):
         f'--{key} {val}' for key, val in self.to_dict().items() if key in
         CONV_CONFIG_COLS or key in TENSOR_COLS or key in self.get_common_cols())
 
-
   @staticmethod
   def test_skip_arg(tok1):
     """Check if token is skipable"""
