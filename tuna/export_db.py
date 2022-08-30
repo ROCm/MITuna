@@ -27,9 +27,8 @@
 """Module to export find_db to txt file"""
 import sqlite3
 import os
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 import base64
-from sqlalchemy import and_
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen_tables import Solver  # pylint: disable=unused-import
@@ -274,7 +273,7 @@ def build_miopen_kdb(dbt, find_db):
   num_fdb_entries = 0
   num_kdb_blobs = 0
   kern_db = []
-  for fdb_key, entries in find_db.items():
+  for _, entries in find_db.items():
     for fdb_entry in entries:
       num_fdb_entries += 1
       with DbSession() as session:
