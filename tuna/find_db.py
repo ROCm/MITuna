@@ -27,7 +27,6 @@
 """find db class"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, orm
 from sqlalchemy import Float, BigInteger, Boolean, and_, Text
-from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
 from tuna.dbBase.base_class import BASE
