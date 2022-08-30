@@ -478,6 +478,7 @@ def pytestSuite3() {
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
            sh "pytest tests/test_fin_evaluator.py -s"
+           sh "pytest tests/test_populate_golden.py -s"
         }
     }
 }
