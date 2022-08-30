@@ -148,9 +148,7 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
       "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
 
   arch_ext = arch2targetid(arch)
-  for kern in kern_db:
-    name = kern.kernel_name
-    args = kern.kernel_args
+  for (name, args), (blob, kern_hash, kern_size) in kern_db.items():
     #check if extensions should be added
     if not name.endswith('.o') and not "-mcpu=" in args:
       if not name.endswith('.mlir'):
@@ -159,8 +157,7 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
     cur.execute(
         "INSERT INTO kern_db (kernel_name, kernel_args, kernel_blob, kernel_hash, "
         "uncompressed_size) VALUES(?, ?, ?, ?, ?);",
-        (name, args, base64.b64decode(
-            kern.kernel_blob), kern.kernel_hash, kern.uncompressed_size))
+        (name, args, base64.b64decode(blob), kern_hash, kern_size))
   conn.commit()
   cur.close()
   conn.close()
