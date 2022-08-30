@@ -42,7 +42,7 @@ pipeline {
            }
         }
         stage("fin get solver"){
-	      agent{  label "gfx908" }
+        agent{  label utils.rocmnode("tunatest") }
         steps {
             script {
             utils.finSolvers()
@@ -50,7 +50,8 @@ pipeline {
             } 
         }
         stage("fin applicability"){
-	      agent{  label "gfx908" }
+        //init_session called here
+        agent{  label "gfx908" }
         steps {
             script{
             utils.finApplicability()
@@ -82,7 +83,7 @@ pipeline {
             }
         }    
         stage("fin find compile"){
-        agent{ label "gfx908"}
+        agent{ label utils.rocmnode("tunatest") }
         steps{
             script {
             utils.finFindCompile()
@@ -98,7 +99,7 @@ pipeline {
             }
         }
         stage("load jobs"){
-        agent{ label "gfx908"} 
+        agent{ label utils.rocmnode("tunatest") }
         steps {
             script {
             utils.loadJobTest()
@@ -106,7 +107,7 @@ pipeline {
             }
         }
         stage("perf compile"){
-	      agent{  label "gfx908" }
+        agent{  label utils.rocmnode("tunatest") }
         steps {
             script {
             utils.perfCompile()
@@ -128,7 +129,7 @@ pipeline {
            utils.cleanup()
            }
            }
-	}
+        }
     }
 }
 
