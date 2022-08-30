@@ -53,9 +53,34 @@ def parse_args():
                       action='store',
                       type=int,
                       default=None,
+                      required=True,
+                      help='target golden miopen version to write')
+  parser.add_argument('--base_golden_v',
+                      dest='base_golden_v',
+                      action='store',
+                      type=int,
+                      default=None,
                       required=False,
-                      help='Golden miopen version')
+                      help='previous golden miopen version for initialization')
+  parser.add_argument('-o',
+                      '--overwrite',
+                      dest='overwrite',
+                      action='store_true',
+                      default=False,
+                      help='Write over existing golden version.')
+
   args = parser.parse_args()
+
+  if args.overwrite:
+    if not args.golden_v:
+      parser.error('--golden_v must be set with --overwrite')
+    if args.base_golden_v:
+      parser.error('--base_golden_v must not be set with --overwrite')
+  elif not args.base_golden_v:
+    parser.error(
+        'When using --golden_v to create a new version, specify --base_golden_v'
+    )
+
   return args
 
 
@@ -85,7 +110,7 @@ def latest_golden_v(dbt):
   version = -1
   with DbSession() as session:
     query = session.query(dbt.golden_table).order_by(
-        dbt.golden_table.golden_miopen_v.desc()).limit(1)
+        dbt.golden_table.golden_miopen_v.max())
     obj = query.first()
     if obj:
       version = obj.golden_miopen_v
@@ -134,18 +159,21 @@ def main():
   args = parse_args()
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
 
-  new_golden = False
-  last_golden_v = latest_golden_v(dbt)
+  gold_db = get_golden_query(dbt, args.golden_v).all()
+  if not gold_db:
+    if args.overwrite:
+      raise ValueError(f'Target golden version {args.golden_v} does not exist.')
+  elif not args.overwrite:
+    raise ValueError(
+        f'Target golden version {args.golden_v} exists, but --overwrite is not specified.'
+    )
 
-  if not args.golden_v:
-    new_golden = True
-    args.golden_v = last_golden_v + 1
-  elif args.golden_v > last_golden_v:
-    new_golden = True
-
-  if new_golden:
-    query = get_golden_query(dbt, last_golden_v)
-    merge_golden_entries(dbt, args.golden_v, query.all())
+  if args.base_golden_v:
+    base_gold_db = get_golden_query(dbt, args.base_golden_v).all()
+    if not base_gold_db:
+      raise ValueError(
+          f'Base golden version {args.base_golden_v} does not exist.')
+    merge_golden_entries(dbt, args.golden_v, base_gold_db)
 
   query = get_fdb_query(dbt)
   merge_golden_entries(dbt, args.golden_v, query.all())

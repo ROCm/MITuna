@@ -144,7 +144,7 @@ def get_fdb_query(dbt, args):
     src_table = dbt.golden_table
 
   with DbSession() as session:
-    query = session.query(src_table, dbt.config_table, dbt.tensor_table)
+    query = session.query(src_table, dbt.config_table)
     if args.golden_v is not None:
       query = query.filter(src_table.golden_miopen_v == args.golden_v)\
               .filter(src_table.arch == args.arch)\
@@ -156,7 +156,6 @@ def get_fdb_query(dbt, args):
 
     query = query.filter(src_table.config == dbt.config_table.id)\
         .filter(src_table.solver == dbt.solver_table.id)\
-        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
         .filter(src_table.valid == 1)\
         .filter(src_table.kernel_time != -1)\
         .filter(src_table.workspace_sz != -1)\
@@ -188,7 +187,7 @@ def get_fdb_alg_lists(query):
   """return dict with key: fdb_key + alg_lib, val: solver list"""
   find_db = OrderedDict()
   solvers = {}
-  for fdb_entry, _, _ in query.all():
+  for fdb_entry, _ in query.all():
     fdb_key = fdb_entry.fdb_key
     if fdb_key not in solvers:
       solvers[fdb_key] = {}
@@ -273,10 +272,10 @@ def build_miopen_kdb(dbt, find_db):
   num_fdb_entries = 0
   num_kdb_blobs = 0
   kern_db = []
-  for _, entries in find_db.items():
-    for fdb_entry in entries:
-      num_fdb_entries += 1
-      with DbSession() as session:
+  with DbSession() as session:
+    for _, entries in find_db.items():
+      for fdb_entry in entries:
+        num_fdb_entries += 1
         query = session.query(dbt.kernel_cache)\
             .filter(dbt.kernel_cache.kernel_group == fdb_entry.kernel_group)
         for kinder in query.all():
@@ -414,13 +413,13 @@ def export_pdb(dbt, args):
   with DbSession() as session:
     query = get_pdb_query(dbt, args)
     cfg_map = {}
-    for perf_db_entry, cfg_entry, tensor_entry in query.all():
+    for perf_db_entry, cfg_entry in query.all():
       LOGGER.info("%s", cfg_entry.id)
 
       if cfg_entry.id in cfg_map:
         ins_cfg_id = cfg_map[cfg_entry.id]
       else:
-        cfg_dict = get_cfg_dict(cfg_entry, tensor_entry)
+        cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
         #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
         ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
         cfg_map[cfg_entry.id] = ins_cfg_id
