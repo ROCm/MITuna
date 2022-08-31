@@ -115,9 +115,9 @@ def finApplicability(){
         env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
         env.OTEL_LOG_LEVEL="debug"
 
-        sh "./tuna/go_fish.py --init_session -l new_session --local_machine"
+        sh "./tuna/go_fish.py --init_session -l new_session"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py --init_session -l new_session2 --local_machine"
+        sh "./tuna/go_fish.py --init_session -l new_session2"
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
