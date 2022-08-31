@@ -145,12 +145,11 @@ def parse_args():
 def test_tag_name(tag, dbt):
   """ test if a tag name is in config_tags table """
   with DbSession() as session:
-    query = session.query(dbt.config_tags_table.tag).distinct()
-  tag_names = []
-  for row in query.all():
-    tag_names.append(row.tag)
+    query = session.query(dbt.config_tags_table.tag)\
+            .filter(dbt.config_tags_table.tag == tag)
+    res = query.all()
 
-  if tag not in tag_names:
+  if not res:
     raise ValueError(f"tag '{tag}' not in config_tags")
 
   return True
