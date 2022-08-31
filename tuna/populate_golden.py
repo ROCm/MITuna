@@ -26,6 +26,7 @@
 ###############################################################################
 """! @brief Script to populate the golden table based on session_id"""
 from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
+from sqlalchemy.sql.expression import func
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
@@ -73,11 +74,9 @@ def parse_args():
   args = parser.parse_args()
 
   if args.overwrite:
-    if not args.golden_v:
-      parser.error('--golden_v must be set with --overwrite')
-    if args.base_golden_v:
+    if args.base_golden_v != None:
       parser.error('--base_golden_v must not be set with --overwrite')
-  elif not args.base_golden_v:
+  elif args.base_golden_v == None:
     parser.error(
         'When using --golden_v to create a new version, specify --base_golden_v'
     )
@@ -110,11 +109,12 @@ def latest_golden_v(dbt):
   """Get highest golden version in the table """
   version = -1
   with DbSession() as session:
-    query = session.query(dbt.golden_table).order_by(
-        dbt.golden_table.golden_miopen_v.max())
+    query = session.query(func.max(dbt.golden_table.golden_miopen_v))
     obj = query.first()
     if obj:
-      version = obj.golden_miopen_v
+      version = obj[0]
+
+    LOGGER.warning(version)
 
   return version
 
@@ -169,12 +169,17 @@ def main():
         f'Target golden version {args.golden_v} exists, but --overwrite is not specified.'
     )
 
-  if args.base_golden_v:
+  if args.base_golden_v != None:
     base_gold_db = get_golden_query(dbt, args.base_golden_v).all()
     if not base_gold_db:
-      raise ValueError(
-          f'Base golden version {args.base_golden_v} does not exist.')
-    merge_golden_entries(dbt, args.golden_v, base_gold_db)
+      ver = latest_golden_v(dbt)
+      if ver == -1:
+        LOGGER.warning('No golden versions, starting from scratch.')
+      else:
+        raise ValueError(
+            f'Base golden version {args.base_golden_v} does not exist.')
+    else:
+      merge_golden_entries(dbt, args.golden_v, base_gold_db)
 
   query = get_fdb_query(dbt)
   merge_golden_entries(dbt, args.golden_v, query.all())
