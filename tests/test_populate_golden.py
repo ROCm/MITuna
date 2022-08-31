@@ -26,7 +26,7 @@
 
 import sys
 from dummy_args import DummyArgs
-from tuna.populate_golden import add_golden_entries, get_query
+from tuna.populate_golden import merge_golden_entries, get_fdb_query
 from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
@@ -43,8 +43,9 @@ def test_populate_golden():
   args.config_type = ConfigType.convolution
   args.golden_v = 1
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
-  assert get_query(dbt)
-  assert add_golden_entries(args, dbt)
+  assert query = get_fdb_query(dbt)
+  assert merge_golden_entries(dbt, args.golden_v, query.all())
+
   with DbSession() as session:
     query = session.query(ConvolutionGolden)
     res = query.all()
