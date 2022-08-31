@@ -42,6 +42,7 @@ pipeline {
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
     string(name: 'job_label', defaultValue: '', description: 'Label for new jobs.')
+    string(name: 'session_id', defaultValue: '', description: 'session id for update applicability')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
     string(name: 'env', defaultValue: '', description: 'Additional environment variables for compilation.')
     choice(name: 'arch', choices: ['', 'gfx908', 'gfx906', 'gfx900', 'gfx1030', 'gfx90a'], description: 'Target architecture')
