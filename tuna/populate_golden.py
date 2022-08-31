@@ -74,9 +74,9 @@ def parse_args():
   args = parser.parse_args()
 
   if args.overwrite:
-    if args.base_golden_v != None:
+    if args.base_golden_v is not None:
       parser.error('--base_golden_v must not be set with --overwrite')
-  elif args.base_golden_v == None:
+  elif args.base_golden_v is None:
     parser.error(
         'When using --golden_v to create a new version, specify --base_golden_v'
     )
@@ -169,7 +169,7 @@ def main():
         f'Target golden version {args.golden_v} exists, but --overwrite is not specified.'
     )
 
-  if args.base_golden_v != None:
+  if args.base_golden_v is not None:
     base_gold_db = get_golden_query(dbt, args.base_golden_v).all()
     if not base_gold_db:
       ver = latest_golden_v(dbt)
