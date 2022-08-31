@@ -77,9 +77,12 @@ def parse_args():
     if args.base_golden_v is not None:
       parser.error('--base_golden_v must not be set with --overwrite')
   elif args.base_golden_v is None:
-    parser.error(
-        'When using --golden_v to create a new version, specify --base_golden_v'
-    )
+    dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
+    ver = latest_golden_v(dbt)
+    if ver != -1:
+      parser.error(
+          'When using --golden_v to create a new version, specify --base_golden_v'
+      )
 
   return args
 
