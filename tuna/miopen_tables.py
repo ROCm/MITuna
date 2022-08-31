@@ -28,6 +28,7 @@
 import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
 from sqlalchemy import Text, Enum
+from sqlalchemy import Float, BigInteger
 from sqlalchemy.databases import mysql
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
 from sqlalchemy.orm import relationship
@@ -459,9 +460,7 @@ class GoldenMixin():
                              ondelete="CASCADE"),
                   nullable=False)
 
-  golden_miopen_v = Column(String(length=64), nullable=False)
-  is_winning = Column(TINYINT(1), nullable=False, server_default="0")
-  is_app = Column(TINYINT(1), nullable=False, server_default="0")
+  golden_miopen_v = Column(Integer, nullable=False)
   arch = Column(String(length=20), nullable=False, server_default="")
   num_cu = Column(Integer, nullable=False, server_default="0")
 
@@ -476,8 +475,11 @@ class ConvolutionGolden(BASE, GoldenMixin):
                                      "num_cu",
                                      name="uq_idx"),)
 
-  find_db = Column(Integer, ForeignKey("conv_find_db.id"), nullable=False)
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  fdb_key = Column(String(length=128), nullable=True)
+  params = Column(String(length=128), nullable=True)
+  kernel_time = Column(Float, nullable=False)
+  workspace_sz = Column(BigInteger, nullable=False)
 
 
 class BNGolden(BASE, GoldenMixin):
@@ -490,7 +492,6 @@ class BNGolden(BASE, GoldenMixin):
                                      "num_cu",
                                      name="uq_idx"),)
 
-  find_db = Column(Integer, ForeignKey("bn_find_db.id"), nullable=False)
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 

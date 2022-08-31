@@ -475,6 +475,7 @@ def pytestSuite3() {
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
            sh "pytest tests/test_fin_evaluator.py "                     
+           sh "pytest tests/test_populate_golden.py "                     
         }
         def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
         sh "${cmd}"        
