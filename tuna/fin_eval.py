@@ -130,7 +130,7 @@ class FinEvaluator(WorkerInterface):
       fdb_entry.session = self.dbt.session.id
       fdb_entry.logger = self.logger
       fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
-                                      self.dbt.solver_app, self.dbt.session.id)
+                                      self.dbt.session.id)
       # JD: The solvers which throw on GetSolution are marked with
       # negative workspace
       fdb_query = fdb_query.filter(self.dbt.find_db_table.workspace_sz != -1,

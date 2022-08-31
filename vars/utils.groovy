@@ -40,6 +40,11 @@ def buildSchema(){
     sh "./tuna/db_tables.py"
 }
 
+def cleanup() {
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
+    sh "${cmd}"        
+}
+
 def getMachine() {
     def arch, cu, count
     for(String arch_cu :  sh(script:'bin/arch_cu.sh', returnStdout: true).split("\n")) { // is multiline
@@ -111,9 +116,9 @@ def finApplicability(){
         env.OTEL_LOG_LEVEL="debug"
 
         sh "./tuna/go_fish.py --init_session -l new_session --local_machine"
-        def sesh1 = runsql("select id from session order by id asc limit 1")
+        def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
         sh "./tuna/go_fish.py --init_session -l new_session2 --local_machine"
-        def sesh2 = runsql("select id from session order by id desc limit 1")
+        def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt"
@@ -281,8 +286,8 @@ def loadJobTest() {
         // setup version table
         runsql("SELECT * from machine;")
         echo "${arch} : ${num_cu}"
-        def sesh1 = runsql("select id from session order by id asc limit 1")
-        def sesh2 = runsql("select id from session order by id desc limit 1")
+        def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
+        def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
@@ -420,20 +425,20 @@ def pytestSuite1() {
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
-           sh "pytest tests/test_abort_file.py "
+           sh "pytest tests/test_abort_file.py -s"
            //sh "pytest tests/test_analyze_parse_db.py "
 
-           sh "pytest tests/test_connection.py "
+           sh "pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
-           sh "pytest tests/test_importconfigs.py "
-           sh "pytest tests/test_worker.py "
-           sh "pytest tests/test_machine.py "
-           sh "pytest tests/test_dbBase.py "
-           sh "pytest tests/test_driver.py "
-           sh "pytest tests/test_fin_class.py"                     
-           sh "pytest tests/test_fin_utils.py"                     
-           sh "pytest tests/test_add_session.py"                     
-           sh "pytest tests/test_merge_db.py"
+           sh "pytest tests/test_importconfigs.py -s"
+           sh "pytest tests/test_worker.py -s"
+           sh "pytest tests/test_machine.py -s"
+           sh "pytest tests/test_dbBase.py -s"
+           sh "pytest tests/test_driver.py -s"
+           sh "pytest tests/test_fin_class.py -s"
+           sh "pytest tests/test_fin_utils.py -s"
+           sh "pytest tests/test_add_session.py -s"
+           sh "pytest tests/test_merge_db.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -460,10 +465,8 @@ def pytestSuite2() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_fin_builder.py "
+           sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
         }
-        //def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-        //sh "${cmd}"
     }
 }
 
@@ -484,11 +487,9 @@ def pytestSuite3() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_fin_evaluator.py "                     
-           sh "pytest tests/test_populate_golden.py "                     
+           sh "pytest tests/test_fin_evaluator.py -s"
+           sh "pytest tests/test_populate_golden.py -s"
         }
-        def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-        sh "${cmd}"        
     }
 }
 

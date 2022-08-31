@@ -26,7 +26,7 @@
 ###############################################################################
 """find db class"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, orm
-from sqlalchemy import Float, BigInteger, Boolean, and_, Text
+from sqlalchemy import Float, BigInteger, Boolean, Text
 from sqlalchemy.ext.declarative import declared_attr
 
 from tuna.dbBase.base_class import BASE
@@ -58,28 +58,16 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   alg_lib = Column(String(length=64), nullable=True)
   opencl = Column(Boolean, nullable=False)
 
-  def get_query(self, sess, fdb_obj, slv_app, session_id):
+  def get_query(self, sess, fdb_obj, session_id):
     """Construct a Db query for the find object
     """
-
-    # CE: Solver applicability can change between miopen versions
-    # find if this fdb entry is currently applicable
-    query = sess.query(fdb_obj, slv_app).filter(
-        and_(fdb_obj.session == session_id, slv_app.session == session_id,
-             fdb_obj.config == self.config, fdb_obj.opencl == self.opencl),
-        fdb_obj.valid == 1, fdb_obj.solver == slv_app.solver,
-        fdb_obj.config == slv_app.config, slv_app.applicable == 1)
+    query = sess.query(fdb_obj).filter(fdb_obj.session == session_id,
+                                       fdb_obj.config == self.config,
+                                       fdb_obj.opencl == self.opencl,
+                                       fdb_obj.valid == 1)
 
     if self.solver:
       query = query.filter(fdb_obj.solver == self.solver)
-
-    fdb_entries = query.all()
-    if not fdb_entries:
-      self.logger.warning(
-          "No applicable fdb entries for config %s, session id %s", self.config,
-          session_id)
-    ids = tuple((str(fdb_e.id) for fdb_e, _ in fdb_entries))
-    query = sess.query(fdb_obj).filter(fdb_obj.id.in_(ids))
 
     return query
 
