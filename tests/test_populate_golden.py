@@ -43,8 +43,9 @@ def test_populate_golden():
   args.config_type = ConfigType.convolution
   args.golden_v = 1
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
-  assert query = get_fdb_query(dbt)
-  assert merge_golden_entries(dbt, args.golden_v, query.all())
+  entries = get_fdb_query(dbt).all()
+  assert entries
+  assert merge_golden_entries(dbt, args.golden_v, entries)
 
   with DbSession() as session:
     query = session.query(ConvolutionGolden)
