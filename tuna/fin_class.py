@@ -149,7 +149,7 @@ class FinClass(WorkerInterface):
       ret_code, out, err = self.exec_docker_cmd(fin_cmd)
       if ret_code > 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
-        self.logger.warning(out.read())
+        self.logger.warning(out)
         raise Exception(
             f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 

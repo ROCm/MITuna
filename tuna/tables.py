@@ -31,7 +31,7 @@ from tuna.miopen_tables import ConvJobCache, Solver
 from tuna.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
 from tuna.miopen_tables import ConvSolverApplicability, BNSolverApplicability
 from tuna.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
-from tuna.miopen_tables import TensorTable
+from tuna.miopen_tables import TensorTable, ConvolutionGolden
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.session import Session
@@ -59,6 +59,7 @@ class DBTables():
     self.solver_table = None
     self.kernel_cache = None
     self.tensor_table = TensorTable
+    self.golden_table = None
 
     self.config_type = None
     self.session_id = None
@@ -96,3 +97,4 @@ class DBTables():
       self.cache_table = ConvJobCache
       self.fin_cache_table = ConvFinJobCache
       self.kernel_cache = ConvolutionKernelCache
+      self.golden_table = ConvolutionGolden
