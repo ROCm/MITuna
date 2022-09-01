@@ -45,8 +45,8 @@ def add_job():
   find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='recurrent_pytest' GROUP BY tag"
 
   del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, session) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1 \
+  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, fin_step, session) \
+        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 'not_fin', 1 \
         FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'recurrent_pytest'"
 
   with DbCursor() as cur:
