@@ -71,11 +71,11 @@ def parse_args():
                       help=
                       'Session ID to be used as tuning tracker. ' \
                       'Allows to correlate DB results to tuning sessions')
-  parser.add_argument('--local_machine',
-                      dest='local_machine',
+  parser.add_argument('--remote_machine',
+                      dest='remote_machine',
                       action='store_true',
                       default=False,
-                      help='Run the process on this machine')
+                      help='Run the process on a network machine')
   parser.add_argument('-l',
                       '--label',
                       dest='label',
@@ -191,10 +191,12 @@ def parse_args():
     args.machines = [int(x) for x in args.machines.split(',')
                     ] if ',' in args.machines else [int(args.machines)]
 
-  if args.init_session and not (args.label and args.local_machine):
+  args.local_machine = not args.remote_machine
+
+  if args.init_session and not args.label:
     parser.error(
         "When setting up a new tunning session the following must be specified: "\
-        "label, local_machine.")
+        "label.")
 
   fin_session_steps = [
       'miopen_find_compile', 'miopen_find_eval', 'miopen_perf_compile',

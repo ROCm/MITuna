@@ -30,7 +30,7 @@ def finSolvers(){
 
   if(params.UPDATE_SOLVERS)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_solvers --local_machine'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_solvers'"
     def num_solvers = runsql("SELECT count(*) from solver;")
     println "Number of solvers: ${num_solvers}"
     if (num_solvers.toInteger() == 0){
@@ -39,7 +39,7 @@ def finSolvers(){
   }
   if(params.UPDATE_APPLICABILITY)
   { 
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id} --local_machine --arch_num_cu_list ${params.architecture}'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id} --arch_num_cu_list ${params.architecture}'"
     def num_sapp = runsql("SELECT count(*) from conv_solver_applicability;")
     println "Count(*) conv_solver_applicability table: ${num_sapp}"
     if (num_sapp.toInteger() == 0){

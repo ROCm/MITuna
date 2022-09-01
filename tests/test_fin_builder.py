@@ -94,7 +94,7 @@ def add_fin_find_compile_job(session):
     try:
       tag_name_test(args.tag, dbt)
     except ValueError as terr:
-      LOGGER.error(terr)
+      print(terr)
 
   add_jobs(args, counts, dbt)
 

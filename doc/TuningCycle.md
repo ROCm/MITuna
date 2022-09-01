@@ -90,10 +90,7 @@ This should be updated when an MIOpen version modifies solvers.
 [Use backend=HIPNOGPU docker]
 
 <pre>
-./go_fish.py --local_machine --update_solvers
-</pre>
-<pre>
---local_machine - run directly on this machine
+./go_fish.py --update_solvers
 </pre>
 
 ### Add Tuning Session
@@ -106,7 +103,7 @@ and will populate the table with the version and architecture information.
 [Use backend=HIPNOGPU docker]
 
 <pre>
-./go_fish.py --local_machine --init_session -l reason
+./go_fish.py --init_session -l reason
 </pre>
 <pre>
 --init_session - create a session entry
@@ -120,7 +117,7 @@ solver_applicability table with applicable solvers for each configuration for th
 [Use backend=HIPNOGPU docker]
 
 <pre>
-./go_fish.py --local_machine --update_applicability --session_id 1
+./go_fish.py --update_applicability --session_id 1
 </pre>
 <pre>
 --session_id - tuning session id
@@ -152,10 +149,9 @@ supply the session id along with the compile fin_step matching the one in the jo
 [Use backend=HIPNOGPU docker]
 
 <pre>
-./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_compile 
+./go_fish.py --session_id 1 --fin_steps miopen_perf_compile 
 </pre>
 <pre>
---local_machine - run directly on this machine 
 --session_id    - tuning session id 
 --fin_steps     - execute this operation
 </pre>
@@ -167,10 +163,9 @@ This command is similar to the previous.
 [Use backend=HIP docker]
 
 <pre>
-./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_eval
+./go_fish.py --session_id 1 --fin_steps miopen_perf_eval
 </pre>
 <pre>
---local_machine - run directly on this machine
 --session_id    - tuning session id
 --fin_steps     - execute this operation
 </pre>
