@@ -50,7 +50,7 @@ pipeline {
     string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
     string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
-    string(name: 'db_name', defaultValue: "${TUNA_DB_NAME}", description: 'Name of the database schema')
+    string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
     string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
