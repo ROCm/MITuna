@@ -31,8 +31,8 @@ from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
 from tuna.miopen_tables import ConvolutionGolden
-from tuna.find_db import ConvolutionFindDb
-from test.utils import add_test_session
+from tuna.find_db import ConvolutionFindDB
+from utils import add_test_session
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -40,7 +40,7 @@ sys.path.append("tuna")
 
 def add_fdb_entry(session_id):
   with DbSession() as session:
-    fdb_entry = ConvolutionFindDb()
+    fdb_entry = ConvolutionFindDB()
     fdb_entry.config = 1
     fdb_entry.solver = 1
     fdb_entry.session = session_id
