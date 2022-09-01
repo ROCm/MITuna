@@ -123,5 +123,3 @@ def add_test_session(arch='gfx908', num_cu=120):
   session_id = Session().add_new_session(args, worker)
   assert (session_id)
   return session_id
-
-
