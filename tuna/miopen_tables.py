@@ -382,10 +382,7 @@ class JobMixin():
 class ConvolutionJob(BASE, JobMixin):
   """Represents convolutions job table"""
   __tablename__ = "conv_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS,
-                                     "reason",
-                                     "valid",
-                                     name="uq_idx"),)
+  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
 
@@ -393,8 +390,7 @@ class ConvolutionJob(BASE, JobMixin):
 class BNJob(BASE, JobMixin):
   """Represents batch norm job table"""
   __tablename__ = "bn_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, "reason",
-                                     name="uq_idx"),)
+  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
@@ -402,8 +398,7 @@ class BNJob(BASE, JobMixin):
 class FusionJob(BASE, JobMixin):
   """Represents fusions job table"""
   __tablename__ = "fusion_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, "reason",
-                                     name="uq_idx"),)
+  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
@@ -492,7 +487,6 @@ class BNGolden(BASE, GoldenMixin):
   __tablename__ = "bn_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "config",
-                                     "session",
                                      "solver_id",
                                      "arch",
                                      "num_cu",

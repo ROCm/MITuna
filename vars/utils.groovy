@@ -294,6 +294,8 @@ def loadJobTest() {
         def out = runsql("SELECT count(*) FROM conv_config_tags WHERE tag='recurrent_${branch_id}' ;")
         assert out.toInteger() > 0
 
+        //reset job table
+        runsql("DELETE FROM conv_job;")
         sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} --session_id ${sesh1}"
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and session=${sesh1} ;")
         assert out.toInteger() > 0
@@ -416,7 +418,7 @@ def pytestSuite1() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            sh "pytest tests/test_abort_file.py -s"
-           //sh "pytest tests/test_analyze_parse_db.py "
+           sh "pytest tests/test_analyze_parse_db.py -s"
 
            sh "pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
