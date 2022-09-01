@@ -24,8 +24,13 @@
 #
 ###############################################################################
 
-import os
-import sqlite3
+from multiprocessing import Value
+
+from tuna.go_fish import compose_f_vals, get_kwargs
+from tuna.worker_interface import WorkerInterface
+from tuna.session import Session
+from tuna.machine import Machine
+from tuna.tables import ConfigType
 
 # TODO: This is a copy and is unacceptable
 sqlite_config_cols = [
@@ -50,3 +55,73 @@ def get_sqlite_table(cnx, table_name):
   rows = c.fetchall()
   columns = [x[0] for x in c.description]
   return rows, columns
+
+
+class CfgImportArgs():
+  config_type = ConfigType.convolution,
+  command = None
+  batches = None
+  batch_list = []
+  file_name = None
+  mark_recurrent = False
+  tag = None
+  tag_only = False
+
+
+class LdJobArgs():
+  config_type = ConfigType.convolution,
+  tag = None
+  all_configs = False
+  algo = None
+  solvers = [('', None)]
+  only_app = False
+  tunable = False
+  cmd = None
+  label = None
+  fin_steps = None
+  session_id = None
+
+
+class GoFishArgs():
+  local_machine = True
+  fin_steps = None
+  session_id = None
+  arch = None
+  num_cu = None
+  machines = None
+  restart_machine = None
+  update_applicability = None
+  find_mode = None
+  blacklist = None
+  update_solvers = None
+  config_type = None
+  reset_interval = None
+  dynamic_solvers_only = False
+  label = 'pytest'
+  docker_name = None
+  ticket = None
+  solver_id = None
+
+
+def get_worker_args(args, machine):
+  worker_ids = range(machine.get_num_cpus())
+  f_vals = compose_f_vals(args, machine)
+  f_vals["num_procs"] = Value('i', len(worker_ids))
+  kwargs = get_kwargs(0, f_vals, args)
+  return kwargs
+
+
+def add_test_session(arch='gfx908', num_cu=120):
+  args = GoFishArgs()
+  machine = Machine(local_machine=True)
+  machine.arch = arch
+  machine.num_cu = num_cu
+
+  #create a session
+  kwargs = get_worker_args(args, machine)
+  worker = WorkerInterface(**kwargs)
+  session_id = Session().add_new_session(args, worker)
+  assert (session_id)
+  return session_id
+
+

@@ -31,15 +31,39 @@ from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
 from tuna.miopen_tables import ConvolutionGolden
+from tuna.find_db import ConvolutionFindDb
+from test.utils import add_test_session
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
+def add_fdb_entry(session_id):
+  with DbSession() as session:
+    fdb_entry = ConvolutionFindDb()
+    fdb_entry.config = 1
+    fdb_entry.solver = 1
+    fdb_entry.session = session_id
+    fdb_entry.opencl = False
+
+    fdb_entry.fdb_key = 1
+    fdb_entry.alg_lib = 'Test'
+    fdb_entry.params = 1
+    fdb_entry.workspace_sz = 0
+    fdb_entry.valid = True
+    fdb_entry.kernel_time = 11111
+    fdb_entry.kernel_group = 1
+
+    session.add(fdb_entry)
+    session.commit()
+
 
 def test_populate_golden():
+  session_id = add_test_session()
+  add_fdb_entry(session_id)
+
   res = None
   args = DummyArgs()
-  args.session_id = 1
+  args.session_id = session_id
   args.config_type = ConfigType.convolution
   args.golden_v = 1
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
