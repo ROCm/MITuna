@@ -83,6 +83,7 @@ def test_add_session():
 
   worker = WorkerInterface(**kwargs)
   sess_id = Session().add_new_session(args, worker)
+  print(f"session id: {sess_id}")
   assert (sess_id)
 
   with DbSession() as session:

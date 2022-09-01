@@ -30,6 +30,7 @@ sys.path.append("tuna")
 from tuna.machine_management_interface import MachineManagementInterface, MgmtBackend
 
 
+'''
 def test_ipmi():
   mmi = MachineManagementInterface(mgmt_ip='192.168.1.74',
                                    mgmt_port=623,
@@ -40,6 +41,7 @@ def test_ipmi():
   assert (exit_status == 0)
   assert (MachineManagementInterface.gateway_session is not None)
   mmi.server_status()
+'''
 
 
 '''
