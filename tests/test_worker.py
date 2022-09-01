@@ -157,7 +157,7 @@ def test_worker():
       'job_queue': Queue(),
       'queue_lock': Lock(),
       'end_jobs': e,
-      'fin_step': ['not_fin'],
+      'fin_steps': ['not_fin'],
       'config_type': ConfigType.convolution,
       'session_id': 1
   }
