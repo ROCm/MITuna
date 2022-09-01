@@ -1,6 +1,6 @@
 def runsql(query) {
     echo "query: ${query}"
-    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${db_name}" -e "${query}" -N -s /$
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${params.db_name}" -e "${query}" -N -s /$
     def res = sh (script: "${cmd}", returnStdout: true).trim()
     return res
 }
@@ -15,7 +15,7 @@ def finSolvers(){
   backend = "HIPNOGPU"
   def tuna_docker
   def tuna_docker_name = getDockerName("HIPNOGPU")
-  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -26,7 +26,7 @@ def finSolvers(){
   tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
   tuna_docker.push()
 
-  def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
+  def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
   if(params.UPDATE_SOLVERS)
   {
@@ -80,9 +80,9 @@ pipeline {
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
     string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
     string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
-    string(name: 'pipeline_db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
-    string(name: 'pipeline_db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
-    string(name: 'pipeline_db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
+    string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
+    string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
+    string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
     string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
     string(name: 'base_image', defaultValue: '', description: 'Put a fully qualified docker name here to use (optional)')
   }
