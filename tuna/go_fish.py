@@ -467,7 +467,7 @@ def compose_worker_list(res, args):
       continue
 
     #fin_steps should only contain one step
-    if args.fin_steps and 'eval' in args.fin_steps[0]):
+    if args.fin_steps and 'eval' in args.fin_steps[0]:
       worker_ids = machine.get_avail_gpus()
     else:
       #determine number of processes by compute capacity
