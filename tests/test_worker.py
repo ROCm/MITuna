@@ -39,14 +39,15 @@ from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.tables import ConfigType
+from utils import add_test_session
 
 
-def add_job():
+def add_job(w):
   find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='recurrent_pytest' GROUP BY tag"
 
   del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, fin_step, session) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 'not_fin', 1 \
+  ins_q = f"INSERT INTO conv_job(config, state, solver, valid, reason, fin_step, session) \
+        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 'not_fin', {w.session_id} \
         FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'recurrent_pytest'"
 
   with DbCursor() as cur:
@@ -143,6 +144,8 @@ def test_worker():
   v = Value('i', 0)
   e = Value('i', 0)
 
+  session_id = add_test_session()
+
   keys = {
       'machine': machine,
       'gpu_id': 0,
@@ -159,12 +162,12 @@ def test_worker():
       'end_jobs': e,
       'fin_steps': ['not_fin'],
       'config_type': ConfigType.convolution,
-      'session_id': 1
+      'session_id': session_id
   }
 
   w = WorkerInterface(**keys)
 
-  add_job()
+  add_job(w)
   get_job(w)
   w.queue_end_reset()
   multi_queue_test(w)
