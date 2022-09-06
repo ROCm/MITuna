@@ -60,10 +60,6 @@ def parse_args():
       help='All configs with this tag will be added to the job table. \
                         By default adds jobs with no solver specified (all solvers).'
   )
-  config_filter.add_argument('--all_configs',
-                             dest='all_configs',
-                             action='store_true',
-                             help='Add all convolution jobs')
   solver_filter.add_argument(
       '-A',
       '--algo',
@@ -85,6 +81,12 @@ def parse_args():
       dest='only_app',
       action='store_true',
       help='Use with --tag to create a job for each applicable solver.')
+  parser.add_argument(
+      '-d',
+      '--only_dynamic',
+      dest='only_dynamic',
+      action='store_true',
+      help='Use with --tag to create a job for dynamic solvers only.')
   parser.add_argument('--tunable',
                       dest='tunable',
                       action='store_true',
@@ -227,6 +229,9 @@ def compose_query(args, session, dbt, cfg_query):
     query = query.filter(Solver.config_type == ConfigType('batch_norm').name)
   else:
     query = query.filter(Solver.config_type == ConfigType('convolution').name)
+
+  if args.only_dynamic:
+    query = query.filter(Solver.is_dynamic == true())
 
   cfg_ids = [config.id for config in cfg_query.all()]
   query = query.filter(dbt.solver_app.config.in_(cfg_ids))
