@@ -332,7 +332,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     Execute a command on this machine
     - through docker if on a remote machine
-    - no docker with --local_machine
+    - no docker on local machine
     """
     logger = self.get_logger()
     if isinstance(command, list):

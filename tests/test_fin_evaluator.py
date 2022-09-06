@@ -65,6 +65,13 @@ def test_fin_evaluator():
       'session_id': 1
   }
 
+  with DbCursor() as cur:
+    get_session = "select session from conv_job where state = 'compiled' and reason = 'tuna_pytest_fin_builder'"
+    cur.execute(get_session)
+    res = cur.fetchall()
+    kwargs['session_id'] = res[0][0]
+  assert (kwargs['session_id'])
+
   # test get_job true branch
   fin_eval = FinEvaluator(**kwargs)
   ans = fin_eval.get_job('compiled', 'evaluating', False)

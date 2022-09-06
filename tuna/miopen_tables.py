@@ -28,6 +28,7 @@
 import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
 from sqlalchemy import Text, Enum
+from sqlalchemy import Float, BigInteger
 from sqlalchemy.databases import mysql
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
 from sqlalchemy.orm import relationship
@@ -364,7 +365,7 @@ class JobMixin():
   compile_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_start = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  result = Column(Text)
+  result = Column(Text, nullable=True)
   reason = Column(String(length=60), nullable=False, server_default="")
   machine_id = Column(Integer, nullable=False, server_default="-1")
   eval_mid = Column(Integer, server_default="-1")
@@ -381,10 +382,7 @@ class JobMixin():
 class ConvolutionJob(BASE, JobMixin):
   """Represents convolutions job table"""
   __tablename__ = "conv_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS,
-                                     "reason",
-                                     "valid",
-                                     name="uq_idx"),)
+  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
 
@@ -392,8 +390,7 @@ class ConvolutionJob(BASE, JobMixin):
 class BNJob(BASE, JobMixin):
   """Represents batch norm job table"""
   __tablename__ = "bn_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, "reason",
-                                     name="uq_idx"),)
+  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
@@ -401,8 +398,7 @@ class BNJob(BASE, JobMixin):
 class FusionJob(BASE, JobMixin):
   """Represents fusions job table"""
   __tablename__ = "fusion_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, "reason",
-                                     name="uq_idx"),)
+  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
@@ -464,9 +460,7 @@ class GoldenMixin():
                              ondelete="CASCADE"),
                   nullable=False)
 
-  golden_miopen_v = Column(String(length=64), nullable=False)
-  is_winning = Column(TINYINT(1), nullable=False, server_default="0")
-  is_app = Column(TINYINT(1), nullable=False, server_default="0")
+  golden_miopen_v = Column(Integer, nullable=False)
   arch = Column(String(length=20), nullable=False, server_default="")
   num_cu = Column(Integer, nullable=False, server_default="0")
 
@@ -475,29 +469,29 @@ class ConvolutionGolden(BASE, GoldenMixin):
   """Golden table for convolution"""
   __tablename__ = "conv_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "find_db",
                                      "config",
-                                     "session",
+                                     "solver_id",
                                      "arch",
                                      "num_cu",
                                      name="uq_idx"),)
 
-  find_db = Column(Integer, ForeignKey("conv_find_db.id"), nullable=False)
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  fdb_key = Column(String(length=128), nullable=True)
+  params = Column(String(length=128), nullable=True)
+  kernel_time = Column(Float, nullable=False)
+  workspace_sz = Column(BigInteger, nullable=False)
 
 
 class BNGolden(BASE, GoldenMixin):
   """Golden table for batch norm"""
   __tablename__ = "bn_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "find_db",
                                      "config",
-                                     "session",
+                                     "solver_id",
                                      "arch",
                                      "num_cu",
                                      name="uq_idx"),)
 
-  find_db = Column(Integer, ForeignKey("bn_find_db.id"), nullable=False)
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
