@@ -28,7 +28,6 @@ import os
 import sys
 import socket
 from multiprocessing import Value, Lock, Queue
-from subprocess import Popen, PIPE
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -37,7 +36,6 @@ this_path = os.path.dirname(__file__)
 
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen_tables import Session
 from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
 from dummy_args import DummyArgs
@@ -49,7 +47,7 @@ def test_add_session():
   num_gpus = Value('i', 1)
   v = Value('i', 0)
   e = Value('i', 0)
-  docker_name = os.environ['TUNA_DOCKER_NAME']
+  docker_name = 'Dummy-Docker'
   hostname = socket.gethostname()
   machine = Machine(hostname=hostname, local_machine=True)
 
@@ -73,8 +71,8 @@ def test_add_session():
 
   args = DummyArgs()
   args.add_session = True
-  args.arch = machine.arch
-  args.num_cu = machine.num_cu
+  args.arch = 'gfx908'
+  args.num_cu = 120
   args.reason = "testing_add_session"
   args.ticket = "JIRA-Dummy-123"
   args.label = "my_dummy_label"
