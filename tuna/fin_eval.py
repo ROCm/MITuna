@@ -213,12 +213,6 @@ class FinEvaluator(WorkerInterface):
 
   def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
     """process find db eval json results"""
-    try:
-      self.check_env()
-    except ValueError as verr:
-      self.logger.error(verr)
-      return False
-
     status = []
     fdb_obj = None
     with DbSession() as session:
@@ -258,6 +252,15 @@ class FinEvaluator(WorkerInterface):
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
+
+    # pylint: disable=duplicate-code
+    try:
+      self.check_env()
+    except ValueError as verr:
+      self.logger.error(verr)
+      return False
+    # pylint: enable=duplicate-code
+
     if not self.get_job("compiled", "eval_start", True):
       return False
 
