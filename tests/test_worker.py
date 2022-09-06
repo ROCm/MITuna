@@ -67,7 +67,7 @@ def get_job(w):
     cur.execute("UPDATE conv_job SET valid=0 WHERE id>=0")
   # to force commit
   with DbCursor() as cur:
-    cur.execute("SELECT id FROM conv_job WHERE reason='tuna_pytest' LIMIT 1")
+    cur.execute("SELECT id FROM conv_job WHERE session={w.session_id} LIMIT 1")
     res = cur.fetchall()
     assert (len(res) == 1)
     id = res[0][0]
@@ -140,7 +140,7 @@ def test_worker():
   machine = Machine(hostname=hostname, local_machine=True)
 
   keys = {}
-  num_gpus = Value('i', len(machine.get_avail_gpus()))
+  num_gpus = Value('i', 2)
   v = Value('i', 0)
   e = Value('i', 0)
 
