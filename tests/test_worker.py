@@ -67,25 +67,24 @@ def get_job(w):
     cur.execute("UPDATE conv_job SET valid=0 WHERE id>=0")
   # to force commit
   with DbCursor() as cur:
-    cur.execute("SELECT id FROM conv_job WHERE session={w.session_id} LIMIT 1")
+    cur.execute(f"SELECT id FROM conv_job WHERE session={w.session_id} LIMIT 1")
     res = cur.fetchall()
     assert (len(res) == 1)
     id = res[0][0]
     assert (id)
     cur.execute(
-        "UPDATE conv_job SET state='new', valid=1, retries=0 WHERE id={}".
-        format(id))
+        f"UPDATE conv_job SET state='new', valid=1, retries=0 WHERE id={id}")
 
   #test get_job()
   job = w.get_job('new', 'compile_start', True)
   assert job == True
   with DbCursor() as cur:
-    cur.execute("SELECT state FROM conv_job WHERE id={}".format(id))
+    cur.execute(f"SELECT state FROM conv_job WHERE id={id}")
     res = cur.fetchall()
     assert (res[0][0] == 'compile_start')
     job = w.get_job('new', 'compile_start', True)
     assert job == False
-    cur.execute("UPDATE conv_job SET valid=0 WHERE id={}".format(id))
+    cur.execute(f"UPDATE conv_job SET valid=0 WHERE id={id}")
 
 
 def multi_queue_test(w):
