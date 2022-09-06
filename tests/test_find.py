@@ -34,8 +34,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.sql import DbCursor
 from tuna.utils.logger import setup_logger
-from tuna.find_db import FindDB
-from tuna.db_tables import ConvConfig, Job
+from tuna.find_db import ConvolutionFindDB
 
 
 def add_job():
@@ -84,7 +83,7 @@ def test_find():
   logger = setup_logger('Machine')
   keys = {'logger': logger}
 
-  find_db = FindDB(**keys)
+  find_db = ConvolutionFindDB(**keys)
 
   add_job('gfx908', 120)
   parsing(find_db)

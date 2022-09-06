@@ -133,7 +133,6 @@ class WorkerInterface(Process):
     self.envmt.append(f"MIOPEN_USER_DB_PATH={self.miopen_user_db_path}")
 
     self.hostname = self.machine.hostname
-    self.poll_retries = 0
     self.job = None
     self.config = None
     self.solver = None
@@ -321,7 +320,7 @@ class WorkerInterface(Process):
     fdb_entry.opencl = False
     fdb_entry.logger = self.logger
     fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
-                                    self.dbt.solver_app, self.dbt.session.id)
+                                    self.dbt.session.id)
     obj = fdb_query.first()
     return obj, fdb_entry
 
@@ -382,10 +381,10 @@ class WorkerInterface(Process):
         status.append(slv_stat)
 
         if fdb_obj[check_str]:
+          #returned entry is added to the table
           fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
           if fdb_obj['reason'] == 'Success':
             self.compose_kernel_entry(fdb_obj, fdb_entry)
-            session.add(fdb_entry)
             self.logger.info('Updating find Db(Build) for job_id=%s',
                              self.job.id)
           else:
@@ -863,13 +862,7 @@ class WorkerInterface(Process):
         # the step member is defined in the derived class
         ret = self.step()  # pylint: disable=no-member
         self.logger.info("proc %s step %s", self.gpu_id, ret)
-        if not ret and (self.poll_retries > 0 and self.poll_retries < 120):
-          pass
-        elif not ret and (self.poll_retries == 0 or self.poll_retries >= 120):
-          if self.poll_retries >= 120:
-            self.logger.warning(
-                'Max poll retries number(120) reached, quiting...')
-            return False
+        if not ret:
           self.logger.warning('No more steps, quiting...')
           return True
     except KeyboardInterrupt as err:

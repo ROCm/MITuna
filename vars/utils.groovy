@@ -40,6 +40,11 @@ def buildSchema(){
     sh "./tuna/db_tables.py"
 }
 
+def cleanup() {
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
+    sh "${cmd}"        
+}
+
 def getMachine() {
     def arch, cu, count
     for(String arch_cu :  sh(script:'bin/arch_cu.sh', returnStdout: true).split("\n")) { // is multiline
@@ -79,7 +84,7 @@ def finSolvers(){
 
         sh "ls /opt/rocm/bin/fin"
         sh "ls /opt/rocm/bin/"
-        sh "./tuna/go_fish.py --update_solvers --local_machine"
+        sh "./tuna/go_fish.py --update_solvers"
         def num_solvers = runsql("SELECT count(*) from solver;")
         println "Number of solvers: ${num_solvers}"
         if (num_solvers.toInteger() == 0){
@@ -110,10 +115,10 @@ def finApplicability(){
         env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
         env.OTEL_LOG_LEVEL="debug"
 
-        sh "./tuna/go_fish.py --init_session -l new_session --local_machine"
-        def sesh1 = runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py --init_session -l new_session2 --local_machine"
-        def sesh2 = runsql("select id from session order by id desc limit 1")
+        sh "./tuna/go_fish.py --init_session -l new_session"
+        def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
+        sh "./tuna/go_fish.py --init_session -l new_session2"
+        def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt"
@@ -124,7 +129,7 @@ def finApplicability(){
 
         def num_cfg = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg}"
-        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --update_applicability --session_id ${sesh1} --local_machine"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --update_applicability --session_id ${sesh1}"
         def num_solvers = runsql("SELECT count(*) from solver;")
         println "Number of solvers: ${num_solvers}"
         def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${sesh1};")
@@ -138,7 +143,7 @@ def finApplicability(){
         def num_bn = runsql("SELECT count(*) from bn_config;")
         println "Count(*) bn_config table: ${num_bn}"
 
-        sh "./tuna/go_fish.py --update_applicability --session_id ${sesh2} --local_machine -C batch_norm"
+        sh "./tuna/go_fish.py --update_applicability --session_id ${sesh2} -C batch_norm"
         def num_sapp_bn = runsql("SELECT count(*) from bn_solver_applicability where session=${sesh2};")
         println "Count(*) bn_solver_applicability table: ${num_sapp_bn}"
         if (num_sapp_bn.toInteger() == 0){
@@ -168,7 +173,7 @@ def finFindCompile(){
         runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
@@ -182,7 +187,7 @@ def finFindCompile(){
         //runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -l finFind_${branch_id}_nhwc -t recurrent_${branch_id}_nhwc --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
         def num_compiled_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs_nhwc} == ${num_jobs_nhwc}"
         if (num_compiled_jobs_nhwc != num_jobs_nhwc){
@@ -193,7 +198,7 @@ def finFindCompile(){
         println "Count(*) conv_config table: ${num_cfg_nchw}"
         sh "./tuna/load_job.py -l finFind_${branch_id}_nchw -t recurrent_${branch_id}_nchw --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_compile -l finFind_${branch_id}_nchw --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id}_nchw --session_id ${sesh1}"
         def num_compiled_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs_nchw} == ${num_jobs_nchw}"
         if (num_compiled_jobs_nchw != num_jobs_nchw){
@@ -218,7 +223,7 @@ def finFindEval(){
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --local_machine --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
@@ -231,7 +236,7 @@ def finFindEval(){
         archiveArtifacts "${kdb_file}"
 
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
         def fdb_file_nhwc = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
         def num_evaluated_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
@@ -244,7 +249,7 @@ def finFindEval(){
         archiveArtifacts "${kdb_file_nhwc}"
 
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
         def fdb_file_nchw = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
         def num_evaluated_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
@@ -281,14 +286,16 @@ def loadJobTest() {
         // setup version table
         runsql("SELECT * from machine;")
         echo "${arch} : ${num_cu}"
-        def sesh1 = runsql("select id from session order by id asc limit 1")
-        def sesh2 = runsql("select id from session order by id desc limit 1")
+        def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
+        def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
         def out = runsql("SELECT count(*) FROM conv_config_tags WHERE tag='recurrent_${branch_id}' ;")
         assert out.toInteger() > 0
 
+        //reset job table
+        runsql("DELETE FROM conv_job;")
         sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} --session_id ${sesh1}"
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and session=${sesh1} ;")
         assert out.toInteger() > 0
@@ -334,7 +341,7 @@ def perfCompile() {
         sh "./tuna/load_job.py -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval"
         // Get the number of jobs
         def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
         {
@@ -346,7 +353,7 @@ def perfCompile() {
         sh "./tuna/load_job.py -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval"
         // Get the number of jobs
         def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1}"
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'conv_${branch_id}_v2';")
         if(compiled_conv_jobs.toInteger() == 0)
         {
@@ -372,7 +379,7 @@ def perfEval_gfx908() {
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1}"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
         {
@@ -380,7 +387,7 @@ def perfEval_gfx908() {
         }
 
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
-        sh "./tuna/go_fish.py --local_machine --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1}"
+        sh "./tuna/go_fish.py --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1}"
         def eval_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'evaluated';")
         def errored_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'errored';")
         if(eval_conv_jobs.toInteger() != compiled_conv_jobs.toInteger())
@@ -410,20 +417,20 @@ def pytestSuite1() {
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
-           sh "pytest tests/test_abort_file.py "
-           //sh "pytest tests/test_analyze_parse_db.py "
+           sh "pytest tests/test_abort_file.py -s"
+           sh "pytest tests/test_analyze_parse_db.py -s"
 
-           sh "pytest tests/test_connection.py "
+           sh "pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
-           sh "pytest tests/test_importconfigs.py "
-           sh "pytest tests/test_worker.py "
-           sh "pytest tests/test_machine.py "
-           sh "pytest tests/test_dbBase.py "
-           sh "pytest tests/test_driver.py "
-           sh "pytest tests/test_fin_class.py"                     
-           sh "pytest tests/test_fin_utils.py"                     
-           sh "pytest tests/test_add_session.py"                     
-           sh "pytest tests/test_merge_db.py"
+           sh "pytest tests/test_importconfigs.py -s"
+           sh "pytest tests/test_worker.py -s"
+           sh "pytest tests/test_machine.py -s"
+           sh "pytest tests/test_dbBase.py -s"
+           sh "pytest tests/test_driver.py -s"
+           sh "pytest tests/test_fin_class.py -s"
+           sh "pytest tests/test_fin_utils.py -s"
+           sh "pytest tests/test_add_session.py -s"
+           sh "pytest tests/test_merge_db.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -450,10 +457,8 @@ def pytestSuite2() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_fin_builder.py "
+           sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
         }
-        //def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-        //sh "${cmd}"
     }
 }
 
@@ -474,10 +479,9 @@ def pytestSuite3() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_fin_evaluator.py "                     
+           sh "pytest tests/test_fin_evaluator.py -s"
+           sh "pytest tests/test_populate_golden.py -s"
         }
-        def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-        sh "${cmd}"        
     }
 }
 
@@ -657,7 +661,7 @@ def compile()
   }
   def s_id = runsql("select id from session where reason='${params.job_label}'")
     // Run the jobs on the cluster
-  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${compile_cmd} -l ${params.job_label} --session_id ${s_id}'"
+  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${compile_cmd} -l ${params.job_label} --session_id ${s_id}'"
 }
 
 
@@ -715,7 +719,7 @@ def evaluate()
 
   def s_id = runsql("select id from session where reason='${params.job_label}'")  
   
-  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --local_machine ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
+  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
 

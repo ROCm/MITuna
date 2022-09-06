@@ -41,9 +41,8 @@ pipeline {
            }
            }
         }
-
         stage("fin get solver"){
-	      agent{  label "gfx908" }
+        agent{  label utils.rocmnode("tunatest") }
         steps {
             script {
             utils.finSolvers()
@@ -51,50 +50,11 @@ pipeline {
             } 
         }
         stage("fin applicability"){
-	      agent{  label "gfx908" }
+        //init_session called here
+        agent{  label "gfx908" }
         steps {
             script{
             utils.finApplicability()
-            }
-            }
-        }
-        stage("fin find compile"){
-        agent{ label "gfx908"}
-        steps{
-            script {
-            utils.finFindCompile()
-            }
-            }
-        }
-        stage("fin find eval"){
-        agent{  label "gfx908" }
-        steps {
-            script {
-            utils.finFindEval()
-            }
-            }
-        }
-        stage("load jobs"){
-        agent{ label "gfx908"} 
-        steps {
-            script {
-            utils.loadJobTest()
-            }
-            }
-        }
-        stage("perf compile"){
-	      agent{  label "gfx908" }
-        steps {
-            script {
-            utils.perfCompile()
-            }
-            }
-        }
-        stage("perf eval gfx908"){
-        agent{  label "gfx908" }
-        steps{
-            script {
-            utils.perfEval_gfx908()
             }
             }
         }
@@ -106,7 +66,6 @@ pipeline {
             }
             }
         }
-
         stage("pytest2"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
@@ -122,8 +81,56 @@ pipeline {
             utils.pytestSuite3()
             }
             }
+        }    
+        stage("fin find compile"){
+        agent{ label utils.rocmnode("tunatest") }
+        steps{
+            script {
+            utils.finFindCompile()
+            }
+            }
         }
+        stage("fin find eval"){
+        agent{  label "gfx908" }
+        steps {
+            script {
+            utils.finFindEval()
+            }
+            }
         }
+        stage("load jobs"){
+        agent{ label utils.rocmnode("tunatest") }
+        steps {
+            script {
+            utils.loadJobTest()
+            }
+            }
+        }
+        stage("perf compile"){
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+            script {
+            utils.perfCompile()
+            }
+            }
+        }
+        stage("perf eval gfx908"){
+        agent{  label "gfx908" }
+        steps{
+            script {
+            utils.perfEval_gfx908()
+            }
+            }
+        }
+        stage("cleanup"){
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+           script {
+           utils.cleanup()
+           }
+           }
+        }
+    }
 }
 
 
