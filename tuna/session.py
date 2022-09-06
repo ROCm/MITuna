@@ -66,6 +66,7 @@ class Session(BASE):
                      nullable=True)
 
   def get_query(self, sess, sess_obj, entry):
+    """get session matching this object"""
     query = sess.query(sess_obj)\
         .filter(sess_obj.arch == entry.arch)\
         .filter(sess_obj.num_cu == entry.num_cu)\
@@ -116,6 +117,7 @@ class Session(BASE):
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
         session.rollback()
-        self = self.get_query(session, Session, self).one()
+        entry = self.get_query(session, Session, self).one()
+        return entry.id
 
     return self.id
