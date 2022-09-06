@@ -63,8 +63,7 @@ The solver table contains MIOpen solvers and solver characteristics.
 This should be updated when an MIOpen version modifies solvers.
 
 ```
-./go_fish.py --local_machine --update_solvers
---local_machine - run directly on this machine
+./go_fish.py --update_solvers
 ```
 
 **Add Tuning Session (3)**
@@ -75,8 +74,9 @@ rocm version for the tuning session.
 This command will need to be run from inside the tuning environment eg MITuna docker
 and will populate the table with the version and architecture information.
 
+[Use backend=HIPNOGPU docker]
 ```
-./go_fish.py --local_machine --init_session -l reason
+./go_fish.py --init_session -l reason
 --init_session - create a session entry
 -l             - reference text description
 ```
@@ -85,8 +85,9 @@ and will populate the table with the version and architecture information.
 Each network configuration has a set of applicable solvers. This step will update the
 solver_applicability table with applicable solvers for each configuration for the session.
 
+[Use backend=HIPNOGPU docker]
 ```
-./go_fish.py --local_machine --update_applicability --session_id 1
+./go_fish.py --update_applicability --session_id 1
 --session_id - tuning session id
 ```
 
@@ -112,9 +113,9 @@ Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, a
 Once prerequisites are set, tuning can begin. To compile the jobs, 
 supply the session id along with the compile fin_step matching the one in the job table.
 
+[Use backend=HIPNOGPU docker]
 ```
-./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_compile
---local_machine - run directly on this machine 
+./go_fish.py --session_id 1 --fin_steps miopen_perf_compile
 --session_id    - tuning session id 
 --fin_steps     - execute this operation
 ```
@@ -124,9 +125,9 @@ supply the session id along with the compile fin_step matching the one in the jo
 Once compilation has been started, evaluation can also be launched.
 This command is similar to the previous.
 
+[Use backend=HIP docker]
 ```
-./go_fish.py --local_machine --session_id 1 --fin_steps miopen_perf_eval
---local_machine - run directly on this machine
+./go_fish.py --session_id 1 --fin_steps miopen_perf_eval
 --session_id    - tuning session id
 --fin_steps     - execute this operation
 ```

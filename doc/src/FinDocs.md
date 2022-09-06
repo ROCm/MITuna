@@ -13,6 +13,5 @@ Steps. Navigate to a clone of Tuna and run:
 3. cd
 4. git clone https://github.com/ROCmSoftwarePlatform/MITuna.git
 5. cd Tuna/tuna
-6. ./go_fish.py --update_solver --local_machine
-7. ./go_fish.py --update_applicability --local_machine
-```
+6. ./go_fish.py --update_solver
+7. ./go_fish.py --update_applicability
