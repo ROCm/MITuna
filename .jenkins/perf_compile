@@ -34,7 +34,7 @@ def VerifyArgs()
 pipeline {
   agent { node { label 'mysql' } }
   environment {
-      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
+      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
       partition = "${slurm_partition}"
       backend = "HIP"
       tuna_docker_name = utils.getDockerName("${backend}")
