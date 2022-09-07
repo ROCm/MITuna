@@ -28,7 +28,7 @@
 import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
 from sqlalchemy import Text, Enum
-from sqlalchemy import Float, BigInteger
+from sqlalchemy import Float, BigInteger, Boolean
 from sqlalchemy.databases import mysql
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
 from sqlalchemy.orm import relationship
@@ -137,19 +137,14 @@ class ConvolutionKernelCache(BASE, KernelCacheMixin):
   """Represents kernel_cache table for convolutions"""
   __tablename__ = "conv_kernel_cache"
 
-  conv_find_db_key = Column(Integer,
-                            ForeignKey("conv_find_db.id"),
-                            nullable=False)
-  conv_find_db_entries = relationship("ConvolutionFindDB",
-                                      back_populates="blobs")
+  kernel_group = Column(Integer, nullable=True)
 
 
 class BNKernelCache(BASE, KernelCacheMixin):
   """Represents kernel_cache table for batch_norm"""
   __tablename__ = "bn_kernel_cache"
 
-  bn_find_db_key = Column(Integer, ForeignKey("bn_find_db.id"), nullable=False)
-  bn_find_db_entries = relationship("BNFindDB", back_populates="blobs")
+  kernel_group = Column(Integer, nullable=True)
 
 
 class Solver(BASE):
@@ -452,8 +447,8 @@ class GoldenMixin():
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
   @declared_attr
-  def solver_id(self):
-    """solver_id foreign key"""
+  def solver(self):
+    """solver foreign key"""
     return Column(Integer,
                   ForeignKey("solver.id",
                              onupdate="CASCADE",
@@ -470,16 +465,21 @@ class ConvolutionGolden(BASE, GoldenMixin):
   __tablename__ = "conv_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "config",
-                                     "solver_id",
+                                     "solver",
                                      "arch",
                                      "num_cu",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+
   fdb_key = Column(String(length=128), nullable=True)
   params = Column(String(length=128), nullable=True)
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
+  alg_lib = Column(String(length=64), nullable=True)
+  opencl = Column(Boolean, nullable=False)
+
+  kernel_group = Column(Integer, nullable=True)
 
 
 class BNGolden(BASE, GoldenMixin):
@@ -487,12 +487,14 @@ class BNGolden(BASE, GoldenMixin):
   __tablename__ = "bn_golden"
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "config",
-                                     "solver_id",
+                                     "solver",
                                      "arch",
                                      "num_cu",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
+
+  kernel_group = Column(Integer, nullable=True)
 
 
 def add_conv_tables(miopen_tables):
@@ -501,10 +503,10 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvolutionJob)
   miopen_tables.append(ConvolutionConfigTags())
   miopen_tables.append(ConvSolverApplicability())
-  miopen_tables.append(ConvolutionFindDB)
   miopen_tables.append(ConvolutionKernelCache())
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
+  miopen_tables.append(ConvolutionFindDB)
   miopen_tables.append(ConvolutionGolden())
   return miopen_tables
 
@@ -524,10 +526,10 @@ def add_bn_tables(miopen_tables):
   miopen_tables.append(BNJob())
   miopen_tables.append(BNConfigTags())
   miopen_tables.append(BNSolverApplicability())
-  miopen_tables.append(BNFindDB())
   miopen_tables.append(BNKernelCache())
   miopen_tables.append(BNJobCache())
   miopen_tables.append(BNFinJobCache())
+  miopen_tables.append(BNFindDB())
   miopen_tables.append(BNGolden())
   return miopen_tables
 

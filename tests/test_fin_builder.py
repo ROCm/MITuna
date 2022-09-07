@@ -26,7 +26,6 @@
 
 import os
 import sys
-from multiprocessing import Value
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -34,49 +33,24 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.go_fish import load_machines, compose_worker_list, compose_f_vals, get_kwargs
-from tuna.worker_interface import WorkerInterface
+from tuna.go_fish import load_machines, compose_worker_list
 from tuna.fin_class import FinClass
-from tuna.session import Session
-from tuna.tables import DBTables, ConfigType
+from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
+from utils import CfgImportArgs, LdJobArgs, GoFishArgs
+from utils import get_worker_args, add_test_session
 
 
-class CfgImportArgs():
-  config_type = ConfigType.convolution,
-  command = None
-  batches = None
-  batch_list = []
-  file_name = None
-  mark_recurrent = False
-  tag = None
-  tag_only = False
-
-
-class LdJobArgs():
-  config_type = ConfigType.convolution,
-  tag = None
-  all_configs = False
-  algo = None
-  solvers = [('', None)]
-  only_app = False
-  tunable = False
-  cmd = None
-  label = None
-  fin_steps = None
-  session_id = None
-
-
-def add_fin_find_compile_job(session):
+def add_fin_find_compile_job(session_id):
   #import configs
   args = CfgImportArgs()
   args.tag = 'test_fin_builder'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = DBTables(session_id=session, config_type=args.config_type)
+  dbt = DBTables(session_id=session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
   #load jobs
@@ -84,7 +58,7 @@ def add_fin_find_compile_job(session):
   args.label = 'tuna_pytest_fin_builder'
   args.tag = 'test_fin_builder'
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
-  args.session_id = session
+  args.session_id = session_id
 
   connect_db()
   counts = {}
@@ -99,45 +73,15 @@ def add_fin_find_compile_job(session):
   add_jobs(args, counts, dbt)
 
 
-class GoFishArgs():
-  local_machine = True
-  fin_steps = None
-  session_id = None
-  arch = None
-  num_cu = None
-  machines = None
-  restart_machine = None
-  update_applicability = None
-  find_mode = None
-  blacklist = None
-  update_solvers = None
-  config_type = None
-  reset_interval = None
-  dynamic_solvers_only = False
-  label = 'pytest_fin_builder'
-  docker_name = None
-  ticket = None
-  solver_id = None
-
-
 def test_fin_builder():
   args = GoFishArgs()
   machine_lst = load_machines(args)
   machine = machine_lst[0]
 
-  #create a session
-  worker_ids = range(machine.get_num_cpus())
-  f_vals = compose_f_vals(args, machine)
-  f_vals["num_procs"] = Value('i', len(worker_ids))
-  kwargs = get_kwargs(0, f_vals, args)
-  worker = WorkerInterface(**kwargs)
-  worker.machine.arch = 'gfx908'
-  worker.machine.num_cu = 120
-  args.session_id = Session().add_new_session(args, worker)
-  assert (args.session_id)
+  args.session_id = add_test_session()
 
   #update solvers
-  kwargs = get_kwargs(0, f_vals, args)
+  kwargs = get_worker_args(args, machine)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 

@@ -69,8 +69,18 @@ def get_fin_result(status):
   success = False
   if True in [x['success'] for x in status]:
     success = True
-  for slv, res in [[x['solver'], x['result']] for x in status]:
-    result_str += f' ({slv}: {res})'
+
+  unanimous = False
+  if len(status) > 0:
+    res = status[0]['result']
+    res_list = [res == val['result'] for val in status]
+    unanimous = False not in res_list
+
+  if unanimous:
+    result_str = status[0]['result']
+  else:
+    for slv, res in [[x['solver'], x['result']] for x in status]:
+      result_str += f' ({slv}: {res})'
 
   return success, result_str
 
