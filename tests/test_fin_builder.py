@@ -61,8 +61,6 @@ def add_fin_find_compile_job(session_id):
   args.session_id = session_id
 
   connect_db()
-  counts = {}
-  counts['cnt_jobs'] = 0
   dbt = DBTables(session_id=None, config_type=args.config_type)
   if args.tag:
     try:
@@ -70,7 +68,7 @@ def add_fin_find_compile_job(session_id):
     except ValueError as terr:
       print(terr)
 
-  add_jobs(args, counts, dbt)
+  return add_jobs(args, dbt)
 
 
 def test_fin_builder():
@@ -86,14 +84,7 @@ def test_fin_builder():
   assert (fin_worker.get_solvers())
 
   #load jobs
-  add_fin_find_compile_job(args.session_id)
-  num_jobs = 0
-  with DbSession() as session:
-    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state='new';"
-    res = session.execute(get_jobs)
-    for row in res:
-      assert (row[0] > 0)
-      num_jobs = row[0]
+  num_jobs = add_fin_find_compile_job(args.session_id)
 
   #get applicability
   args.update_applicability = True

@@ -40,28 +40,35 @@ from tuna.sql import DbCursor
 from tuna.tables import ConfigType
 
 
-def add_job():
-  find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='test_abort' GROUP BY tag"
-
-  del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, session, fin_step) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1, 'miopen_find_compile,miopen_find_eval' \
-        FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'test_abort'"
-
-  print(ins_q)
-  with DbCursor() as cur:
-    cur.execute(find_configs)
-    res = cur.fetchall()
-    if len(res) == 0:
-      add_cfg = "{0}/../tuna/import_configs.py -f {0}/../utils/recurrent_cfgs/alexnet_4jobs.txt -t test_abort -C convolution".format(
-          this_path)
-      os.system(add_cfg)
-
-    cur.execute(del_q)
-    cur.execute(ins_q)
-
-
 def test_abort():
+  #import configs
+  session = 1
+  args = CfgImportArgs()
+  args.tag = 'test_builder'
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
+
+  dbt = DBTables(session_id=session, config_type=args.config_type)
+  counts = import_cfgs(args, dbt)
+
+  #load jobs
+  args = LdJobArgs
+  args.label = 'tuna_pytest_abort'
+  args.tag = 'test_builder'
+  args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
+  args.session_id = session
+
+  connect_db()
+  dbt = DBTables(session_id=None, config_type=args.config_type)
+  if args.tag:
+    try:
+      tag_name_test(args.tag, dbt)
+    except ValueError as terr:
+      print(terr)
+
+  num_jobs = add_jobs(args, dbt)
+  assert num_jobs > 0
+
   hostname = socket.gethostname()
   m = Machine(hostname=hostname, local_machine=True)
   arch = m.arch = 'gfx908'
@@ -91,16 +98,6 @@ def test_abort():
     }
 
   w = FinBuilder(**kwargs)
-  add_job()
-
-  num_jobs = 0
-  with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest' and state='new';"
-    cur.execute(get_jobs)
-    res = cur.fetchall()
-    print(res)
-    assert (res[0][0] > 0)
-    num_jobs = res[0][0]
 
   #creating abort file just before we execute
   arch_abort = '/tmp/miopen_abort_{}'.format(arch)

@@ -54,7 +54,8 @@ def add_job():
       os.system(add_cfg)
 
     cur.execute(del_q)
-    insert_jobs = "{0}/../tuna/load_job.py --session_id 1 -l tuna_pytest -t recurrent_pytest".format(this_path)
+    insert_jobs = "{0}/../tuna/load_job.py --session_id 1 -l tuna_pytest -t recurrent_pytest".format(
+        this_path)
     cur.execute(insert_jobs)
 
 

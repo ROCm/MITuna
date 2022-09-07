@@ -103,6 +103,16 @@ class GoFishArgs():
   solver_id = None
 
 
+class DummyArgs(object):
+  """Dummy args object class to be used for testing"""
+
+  # pylint: disable=too-many-instance-attributes
+
+  def __init__(self, **kwargs):
+    """Constructor"""
+    pass
+
+
 def get_worker_args(args, machine):
   worker_ids = range(machine.get_num_cpus())
   f_vals = compose_f_vals(args, machine)

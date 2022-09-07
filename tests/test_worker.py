@@ -43,24 +43,31 @@ from utils import add_test_session
 
 
 def add_job(w):
-  find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='recurrent_pytest' GROUP BY tag"
+  #import configs
+  args = CfgImportArgs()
+  args.tag = 'recurrent_pytest'
+  args.file_name = f"{this_path}/../utils/configs/conv_configs/conv_configs_NCHW.txt"
 
-  del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = f"INSERT INTO conv_job(config, state, solver, valid, reason, fin_step, session) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 'not_fin', {w.session_id} \
-        FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'recurrent_pytest'"
+  dbt = DBTables(session_id=w.session_id, config_type=args.config_type)
+  counts = import_cfgs(args, dbt)
 
-  with DbCursor() as cur:
-    cur.execute(find_configs)
-    res = cur.fetchall()
-    if len(res) == 0:
-      add_cfg = "{0}/../tuna/import_configs.py -f {0}/../utils/configs/conv_configs_NCHW.txt -t recurrent_pytest".format(
-          this_path)
-      os.system(add_cfg)
+  #load jobs
+  args = LdJobArgs
+  args.label = 'tuna_pytest_worker'
+  args.tag = 'recurrent_pytest'
+  args.fin_steps = ['not_fin']
+  args.session_id = session
 
-    cur.execute(del_q)
-    insert_jobs = "{0}/../tuna/load_job.py --session_id 1 -l tuna_pytest -t recurrent_pytest".format(this_path)
-    cur.execute(insert_jobs)
+  connect_db()
+  dbt = DBTables(session_id=None, config_type=args.config_type)
+  if args.tag:
+    try:
+      tag_name_test(args.tag, dbt)
+    except ValueError as terr:
+      print(terr)
+
+  num_jobs = add_jobs(args, dbt)
+  assert num_jobs > 0
 
 
 def get_job(w):
@@ -95,28 +102,28 @@ def multi_queue_test(w):
     cur.execute("UPDATE conv_job SET valid=0 WHERE id>=0")
   with DbCursor() as cur:
     cur.execute(
-        "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest' LIMIT {}"
+        "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest_worker' LIMIT {}"
         .format(w.claim_num + 1))
   job = w.get_job('new', 'compile_start', True)
   assert job == True
   res = None
   with DbCursor() as cur:
     cur.execute(
-        "SELECT state FROM conv_job WHERE reason='tuna_pytest' AND state='compile_start' AND valid=1"
+        "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
     )
     res = cur.fetchall()
   assert (len(res) == w.claim_num)
 
   with DbCursor() as cur:
     cur.execute(
-        "UPDATE conv_job SET state='compiling' WHERE reason='tuna_pytest' AND state='compile_start' AND valid=1"
+        "UPDATE conv_job SET state='compiling' WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
     )
   for i in range(w.claim_num - 1):
     job = w.get_job('new', 'compile_start', True)
     with DbCursor() as cur:
       assert job == True
       cur.execute(
-          "SELECT state FROM conv_job WHERE reason='tuna_pytest' AND state='compile_start' AND valid=1"
+          "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
       )
       res = cur.fetchall()
       assert (len(res) == 0)
@@ -125,11 +132,11 @@ def multi_queue_test(w):
   assert job == True
   with DbCursor() as cur:
     cur.execute(
-        "SELECT state FROM conv_job WHERE reason='tuna_pytest' AND state='compile_start' AND valid=1"
+        "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
     )
     res = cur.fetchall()
     assert (len(res) == 1)
-    cur.execute("UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest'")
+    cur.execute("UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker'")
 
 
 def test_worker():
@@ -167,7 +174,7 @@ def test_worker():
 
   w = WorkerInterface(**keys)
 
-  add_job(w)
+  add_job()
   get_job(w)
   w.queue_end_reset()
   multi_queue_test(w)
