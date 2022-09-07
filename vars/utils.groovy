@@ -541,6 +541,10 @@ def LoadJobs()
   {
       script_args = script_args + " --fin_steps \"miopen_find_compile, miopen_find_eval\""
   }
+  else if(params.stage == 'perf')
+  {
+      script_args = script_args + " --fin_steps \"miopen_perf_compile, miopen_perf_eval\""
+  }
   if(params.all_configs)
   {
       if(params.only_applicable)
@@ -553,36 +557,25 @@ def LoadJobs()
       script_args = script_args + " -t ${params.config_tag} "
   }
   echo "${script_args}"
-  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_CACHE_DIR= --build-arg MIOPEN_USER_DB_PATH= --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+
+  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  if(params.base_image != '')
+  {
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} -f dockerfiles/rocm_base/Dockerfile"
+  }
+
   sh "echo ${build_args}"
   def tuna_docker = docker.build("${tuna_docker_name}", "${build_args}" )
   tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
       env.PYTHONPATH=env.WORKSPACE
       env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
       env.TUNA_LOGLEVEL="${tuna_loglevel}" 
-      if(params.arch == '')
-      {
-        echo "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
-        sh "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
-
-        echo "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
-        sh "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
-
-        echo "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
-        sh "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
-
-        echo "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
-        sh "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
-        
-        echo "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
-        sh "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
-      }
-      else
-      {
-        echo "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
-        sh "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
-      }
   }
+
+  def docker_run_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
+
+  echo "/tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}"
+  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} python3 /tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}'"
 }
 
 
