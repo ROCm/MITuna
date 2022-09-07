@@ -76,12 +76,6 @@ def parse_args():
                              help='add jobs with only these solvers '\
                                '(can be a comma separated list)')
   parser.add_argument(
-      '-o',
-      '--only_applicable',
-      dest='only_app',
-      action='store_true',
-      help='Use with --tag to create a job for each applicable solver.')
-  parser.add_argument(
       '-d',
       '--only_dynamic',
       dest='only_dynamic',
@@ -157,45 +151,6 @@ def test_tag_name(tag, dbt):
   return True
 
 
-def insert_job_all(args, counts, cfg_query, dbt):
-  """ insert all jobs for the given session for applicable solvers"""
-  do_commit = False
-  with DbSession() as session:
-    while True:  #pylint: disable=too-many-nested-blocks
-      for config_entry in cfg_query.all():
-        for solver_name, _ in args.solvers:
-          if counts['cnt_jobs'] % LOG_FREQ == 0:
-            print('.', flush=True, end='')
-          try:
-            job = dbt.job_table()
-            job.config = config_entry.id
-            job.state = 'new'
-            job.valid = True
-            job.reason = args.label
-            job.fin_step = args.fin_steps
-            job.solver = solver_name
-            job.session = args.session_id
-            session.add(job)
-            if do_commit:
-              session.commit()
-            counts['cnt_jobs'] += 1
-          except IntegrityError as err:
-            session.rollback()
-            LOGGER.warning("Integrity Error: %s", err)
-      if not do_commit:
-        try:
-          session.commit()
-        except IntegrityError as err:
-          session.rollback()
-          counts['cnt_jobs'] = 0
-          do_commit = True
-          LOGGER.warning(
-              "Quick update failed, rolling back to add one by one: %s", err)
-          continue
-      break
-  return True
-
-
 def config_query(args, session, dbt):
   """ Produce config query for new style config table"""
   cfg_query = session.query(dbt.config_table)\
@@ -244,43 +199,39 @@ def add_jobs(args, counts, dbt):
       query specified"""
   with DbSession() as session:
     cfg_query = config_query(args, session, dbt)
-    if args.only_app:
-      query = compose_query(args, session, dbt, cfg_query)
-      do_commit = False
-      while True:
-        for solv_app, slv in query.all():
-          if counts['cnt_jobs'] % LOG_FREQ == 0:
-            print('.', flush=True, end='')
-          try:
-            job = dbt.job_table()
-            job.config = solv_app.config
-            job.state = 'new'
-            job.valid = 1
-            job.reason = args.label
-            job.solver = slv.solver
-            job.fin_step = args.fin_steps
-            job.session = args.session_id
-            session.add(job)
-            if do_commit:
-              session.commit()
-            counts['cnt_jobs'] += 1
-          except IntegrityError as err:
-            session.rollback()
-            LOGGER.warning('Integrity Error: %s', err)
-        if not do_commit:
-          try:
+    query = compose_query(args, session, dbt, cfg_query)
+    do_commit = False
+    while True:
+      for solv_app, slv in query.all():
+        if counts['cnt_jobs'] % LOG_FREQ == 0:
+          print('.', flush=True, end='')
+        try:
+          job = dbt.job_table()
+          job.config = solv_app.config
+          job.state = 'new'
+          job.valid = 1
+          job.reason = args.label
+          job.solver = slv.solver
+          job.fin_step = args.fin_steps
+          job.session = args.session_id
+          session.add(job)
+          if do_commit:
             session.commit()
-          except IntegrityError as err:
-            session.rollback()
-            counts['cnt_jobs'] = 0
-            do_commit = True
-            LOGGER.warning(
-                'Quick update failed, rolling back to add one by one : %s', err)
-            continue
-        break
-
-    else:
-      insert_job_all(args, counts, cfg_query, dbt)
+          counts['cnt_jobs'] += 1
+        except IntegrityError as err:
+          session.rollback()
+          LOGGER.warning('Integrity Error: %s', err)
+      if not do_commit:
+        try:
+          session.commit()
+        except IntegrityError as err:
+          session.rollback()
+          counts['cnt_jobs'] = 0
+          do_commit = True
+          LOGGER.warning(
+              'Quick update failed, rolling back to add one by one : %s', err)
+          continue
+      break
 
 
 def main():
