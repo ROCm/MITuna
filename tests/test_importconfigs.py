@@ -35,7 +35,7 @@ this_path = os.path.dirname(__file__)
 from tuna.import_configs import import_cfgs
 from tuna.sql import DbCursor
 from tuna.tables import DBTables, ConfigType
-from dummy_args import DummyArgs
+from dummy_args import CfgImportArgs 
 
 
 def test_importconfigs():
@@ -61,15 +61,10 @@ def test_import_conv():
   cfg_file = "{0}/../utils/configs/conv_configs_NHWC.txt".format(this_path)
   add_cfg_NHWC = "{0}/../tuna/import_configs.py -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution".format(
       this_path)
-  args = DummyArgs()
-  args.command = None
-  args.batch_list = []
+  args = CfgImportArgs 
   args.file_name = cfg_file
-  args.mark_recurrent = None
   args.tag = "conv_config_test"
-  args.tag_only = None
   args.version = '1.0.0'
-  args.config_type = ConfigType.convolution
   counts = import_cfgs(args, dbt)
   os.system(add_cfg_NHWC)
 
@@ -102,13 +97,9 @@ def test_import_batch_norm():
   cfg_file = "{0}/../utils/configs/batch_norm.txt".format(this_path)
   add_cfg_NHWC = "{0}/../tuna/import_configs.py -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm".format(
       this_path)
-  args = DummyArgs()
-  args.command = None
-  args.batch_list = []
+  args = CfgImportArgs 
   args.file_name = cfg_file
-  args.mark_recurrent = None
   args.tag = "bn_config_test"
-  args.tag_only = None
   args.version = '1.0.0'
   args.config_type = ConfigType.batch_norm
   counts = import_cfgs(args, dbt)

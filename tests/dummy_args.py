@@ -35,3 +35,48 @@ class DummyArgs(object):
   def __init__(self, **kwargs):
     """Constructor"""
     pass
+
+class CfgImportArgs():
+  config_type = ConfigType.convolution,
+  command = None
+  batches = None
+  batch_list = []
+  file_name = None
+  mark_recurrent = False
+  tag = None
+  tag_only = False
+
+
+class LdJobArgs():
+  config_type = ConfigType.convolution,
+  tag = None
+  all_configs = False
+  algo = None
+  solvers = [('', None)]
+  only_app = False
+  tunable = False
+  cmd = None
+  label = None
+  fin_steps = None
+  session_id = None
+
+
+class GoFishArgs():
+  local_machine = True
+  fin_steps = None
+  session_id = None
+  arch = None
+  num_cu = None
+  machines = None
+  restart_machine = None
+  update_applicability = None
+  find_mode = None
+  blacklist = None
+  update_solvers = None
+  config_type = None
+  reset_interval = None
+  dynamic_solvers_only = False
+  label = 'pytest_fin_builder'
+  docker_name = None
+  ticket = None
+  solver_id = None

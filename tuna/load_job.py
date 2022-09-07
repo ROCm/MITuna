@@ -194,16 +194,17 @@ def compose_query(args, session, dbt, cfg_query):
   return query
 
 
-def add_jobs(args, counts, dbt):
+def add_jobs(args, dbt):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
+  counts = 0
   with DbSession() as session:
     cfg_query = config_query(args, session, dbt)
     query = compose_query(args, session, dbt, cfg_query)
     do_commit = False
     while True:
       for solv_app, slv in query.all():
-        if counts['cnt_jobs'] % LOG_FREQ == 0:
+        if counts % LOG_FREQ == 0:
           print('.', flush=True, end='')
         try:
           job = dbt.job_table()
@@ -217,7 +218,7 @@ def add_jobs(args, counts, dbt):
           session.add(job)
           if do_commit:
             session.commit()
-          counts['cnt_jobs'] += 1
+          counts += 1
         except IntegrityError as err:
           session.rollback()
           LOGGER.warning('Integrity Error: %s', err)
@@ -226,21 +227,21 @@ def add_jobs(args, counts, dbt):
           session.commit()
         except IntegrityError as err:
           session.rollback()
-          counts['cnt_jobs'] = 0
+          counts = 0
           do_commit = True
           LOGGER.warning(
               'Quick update failed, rolling back to add one by one : %s', err)
           continue
       break
 
+  return counts
+
+
 
 def main():
   """ main """
   args = parse_args()
   connect_db()
-
-  counts = {}
-  counts['cnt_jobs'] = 0
 
   dbt = DBTables(session_id=None, config_type=args.config_type)
   if args.tag:
@@ -249,9 +250,9 @@ def main():
     except ValueError as terr:
       LOGGER.error(terr)
 
-  add_jobs(args, counts, dbt)
+  cnt = add_jobs(args, dbt)
 
-  print(f"New jobs added: {counts['cnt_jobs']}")
+  print(f"New jobs added: {cnt}")
 
 
 if __name__ == '__main__':
