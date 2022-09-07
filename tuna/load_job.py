@@ -237,7 +237,6 @@ def add_jobs(args, dbt):
   return counts
 
 
-
 def main():
   """ main """
   args = parse_args()
