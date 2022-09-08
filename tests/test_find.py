@@ -35,28 +35,43 @@ this_path = os.path.dirname(__file__)
 from tuna.sql import DbCursor
 from tuna.utils.logger import setup_logger
 from tuna.find_db import ConvolutionFindDB
+from load_job import test_tag_name as tag_name_test, add_jobs
+from utils import CfgImportArgs, LdJobArgs
+from tuna.db_tables import connect_db
+from tuna.tables import DBTables
+from tuna.import_configs import import_cfgs
 
 
-def add_job():
-  find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='recurrent_pytest' GROUP BY tag"
+def add_job(arch, num_cu):
 
-  del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job (config, state, solver, valid, reason, session) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1 \
-        FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'recurrent_pytest'"
+  #import configs
+  session = 1
+  args = CfgImportArgs()
+  args.tag = 'recurrent_pytest'
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
-  with DbCursor() as cur:
-    cur.execute(find_configs)
-    res = cur.fetchall()
-    if len(res) == 0:
-      add_cfg = "{0}/../tuna/import_config.py -f {0}/../utils/recurrent_cfgs/alexnet_4jobs.txt -t recurrent_pytest -V 1.0.0".format(
-          this_path)
-      os.system(add_cfg)
+  dbt = DBTables(session_id=session, config_type=args.config_type)
+  counts = import_cfgs(args, dbt)
 
-    cur.execute(del_q)
-    insert_jobs = "{0}/../tuna/load_job.py --session_id 1 -l tuna_pytest -t recurrent_pytest".format(
-        this_path)
-    cur.execute(insert_jobs)
+  #load jobs
+  args = LdJobArgs
+  args.label = 'tuna_pytest_find'
+  args.tag = 'recurrent_pytest'
+  args.session_id = session
+  args.arch = arch
+  args.num_cu = num_cu
+
+  connect_db()
+  dbt = DBTables(session_id=None, config_type=args.config_type)
+  if args.tag:
+    try:
+      tag_name_test(args.tag, dbt)
+    except ValueError as terr:
+      print(terr)
+
+  num_jobs = add_jobs(args, dbt)
+  assert num_jobs > 0
 
 
 def parsing(find_db):

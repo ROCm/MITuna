@@ -58,7 +58,7 @@ def get_sqlite_table(cnx, table_name):
 
 
 class CfgImportArgs():
-  config_type = ConfigType.convolution,
+  config_type = ConfigType.convolution
   command = None
   batches = None
   batch_list = []
@@ -80,6 +80,7 @@ class LdJobArgs():
   label = None
   fin_steps = None
   session_id = None
+  only_dynamic = False
 
 
 class GoFishArgs():

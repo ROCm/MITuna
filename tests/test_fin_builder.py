@@ -54,6 +54,7 @@ def add_fin_find_compile_job(session_id):
   counts = import_cfgs(args, dbt)
 
   #load jobs
+  print('Loading jobs')
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
   args.tag = 'test_fin_builder'
@@ -61,14 +62,13 @@ def add_fin_find_compile_job(session_id):
   args.session_id = session_id
 
   connect_db()
-  dbt = DBTables(session_id=None, config_type=args.config_type)
-  if args.tag:
-    try:
-      tag_name_test(args.tag, dbt)
-    except ValueError as terr:
-      print(terr)
+  #if args.tag:
+  #  try:
+  #    tag_name_test(args.tag, dbt)
+  #  except ValueError as terr:
+  #    print(terr)
 
-  return add_jobs(args, dbt)
+  return add_jobs(args, dbt), dbt
 
 
 def test_fin_builder():
@@ -76,7 +76,8 @@ def test_fin_builder():
   machine_lst = load_machines(args)
   machine = machine_lst[0]
 
-  args.session_id = add_test_session()
+  #args.session_id = add_test_session()
+  args.session_id = 1
 
   #update solvers
   kwargs = get_worker_args(args, machine)
@@ -84,7 +85,8 @@ def test_fin_builder():
   assert (fin_worker.get_solvers())
 
   #load jobs
-  num_jobs = add_fin_find_compile_job(args.session_id)
+  num_jobs, dbt = add_fin_find_compile_job(args.session_id)
+  print(num_jobs)
 
   #get applicability
   args.update_applicability = True
@@ -100,8 +102,8 @@ def test_fin_builder():
   for worker in worker_lst:
     worker.join()
 
+  print(args.session_id)
   with DbSession() as session:
-    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state in ('compiled');"
-    row = session.execute(get_jobs)
-    for row in res:
-      assert (row[0] == num_jobs)
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='compiled').count()
+    assert (count == num_jobs)

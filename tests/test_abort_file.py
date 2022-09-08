@@ -38,6 +38,11 @@ from tuna.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.tables import ConfigType
+from utils import CfgImportArgs, LdJobArgs
+from tuna.tables import DBTables
+from tuna.import_configs import import_cfgs
+from tuna.db_tables import connect_db
+from load_job import test_tag_name as tag_name_test, add_jobs
 
 
 def test_abort():
@@ -88,7 +93,7 @@ def test_abort():
         'envmt': ["MIOPEN_LOG_LEVEL=7"],
         'reset_interval': False,
         'app_test': False,
-        'label': 'tuna_pytest',
+        'label': 'tuna_pytest_abort',
         'use_tuner': False,
         'job_queue': Queue(),
         'queue_lock': Lock(),
@@ -108,7 +113,7 @@ def test_abort():
 
   #checking that no job where actually run due to abort_file_arch being present
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest' and state='new';"
+    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
     cur.execute(get_jobs)
     res = cur.fetchall()
     print(res)
@@ -122,7 +127,7 @@ def test_abort():
 
   #checking that no job where actually run due to abort_file_mid being present
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest' and state='new';"
+    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
     cur.execute(get_jobs)
     res = cur.fetchall()
     print(res)
