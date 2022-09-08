@@ -201,9 +201,12 @@ def add_jobs(args, dbt):
   with DbSession() as session:
     cfg_query = config_query(args, session, dbt)
     query = compose_query(args, session, dbt, cfg_query)
+    res = query.all()
+    if not res:
+      LOGGER.error('No applicable solvers found for args %s', args.__dict__)
     do_commit = False
     while True:
-      for solv_app, slv in query.all():
+      for solv_app, slv in res:
         if counts % LOG_FREQ == 0:
           print('.', flush=True, end='')
         try:

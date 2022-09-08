@@ -40,13 +40,19 @@ from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.tables import ConfigType
 from utils import add_test_session
+from utils import CfgImportArgs, LdJobArgs, GoFishArgs
+from tuna.tables import DBTables
+from tuna.db_tables import connect_db
+from import_configs import import_cfgs
+from load_job import test_tag_name as tag_name_test, add_jobs
 
 
 def add_job(w):
   #import configs
   args = CfgImportArgs()
   args.tag = 'recurrent_pytest'
-  args.file_name = f"{this_path}/../utils/configs/conv_configs/conv_configs_NCHW.txt"
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
   dbt = DBTables(session_id=w.session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
@@ -56,10 +62,9 @@ def add_job(w):
   args.label = 'tuna_pytest_worker'
   args.tag = 'recurrent_pytest'
   args.fin_steps = ['not_fin']
-  args.session_id = session
+  args.session_id = w.session_id
 
   connect_db()
-  dbt = DBTables(session_id=None, config_type=args.config_type)
   if args.tag:
     try:
       tag_name_test(args.tag, dbt)
@@ -72,34 +77,36 @@ def add_job(w):
 
 def get_job(w):
   with DbCursor() as cur:
-    cur.execute("UPDATE conv_job SET valid=0 WHERE id>=0")
+    cur.execute("UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker'")
   # to force commit
+  print(w.session_id)
   with DbCursor() as cur:
-    cur.execute(f"SELECT id FROM conv_job WHERE session={w.session_id} LIMIT 1")
+    cur.execute(
+        f"SELECT id FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} LIMIT 1"
+    )
     res = cur.fetchall()
     assert (len(res) == 1)
-    id = res[0][0]
-    assert (id)
+    job_id = res[0][0]
+    assert (job_id)
     cur.execute(
-        f"UPDATE conv_job SET state='new', valid=1, retries=0 WHERE id={id}")
+        f"UPDATE conv_job SET state='new', valid=1, retries=0 WHERE id={job_id}"
+    )
+    print('ID: '.format(job_id))
 
   #test get_job()
   job = w.get_job('new', 'compile_start', True)
   assert job == True
   with DbCursor() as cur:
-    cur.execute(f"SELECT state FROM conv_job WHERE id={id}")
+    cur.execute(f"SELECT state FROM conv_job WHERE id={job_id}")
     res = cur.fetchall()
     assert (res[0][0] == 'compile_start')
     job = w.get_job('new', 'compile_start', True)
     assert job == False
-    cur.execute(f"UPDATE conv_job SET valid=0 WHERE id={id}")
+    cur.execute(f"UPDATE conv_job SET valid=0 WHERE id={job_id}")
 
 
 def multi_queue_test(w):
   # a separate block was necessary to force commit
-  with DbCursor() as cur:
-    #Queue test
-    cur.execute("UPDATE conv_job SET valid=0 WHERE id>=0")
   with DbCursor() as cur:
     cur.execute(
         "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest_worker' LIMIT {}"
@@ -151,7 +158,7 @@ def test_worker():
   v = Value('i', 0)
   e = Value('i', 0)
 
-  session_id = add_test_session()
+  session_id = 1
 
   keys = {
       'machine': machine,
@@ -174,7 +181,7 @@ def test_worker():
 
   w = WorkerInterface(**keys)
 
-  add_job()
+  add_job(w)
   get_job(w)
   w.queue_end_reset()
   multi_queue_test(w)
