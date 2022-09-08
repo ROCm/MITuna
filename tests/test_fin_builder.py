@@ -104,6 +104,12 @@ def test_fin_builder():
 
   print(args.session_id)
   with DbSession() as session:
+    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='errored')\
+                                         .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
+                                         .count()
+    #ommiting valid Fin/MIOpen errors
+    num_jobs = (num_jobs - valid_fin_err)
     count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
                                          .filter(dbt.job_table.state=='compiled').count()
     assert (count == num_jobs)
