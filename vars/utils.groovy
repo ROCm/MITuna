@@ -567,16 +567,25 @@ def LoadJobs()
   sh "echo ${build_args}"
   def tuna_docker = docker.build("${tuna_docker_name}", "${build_args}" )
   tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+      env.TUNA_DB_HOSTNAME = "${db_host}"
+      env.TUNA_DB_NAME="${params.db_name}"
+      env.TUNA_DB_USER_NAME="${db_user}"
+      env.TUNA_DB_PASSWORD="${db_password}"
+      env.gateway_ip = "${gateway_ip}"
+      env.gateway_port = "${gateway_port}"
+      env.gateway_user = "${gateway_user}"     
       env.PYTHONPATH=env.WORKSPACE
       env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
       env.TUNA_LOGLEVEL="${tuna_loglevel}" 
+      echo "/tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}"
+      sh "/tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}"
   }
-  tuna_docker.push()
+  //tuna_docker.push()
+  
+  //def docker_run_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
-  def docker_run_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
-
-  echo "/tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}"
-  sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} python3 /tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}'"
+  //echo "/tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}"
+  //sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} python3 /tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}'"
 }
 
 
