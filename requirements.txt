@@ -45,3 +45,4 @@ yapf==0.30.0
 zipp==1.2.0
 mysql-connector-python
 prometheus_flask_exporter
+coverage==6.4.2
