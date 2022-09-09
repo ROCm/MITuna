@@ -1,5 +1,5 @@
 #default image to ubuntu + install rocm
-ARG BASEIMAGE=ubuntu:18.04
+ARG BASEIMAGE=ubuntu:20.04
 ARG ROCM_PRE=0
 #ARG IMG_VER=$([[ $BASEIMAGE == "ubuntu:18.04" ]]; echo $?)
 
