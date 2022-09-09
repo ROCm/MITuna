@@ -121,7 +121,7 @@ pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
 To extract coverage percentage from the underlying code base prior to opening Pull Request:
 
 ```
-cd MITunaX/tuna
+cd MITunaX
 ./tests/covscripts/coverage_script.sh
 ```
 

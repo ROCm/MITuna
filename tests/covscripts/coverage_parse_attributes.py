@@ -24,18 +24,19 @@
 #
 ###############################################################################
 import json
-import sys
+import os
 
-sys.path.append("../tuna")
-sys.path.append("tuna")
+root_dir = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+file_path_json = os.path.join(root_dir, "utils/coverage_files/coverage.json")
+file_path_txt = os.path.join(root_dir,
+                             "utils/coverage_files/coverage_percentage.txt")
 
-coverage_file = open('./utils/coverage_files/coverage.json')
+coverage_file = open(file_path_json)
 coverage_data = json.load(coverage_file)
-
 percent_covered = coverage_data['totals']['percent_covered']
 percent_covered = '{:.2f}'.format(percent_covered)
 
-file = open("./utils/coverage_files/coverage_percentage.txt", "w")
+file = open(file_path_txt, "w")
 file.write(percent_covered)
-
 file.close()
