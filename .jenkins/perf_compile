@@ -34,7 +34,7 @@ def VerifyArgs()
 pipeline {
   agent { node { label 'mysql' } }
   environment {
-      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
+      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
       partition = "${slurm_partition}"
       backend = "HIP"
       tuna_docker_name = utils.getDockerName("${backend}")
@@ -45,13 +45,14 @@ pipeline {
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
     string(name: 'job_label', defaultValue: '', description: 'Label for new jobs.')
+    string(name: 'session_id', defaultValue: '', description: 'session id for compile')
     string(name: 'slurm_partition', defaultValue: 'gpu-node', description: 'Name of the slurm partition to run jobs on')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
     string(name: 'env', defaultValue: '', description: 'Additional environment variables for compilation.')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
     string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
     string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
-    string(name: 'db_name', defaultValue: "${TUNA_DB_NAME}", description: 'Name of the database schema')
+    string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
     string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
