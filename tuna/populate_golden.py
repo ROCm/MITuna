@@ -154,34 +154,39 @@ def merge_golden_entries(dbt, golden_v, entries):
   count = 0
   rev = 0
   with DbSession() as session:
-    for copy_entry in entries:
-      golden_entry = dbt.golden_table()
-      #unique identifiers
-      golden_entry.golden_miopen_v = golden_v
-      golden_entry.config = copy_entry.config
-      golden_entry.solver = copy_entry.solver
-      golden_entry.arch = dbt.session.arch
-      golden_entry.num_cu = dbt.session.num_cu
+    for retry in range(10):
+      count = 0
+      rev = 0
+      for copy_entry in entries:
+        golden_entry = dbt.golden_table()
+        #unique identifiers
+        golden_entry.golden_miopen_v = golden_v
+        golden_entry.config = copy_entry.config
+        golden_entry.solver = copy_entry.solver
+        golden_entry.arch = dbt.session.arch
+        golden_entry.num_cu = dbt.session.num_cu
 
-      #resolve to existing entry if present
-      golden_entry = update_gold_entry(session, dbt.golden_table, golden_entry)
+        #resolve to existing entry if present
+        golden_entry = update_gold_entry(session, dbt.golden_table, golden_entry)
 
-      golden_entry.valid = 1
-      golden_entry.session = copy_entry.session
+        golden_entry.valid = 1
+        golden_entry.session = copy_entry.session
 
-      golden_entry.fdb_key = copy_entry.fdb_key
-      golden_entry.params = copy_entry.params
-      golden_entry.kernel_time = copy_entry.kernel_time
-      golden_entry.workspace_sz = copy_entry.workspace_sz
-      golden_entry.alg_lib = copy_entry.alg_lib
-      golden_entry.opencl = copy_entry.opencl
+        golden_entry.fdb_key = copy_entry.fdb_key
+        golden_entry.params = copy_entry.params
+        golden_entry.kernel_time = copy_entry.kernel_time
+        golden_entry.workspace_sz = copy_entry.workspace_sz
+        golden_entry.alg_lib = copy_entry.alg_lib
+        golden_entry.opencl = copy_entry.opencl
 
-      golden_entry.kernel_group = copy_entry.kernel_group
+        golden_entry.kernel_group = copy_entry.kernel_group
 
-      count += 1
+        count += 1
+
       try:
         #session.merge(golden_entry)
         session.commit()
+        break
       except OperationalError as oerror:
         rev += 1
         LOGGER.warning('DB error: %s', oerror)
@@ -190,6 +195,7 @@ def merge_golden_entries(dbt, golden_v, entries):
         rev += 1
         LOGGER.warning('DB error: %s', ierror)
         session.rollback()
+        break
 
   return count - rev, rev
 
