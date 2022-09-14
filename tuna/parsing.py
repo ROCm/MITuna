@@ -211,26 +211,6 @@ def build_driver_cmd(fds, vals, precision, direction):
   return cmd
 
 
-def build_driver_cmd_from_config(conv_config, non_driver_cols):
-  """Take 1 config row from DB and return MIOpenDriver cmd"""
-
-  cc_dict = conv_config.to_dict()
-  if 'conv_mode' in cc_dict.keys():
-    cc_dict['mode'] = cc_dict.pop('conv_mode')
-
-  fusion_cols = ['fusion_mode', 'activMode']
-  for fusion_col in fusion_cols:
-    if fusion_col in cc_dict.keys():
-      cc_dict.pop(fusion_col)
-  arg_strs = [
-      f'--{key} {value}' for key, value in cc_dict.items()
-      if key not in non_driver_cols
-  ]
-  conv = cc_dict['cmd']
-  cmd = f"MIOpenDriver {conv} {' '.join(arg_strs)}"
-  return cmd
-
-
 def parse_pdb_value(value):
   """return array of solver[parameters] for a db entry"""
   tmp = value.split(';')
@@ -364,12 +344,11 @@ def get_fd_name(tok1, cols_map):
 
 def conv_arg_valid(arg, val):
   """check validity of conv argument"""
-  if arg == 'conv_mode':
+  if arg == 'mode':
     return val in ['conv', 'trans']
   return True
 
 
-#ALEX_NOTE: Do we have options here for batch norm or fusion?
 def arg_valid(arg, val):
   """check validity of argument"""
   if arg or val:

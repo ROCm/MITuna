@@ -204,7 +204,7 @@ class ConvolutionConfig(BASE):
   dilation_w = Column(Integer, nullable=False, server_default="1")
   dilation_d = Column(Integer, nullable=False, server_default="1")
   group_count = Column(Integer, nullable=False, server_default="1")
-  conv_mode = Column(String(length=40), nullable=False, server_default="conv")
+  mode = Column(String(length=40), nullable=False, server_default="conv")
   pad_mode = Column(String(length=40), nullable=False, server_default="default")
   trans_output_pad_h = Column(Integer, nullable=False, server_default="0")
   trans_output_pad_w = Column(Integer, nullable=False, server_default="0")
@@ -271,7 +271,7 @@ class BNConfig(BASE):
                          backref="bn_input_tensor",
                          foreign_keys=[input_tensor],
                          lazy="joined")
-  out_layout = Column(String(60), nullable=False, server_default="NCHW")
+  in_layout = Column(String(60), nullable=False, server_default="NCHW")
 
   def get_direction(self):
     """synthesize direction"""

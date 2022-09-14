@@ -31,18 +31,25 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.miopen_tables import TensorTable
 from tuna.metadata import TENSOR_PRECISION
+from tuna.miopen_tables import ConvolutionConfig, BNConfig
 
 LOGGER = setup_logger('driver_base')
 
 
 #pylint: disable=no-member
+#pylint: disable=too-many-instance-attributes
 #NOTE:remove pylint flag after driver implementation throughout code
 class DriverBase():
   """Represents db tables based on ConfigType"""
 
-  def __init__(self, line):
-    if not self.construct_driver(line):
-      raise ValueError(f"Error creating Driver from line: '{line}'")
+  def __init__(self, line=None, db_obj=None):
+    if line:
+      if not self.construct_driver(line):
+        raise ValueError(f"Error creating Driver from line: '{line}'")
+    if db_obj:
+      if not self.construct_driver_from_db(db_obj):
+        raise ValueError(
+            f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
 
   @staticmethod
   def get_common_cols():
@@ -62,6 +69,18 @@ class DriverBase():
       return False
 
     self.config_set_defaults()
+
+    return True
+
+  def construct_driver_from_db(self, db_obj):
+    """Takes a <>_config row and returns a driver cmd"""
+    LOGGER.info('Processing db_row: %s', db_obj.to_dict())
+    #common tensor among convolution and batch norm
+    self.decompose_input_t(db_obj)
+    if isinstance(db_obj, ConvolutionConfig):
+      self.parse_conv_row(db_obj)
+    elif isinstance(db_obj, BNConfig):
+      self.parse_bn_row(db_obj)
 
     return True
 
@@ -138,35 +157,33 @@ class DriverBase():
 
     return i_dict
 
+  def decompose_input_t(self, db_obj):
+    """Use input_tensor to assign local variables to build driver cmd """
+    #pylint: disable=attribute-defined-outside-init
+
+    self.set_cmd(db_obj.input_t.data_type)
+    self.num_dims = db_obj.input_t.num_dims
+    self.in_layout = db_obj.input_t.layout
+
+    if self.in_layout == 'NCHW':
+      self.in_channels = db_obj.input_t.dim1
+      self.in_d = db_obj.input_t.dim2
+      self.in_h = db_obj.input_t.dim3
+      self.in_w = db_obj.input_t.dim4
+    elif self.in_layout == 'NHWC':
+      self.in_d = db_obj.input_t.dim1
+      self.in_h = db_obj.input_t.dim2
+      self.in_w = db_obj.input_t.dim3
+      self.in_channels = db_obj.input_t.dim4
+
+    return True
+
   def get_weight_t_id(self):
     """Build 1 row in tensor table based on layout from fds param
      Details are mapped in metadata LAYOUT"""
     w_dict = self.compose_weight_t()
 
     return self.insert_tensor(w_dict)
-
-  def compose_weight_t(self):
-    """Build weight_tensor"""
-    w_dict = {}
-    w_dict['data_type'] = TENSOR_PRECISION[self.cmd]
-    w_dict['num_dims'] = self.num_dims
-
-    if self.fil_layout == 'NCHW':
-      w_dict['dim0'] = self.out_channels
-      w_dict['dim1'] = self.in_channels
-      w_dict['dim2'] = self.fil_d
-      w_dict['dim3'] = self.fil_h
-      w_dict['dim4'] = self.fil_w
-      w_dict['layout'] = 'NCHW'
-    elif self.fil_layout == 'NHWC':
-      w_dict['dim0'] = self.out_channels
-      w_dict['dim1'] = self.in_channels
-      w_dict['dim2'] = self.fil_d
-      w_dict['dim3'] = self.fil_h
-      w_dict['dim4'] = self.fil_w
-      w_dict['layout'] = 'NHWC'
-
-    return w_dict
 
   def parse_driver_line(self, line):
     """Parse line and set attributes"""
@@ -206,7 +223,7 @@ class DriverBase():
   def to_dict(self):
     """Return class to dictionary"""
     copy_dict = {}
-    for key, value in self.__dict__.items():
+    for key, value in vars(self).items():
       if key == "_cmd":
         copy_dict["cmd"] = value
       else:

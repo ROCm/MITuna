@@ -93,8 +93,8 @@ TABLE_COLS_CONV_MAP = {
     '-fil_h': ('fil_h', 3),
     'z': ('pad_mode', 'default'),
     '-pad_mode': ('pad_mode', 'default'),
-    'm': ('conv_mode', 'conv'),
-    '-mode': ('conv_mode', 'conv'),
+    'm': ('mode', 'conv'),
+    '-mode': ('mode', 'conv'),
     '!': ('in_d', '32'),
     '-in_d': ('in_d', '32'),
     '@': ('fil_d', '3'),
@@ -108,6 +108,10 @@ TABLE_COLS_CONV_MAP = {
     '-spatial_dim': ('spatial_dim', '2'),
     '%': ('trans_output_pad_d', '0'),
     '-trans_output_pad_d': ('trans_output_pad_d', '0'),
+    'X': ('trans_output_pad_w', '0'),
+    '-trans_output_pad_w': ('trans_output_pad_w', '0'),
+    'Y': ('trans_output_pad_h', '0'),
+    '-trans_output_pad_h': ('trans_output_pad_h', '0'),
     '-in_layout': ('in_layout', 'NCHW'),
     'I': ('in_layout', 'NCHW'),
     '-out_layout': ('out_layout', 'NCHW'),
@@ -222,13 +226,21 @@ TENSOR_PRECISION = {
     'bnormfp16': 'FP16'
 }
 
+INVERS_CONV_TENSOR_PRECISION = {
+    'FP32': 'conv',
+    'FP16': 'convfp16',
+    'BF16': 'convbfp16'
+}
+
+INVERS_BN_TENSOR_PRECISION = {'FP32': 'bnorm', 'FP16': 'bnormfp16'}
+
 SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16']
 SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16']
 
 CONV_CONFIG_COLS = [
     'batchsize', 'spatial_dim', 'pad_h', 'pad_w', 'pad_d', 'conv_stride_h',
     'conv_stride_w', 'conv_stride_d', 'dilation_h', 'dilation_w', 'dilation_d',
-    'group_count', 'conv_mode', 'pad_mode', 'trans_output_pad_h',
+    'group_count', 'mode', 'pad_mode', 'trans_output_pad_h',
     'trans_output_pad_w', 'trans_output_pad_d', 'out_layout', 'direction'
 ]
 
@@ -509,7 +521,7 @@ CONV_2D_DEFAULTS = {
     'pad_w': 0,
     'batchsize': 32,
     'pad_mode': 'default',
-    'conv_mode': 'conv',
+    'mode': 'conv',
     'fil_d': 1,
     'in_d': 1,
     'spatial_dim': 2,
@@ -544,7 +556,7 @@ CONV_3D_DEFAULTS = {
     'pad_w': 0,
     'batchsize': 100,
     'pad_mode': 'default',
-    'conv_mode': 'conv',
+    'mode': 'conv',
     'fil_d': 3,
     'in_d': 32,
     'spatial_dim': 3,
@@ -579,7 +591,7 @@ FUSION_DEFAULTS = {
     'pad_w': 0,
     'batchsize': 100,
     'pad_mode': 'default',
-    'conv_mode': 'conv',
+    'mode': 'conv',
     'fil_d': 3,
     'in_d': 32,
     'spatial_dim': 3,
@@ -589,7 +601,6 @@ FUSION_DEFAULTS = {
     'trans_output_pad_d': 0
 }
 
-#Alex-NOTE: can someone double check this?
 BN_DEFAULTS = {'in_d': 1, 'out_channels': 1, 'num_dims': 2}
 
 ARCH_NUM_CU_LIST = [

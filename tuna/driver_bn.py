@@ -28,7 +28,7 @@
 from tuna.driver_base import DriverBase
 from tuna.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS
 from tuna.metadata import SUPPORTED_BN_CMDS, TABLE_COLS_BN_MAP, BN_DEFAULTS
-from tuna.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
+from tuna.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS, INVERS_BN_TENSOR_PRECISION
 from tuna.miopen_tables import BNConfig
 from tuna.parsing import get_fd_name, arg_valid
 from tuna.helper import get_db_id
@@ -38,7 +38,7 @@ from tuna.helper import get_db_id
 class DriverBatchNorm(DriverBase):
   """Represents db tables based on ConfigType"""
 
-  def __init__(self, line, cmd=None):
+  def __init__(self, line, cmd=None, db_obj=None):
     self.batchsize = 0
     self.alpha = 1
     self.beta = 0
@@ -51,7 +51,6 @@ class DriverBatchNorm(DriverBase):
     self.in_w = 1
     self.in_channels = 1
     self.in_layout = 'NCHW'
-    self._cmd = cmd
     self.num_dims = None
     self.direction = None
     self._cmd = 'bnorm'
@@ -85,6 +84,12 @@ class DriverBatchNorm(DriverBase):
     else:
       raise ValueError(f"Can't import driver commmand line, \
           one and only one of forw or back must be set: '{line}'")
+
+  def parse_bn_row(self, db_obj):
+    """Compose obj from bn_config row"""
+    self.batchsize = db_obj.batchsize
+    self.forw = db_obj.forward
+    self.direction = db_obj.direction
 
   def compose_tensors(self, keep_id=False):
     """Get tensors needed for DB table based on config type"""
@@ -132,7 +137,7 @@ class DriverBatchNorm(DriverBase):
 
   def __str__(self):
     return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
-        f'--{key} {val}' for key, val in self.__dict__.items()
+        f'--{key} {val}' for key, val in vars(self).items()
         if key in BN_CONFIG_COLS or key in IN_TENSOR_COLS or
         key in self.get_common_cols())
 
@@ -142,3 +147,7 @@ class DriverBatchNorm(DriverBase):
     if tok1 in BN_SKIP_ARGS:
       return True
     return False
+
+  def set_cmd(self, data_type):
+    """Set cmd based on tensor data type"""
+    self.cmd = INVERS_BN_TENSOR_PRECISION[data_type]

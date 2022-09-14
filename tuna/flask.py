@@ -28,12 +28,10 @@
 
 from sqlalchemy import create_engine
 from tuna.utils.logger import setup_logger
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen_tables import ConvolutionConfig, ConvolutionConfigTags
-from tuna.metadata import get_solver_ids, DIRECTION
+from tuna.metadata import get_solver_ids
 from tuna.utils.utility import get_env_vars
 from tuna.utils.db_utility import get_id_solvers
-from tuna.parsing import build_driver_cmd_from_config
 
 LOGGER = setup_logger('flask')
 SOLVER_ID_MAP_C, SOLVER_ID_MAP_H = get_solver_ids()
@@ -45,72 +43,6 @@ ENGINE = create_engine(
 
 CFTable = ConvolutionConfig
 CFTTable = ConvolutionConfigTags
-
-
-def get_tag_data(grafana_req, data):
-  """Addresses Tag to driver cmd panel query from Grafana"""
-  tag_like = None
-  if grafana_req[2] != '':
-    tag_like = f"%{grafana_req[2]}%"
-  if '(' in grafana_req[1]:
-    tags = grafana_req[1][1:-1].split('|')
-  else:
-    tags = grafana_req[1].split('|')
-
-  query_tags = []
-  for tag in tags:
-    query_tags.append(tag.replace('\\', ''))
-
-  non_driver_cols = [
-      'id', 'insert_ts', 'update_ts', 'md5', 'valid', 'activMode', 'cmd'
-  ]
-  datapoints = {'title': 'Tag - Driver cmd', 'refId': 'A', 'datapoints': []}
-
-  values = []
-  with DbSession() as session:
-    try:
-      if query_tags != ['']:
-        LOGGER.info(query_tags)
-        configs = session.query(CFTable, CFTTable.tag)\
-                              .filter(CFTable.id == CFTTable.config)\
-                              .filter(CFTTable.tag.in_(query_tags))\
-                              .filter(CFTable.valid == 1).all()
-        for conv_config, tag in configs:
-          values.append(
-              [tag,
-               build_driver_cmd_from_config(conv_config, non_driver_cols)])
-
-      if tag_like is not None:
-        LOGGER.info(tag_like)
-        extra_configs = session.query(CFTable, CFTTable.tag)\
-                            .filter(CFTable.id == CFTTable.config)\
-                            .filter(CFTTable.tag.like(tag_like))\
-                            .filter(CFTable.valid == 1).all()
-        for conv_config, tag in extra_configs:
-          values.append(
-              [tag,
-               build_driver_cmd_from_config(conv_config, non_driver_cols)])
-
-    except Exception as exp:  #pylint: disable=broad-except
-      LOGGER.error(exp)
-
-  datapoints['datapoints'] = values
-  LOGGER.info(values)
-  data.append(datapoints)
-
-  return True
-
-
-def get_direction(filters):
-  """ Return direction from filter"""
-  direction = []
-  if filters and '-F' in filters['cmd']:
-    dirc = filters['cmd'].partition('-F ')[2][0]
-    direction.append(dirc)
-  else:
-    direction = DIRECTION
-
-  return direction
 
 
 def get_driver_cmds(filters, grafana_req=None):
