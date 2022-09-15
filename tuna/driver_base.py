@@ -139,20 +139,20 @@ class DriverBase():
     """Build input_tensor"""
     i_dict = {}
     i_dict['data_type'] = TENSOR_PRECISION[self.cmd]
-    i_dict['num_dims'] = int(self.num_dims)
+    i_dict['num_dims'] = self.num_dims
     i_dict['dim0'] = 1
 
     if self.in_layout == 'NCHW':
-      i_dict['dim1'] = int(self.in_channels)
-      i_dict['dim2'] = int(self.in_d)
-      i_dict['dim3'] = int(self.in_h)
-      i_dict['dim4'] = int(self.in_w)
+      i_dict['dim1'] = self.in_channels
+      i_dict['dim2'] = self.in_d
+      i_dict['dim3'] = self.in_h
+      i_dict['dim4'] = self.in_w
       i_dict['layout'] = 'NCHW'
     elif self.in_layout == 'NHWC':
-      i_dict['dim1'] = int(self.in_d)
-      i_dict['dim2'] = int(self.in_h)
-      i_dict['dim3'] = int(self.in_w)
-      i_dict['dim4'] = int(self.in_channels)
+      i_dict['dim1'] = self.in_d
+      i_dict['dim2'] = self.in_h
+      i_dict['dim3'] = self.in_w
+      i_dict['dim4'] = self.in_channels
       i_dict['layout'] = 'NHWC'
 
     return i_dict

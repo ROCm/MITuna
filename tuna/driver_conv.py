@@ -206,21 +206,21 @@ class DriverConvolution(DriverBase):
     """Build weight_tensor"""
     w_dict = {}
     w_dict['data_type'] = TENSOR_PRECISION[self.cmd]
-    w_dict['num_dims'] = int(self.num_dims)
+    w_dict['num_dims'] = self.num_dims
 
     if self.fil_layout == 'NCHW':
-      w_dict['dim0'] = int(self.out_channels)
-      w_dict['dim1'] = int(self.in_channels)
-      w_dict['dim2'] = int(self.fil_d)
-      w_dict['dim3'] = int(self.fil_h)
-      w_dict['dim4'] = int(self.fil_w)
+      w_dict['dim0'] = self.out_channels
+      w_dict['dim1'] = self.in_channels
+      w_dict['dim2'] = self.fil_d
+      w_dict['dim3'] = self.fil_h
+      w_dict['dim4'] = self.fil_w
       w_dict['layout'] = 'NCHW'
     elif self.fil_layout == 'NHWC':
-      w_dict['dim0'] = int(self.out_channels)
-      w_dict['dim1'] = int(self.in_channels)
-      w_dict['dim2'] = int(self.fil_d)
-      w_dict['dim3'] = int(self.fil_h)
-      w_dict['dim4'] = int(self.fil_w)
+      w_dict['dim0'] = self.out_channels
+      w_dict['dim1'] = self.in_channels
+      w_dict['dim2'] = self.fil_d
+      w_dict['dim3'] = self.fil_h
+      w_dict['dim4'] = self.fil_w
       w_dict['layout'] = 'NHWC'
 
     return w_dict
