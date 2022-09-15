@@ -149,17 +149,18 @@ def get_fdb_query(dbt, args):
       query = query.filter(src_table.golden_miopen_v == args.golden_v)\
               .filter(src_table.arch == args.arch)\
               .filter(src_table.num_cu == args.num_cu)
+      LOGGER.info("golden_miopen_v: %s, arch: %s, num_cu: %s", args.golden_v, args.arch, args.num_cu)
     else:
       query = query.filter(src_table.session == dbt.session.id)
       LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
       LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
 
-    query = query.filter(src_table.config == dbt.config_table.id)\
-        .filter(src_table.solver == dbt.solver_table.id)\
-        .filter(src_table.valid == 1)\
+    query = query.filter(src_table.valid == 1)\
         .filter(src_table.kernel_time != -1)\
         .filter(src_table.workspace_sz != -1)\
-        .filter(src_table.opencl == args.opencl)
+        .filter(src_table.opencl == args.opencl)\
+        .filter(src_table.config == dbt.config_table.id)\
+        .filter(src_table.solver == dbt.solver_table.id)
 
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
@@ -167,6 +168,7 @@ def get_fdb_query(dbt, args):
           .filter(dbt.config_table.config == dbt.config_table.id)
 
     query = query.order_by(src_table.config, src_table.update_ts.desc())
+    LOGGER.info("fdb query returned: %s", len(query.all()))
 
   return query
 
@@ -273,7 +275,10 @@ def build_miopen_kdb(dbt, find_db):
   num_kdb_blobs = 0
   kern_db = []
   with DbSession() as session:
+    total = len(find_db.items()) * 5
+    last_pcnt = 0
     for _, entries in find_db.items():
+      total += len(entries) - 5
       for fdb_entry in entries:
         num_fdb_entries += 1
         query = session.query(dbt.kernel_cache)\
@@ -281,9 +286,12 @@ def build_miopen_kdb(dbt, find_db):
         for kinder in query.all():
           kern_db.append(kinder)
           num_kdb_blobs += 1
+      pcnt = int(num_fdb_entries * 100 / total)
+      if pcnt > last_pcnt:
+        LOGGER.warning("Building db: %s%%, blobs: %s", pcnt, num_kdb_blobs)
+        last_pcnt = pcnt
 
-  LOGGER.warning("Total number of FDB entries: %s", num_fdb_entries)
-  LOGGER.warning("Total number of blobs: %s", num_kdb_blobs)
+  LOGGER.warning("Total FDB entries: %s, Total blobs: %s", num_fdb_entries, num_kdb_blobs)
   return kern_db
 
 
