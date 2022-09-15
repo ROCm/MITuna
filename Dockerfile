@@ -1,9 +1,9 @@
 #default image to ubuntu + install rocm
 ARG BASEIMAGE=ubuntu:20.04
 ARG ROCM_PRE=0
-#ARG IMG_VER=$([[ $BASEIMAGE == "ubuntu:18.04" ]]; echo $?)
+#ARG IMG_VER=$([[ $BASEIMAGE == "ubuntu:20.04" ]]; echo $?)
 
-FROM ubuntu:18.04 as dtuna-ver-0
+FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
 ARG ROCMVERSION=5.1
 ARG OSDB_BKC_VERSION
@@ -32,17 +32,12 @@ FROM dtuna-ver-${ROCM_PRE} as final
 #finish building off previous image
 RUN set -xe
 
-RUN wget --no-check-certificate -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add -
-RUN sh -c "echo deb https://apt.kitware.com/ubuntu/ bionic main | tee -a /etc/apt/sources.list"
-
-ADD requirements.txt requirements.txt
 # Install dependencies
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
     apt-utils \
     sshpass \
     build-essential \
-    cmake-data=3.15.1-0kitware1 \
-    cmake=3.15.1-0kitware1 \
+    cmake \ 
     curl \
     doxygen \
     g++ \
@@ -58,12 +53,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-
     llvm-amdgpu \
     miopengemm \
     pkg-config \
-    python \
     python3 \
-    python-dev \
     python3-dev \
-    python-pip \
     python3-pip \
+    python3-venv \
     software-properties-common \
     sqlite3 \
     wget \
@@ -81,6 +74,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+ADD requirements.txt requirements.txt
 RUN pip3 install --default-timeout=100000 -r requirements.txt
 RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysql_connector mysql-connector-python==8.0.20
 RUN pip3 install /tmp/mysql_connector/*.whl
@@ -108,28 +102,32 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
+ARG MIOPEN_BRANCH=8d67ae8b6a84b48debd3f140482b077b104c32dd
+RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
 # Install dependencies
-RUN cget install pfultz2/rocm-recipes
-RUN cget install -f min-requirements.txt
+#issue with upstream for composable kernel install
+RUN sed -i "s#[^\n]*composable_kernel[^\n]*##g" requirements.txt
+RUN cmake -P install_deps.cmake --minimum
+
 RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
 
 ARG TUNA_USER=miopenpdb
 ARG BACKEND=HIP
 # Build MIOpen
 WORKDIR $MIOPEN_DIR/build
-ARG MIOPEN_BRANCH=8d67ae8b6a84b48debd3f140482b077b104c32dd
 ARG MIOPEN_CACHE_DIR=/tmp/${TUNA_USER}/cache
 ARG MIOPEN_USER_DB_PATH=/tmp/$TUNA_USER/config/miopen
 ARG MIOPEN_USE_MLIR=On
-RUN git pull && git checkout $MIOPEN_BRANCH
+ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DMIOPEN_USE_COMPOSABLEKERNEL=Off -DUSE_FIN=Off"
+
 RUN echo "MIOPEN: Selected $BACKEND backend."
 RUN if [ $BACKEND = "OpenCL" ]; then \
-           cmake -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH={MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=OpenCL -DMIOPEN_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ -DCMAKE_PREFIX_PATH="$MIOPEN_DEPS" $MIOPEN_DIR ; \
+        cmake -DMIOPEN_HIP_COMPILER=/opt/rocm/llvm/bin/clang++ ${MIOPEN_CMAKE_ARGS} $MIOPEN_DIR ; \
     else \
-           CXX=/opt/rocm/llvm/bin/clang++ cmake -DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=$BACKEND -DCMAKE_PREFIX_PATH=$MIOPEN_DEPS $MIOPEN_DIR ; \
+        CXX=/opt/rocm/llvm/bin/clang++ cmake ${MIOPEN_CMAKE_ARGS} $MIOPEN_DIR ; \
     fi
 
 RUN make -j $(nproc)
@@ -141,7 +139,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=30d699b9edc014c6076a9649f849bd3c4588d4ab
+ARG FIN_BRANCH=39024934b61177d3f719f206bc2445b40edf4db7
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 
@@ -176,4 +174,5 @@ ADD tests /tuna/tests/
 ADD utils /tuna/utils/
 ADD requirements.txt /tuna/
 WORKDIR /tuna
+
 RUN python3 setup.py install
