@@ -167,7 +167,7 @@ def get_fdb_query(dbt, args):
       query = query.filter(dbt.config_tags_table.tag == args.config_tag)\
           .filter(dbt.config_table.config == dbt.config_table.id)
 
-    query = query.order_by(src_table.config, src_table.update_ts.desc())
+    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
     LOGGER.info("fdb query returned: %s", len(query.all()))
 
   return query
@@ -275,10 +275,10 @@ def build_miopen_kdb(dbt, find_db):
   num_kdb_blobs = 0
   kern_db = []
   with DbSession() as session:
-    total = len(find_db.items()) * 5
+    total = len(find_db.items()) * 4
     last_pcnt = 0
     for _, entries in find_db.items():
-      total += len(entries) - 5
+      total += len(entries) - 4
       for fdb_entry in entries:
         num_fdb_entries += 1
         query = session.query(dbt.kernel_cache)\
