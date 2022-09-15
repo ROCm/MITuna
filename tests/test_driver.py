@@ -123,5 +123,4 @@ def test_driver():
     row3 = session.query(BNConfig).filter(BNConfig.id == cmd3_id).one()
     driver_3_row = DriverBatchNorm(db_obj=row3)
     #compare DriverBN for same driver cmd built from Driver-line, vs built from that Driver-line's DB row
-    print(driver_3_row)
     assert driver3 == driver_3_row

@@ -53,6 +53,8 @@ class DriverBatchNorm(DriverBase):
     self.in_layout = 'NCHW'
     self.num_dims = None
     self.direction = None
+    self.save = 0
+    self.verify = 1
     self._cmd = 'bnorm'
 
     super().__init__(line, db_obj)
@@ -90,13 +92,9 @@ class DriverBatchNorm(DriverBase):
 
   def parse_bn_row(self, db_obj):
     """Compose obj from bn_config row"""
-    self.batchsize = db_obj.batchsize
-    self.alpha = db_obj.alpha
-    self.beta = db_obj.beta
-    self.forw = db_obj.forw
-    self.back = db_obj.back
-    self.mode = db_obj.mode
-    self.run = db_obj.run
+    for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
+      if key not in ('id', 'input_t'):
+        setattr(self, key, value)
     self.compute_direction()
 
   def compose_tensors(self, keep_id=False):

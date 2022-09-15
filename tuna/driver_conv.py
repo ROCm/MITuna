@@ -111,25 +111,9 @@ class DriverConvolution(DriverBase):
   def parse_conv_row(self, db_obj):
     """Compose obj from conv_config row"""
     self.decompose_weight_t(db_obj)
-    self.batchsize = db_obj.batchsize
-    self.spatial_dim = db_obj.spatial_dim
-    self.pad_h = db_obj.pad_h
-    self.pad_w = db_obj.pad_w
-    self.pad_d = db_obj.pad_d
-    self.conv_stride_h = db_obj.conv_stride_h
-    self.conv_stride_w = db_obj.conv_stride_w
-    self.conv_stride_d = db_obj.conv_stride_d
-    self.dilation_h = db_obj.dilation_h
-    self.dilation_w = db_obj.dilation_w
-    self.dilation_d = db_obj.dilation_d
-    self.group_count = db_obj.group_count
-    self.mode = db_obj.mode
-    self.pad_mode = db_obj.pad_mode
-    self.trans_output_pad_h = db_obj.trans_output_pad_h
-    self.trans_output_pad_w = db_obj.trans_output_pad_w
-    self.trans_output_pad_d = db_obj.trans_output_pad_d
-    self.out_layout = db_obj.out_layout
-    self.direction = db_obj.direction
+    for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
+      if key not in ('id', 'input_t', 'weight_t'):
+        setattr(self, key, value)
 
     return True
 
