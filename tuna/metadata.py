@@ -294,9 +294,9 @@ CONV_COLS = [v for _, v in TABLE_COLS_CONV_MAP.items()]
 CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S']
 BN_SKIP_ARGS = ['i', 't', 'V', 's', 'w', 'S']
 
-DIR_MAP = {'1': 'F', '2': 'B', '4': 'W'}
-INVERS_DIR_MAP = {'F': '1', 'B': '2', 'W': '4'}
-DIRECTION = ['1', '2', '4']
+DIR_MAP = {1: 'F', 2: 'B', 4: 'W'}
+INVERS_DIR_MAP = {'F': 1, 'B': 2, 'W': 4}
+DIRECTION = [1, 2, 4]
 
 FIND_ONLY_EXCEPTION = {
     'gemm': 'MIOPEN_DEBUG_CONV_GEMM',

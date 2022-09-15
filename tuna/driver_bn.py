@@ -38,7 +38,7 @@ from tuna.helper import get_db_id
 class DriverBatchNorm(DriverBase):
   """Represents db tables based on ConfigType"""
 
-  def __init__(self, line, cmd=None, db_obj=None):
+  def __init__(self, line=None, cmd=None, db_obj=None):
     self.batchsize = 0
     self.alpha = 1
     self.beta = 0
@@ -55,7 +55,7 @@ class DriverBatchNorm(DriverBase):
     self.direction = None
     self._cmd = 'bnorm'
 
-    super().__init__(line)
+    super().__init__(line, db_obj)
     #allow cmd input to override driver line
     if cmd:
       self._cmd = cmd
@@ -68,7 +68,6 @@ class DriverBatchNorm(DriverBase):
   @cmd.setter
   def cmd(self, value):
     """Checking allowed BN cmd values"""
-    print(value)
     if value not in SUPPORTED_BN_CMDS:
       raise ValueError(f'Cannot instantiate batch normalization Driver class. \
            Supported cmds are: {SUPPORTED_BN_CMDS}')
@@ -77,19 +76,28 @@ class DriverBatchNorm(DriverBase):
   def parse_driver_line(self, line):
     super().parse_driver_line(line)
 
-    self.direction = str(int(self.forw) + 4 * int(self.back))
+    self.compute_direction()
+
+  def compute_direction(self):
+    """Setting BN direction based on forw and back"""
+    self.direction = int(self.forw) + 4 * int(self.back)
 
     if self.direction and self.direction in DIRECTION:
       self.direction = DIR_MAP[self.direction]
     else:
-      raise ValueError(f"Can't import driver commmand line, \
-          one and only one of forw or back must be set: '{line}'")
+      raise ValueError("Can't import driver commmand line, \
+          one and only one of forw or back must be set")
 
   def parse_bn_row(self, db_obj):
     """Compose obj from bn_config row"""
     self.batchsize = db_obj.batchsize
-    self.forw = db_obj.forward
-    self.direction = db_obj.direction
+    self.alpha = db_obj.alpha
+    self.beta = db_obj.beta
+    self.forw = db_obj.forw
+    self.back = db_obj.back
+    self.mode = db_obj.mode
+    self.run = db_obj.run
+    self.compute_direction()
 
   def compose_tensors(self, keep_id=False):
     """Get tensors needed for DB table based on config type"""

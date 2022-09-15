@@ -58,7 +58,7 @@ def get_conv_config_triggers():
   NEW.md5=MD5(CONCAT(NEW.batchsize, NEW.spatial_dim, NEW.pad_h, \
   NEW.pad_w, NEW.pad_d, NEW.conv_stride_h, NEW.conv_stride_w, NEW.conv_stride_d, \
   NEW.dilation_h, NEW.dilation_w, NEW.dilation_d, \
-  NEW.group_count, NEW.conv_mode, NEW.pad_mode, NEW.trans_output_pad_h, \
+  NEW.group_count, NEW.mode, NEW.pad_mode, NEW.trans_output_pad_h, \
   NEW.trans_output_pad_w, NEW.trans_output_pad_d, NEW.direction, NEW.input_tensor, NEW.weight_tensor, \
   NEW.out_layout));"
 
@@ -67,7 +67,7 @@ def get_conv_config_triggers():
   NEW.md5=MD5(CONCAT(NEW.batchsize, NEW.spatial_dim, NEW.pad_h, \
   NEW.pad_w, NEW.pad_d, NEW.conv_stride_h, NEW.conv_stride_w, NEW.conv_stride_d, \
   NEW.dilation_h, NEW.dilation_w, NEW.dilation_d, \
-  NEW.group_count, NEW.conv_mode, NEW.pad_mode, NEW.trans_output_pad_h, \
+  NEW.group_count, NEW.mode, NEW.pad_mode, NEW.trans_output_pad_h, \
   NEW.trans_output_pad_w, NEW.trans_output_pad_d, NEW.direction, NEW.input_tensor, NEW.weight_tensor, \
   NEW.out_layout));"
 
