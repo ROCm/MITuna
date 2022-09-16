@@ -139,8 +139,12 @@ class DriverConvolution(DriverBase):
   def set_defaults(self, defaults):
     """Set fds defaults"""
     for k, val in self.to_dict().items():
-      if val is None and k in defaults.keys():
-        setattr(self, k, defaults[k])
+      if k in defaults.keys():
+        if val is None:
+          setattr(self, k, defaults[k])
+        #for 2d configs filter out 3rd dimensional paramaters from unscrupulous users
+        elif self.spatial_dim != 3 and k.endswith('_d'):
+          setattr(self, k, defaults[k])
 
   @staticmethod
   def get_params(tok1):
