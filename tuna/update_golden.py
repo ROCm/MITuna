@@ -127,11 +127,12 @@ def latest_golden_v(dbt):
 def get_gold_query(session, gold_table, gold_entry):
   """Construct a Db query for the golden entry
   """
-  query = session.query(gold_table).filter(gold_table.golden_miopen_v == gold_entry.golden_miopen_v,
-                                      gold_table.config == gold_entry.config,
-                                      gold_table.solver == gold_entry.solver,
-                                      gold_table.arch == gold_entry.arch,
-                                      gold_table.num_cu == gold_entry.num_cu)
+  query = session.query(gold_table).filter(
+      gold_table.golden_miopen_v == gold_entry.golden_miopen_v,
+      gold_table.config == gold_entry.config,
+      gold_table.solver == gold_entry.solver,
+      gold_table.arch == gold_entry.arch,
+      gold_table.num_cu == gold_entry.num_cu)
 
   return query
 
