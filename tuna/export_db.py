@@ -149,7 +149,8 @@ def get_fdb_query(dbt, args):
       query = query.filter(src_table.golden_miopen_v == args.golden_v)\
               .filter(src_table.arch == args.arch)\
               .filter(src_table.num_cu == args.num_cu)
-      LOGGER.info("golden_miopen_v: %s, arch: %s, num_cu: %s", args.golden_v, args.arch, args.num_cu)
+      LOGGER.info("golden_miopen_v: %s, arch: %s, num_cu: %s", args.golden_v,
+                  args.arch, args.num_cu)
     else:
       query = query.filter(src_table.session == dbt.session.id)
       LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
@@ -291,7 +292,8 @@ def build_miopen_kdb(dbt, find_db):
         LOGGER.warning("Building db: %s%%, blobs: %s", pcnt, num_kdb_blobs)
         last_pcnt = pcnt
 
-  LOGGER.warning("Total FDB entries: %s, Total blobs: %s", num_fdb_entries, num_kdb_blobs)
+  LOGGER.warning("Total FDB entries: %s, Total blobs: %s", num_fdb_entries,
+                 num_kdb_blobs)
   return kern_db
 
 

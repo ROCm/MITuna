@@ -330,21 +330,29 @@ class FinClass(WorkerInterface):
       if "applicable_solvers" in elem.keys():
         #remove old applicability
         # pylint: disable=comparison-with-callable
-        query = session.query(self.dbt.solver_app)\
+        app_query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
           .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
         # pylint: enable=comparison-with-callable
-        query.delete()
+        app_query.update({self.dbt.solver_app.applicable: 0},
+                         synchronize_session='fetch')
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s",
                               elem["input"]["config_tuna_id"])
         for solver in elem["applicable_solvers"]:
           try:
-            new_entry = self.dbt.solver_app(
-                solver=solver_id_map_h[solver],
-                config=elem["input"]["config_tuna_id"],
-                session=self.session_id)
-            session.add(new_entry)
+            solver_id = solver_id_map_h[solver]
+            obj = app_query.filter(
+                self.dbt.solver_app.solver == solver_id).first()
+            if obj:
+              obj.applicable = 1
+            else:
+              new_entry = self.dbt.solver_app(
+                  solver=solver_id,
+                  config=elem["input"]["config_tuna_id"],
+                  session=self.session_id,
+                  applicable=1)
+              session.add(new_entry)
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
