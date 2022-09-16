@@ -25,6 +25,7 @@
 #
 ###############################################################################
 """Module that a convolution MIOpenDriver cmd"""
+from tuna.utils.logger import setup_logger
 from tuna.driver_base import DriverBase
 from tuna.metadata import CONV_CONFIG_COLS
 from tuna.helper import get_db_id
@@ -34,6 +35,7 @@ from tuna.metadata import CONV_3D_DEFAULTS, TENSOR_COLS, TABLE_COLS_CONV_MAP
 from tuna.metadata import DIRECTION, DIR_MAP, CONV_SKIP_ARGS
 from tuna.parsing import get_fd_name, conv_arg_valid, get_fds_from_cmd
 
+LOGGER = setup_logger('driver_conv')
 
 #pylint: disable=too-many-instance-attributes
 class DriverConvolution(DriverBase):
@@ -145,6 +147,7 @@ class DriverConvolution(DriverBase):
         #for 2d configs filter out 3rd dimensional paramaters from unscrupulous users
         elif self.spatial_dim != 3 and k.endswith('_d'):
           setattr(self, k, defaults[k])
+          LOGGER.warning("Using default for key %s, because spatial_dim is %s.", k, self.spatial_dim)
 
   @staticmethod
   def get_params(tok1):
