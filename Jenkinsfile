@@ -11,8 +11,8 @@ pipeline {
         db_host = 'localhost'
         db_user = "${DB_USER_NAME}"
         db_password = "${DB_USER_PASSWORD}"
-        pipeline_user = "${PIPELINE_USER}"
-        pipeline_pwd = "${PIPELINE_PWD}"
+        pipeline_user = "${DB_USER_NAME}"
+        pipeline_pwd = "${DB_USER_PASSWORD}"
         arch = 'gfx908'
         num_cu = '120'
         arch_908 = 'gfx908'
