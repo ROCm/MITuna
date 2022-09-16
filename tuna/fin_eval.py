@@ -218,6 +218,7 @@ class FinEvaluator(WorkerInterface):
     status = []
     fdb_obj = None
     with DbSession() as session:
+
       def actuator(func, fdb_obj):
         return func(session, fdb_obj)
 
