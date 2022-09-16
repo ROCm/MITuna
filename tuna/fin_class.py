@@ -392,10 +392,9 @@ class FinClass(WorkerInterface):
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
       sapp_count = query.one()[0]
-      self.logger.info("Solver applicability table updated to %d entries",
-                       sapp_count)
-
-    self.logger.info('Done parsing fin solver applicability output')
+      self.logger.warning(
+          "Finished parsing solver applicability, new table size: %d entries",
+          sapp_count)
     return True
 
   def invalidate_solvers(self, sids, max_id):
