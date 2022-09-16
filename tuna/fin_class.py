@@ -369,10 +369,25 @@ class FinClass(WorkerInterface):
       self.logger.error("JSON file returned from Fin is empty")
       return False
 
+    #break down commits into smaller packets
+    pack_i = 0
+    pack = []
+    all_packs = []
+    for elem in json_in:
+      pack.append(elem)
+      pack_i += 1
+      if pack_i == 100:
+        all_packs.append(pack)
+        pack = []
+        pack_i = 0
+    if pack:
+      all_packs.append(pack)
+
     with DbSession() as session:
       callback = self.insert_applicability
-      session_retry(session, callback, lambda x: x(session, json_in),
-                    self.logger)
+      for pack in all_packs:
+        session_retry(session, callback, lambda x: x(session, pack),
+                      self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
