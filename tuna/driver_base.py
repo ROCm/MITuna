@@ -186,6 +186,7 @@ class DriverBase():
   def compose_fds(self, tok, line):
     """Compose fds from driver line"""
 
+    attr_list={}
     for (tok1, tok2) in zip(tok[2::2], tok[3::2]):
       # the following would not work for a full name argument
       if tok1[0] == '-':
@@ -195,11 +196,22 @@ class DriverBase():
       tok2 = tok2.strip()
       tok1 = self.get_params(tok1)
       if self.get_check_valid(tok1[0], tok2):
-        setattr(self, tok1[0], tok2)
+        attr_list[tok1[0]] = tok2
       else:
         raise ValueError(
             f'Invalid command line arg for {self.cmd}: {tok1[0]} - {tok2} line: {line}'
         )
+
+    #for 2d configs filter out 3rd dimensional paramaters from unscrupulous users
+    if 'spatial_dim' in attr_list:
+      setattr(self, 'spatial_dim', attr_list['spatial_dim'])
+    for key, val in attr_list.items():
+      if self.spatial_dim == 3:
+        setattr(self, key, val)
+      elif not key.endswith('_d'):
+        setattr(self, key, val)
+      else:
+        LOGGER.warning("Not using key %s, because spatial_dim is %s.", key, self.spatial_dim)
 
     return True
 
