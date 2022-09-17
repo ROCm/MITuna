@@ -391,7 +391,7 @@ class FinClass(WorkerInterface):
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
-      query = query.filter(self.dbt.solver_app.session == session)
+      query = query.filter(self.dbt.solver_app.session == self.session_id)
       sapp_count = query.one()[0]
       self.logger.warning(
           "Finished parsing solver applicability, new session size: %d entries",
