@@ -9,9 +9,9 @@ library "jenkins-shared@${shared_library_branch}"
 
 def VerifyArgs()
 {
-    if(params.job_label == '')
+    if(params.session_id == '')
     {
-      error "Please specify a job label"
+      error "Please specify a session_id"
     }
     
     //if(params.arch == '' || params.num_cu == '')
@@ -44,7 +44,6 @@ pipeline {
     string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
-    string(name: 'job_label', defaultValue: '', description: 'Label for new jobs.')
     string(name: 'session_id', defaultValue: '', description: 'session id for compile')
     string(name: 'slurm_partition', defaultValue: 'gpu-node', description: 'Name of the slurm partition to run jobs on')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
