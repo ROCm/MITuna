@@ -67,7 +67,9 @@ pipeline {
     stage('compile') {
       steps {
         script {
+          sh "test print here before compile"
           utils.compile()
+          sh "test print here after compile"
         }
       }
     }
