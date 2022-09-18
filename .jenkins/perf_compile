@@ -1,10 +1,12 @@
-def shared_library_branch = scm.branches[0].name
-if (shared_library_branch .contains("*/")) {
-    shared_library_branch  = shared_library_branch.split("\\*/")[1]
-   }
-echo shared_library_branch 
+//def shared_library_branch = scm.branches[0].name
+//if (shared_library_branch .contains("*/")) {
+//    shared_library_branch  = shared_library_branch.split("\\*/")[1]
+//   }
+//echo shared_library_branch 
+//
+//library "jenkins-shared@${shared_library_branch}"
 
-library "jenkins-shared@${shared_library_branch}"
+library "jenkins-shared@$BRANCH_NAME"
 
 
 def VerifyArgs()
