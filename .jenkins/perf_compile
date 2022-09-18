@@ -61,12 +61,13 @@ pipeline {
   stages {
     stage("Check params") {
       steps {
-            VerifyArgs()
+          VerifyArgs()
       }
     }
     stage('compile') {
       steps {
         script {
+          utils = load '../vars/utils.groovy'
           sh "echo test print here before compile"
           utils.compile()
           sh "echo test print here after compile"
