@@ -678,8 +678,6 @@ def evaluate()
   echo resarr
   resarr = res.split('\t+')
   echo resarr
-  resarr = res.split('\s+')
-  echo resarr
 
   def arch = resarr[0]
   def num_cu = resarr[1]
