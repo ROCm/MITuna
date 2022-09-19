@@ -673,10 +673,11 @@ def evaluate()
 {
   def tuna_docker
   res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
-  def arch = res[0]
-  def num_cu = res[1]
-  def rocm_v = res[2]
-  def miopen_v = res[3]
+  def arch = res[0][0]
+  def num_cu = res[0][1]
+  def rocm_v = res[0][2]
+  def miopen_v = res[0][3]
+  echo "$arch $num_cu $rocm_v $miopen_v"
 
   def osdb_bkc_version = ''
   def rocm_version = ''
