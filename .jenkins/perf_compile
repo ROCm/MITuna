@@ -4,7 +4,7 @@ if (shared_library_branch .contains("*/")) {
    }
 echo shared_library_branch 
 
-//library "jenkins-shared@${shared_library_branch}"
+library "jenkins-shared@${shared_library_branch}"
 
 
 def VerifyArgs()
