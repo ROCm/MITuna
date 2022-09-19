@@ -672,6 +672,7 @@ def compile()
 def evaluate(params)
 {
   def tuna_docker
+  echo "HELLO-WORLD".split('-')[1]
   String res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
   echo res
   echo res[0]
