@@ -17,12 +17,13 @@ def VerifyArgs()
 pipeline {
   agent { node { label 'ixt-rack-15' } }
     environment {
+      backend = 'HIP'
       docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
-      tuna_docker_name = utils.getDockerName("HIP")
+      tuna_docker_name = utils.getDockerName("${backend}")
       db_name = "${params.db_name}"
   }
   parameters {
-    string(name: 'branch_name', defaultValue: 'eval_pipe', description: '')
+    string(name: 'branch_name', defaultValue: 'eval_pipe_gold', description: '')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
     string(name: 'session_id', defaultValue: '', description: 'session id for evaluation')
