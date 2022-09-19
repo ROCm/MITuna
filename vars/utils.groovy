@@ -672,21 +672,13 @@ def compile()
 def evaluate(params)
 {
   def tuna_docker
-  echo "HELLO-WORLD".split('-')[1]
   String res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
   echo res
-  echo res.split("[ \t]+")[0]
-  echo res[0]
-  echo res[1]
-  def resarr = res.split("[ \t]+")
-  echo resarr
-  echo resarr[0]
-  echo resarr[1]
 
-  def arch = resarr[0]
-  def num_cu = resarr[1]
-  def rocm_v = resarr[2]
-  def miopen_v = resarr[3]
+  def arch = res.split("[ \t]+")[0]
+  def num_cu = res.split("[ \t]+")[1]
+  def rocm_v = res.split("[ \t]+")[2]
+  def miopen_v = res.split("[ \t]+")[3]
   echo "$arch $num_cu $rocm_v $miopen_v"
 
   def osdb_bkc_version = ''
