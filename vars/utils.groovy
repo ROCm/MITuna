@@ -19,7 +19,7 @@ def rocmnode(name) {
 
 def runsql(query) {
     echo "query: ${query}"
-    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${db_name}" -e "${query}" -N -s /$
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${params.db_name}" -e "${query}" -N -s /$
     def res = sh (script: "${cmd}", returnStdout: true).trim()
     return res
 }
