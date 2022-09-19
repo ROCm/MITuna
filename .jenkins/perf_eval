@@ -8,16 +8,11 @@ library "jenkins-shared@${shared_library_branch}"
 
 def VerifyArgs()
 {
-    if(params.job_label == '')
+    if(params.session_id == '')
     {
-      error "Please specify a job label"
+      error "Please specify a session_id"
     }
     
-    if(params.arch == '' || params.num_cu == '')
-    {
-      error "Arch and num_cu must both be specified"
-    }
-
     if(params.rocm_version == '' && params.osdb_bkc_version == '')
     {
       error "Either ROCm version or OSDB build number is required"
@@ -41,12 +36,9 @@ pipeline {
     string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
-    string(name: 'job_label', defaultValue: '', description: 'Label for new jobs.')
     string(name: 'session_id', defaultValue: '', description: 'session id for evaluation')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
     string(name: 'env', defaultValue: '', description: 'Additional environment variables for compilation.')
-    choice(name: 'arch', choices: ['', 'gfx908', 'gfx906', 'gfx900', 'gfx1030', 'gfx90a'], description: 'Target architecture')
-    choice(name: 'num_cu', choices: ['', '120', '110', '104', '64', '60', '56', '36'], description: 'Target architecture num_cu')
     string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
     string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
@@ -76,8 +68,8 @@ pipeline {
   post {
     always {
       script {
-      echo "clean up container"
-      utils.killContainer()
+          echo "clean up container"
+          utils.killContainer()
       }
     }
   }

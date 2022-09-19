@@ -664,9 +664,7 @@ def compile()
   {
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
-  //def s_id = runsql("select id from session where reason='${params.job_label}'")
     // Run the jobs on the cluster
-  sh "echo sanity check session ${params.session_id} close"
   sh "srun --no-kill -p ${slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${compile_cmd} --session_id ${params.session_id}'"
 }
 
@@ -723,9 +721,10 @@ def evaluate()
     rocm_version = "osdb-${params.osdb_bkc_version}"
   }
 
-  //def s_id = runsql("select id from session where reason='${params.job_label}'")
-  
-  sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} -l ${params.job_label} --session_id ${params.session_id} || scontrol requeue \$SLURM_JOB_ID'"
+
+  def arch, num_cu = runsql("select arch, num_cu from session where id=${params.session_id};")
+  def partition = "${arch}_${num_cu}"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} --session_id ${params.session_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
 
