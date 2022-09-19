@@ -675,7 +675,7 @@ def evaluate(params)
   echo "HELLO-WORLD".split('-')[1]
   String res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
   echo res
-  echo res.split("[ \s\t]+")[0]
+  echo res.split("[ \t]+")[0]
   echo res[0]
   echo res[1]
   def resarr = res.split("[ \t]+")
