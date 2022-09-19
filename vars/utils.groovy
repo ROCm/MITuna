@@ -680,7 +680,7 @@ def evaluate()
   echo resarr
   echo resarr[0]
   echo resarr[1]
-  def resarr = res.split('\t')
+  resarr = res.split('\t')
   echo resarr
   echo resarr[0]
   echo resarr[1]
