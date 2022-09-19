@@ -2,10 +2,10 @@ def shared_library_branch = scm.branches[0].name
 if (shared_library_branch .contains("*/")) {
     shared_library_branch  = shared_library_branch.split("\\*/")[1]
    }
-echo shared_library_branch 
+def util_lib="jenkins-shared@${shared_library_branch}"
+echo "${util_lib}"
 
-//library "jenkins-shared@${shared_library_branch}"
-@Library('utils') _
+@Library("${util_lib}")
 
 
 def VerifyArgs()
