@@ -669,7 +669,7 @@ def compile()
 }
 
 
-def evaluate()
+def evaluate(params)
 {
   def tuna_docker
   def res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
