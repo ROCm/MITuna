@@ -676,11 +676,11 @@ def evaluate()
   echo res
   echo res[0]
   echo res[1]
-  String[] resarr = res.split('[ \t]+')
+  def resarr = res.split('[ \t]+')
   echo resarr
   echo resarr[0]
   echo resarr[1]
-  resarr = res.split('\t')
+  def resarr = res.split('\t')
   echo resarr
   echo resarr[0]
   echo resarr[1]
