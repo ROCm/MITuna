@@ -674,7 +674,7 @@ def evaluate()
   def tuna_docker
   def res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
   echo res
-  def resarr = res.split('\t')
+  def resarr = res.split('[ \t]+')
   echo resarr
 
   def arch = resarr[0]
