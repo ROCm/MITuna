@@ -676,11 +676,7 @@ def evaluate(params)
   echo res
   echo res[0]
   echo res[1]
-  def resarr = tokenize(res, '\t')
-  echo resarr
-  echo resarr[0]
-  echo resarr[1]
-  resarr = tokenize(res, ' ')
+  def resarr = res.split("[ \t]+")
   echo resarr
   echo resarr[0]
   echo resarr[1]
