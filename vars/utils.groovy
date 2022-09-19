@@ -672,7 +672,27 @@ def compile()
 def evaluate()
 {
   def tuna_docker
-  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def arch, num_cu, rocm_v, miopen_v = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
+
+  def osdb_bkc_version = ''
+  def rocm_version = ''
+  def subv_i = rocm_v.indexOf('-')
+  if(subv_i >= 0)
+  {
+    osdb_bkc_version=rocm_v.substring(subv_i+1)
+  }
+  else
+  {
+    rocm_version = rocm_v
+  }
+
+  subv_i = miopen_v.indexOf('-dirty')
+  if(subv_i >= 0)
+  {
+    miopen_v = miopen_v.substring(0, subv_i)
+  }
+
+  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -722,7 +742,6 @@ def evaluate()
   }
 
 
-  def arch, num_cu = runsql("select arch, num_cu from session where id=${params.session_id};")
   def partition = "${arch}_${num_cu}"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} --session_id ${params.session_id} || scontrol requeue \$SLURM_JOB_ID'"
 }

@@ -12,16 +12,6 @@ def VerifyArgs()
     {
       error "Please specify a session_id"
     }
-    
-    if(params.rocm_version == '' && params.osdb_bkc_version == '')
-    {
-      error "Either ROCm version or OSDB build number is required"
-    }
-
-    if(params.rocm_version != '' && params.osdb_bkc_version != '')
-    {
-      error "Can only specify either the ROCm version or the OSDB build number"
-    }
 }
 pipeline {
   agent { node { label 'mysql' } }
@@ -33,14 +23,11 @@ pipeline {
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'eval_pipe', description: '')
-    string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
     string(name: 'session_id', defaultValue: '', description: 'session id for evaluation')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
     string(name: 'env', defaultValue: '', description: 'Additional environment variables for compilation.')
-    string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
-    string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
     string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
