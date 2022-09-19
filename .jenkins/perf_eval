@@ -18,9 +18,8 @@ pipeline {
   agent { node { label 'mysql' } }
     environment {
       docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
-      partition = "${arch_id}"
       tuna_docker_name = utils.getDockerName("HIP")
-      arch_id = "${params.arch}_${params.num_cu}"
+      db_name = "${params.db_name}"
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'eval_pipe', description: '')

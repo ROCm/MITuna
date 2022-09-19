@@ -19,7 +19,7 @@ def rocmnode(name) {
 
 def runsql(query) {
     echo "query: ${query}"
-    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${params.db_name}" -e "${query}" -N -s /$
+    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${db_name}" -e "${query}" -N -s /$
     def res = sh (script: "${cmd}", returnStdout: true).trim()
     return res
 }
@@ -598,6 +598,40 @@ def LoadJobs()
 }
 
 
+def getSessionVals(session_id)
+{
+  String res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${session_id};")
+
+  def arch = res.split("[ \t]+")[0]
+  def num_cu = res.split("[ \t]+")[1]
+  def rocm_v = res.split("[ \t]+")[2]
+  def miopen_v = res.split("[ \t]+")[3]
+  echo "$arch $num_cu $rocm_v $miopen_v"
+
+  def partition = "${arch}_${num_cu}"
+
+  def osdb_bkc_version = ''
+  def rocm_version = ''
+  def subv_i = rocm_v.indexOf('-')
+  if(subv_i >= 0)
+  {
+    osdb_bkc_version=rocm_v.substring(subv_i+1)
+  }
+  else
+  {
+    rocm_version = rocm_v
+  }
+
+  subv_i = miopen_v.indexOf('-dirty')
+  if(subv_i >= 0)
+  {
+    miopen_v = miopen_v.substring(0, subv_i)
+  }
+
+  return [partition, osdb_bkc_version, rocm_version, miopen_v]
+}
+
+
 def compile()
 {
   backend = "HIPNOGPU"
@@ -672,32 +706,7 @@ def compile()
 def evaluate(params)
 {
   def tuna_docker
-  String res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${params.session_id};")
-  echo res
-
-  def arch = res.split("[ \t]+")[0]
-  def num_cu = res.split("[ \t]+")[1]
-  def rocm_v = res.split("[ \t]+")[2]
-  def miopen_v = res.split("[ \t]+")[3]
-  echo "$arch $num_cu $rocm_v $miopen_v"
-
-  def osdb_bkc_version = ''
-  def rocm_version = ''
-  def subv_i = rocm_v.indexOf('-')
-  if(subv_i >= 0)
-  {
-    osdb_bkc_version=rocm_v.substring(subv_i+1)
-  }
-  else
-  {
-    rocm_version = rocm_v
-  }
-
-  subv_i = miopen_v.indexOf('-dirty')
-  if(subv_i >= 0)
-  {
-    miopen_v = miopen_v.substring(0, subv_i)
-  }
+  (partition, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
   def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
@@ -739,17 +748,6 @@ def evaluate(params)
     eval_cmd += ' --dynamic_solvers_only'
   }
 
-  if(params.rocm_version != '')
-  {
-    rocm_version = "rocm-${params.rocm_version}"
-  }
-  else
-  {
-    rocm_version = "osdb-${params.osdb_bkc_version}"
-  }
-
-
-  def partition = "${arch}_${num_cu}"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} --session_id ${params.session_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
