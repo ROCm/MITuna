@@ -216,13 +216,15 @@ TENSOR_PRECISION = {
     'conv': 'FP32',
     'FP16': 'FP16',
     'convfp16': 'FP16',
-    'BF16': 'BFP16',
-    'convbfp16': 'BFP16',
+    'BF16': 'BF16',
+    'convbfp16': 'BF16',
+    'INT8': 'INT8',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }
 
-SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16']
+SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16', 'convint8']
 SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16']
 
 CONV_CONFIG_COLS = [
@@ -602,7 +604,7 @@ PREC_TO_CMD = {
         'FP32': 'conv',
         'FP16': 'convfp16',
         'BF16': 'convbfp16',
-        'BFP16': 'convbfp16'
+        'INT8': 'convint8'
     },
     ConfigType.batch_norm: {
         'FP32': 'bnorm',
@@ -613,6 +615,7 @@ CMD_TO_PREC = {
     'conv': 'FP32',
     'convfp16': 'FP16',
     'convbfp16': 'BF16',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }
