@@ -649,6 +649,12 @@ def applicUpdate(){
 
   def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
+  def use_tag = ''
+  if(params.config_tag != '')
+  {
+    use_tag = "-l '${params.config_tag}'"
+  }
+
   if(params.UPDATE_SOLVERS)
   {
     sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_solvers'"
@@ -660,7 +666,7 @@ def applicUpdate(){
   }
   if(params.UPDATE_APPLICABILITY)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id}'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id} ${use_tag}'"
     def num_sapp = runsql("SELECT count(*) from conv_solver_applicability;")
     println "Count(*) conv_solver_applicability table: ${num_sapp}"
     if (num_sapp.toInteger() == 0){
