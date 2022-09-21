@@ -41,24 +41,39 @@ from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
+from tuna.metadata import ALG_SLV_MAP, get_solver_ids
 
 
-def add_fin_find_compile_job(session_id):
+def add_cfgs():
   #import configs
   args = CfgImportArgs()
   args.tag = 'test_fin_builder'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
+  dbt = DBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
+
+def add_fin_find_compile_job(session_id):
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
   args.tag = 'test_fin_builder'
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
   args.session_id = session_id
+
+  #limit job scope
+  args.algo = "miopenConvolutionAlgoGEMM"
+  solver_arr = ALG_SLV_MAP[args.algo]
+  solver_id_map, _ = get_solver_ids()
+  if solver_arr:
+    solver_ids = []
+    for solver in solver_arr:
+      sid = solver_id_map.get(solver, None)
+      solver_ids.append((solver, sid))
+    args.solvers = solver_ids
+  args.only_applicable = True
 
   connect_db()
   counts = {}
@@ -85,6 +100,14 @@ def test_fin_builder():
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
+  #get applicability
+  add_cfgs()
+  args.update_applicability = True
+  args.label = 'test_fin_builder'
+  worker_lst = compose_worker_list(machine_lst, args)
+  for worker in worker_lst:
+    worker.join()
+
   #load jobs
   add_fin_find_compile_job(args.session_id)
   num_jobs = 0
@@ -95,16 +118,10 @@ def test_fin_builder():
       assert (row[0] > 0)
       num_jobs = row[0]
 
-  #get applicability
-  args.update_applicability = True
-  args.label = None
-  worker_lst = compose_worker_list(machine_lst, args)
-  for worker in worker_lst:
-    worker.join()
-
   #compile
   args.update_applicability = False
   args.fin_steps = ["miopen_find_compile"]
+  args.label = ''
   worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()

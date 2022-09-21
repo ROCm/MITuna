@@ -1,3 +1,7 @@
+import groovy.transform.Field
+
+@Field String job_lim = "-A miopenConvolutionAlgoGEMM -o"
+
 def rocmnode(name) {
     def node_name = 'tunatest'
     if(name == 'fiji') {
@@ -171,7 +175,7 @@ def finFindCompile(){
         println "Count(*) conv_config table: ${num_cfg}"
         runsql("delete from conv_job;")
         runsql("alter table conv_job AUTO_INCREMENT=1;")
-        sh "./tuna/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
+        sh "./tuna/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         sh "opentelemetry-instrument python3 ./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
@@ -185,7 +189,7 @@ def finFindCompile(){
         println "Count(*) conv_config table: ${num_cfg_nhwc}"
         //runsql("delete from conv_job;")
         //runsql("alter table conv_job AUTO_INCREMENT=1;")
-        sh "./tuna/load_job.py -l finFind_${branch_id}_nhwc -t recurrent_${branch_id}_nhwc --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
+        sh "./tuna/load_job.py -l finFind_${branch_id}_nhwc -t recurrent_${branch_id}_nhwc --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc';").toInteger()
         sh "./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
         def num_compiled_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
@@ -196,7 +200,7 @@ def finFindCompile(){
         sh "./tuna/import_configs.py -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt"
         def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg_nchw}"
-        sh "./tuna/load_job.py -l finFind_${branch_id}_nchw -t recurrent_${branch_id}_nchw --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1}"
+        sh "./tuna/load_job.py -l finFind_${branch_id}_nchw -t recurrent_${branch_id}_nchw --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw';").toInteger()
         sh "./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id}_nchw --session_id ${sesh1}"
         def num_compiled_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
@@ -296,7 +300,7 @@ def loadJobTest() {
 
         //reset job table
         runsql("DELETE FROM conv_job;")
-        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} --session_id ${sesh1}"
+        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} --session_id ${sesh1} ${job_lim}"
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and session=${sesh1} ;")
         assert out.toInteger() > 0
 
@@ -338,7 +342,7 @@ def perfCompile() {
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         sh "./tuna/import_configs.py -t alexnet_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
-        sh "./tuna/load_job.py -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval"
+        sh "./tuna/load_job.py -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
         sh "./tuna/go_fish.py --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1}"
@@ -350,7 +354,7 @@ def perfCompile() {
 
         sh "./tuna/import_configs.py -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
         sh "./tuna/import_configs.py -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NCHW.txt"
-        sh "./tuna/load_job.py -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval"
+        sh "./tuna/load_job.py -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
         sh "./tuna/go_fish.py --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1}"
@@ -413,7 +417,7 @@ def perfEval_gfx908() {
 }
 
 def pytestSuite1() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -422,7 +426,7 @@ def pytestSuite1() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
+        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_pytest1"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
@@ -451,7 +455,7 @@ def pytestSuite1() {
 
 
 def pytestSuite2() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest2", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -460,7 +464,7 @@ def pytestSuite2() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
+        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_pytest2"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
@@ -475,7 +479,7 @@ def pytestSuite2() {
 }
 
 def pytestSuite3() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
