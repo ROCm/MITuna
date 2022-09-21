@@ -632,6 +632,47 @@ def getSessionVals(session_id)
 }
 
 
+def finSolvers(){
+  def tuna_docker
+  (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
+
+  backend = "HIPNOGPU"
+  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+
+  if(params.base_image != '')
+  {
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
+  }
+  sh "echo ${build_args}"
+
+  def tuna_docker_name = getDockerName("HIPNOGPU")
+  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+  tuna_docker.push()
+
+  def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
+
+  if(params.UPDATE_SOLVERS)
+  {
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_solvers'"
+    def num_solvers = runsql("SELECT count(*) from solver;")
+    println "Number of solvers: ${num_solvers}"
+    if (num_solvers.toInteger() == 0){
+        error("Unable to add solvers from Fin")
+    }
+  }
+  if(params.UPDATE_APPLICABILITY)
+  {
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id}'"
+    def num_sapp = runsql("SELECT count(*) from conv_solver_applicability;")
+    println "Count(*) conv_solver_applicability table: ${num_sapp}"
+    if (num_sapp.toInteger() == 0){
+      error("Unable to get applicability from Fin")
+    }
+  }
+
+}
+
+
 def compile()
 {
   def tuna_docker
