@@ -159,7 +159,7 @@ def test_fin_builder():
   #get applicability
   add_cfgs()
   args.update_applicability = True
-  args.label = None
+  args.label = 'test_fin_builder'
   worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
@@ -177,6 +177,7 @@ def test_fin_builder():
   #compile
   args.update_applicability = False
   args.fin_steps = ["miopen_find_compile"]
+  args.label = ''
   worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
