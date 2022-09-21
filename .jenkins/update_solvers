@@ -9,9 +9,9 @@ library "${util_lib}"
 
 def VerifyArgs()
 {
-    if(params.UPDATE_APPLICABILITY && params.session_id=='')
+    if(params.session_id=='')
     {
-        error "Session id is required for update applicability!"
+        error "Session id is required!"
     }
 }
 
