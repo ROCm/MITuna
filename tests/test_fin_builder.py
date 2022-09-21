@@ -86,6 +86,10 @@ def add_fin_find_compile_job(session):
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
   args.session_id = session
 
+  #limit job scope
+  args.algo = "miopenConvolutionAlgoGEMM"
+  args.only_applicable = True
+
   connect_db()
   counts = {}
   counts['cnt_jobs'] = 0
