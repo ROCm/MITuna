@@ -154,6 +154,13 @@ def test_fin_builder():
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
+  #get applicability
+  args.update_applicability = True
+  args.label = None
+  worker_lst = compose_worker_list(machine_lst, args)
+  for worker in worker_lst:
+    worker.join()
+
   #load jobs
   add_fin_find_compile_job(args.session_id)
   num_jobs = 0
@@ -163,13 +170,6 @@ def test_fin_builder():
     for row in res:
       assert (row[0] > 0)
       num_jobs = row[0]
-
-  #get applicability
-  args.update_applicability = True
-  args.label = None
-  worker_lst = compose_worker_list(machine_lst, args)
-  for worker in worker_lst:
-    worker.join()
 
   #compile
   args.update_applicability = False
