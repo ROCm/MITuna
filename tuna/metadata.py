@@ -302,9 +302,11 @@ ALG_TO_ENV = {
 ENV_TO_ALG = {x: y for y, x in ALG_TO_ENV.items()}
 
 ALG_SLV_MAP = {
-    'miopenConvolutionAlgoGEMM': ['GemmFwd1x1_0_1', 'GemmFwd1x1_0_1_int8',
-        'GemmFwd1x1_0_2', 'GemmFwdRest', 'GemmBwd1x1_stride2', 'GemmBwd1x1_stride1',
-        'GemmBwdRest', 'GemmWrw1x1_stride1', 'GemmWrwUniversal'],
+    'miopenConvolutionAlgoGEMM': [
+        'GemmFwd1x1_0_1', 'GemmFwd1x1_0_1_int8', 'GemmFwd1x1_0_2',
+        'GemmFwdRest', 'GemmBwd1x1_stride2', 'GemmBwd1x1_stride1',
+        'GemmBwdRest', 'GemmWrw1x1_stride1', 'GemmWrwUniversal'
+    ],
     'miopenConvolutionAlgoDirect': [
         'ConvAsm3x3U', 'ConvAsm1x1U', 'ConvAsm1x1UV2', 'ConvBiasActivAsm1x1U',
         'ConvAsm5x10u2v2f1', 'ConvAsm5x10u2v2b1',
