@@ -42,6 +42,7 @@ from tuna.tables import DBTables, ConfigType
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
+from tuna.metadata import ALG_SLV_MAP, get_solver_ids
 
 
 class CfgImportArgs():
@@ -88,6 +89,14 @@ def add_fin_find_compile_job(session):
 
   #limit job scope
   args.algo = "miopenConvolutionAlgoGEMM"
+  solver_arr = ALG_SLV_MAP[args.algo]
+  solver_id_map, _ = get_solver_ids()
+  if solver_arr:
+    solver_ids = []
+    for solver in solver_arr:
+      sid = solver_id_map.get(solver, None)
+      solver_ids.append((solver, sid))
+    args.solvers = solver_ids
   args.only_applicable = True
 
   connect_db()
