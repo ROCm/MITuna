@@ -34,7 +34,7 @@ from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 
 # Setup logging
-LOGGER = setup_logger('populate_golden')
+LOGGER = setup_logger('update_golden')
 
 
 def parse_args():

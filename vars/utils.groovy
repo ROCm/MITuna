@@ -404,7 +404,7 @@ def perfEval_gfx908() {
 
         def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
         def next_gold_v = last_gold_v.toInteger() + 1
-        sh "./tuna/populate_golden.py --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
+        sh "./tuna/update_golden.py --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())
@@ -496,7 +496,7 @@ def pytestSuite3() {
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
            sh "pytest tests/test_fin_evaluator.py -s"
-           sh "pytest tests/test_populate_golden.py -s"
+           sh "pytest tests/test_update_golden.py -s"
         }
     }
 }
