@@ -70,7 +70,7 @@ class LdJobArgs():
   session_id = None
 
 
-def add_fin_find_compile_job(session):
+def add_cfgs():
   #import configs
   args = CfgImportArgs()
   args.tag = 'test_fin_builder'
@@ -80,6 +80,8 @@ def add_fin_find_compile_job(session):
   dbt = DBTables(session_id=session, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
+
+def add_fin_find_compile_job(session):
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
@@ -155,6 +157,7 @@ def test_fin_builder():
   assert (fin_worker.get_solvers())
 
   #get applicability
+  add_cfgs()
   args.update_applicability = True
   args.label = None
   worker_lst = compose_worker_list(machine_lst, args)
