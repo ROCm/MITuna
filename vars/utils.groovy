@@ -632,7 +632,7 @@ def getSessionVals(session_id)
 }
 
 
-def finSolvers(){
+def applicUpdate(){
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 

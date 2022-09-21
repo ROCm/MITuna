@@ -49,7 +49,7 @@ pipeline {
     {
       steps{
         script {
-          utils.finSolvers()
+          utils.applicUpdate()
         }
       }
     }
