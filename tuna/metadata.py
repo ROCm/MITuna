@@ -281,7 +281,7 @@ TABLE_COLS_FUSION_MAP = {
 FUSION_COLS = [v for _, v in TABLE_COLS_FUSION_MAP.items()]
 CONV_COLS = [v for _, v in TABLE_COLS_CONV_MAP.items()]
 
-CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S']
+CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S', 'Z']
 BN_SKIP_ARGS = ['i', 't', 'V', 's', 'w', 'S']
 
 DIR_MAP = {'1': 'F', '2': 'B', '4': 'W'}
