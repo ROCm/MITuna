@@ -308,11 +308,11 @@ def loadJobTest() {
         // dump the added jobs for version 2
         def out_bn = runsql("SELECT count(*) FROM bn_config_tags WHERE tag='batch_norm_test' ;")
         assert out_bn.toInteger() > 0
-        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test -C batch_norm --session_id ${sesh2} ${job_lim}"
+        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test -C batch_norm --session_id ${sesh2}"
         out_bn = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test' and session=${sesh2} ;")
         assert out_bn.toInteger() > 0
 
-        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test_app -C batch_norm --only_applicable --session_id ${sesh2} ${job_lim}"
+        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test_app -C batch_norm --only_applicable --session_id ${sesh2}"
         out_bn_app = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test_app' and session=${sesh2} ;")
         assert out_bn_app.toInteger() > 0
 
