@@ -48,7 +48,9 @@ pipeline {
     stage('fin Solvers') 
     {
       steps{
-        utils.finSolvers()
+        script {
+          utils.finSolvers()
+        }
       }
     }
   }
