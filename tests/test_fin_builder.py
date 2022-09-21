@@ -77,7 +77,7 @@ def add_cfgs():
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = DBTables(session_id=session, config_type=args.config_type)
+  dbt = DBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
 
