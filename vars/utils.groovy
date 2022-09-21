@@ -319,7 +319,7 @@ def loadJobTest() {
         //reset jobs and test load solver
         runsql("DELETE FROM conv_job;")
         runsql("INSERT INTO solver(solver, valid) SELECT 'gemm', 1;")
-        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} -s gemm --session_id ${sesh1} ${job_lim}"
+        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} -s gemm --session_id ${sesh1}"
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and solver='gemm' and session=${sesh1};")
         assert out.toInteger() > 0
     }
@@ -573,25 +573,25 @@ def LoadJobs()
       env.TUNA_LOGLEVEL="${tuna_loglevel}" 
       if(params.arch == '')
       {
-        echo "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args} ${job_lim}"
-        sh "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args} ${job_lim}"
+        echo "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
+        sh "/tuna/tuna/load_job.py -a gfx1030 -n 36 ${script_args}"
 
-        echo "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args} ${job_lim}"
-        sh "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args} ${job_lim}"
+        echo "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
+        sh "/tuna/tuna/load_job.py -a gfx90a -n 110 ${script_args}"
 
-        echo "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args} ${job_lim}"
-        sh "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args} ${job_lim}"
+        echo "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
+        sh "/tuna/tuna/load_job.py -a gfx908 -n 120 ${script_args}"
 
-        echo "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args} ${job_lim}"
-        sh "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args} ${job_lim}"
+        echo "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
+        sh "/tuna/tuna/load_job.py -a gfx906 -n 60 ${script_args}"
         
-        echo "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args} ${job_lim}"
-        sh "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args} ${job_lim}"
+        echo "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
+        sh "/tuna/tuna/load_job.py -a gfx900 -n 56 ${script_args}"
       }
       else
       {
-        echo "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args} ${job_lim}"
-        sh "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args} ${job_lim}"
+        echo "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
+        sh "/tuna/tuna/load_job.py -a ${params.arch} -n ${params.num_cu} ${script_args}"
       }
   }
 }
