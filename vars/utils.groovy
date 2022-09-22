@@ -686,7 +686,6 @@ def compile()
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
-  backend = "HIPNOGPU"
   def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
@@ -741,7 +740,7 @@ def compile()
   }
 
   // Run the jobs on the cluster
-  sh "srun --no-kill -p ${params.slurm_partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${compile_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
