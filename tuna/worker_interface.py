@@ -342,26 +342,20 @@ class WorkerInterface(Process):
     """Compose a new Kernel Cache entry from fin input"""
     # Now we have the ID, lets add the binary cache objects
     fdb_entry.blobs = []
-    kernel_obj = self.dbt.kernel_cache()
-    fdb_entry_key = fdb_entry.id
-    self.populate_kern_obj(fdb_obj, kernel_obj, key=fdb_entry_key)
-    fdb_entry.blobs.append(kernel_obj)
-
-    return True
-
-  def populate_kern_obj(self, fdb_obj, kernel_obj, key=None):
-    """populates the compose kernel entry
-    """
     for kern_obj in fdb_obj['kernel_objects']:
       kernel_obj = self.dbt.kernel_cache()
-      if key:
-        kernel_obj.conv_find_db_key = key
-      kernel_obj.kernel_name = kern_obj['kernel_file']
-      kernel_obj.kernel_args = kern_obj['comp_options']
-      kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
-      kernel_obj.kernel_hash = kern_obj['md5_sum']
-      kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
+      kernel_obj.conv_find_db_key = fdb_entry.id
+      self.populate_kernels(kern_obj, kernel_obj)
+      fdb_entry.blobs.append(kernel_obj)
+    return True
 
+  def populate_kernels(self, kern_obj, kernel_obj):
+    """populate kernel object"""
+    kernel_obj.kernel_name = kern_obj['kernel_file']
+    kernel_obj.kernel_args = kern_obj['comp_options']
+    kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
+    kernel_obj.kernel_hash = kern_obj['md5_sum']
+    kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
     return kernel_obj
 
   def process_fdb_w_kernels(self,
