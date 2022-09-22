@@ -25,7 +25,7 @@
 ###############################################################################
 
 import sys
-from tuna.populate_golden import merge_golden_entries, get_fdb_query
+from tuna.update_golden import merge_golden_entries, get_fdb_query
 from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
@@ -57,7 +57,7 @@ def add_fdb_entry(session_id):
     session.commit()
 
 
-def test_populate_golden():
+def test_update_golden():
   session_id = add_test_session()
   add_fdb_entry(session_id)
 

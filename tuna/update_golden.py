@@ -34,7 +34,7 @@ from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 
 # Setup logging
-LOGGER = setup_logger('populate_golden')
+LOGGER = setup_logger('update_golden')
 
 
 def parse_args():
@@ -91,7 +91,7 @@ def get_fdb_query(dbt):
   """! Compose query to get all fdb entries for the session"""
   with DbSession() as session:
     query = session.query(dbt.find_db_table)\
-            .filter(dbt.find_db_table.session == dbt.session.id)\
+            .filter(dbt.find_db_table.session == dbt.session_id)\
             .filter(dbt.find_db_table.kernel_time != -1)\
             .filter(dbt.find_db_table.valid == 1)
 
@@ -103,7 +103,7 @@ def get_golden_query(dbt, golden_version):
   with DbSession() as session:
     query = session.query(dbt.golden_table)\
             .filter(dbt.golden_table.golden_miopen_v == golden_version)\
-            .filter(dbt.find_db_table.valid == 1)
+            .filter(dbt.golden_table.valid == 1)
 
   return query
 
@@ -117,24 +117,58 @@ def latest_golden_v(dbt):
     if obj:
       version = obj[0]
 
-    LOGGER.warning(version)
+  if version is None:
+    version = -1
+  LOGGER.warning(version)
 
   return version
 
 
+def get_gold_query(session, gold_table, gold_entry):
+  """Construct a Db query for the golden entry
+  """
+  query = session.query(gold_table).filter(
+      gold_table.golden_miopen_v == gold_entry.golden_miopen_v,
+      gold_table.config == gold_entry.config,
+      gold_table.solver == gold_entry.solver,
+      gold_table.arch == gold_entry.arch,
+      gold_table.num_cu == gold_entry.num_cu)
+
+  return query
+
+
+def update_gold_entry(session, golden_table, gold_entry):
+  """ Add a new entry to golden table if there isnt one already """
+  gold_query = get_gold_query(session, golden_table, gold_entry)
+  obj = gold_query.first()
+  if obj:  # existing entry in db
+    ret = obj
+  else:
+    # Insert the above entry
+    session.add(gold_entry)
+    ret = gold_entry
+  return ret
+
+
 def merge_golden_entries(dbt, golden_v, entries):
   """! Retrieve fdb entries and populate golden table"""
+  count = 0
+  rev = 0
   with DbSession() as session:
     for copy_entry in entries:
       golden_entry = dbt.golden_table()
-      golden_entry.session = copy_entry.session
-
       #unique identifiers
       golden_entry.golden_miopen_v = golden_v
       golden_entry.config = copy_entry.config
       golden_entry.solver = copy_entry.solver
       golden_entry.arch = dbt.session.arch
       golden_entry.num_cu = dbt.session.num_cu
+
+      #resolve to existing entry if present
+      golden_entry = update_gold_entry(session, dbt.golden_table, golden_entry)
+
+      golden_entry.valid = 1
+      golden_entry.session = copy_entry.session
 
       golden_entry.fdb_key = copy_entry.fdb_key
       golden_entry.params = copy_entry.params
@@ -145,17 +179,20 @@ def merge_golden_entries(dbt, golden_v, entries):
 
       golden_entry.kernel_group = copy_entry.kernel_group
 
+      count += 1
       try:
-        session.merge(golden_entry)
+        #session.merge(golden_entry)
         session.commit()
       except OperationalError as oerror:
+        rev += 1
         LOGGER.warning('DB error: %s', oerror)
+        session.rollback()
       except IntegrityError as ierror:
+        rev += 1
         LOGGER.warning('DB error: %s', ierror)
         session.rollback()
-        continue
 
-  return True
+  return count - rev, rev
 
 
 def main():
@@ -185,7 +222,9 @@ def main():
       merge_golden_entries(dbt, args.golden_v, base_gold_db)
 
   query = get_fdb_query(dbt)
-  merge_golden_entries(dbt, args.golden_v, query.all())
+  add, err = merge_golden_entries(dbt, args.golden_v, query.all())
+
+  print(f"Merged: {add}, Errored: {err}")
 
 
 if __name__ == '__main__':
