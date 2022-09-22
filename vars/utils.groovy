@@ -114,8 +114,8 @@ def finApplicability(){
         env.OTEL_TRACES_EXPORTER="console"
         //Jager port
         //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
-        env.OTEL_SERVICE_NAME="MITunaX.miopen_find_compile"
-        env.OTEL_RESOURCE_ATTRIBUTES=application="MITunaX"
+        env.OTEL_SERVICE_NAME="MITuna.miopen_find_compile"
+        env.OTEL_RESOURCE_ATTRIBUTES=application="MITuna"
         env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
         env.OTEL_LOG_LEVEL="debug"
 
@@ -724,6 +724,21 @@ def evaluate()
   def s_id = runsql("select id from session where reason='${params.job_label}'")  
   
   sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
+}
+
+def doxygen() {
+    node {
+          checkout scm
+          def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+          tuna_docker.inside("") {
+            sh "cd doc && doxygen Doxyfile"
+            def empty = sh returnStdout: true, script: "ls doc | wc -l"
+            echo "${empty}"
+            if (empty.toInteger() == 0){
+              error("Unable to generate Doxygen file")
+            }
+          }
+    }
 }
 
 
