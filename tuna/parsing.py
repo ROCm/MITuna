@@ -405,7 +405,6 @@ def parse_driver_line(line):
   return fds, direction
 
 
-
 def compose_fds(fds, tok, line):
   """Compose fds from driver line"""
 
