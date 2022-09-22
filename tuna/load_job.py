@@ -41,7 +41,6 @@ from tuna.config_type import ConfigType
 from tuna.tables import DBTables
 
 LOGGER = setup_logger('load_jobs')
-LOG_FREQ = 100
 
 
 def parse_args():
@@ -162,8 +161,6 @@ def insert_job_all(args, counts, cfg_query, dbt):
     while True:  #pylint: disable=too-many-nested-blocks
       for config_entry in cfg_query.all():
         for solver_name, _ in args.solvers:
-          if counts['cnt_jobs'] % LOG_FREQ == 0:
-            print('.', flush=True, end='')
           try:
             job = dbt.job_table()
             job.config = config_entry.id
@@ -244,9 +241,8 @@ def add_jobs(args, counts, dbt):
       do_commit = False
       while True:
         for solv_app, slv in query.all():
-          if counts['cnt_jobs'] % LOG_FREQ == 0:
-            print('.', flush=True, end='')
           try:
+            LOGGER.info(f"{solv_app.config} {slv.solver}")
             job = dbt.job_table()
             job.config = solv_app.config
             job.state = 'new'
