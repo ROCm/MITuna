@@ -222,6 +222,7 @@ class ConvolutionConfig(BASE):
                           lazy="joined")
   out_layout = Column(String(60), nullable=False, server_default="NCHW")
   md5 = Column(String(length=40), nullable=False, unique=True)
+  driver = column(string(length=512), nullable=false, server_default="")
 
 
 class FusionConfig(BASE):
@@ -272,6 +273,7 @@ class BNConfig(BASE):
                          foreign_keys=[input_tensor],
                          lazy="joined")
   in_layout = Column(String(60), nullable=False, server_default="NCHW")
+  driver = column(string(length=512), nullable=false, server_default="")
 
   def get_direction(self):
     """synthesize direction"""
