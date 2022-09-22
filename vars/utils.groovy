@@ -671,8 +671,8 @@ def applicUpdate(){
   if(params.UPDATE_APPLICABILITY)
   {
     sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id} ${use_tag}'"
-    def num_sapp = runsql("SELECT count(*) from conv_solver_applicability;")
-    println "Count(*) conv_solver_applicability table: ${num_sapp}"
+    def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
+    println "Session ${params.session_id} applicability: ${num_sapp}"
     if (num_sapp.toInteger() == 0){
       error("Unable to get applicability from Fin")
     }
