@@ -42,7 +42,7 @@ from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import get_id_solvers
+from tuna.utils.db_utility import get_id_solvers, session_retry
 from tuna.abort import chk_abort_file
 from tuna.fin_utils import compose_config_obj
 from tuna.fin_utils import get_fin_slv_status
@@ -357,12 +357,12 @@ class WorkerInterface(Process):
       session.add(kernel_obj)
     return True
 
-  def process_fdb_w_kernels(self,
+  def update_fdb_w_kernels(self,
                             session,
                             fin_json,
                             result_str='miopen_find_compile_result',
                             check_str='find_compiled'):
-    """retrieve find db compile json results"""
+    """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:
       for fdb_obj in fin_json[result_str]:
@@ -389,17 +389,32 @@ class WorkerInterface(Process):
           'result': 'Find Compile: No results'
       }]
 
-    try:
-      session.commit()
-    except OperationalError as err:
-      self.logger.warning('FinEval: Unable to update Database: %s', err)
+    session.commit()
+
+    return status
+
+
+  def process_fdb_w_kernels(self,
+                            session,
+                            fin_json,
+                            result_str='miopen_find_compile_result',
+                            check_str='find_compiled'):
+    """initiate find db update"""
+
+    callback = self.update_fdb_w_kernels
+    status = session_retry(session, callback, lambda x: x(session, fin_json, result_str, check_str),
+                    self.logger)
+
+    if not status:
+      self.logger.warning('Fin: Unable to update Database')
       status = [{
           'solver': 'all',
           'success': False,
-          'result': f'FinEval: Unable to update Database: {err}'
+          'result': 'Fin: Unable to update Database'
       }]
 
     return status
+
 
   def queue_end_reset(self):
     """resets end queue flag"""

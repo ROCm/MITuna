@@ -529,10 +529,6 @@ def getJobReason()
 
 
 def killContainer() {
-  if(params.stage == 'fin_find')
-  {
-    backend = "HIPNOGPU"
-  }
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker system prune -f'"
 }
