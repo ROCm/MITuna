@@ -8,7 +8,7 @@ Once a tuning session is approved, the results in the generated find db
 may be used to populate the golden table.
 
 <pre>
-./populate_golden.py --session_id \<id\> --golden_v \<new_ver\> --base_golden_v \<old_ver\>
+./update_golden.py --session_id \<id\> --golden_v \<new_ver\> --base_golden_v \<old_ver\>
 </pre>
 <pre>
 --golden_v      - create this golden version  

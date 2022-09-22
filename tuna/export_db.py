@@ -310,10 +310,11 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
     name = kern.kernel_name
     args = kern.kernel_args
     #check if extensions should be added
-    if not name.endswith('.o') and not "-mcpu=" in args:
-      if not name.endswith('.mlir'):
-        args += f" -mcpu={arch_ext}"
+    if not name.endswith('.o'):
       name += ".o"
+    if not "-mcpu=" in args:
+      if not name.endswith('.mlir.o'):
+        args += f" -mcpu={arch_ext}"
 
     ins_key = (name, args)
     if ins_key not in ins_list:

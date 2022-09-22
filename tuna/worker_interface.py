@@ -469,8 +469,9 @@ class WorkerInterface(Process):
 
               if not job_cfgs:
                 # we are done
-                self.logger.warning('No %s jobs found, fin_step: %s',
-                                    find_state, self.fin_steps)
+                self.logger.warning(
+                    'No %s jobs found, fin_step: %s, session %s', find_state,
+                    self.fin_steps, self.session_id)
                 if imply_end:
                   self.logger.warning("set end")
                   self.end_jobs.value = 1

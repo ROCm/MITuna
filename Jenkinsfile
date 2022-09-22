@@ -67,7 +67,7 @@ pipeline {
             }
         }
         stage("pytest2"){
-        agent{ label utils.rocmnode("tunatest") }
+        agent{ label utils.rocmnode("gputest") }
         steps{
             script{
             utils.pytestSuite2()
