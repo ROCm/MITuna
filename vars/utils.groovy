@@ -110,14 +110,6 @@ def finApplicability(){
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        env.OTEL_METRICS_EXPORTER="none"
-        env.OTEL_TRACES_EXPORTER="console"
-        //Jager port
-        //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
-        env.OTEL_SERVICE_NAME="MITuna.miopen_find_compile"
-        env.OTEL_RESOURCE_ATTRIBUTES=application="MITuna"
-        env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
-        env.OTEL_LOG_LEVEL="debug"
 
         sh "./tuna/go_fish.py --init_session -l new_session --arch gfx908 --num_cu 120"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
