@@ -50,21 +50,13 @@ LOGGER = setup_logger('export_db')
 def parse_args():
   """Function to parse arguments"""
   parser = setup_arg_parser('Convert MYSQL find_db to text find_dbs' \
-    'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION])
+    'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,TunaArgs.SESSION_ID])
   parser.add_argument('-c',
                       '--opencl',
                       dest='opencl',
                       action='store_true',
                       help='Use OpenCL extension',
                       default=False)
-  parser.add_argument(
-      '--session_id',
-      action='store',
-      type=int,
-      dest='session_id',
-      help=
-      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
-  )
   parser.add_argument('--config_tag',
                       dest='config_tag',
                       type=str,

@@ -39,15 +39,8 @@ LOGGER = setup_logger('populate_golden')
 def parse_args():
   """! Function to parse arguments"""
   parser = setup_arg_parser('Populate golden table based on session_id',
-                            [TunaArgs.CONFIG_TYPE])
-  parser.add_argument(
-      '--session_id',
-      action='store',
-      type=int,
-      dest='session_id',
-      help=
-      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
-  )
+                            [TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID])
+
   parser.add_argument('--golden_v',
                       action='store',
                       type=int,

@@ -54,8 +54,10 @@ def parse_args():
   # pylint: disable=too-many-statements
   """Function to parse arguments"""
   parser = setup_arg_parser(
-      'Run Performance Tuning on a certain architecture',
-      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      'Run Performance Tuning on a certain architecture', [
+          TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
+          TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
+      ])
 
   parser.add_argument(
       '--find_mode',
