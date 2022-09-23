@@ -110,6 +110,14 @@ def finApplicability(){
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.OTEL_METRICS_EXPORTER="none"
+        env.OTEL_TRACES_EXPORTER="console"
+        //Jager port
+        //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
+        env.OTEL_SERVICE_NAME="MITuna.miopen_find_compile"
+        env.OTEL_RESOURCE_ATTRIBUTES=application="MITuna"
+        env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
+        env.OTEL_LOG_LEVEL="debug"
 
         sh "./tuna/go_fish.py --init_session -l new_session --arch gfx908 --num_cu 120"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
@@ -498,7 +506,7 @@ def runFormat() {
         checkout scm
         def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
         tuna_docker.inside("") {
-            sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/"
+            sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/"
         }
     }
 }
@@ -728,6 +736,21 @@ def evaluate()
   def s_id = runsql("select id from session where reason='${params.job_label}'")  
   
   sh "srun --no-kill -p ${arch_id} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} -l ${params.job_label} --session_id ${s_id} || scontrol requeue \$SLURM_JOB_ID'"
+}
+
+def doxygen() {
+    node {
+          checkout scm
+          def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+          tuna_docker.inside("") {
+            sh "cd doc && doxygen Doxyfile"
+            def empty = sh returnStdout: true, script: "ls doc | wc -l"
+            echo "${empty}"
+            if (empty.toInteger() == 0){
+              error("Unable to generate Doxygen file")
+            }
+          }
+    }
 }
 
 
