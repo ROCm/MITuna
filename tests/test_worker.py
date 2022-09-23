@@ -168,3 +168,4 @@ def test_worker():
   get_job(w)
   w.queue_end_reset()
   multi_queue_test(w)
+  w.check_env()
