@@ -87,6 +87,15 @@ class FinBuilder(WorkerInterface):
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+
+    # pylint: disable=duplicate-code
+    try:
+      self.check_env()
+    except ValueError as verr:
+      self.logger.error(verr)
+      return False
+    # pylint: enable=duplicate-code
+
     if not self.get_job("new", "compile_start", True):
       return False
 
