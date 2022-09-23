@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Script to launch tuning jobs, or execute commands on available machines"""
+"""! @brief Script to launch tuning jobs, or execute commands on available machines"""
 import sys
 from multiprocessing import Value, Lock, Queue as mpQueue
 from subprocess import Popen, PIPE
@@ -213,7 +213,10 @@ def parse_args():
 
 
 def check_fin_args(args, parser):
-  """Helper function for fin args"""
+  """! Helper function for fin args
+     @param args The command line arguments
+     @param parser The command line argument parser
+  """
   valid_fin_steps = list(k for k in FinStep.__members__)
   if ',' in args.fin_steps:
     parser.error('Multiple fin_steps currently not supported')
@@ -226,7 +229,10 @@ def check_fin_args(args, parser):
 
 
 def check_blacklist(args, parser):
-  """Helper function"""
+  """! Helper function
+     @param args The command line arguments
+     @param parser The command line argument parser
+  """
   args.blacklist = args.blacklist.split(',')
   for sol in args.blacklist:
     if sol not in MIOPEN_ALG_LIST:
@@ -234,7 +240,9 @@ def check_blacklist(args, parser):
 
 
 def load_machines(args):
-  """Function to get available machines from the DB"""
+  """! Function to get available machines from the DB
+     @param args The command line arguments
+  """
   cmd = 'hostname'
   with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
     hostname = subp.stdout.readline().strip()
@@ -273,7 +281,9 @@ def load_machines(args):
 
 
 def get_envmt(args):
-  """Function to construct environment var"""
+  """! Function to construct environment var
+     @param args The command line arguments
+  """
   envmt = ["MIOPEN_LOG_LEVEL=4"]
 
   envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
@@ -291,7 +301,10 @@ def get_envmt(args):
 
 
 def check_docker(worker, dockername="miopentuna"):
-  """Checking for docker"""
+  """! Checking for docker
+    @param worker The worker interface instance
+    @param dockername The name of the docker
+  """
   LOGGER.warning("docker not installed or requires sudo .... ")
   _, out2, _ = worker.exec_command("sudo docker info")
   while not out2.channel.exit_status_ready():
@@ -310,7 +323,13 @@ def check_docker(worker, dockername="miopentuna"):
 
 
 def check_status(worker, b_first, gpu_idx, machine, dockername="miopentuna"):
-  """Function to check gpu_status"""
+  """! Function to check gpu_status
+    @param worker The worker interface instance
+    @param b_first Flag to keep track of visited GPU
+    @param gpu_idx Unique ID of the GPU
+    @param machine The machine instance
+    @param dockername The name of the docker
+  """
 
   if machine.chk_gpu_status(worker.gpu_id):
     LOGGER.info('Machine: (%s, %u) GPU_ID: %u OK', machine.hostname,
@@ -342,7 +361,11 @@ def check_status(worker, b_first, gpu_idx, machine, dockername="miopentuna"):
 
 
 def execute_docker(worker, docker_cmd, machine):
-  """Function to executed docker cmd"""
+  """! Function to executed docker cmd
+    @param worker The worker interface instance
+    @param docker_cmd The command to be executed in the docker
+    @param machine The machine instance
+  """
   LOGGER.info('Running on host: %s port: %u', machine.hostname, machine.port)
   _, _, _ = worker.exec_docker_cmd(docker_cmd + " 2>&1")
   #logger output already printed by exec_docker_cmd
@@ -357,7 +380,11 @@ def execute_docker(worker, docker_cmd, machine):
 
 
 def get_kwargs(gpu_idx, f_vals, args):
-  """Helper function to set up kwargs for worker instances"""
+  """! Helper function to set up kwargs for worker instances
+    @param gpu_idx Unique ID of the GPU
+    @param f_vals Dict containing runtime information
+    @param args The command line arguments
+  """
   envmt = f_vals["envmt"].copy()
   if args.config_type is None:
     args.config_type = ConfigType.convolution
@@ -385,7 +412,13 @@ def get_kwargs(gpu_idx, f_vals, args):
 
 
 def launch_worker(gpu_idx, f_vals, worker_lst, args):
-  """Function to launch worker"""
+  """! Function to launch worker
+    @param gpu_idx Unique ID of the GPU
+    @param f_vals Dict containing runtime information
+    @param worker_lst List containing worker instances
+    @param args The command line arguments
+    @retturn ret Boolean value
+  """
   # pylint: disable=too-many-branches
   worker = None
   kwargs = get_kwargs(gpu_idx, f_vals, args)
@@ -429,7 +462,11 @@ def launch_worker(gpu_idx, f_vals, worker_lst, args):
 
 
 def do_fin_work(args, gpu, f_vals):
-  """Helper function to execute job independendent fin work"""
+  """! Helper function to execute job independendent fin work
+    @param args The command line arguments
+    @param gpu Unique ID of the GPU
+    @param f_vals Dict containing runtime information
+  """
   kwargs = get_kwargs(gpu, f_vals, args)
   fin_worker = FinClass(**kwargs)
 
@@ -441,7 +478,10 @@ def do_fin_work(args, gpu, f_vals):
 
 
 def compose_f_vals(args, machine):
-  """Compose dict for WorkerInterface constructor"""
+  """! Compose dict for WorkerInterface constructor
+    @param args The command line arguments
+    @param machine Machine instance
+  """
   f_vals = {}
   f_vals["barred"] = Value('i', 0)
   f_vals["bar_lock"] = Lock()
@@ -458,7 +498,10 @@ def compose_f_vals(args, machine):
 
 def compose_worker_list(res, args):
   # pylint: disable=too-many-branches
-  """Helper function to compose worker_list"""
+  """! Helper function to compose worker_list
+    @param res DB query return item containg available machines
+    @param args The command line arguments
+  """
   worker_lst = []
   fin_work_done = False
   for machine in res:
@@ -501,7 +544,7 @@ def compose_worker_list(res, args):
 
 
 def main():
-  """Main function to start Tuna"""
+  """! Main function to start Tuna"""
   LOGGER.info(sys.argv)
   args = parse_args()
 

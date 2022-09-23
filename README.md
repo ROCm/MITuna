@@ -1,9 +1,26 @@
-# TUNA 
+TUNA 
+====
+
 Tuna is a distributed tuning infrastructure that provides pre-compiled kernels for MIOpen customers
 through automated Jenkins pipelines and SLURM scalable architecture.
 
+Prerequisites
+-------------
 
-## Prerequisites
+Install python3.9
+```
+apt-get update && apt-get install software-properties-common
+add-apt-repository ppa:deadsnakes/ppa
+apt install python3.9
+```
+
+Install pip for python3.9
+```
+wget https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3.9 get-pip.py
+rm get-pip.py
+```
+
 Install MySQL server
 ```
 apt-get install mysql-server
@@ -29,14 +46,11 @@ For the tuning cycle, every machine needs to be able to access every other machi
 passwordless ssh.
 
 
-## Installation
+Installation
+------------
 Clone the repo using 
 ```
 git clone <repo url>
-```
-Then create a virtual env using 
-```
-virtualenv -p python3 myvenv
 ```
 Enter the Tuna directory
 ```
@@ -85,7 +99,8 @@ To create the database run the following script:
 The installation and setup are now complete. To start a tuning cycle, please follow the steps
 documented in [TuningCycle](https://github.com/ROCmSoftwarePlatform/MITuna/blob/develop/doc/TuningCycle.md)
 
-## Code formatting
+Code formatting
+---------------
 
 MITuna used yapf for code formatting:
 ```
@@ -93,9 +108,10 @@ yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tuna/
 yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tests/
 ```
 
-## Static code analysis
+Static code analysis
+--------------------
 
-In order for a PR to be accepted the following `pylint` command needs to result in 10/10 analysis:
+In order for a PR to be accepted the following pylint command needs to result in 10/10 analysis:
 ```
 cd MITuna/tuna
 pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
