@@ -358,10 +358,10 @@ class WorkerInterface(Process):
     return True
 
   def update_fdb_w_kernels(self,
-                            session,
-                            fin_json,
-                            result_str='miopen_find_compile_result',
-                            check_str='find_compiled'):
+                           session,
+                           fin_json,
+                           result_str='miopen_find_compile_result',
+                           check_str='find_compiled'):
     """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:
@@ -393,7 +393,6 @@ class WorkerInterface(Process):
 
     return status
 
-
   def process_fdb_w_kernels(self,
                             session,
                             fin_json,
@@ -402,8 +401,9 @@ class WorkerInterface(Process):
     """initiate find db update"""
 
     callback = self.update_fdb_w_kernels
-    status = session_retry(session, callback, lambda x: x(session, fin_json, result_str, check_str),
-                    self.logger)
+    status = session_retry(
+        session, callback,
+        lambda x: x(session, fin_json, result_str, check_str), self.logger)
 
     if not status:
       self.logger.warning('Fin: Unable to update Database')
@@ -414,7 +414,6 @@ class WorkerInterface(Process):
       }]
 
     return status
-
 
   def queue_end_reset(self):
     """resets end queue flag"""
