@@ -1,1 +1,24 @@
-Generic single-database configuration.
+#Alembic for DB versioning and migrations
+
+##Create a new migration
+```alembic revision -m "migration_one"```
+
+This will generate a new migration file in MITuna/alembic/versions
+Update this new file with desired upgrades.
+
+##Ugrade or downgrade
+```alembic upgrade head```
+This will apply or DB changes from the latest versioning file
+
+Similarly, to downgrade run:
+```alembic downgrade head```
+
+Useful commands:
+```
+alembic history
+alembic downgrade -1
+alembic downgrade <hash>
+alembic stamp <hash>
+```
+
+
