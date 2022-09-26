@@ -8,17 +8,17 @@ Update this new file with desired upgrades.
 
 ##Ugrade or downgrade
 ```alembic upgrade head```
-This will apply or DB changes from the latest versioning file
+This will apply DB changes from the latest versioning file
 
 Similarly, to downgrade run:
 ```alembic downgrade head```
 
+To upgrade or downgrade to/from a specific version:
+```alembic upgrade/downgrade <hash>```
+
 Useful commands:
 ```
-alembic history
-alembic downgrade -1
-alembic downgrade <hash>
-alembic stamp <hash>
+alembic history [show command history]
+alembic downgrade -1 [Downgrade by 1 version]
+alembic stamp <hash> [Move head to a specific hash]
 ```
-
-
