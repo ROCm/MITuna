@@ -109,7 +109,7 @@ def test_fin_evaluator():
     assert (count == 1)
 
   with DbSession() as session:
-    count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
                                          .filter(dbt.job_table.state=='evaluated')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').delete()
 
