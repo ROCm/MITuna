@@ -195,14 +195,14 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
   print_interval = len(entries) // 10
   for copy_entry in entries:
     arch, num_cu = sess_map[copy_entry.session]
-    golden_entry = init_gold_entry(dbt, golden_v, copy_entry.config, copy_entry.solver, arch, num_cu)
+    golden_entry = init_gold_entry(dbt, golden_v, copy_entry.config,
+                                   copy_entry.solver, arch, num_cu)
 
     if simple_copy:
       session.add(golden_entry)
     else:
       #resolve to existing entry if present
-      golden_entry = update_gold_entry(session, dbt.golden_table,
-                                        golden_entry)
+      golden_entry = update_gold_entry(session, dbt.golden_table, golden_entry)
 
     copy_gold_data(golden_entry, copy_entry)
 
@@ -245,7 +245,7 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
       if not ret:
         LOGGER.error("Failed to merge db pack %s", i)
         return False
-      pcnt = int((i+1) * 100 / sz)
+      pcnt = int((i + 1) * 100 / sz)
       if pcnt > prev_pcnt:
         prev_pcnt = pcnt
         LOGGER.info("Merged: %s%%", pcnt)
