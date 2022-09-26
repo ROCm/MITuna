@@ -51,7 +51,7 @@ pipeline {
         }
         stage("fin applicability"){
         //init_session called here
-        agent{  label "gfx908" }
+        agent{  label utils.rocmnode("tunatest") }
         steps {
             script{
             utils.finApplicability()
@@ -59,7 +59,7 @@ pipeline {
             }
         }
         stage("pytest1"){
-        agent{  label "gfx908" }
+        agent{  label utils.rocmnode("tunatest") }
         steps{
             script{
             utils.pytestSuite1()
@@ -67,7 +67,7 @@ pipeline {
             }
         }
         stage("pytest2"){
-        agent{ label utils.rocmnode("tunatest") }
+        agent{ label utils.rocmnode("gputest") }
         steps{
             script{
             utils.pytestSuite2()
@@ -75,7 +75,7 @@ pipeline {
             }
         }
         stage("pytest3"){
-        agent{  label "gfx908" }
+        agent{  label utils.rocmnode("tunatest") }
         steps{
             script{
             utils.pytestSuite3()
