@@ -52,9 +52,16 @@ _, ID_SOLVER_MAP = get_id_solvers()
 def parse_args():
   """Function to parse arguments"""
   parser = setup_arg_parser('Convert MYSQL find_db to text find_dbs' \
-    'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID])
+    'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION])
 
   group_ver = parser.add_mutually_exclusive_group(required=True)
+  group_ver.add_argument(
+      '--session_id',
+      dest='session_id',
+      type=int,
+      help=
+      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
+  )
   group_ver.add_argument(
       '--golden_v',
       dest='golden_v',
