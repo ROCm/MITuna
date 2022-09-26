@@ -65,6 +65,20 @@ class Session(BASE):
                                 ondelete="CASCADE"),
                      nullable=True)
 
+  def get_query(self, sess, sess_obj, entry):
+    """get session matching this object"""
+    query = sess.query(sess_obj)\
+        .filter(sess_obj.arch == entry.arch)\
+        .filter(sess_obj.num_cu == entry.num_cu)\
+        .filter(sess_obj.miopen_v == entry.miopen_v)\
+        .filter(sess_obj.rocm_v == entry.rocm_v)\
+        .filter(sess_obj.reason == entry.reason)\
+        .filter(sess_obj.ticket == entry.ticket)\
+        .filter(sess_obj.docker == entry.docker)\
+        .filter(sess_obj.solver_id == entry.solver_id)\
+
+    return query
+
   def add_new_session(self, args, worker):
     """Add new session entry"""
     self.reason = args.label
@@ -102,5 +116,8 @@ class Session(BASE):
       except IntegrityError as err:
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
+        session.rollback()
+        entry = self.get_query(session, Session, self).one()
+        return entry.id
 
     return self.id

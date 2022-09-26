@@ -99,7 +99,7 @@ def finSolvers(){
 
 def finApplicability(){
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video") {
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -110,18 +110,10 @@ def finApplicability(){
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        env.OTEL_METRICS_EXPORTER="none"
-        env.OTEL_TRACES_EXPORTER="console"
-        //Jager port
-        //env.OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55681"
-        env.OTEL_SERVICE_NAME="MITuna.miopen_find_compile"
-        env.OTEL_RESOURCE_ATTRIBUTES=application="MITuna"
-        env.OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="pymysql"
-        env.OTEL_LOG_LEVEL="debug"
 
-        sh "./tuna/go_fish.py --init_session -l new_session"
+        sh "./tuna/go_fish.py --init_session -l new_session --arch gfx908 --num_cu 120"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py --init_session -l new_session2"
+        sh "./tuna/go_fish.py --init_session -l new_session2 --arch gfx908 --num_cu 120"
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
@@ -401,12 +393,24 @@ def perfEval_gfx908() {
             echo "#errored jobs: ${errored_conv_jobs}"
             error("Unable to eval all conv jobs")
         }
+
+        def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
+        def next_gold_v = last_gold_v.toInteger() + 1
+        sh "./tuna/update_golden.py --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
+        def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
+        def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
+        if(golden_entries.toInteger() != fdb_entries.toInteger())
+        {
+            echo "#fdb jobs: ${fdb_entries}"
+            echo "#goden jobs: ${golden_entries}"
+            error("FDB entries and golden entries do not match")
+        }
     }
 }
 
 def pytestSuite1() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
@@ -468,7 +472,7 @@ def pytestSuite2() {
 
 def pytestSuite3() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
@@ -484,7 +488,7 @@ def pytestSuite3() {
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
            sh "pytest tests/test_fin_evaluator.py -s"
-           sh "pytest tests/test_populate_golden.py -s"
+           sh "pytest tests/test_update_golden.py -s"
         }
     }
 }
