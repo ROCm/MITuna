@@ -36,7 +36,10 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.worker_interface import WorkerInterface
+from tuna.go_fish import load_machines, compose_worker_list
+from tuna.fin_class import FinClass
 from tuna.machine import Machine
+from utils import get_worker_args, add_test_session
 from tuna.sql import DbCursor
 from tuna.tables import ConfigType
 from utils import add_test_session
@@ -50,17 +53,34 @@ from load_job import test_tag_name as tag_name_test, add_jobs
 def add_job(w):
   #import configs
   args = CfgImportArgs()
-  args.tag = 'recurrent_pytest'
+  args.tag = 'tuna_pytest_worker'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
   dbt = DBTables(session_id=w.session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
+  args = GoFishArgs()
+  machine_lst = load_machines(args)
+  machine = machine_lst[0]
+
+  #update solvers
+  kwargs = get_worker_args(args, machine)
+  fin_worker = FinClass(**kwargs)
+  assert (fin_worker.get_solvers())
+
+  #get applicability
+  args.update_applicability = True
+  args.label = 'tuna_pytest_worker'
+  args.session_id = w.session_id 
+  worker_lst = compose_worker_list(machine_lst, args)
+  for worker in worker_lst:
+    worker.join()
+
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_worker'
-  args.tag = 'recurrent_pytest'
+  args.tag = 'tuna_pytest_worker'
   args.fin_steps = ['not_fin']
   args.session_id = w.session_id
 
@@ -158,7 +178,7 @@ def test_worker():
   v = Value('i', 0)
   e = Value('i', 0)
 
-  session_id = 1
+  session_id = add_test_session() 
 
   keys = {
       'machine': machine,

@@ -44,11 +44,18 @@ from utils import CfgImportArgs
 
 def test_fin_evaluator():
   res = None
-  session_id = 1
 
   num_gpus = Value('i', 1)
   v = Value('i', 0)
   e = Value('i', 0)
+
+  args = CfgImportArgs()
+  config_type = ConfigType.convolution
+  dbt = DBTables(config_type=args.config_type)
+  with DbSession() as session:
+    dbt.session_id = session.query(dbt.job_table.session).filter(dbt.job_table.state=='compiled')\
+                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').first().session
+
 
   kwargs = {
       'machine': DummyMachine(False),
@@ -66,12 +73,8 @@ def test_fin_evaluator():
       'queue_lock': Lock(),
       'fetch_state': ['compiled'],
       'end_jobs': e,
-      'session_id': 1
+      'session_id': dbt.session_id
   }
-
-  args = CfgImportArgs()
-  config_type = ConfigType.convolution
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
 
   # test get_job true branch
   fin_eval = FinEvaluator(**kwargs)

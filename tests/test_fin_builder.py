@@ -53,9 +53,10 @@ def add_cfgs():
 
   dbt = DBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt)
+  return dbt
 
 
-def add_fin_find_compile_job(session_id):
+def add_fin_find_compile_job(session_id, dbt):
   #load jobs
   print('Loading jobs')
   args = LdJobArgs
@@ -83,7 +84,7 @@ def add_fin_find_compile_job(session_id):
   #  except ValueError as terr:
   #    print(terr)
 
-  return add_jobs(args, dbt), dbt
+  return add_jobs(args, dbt)
 
 
 def test_fin_builder():
@@ -91,8 +92,7 @@ def test_fin_builder():
   machine_lst = load_machines(args)
   machine = machine_lst[0]
 
-  #args.session_id = add_test_session()
-  args.session_id = 1
+  args.session_id = add_test_session()
 
   #update solvers
   kwargs = get_worker_args(args, machine)
@@ -100,7 +100,7 @@ def test_fin_builder():
   assert (fin_worker.get_solvers())
 
   #get applicability
-  add_cfgs()
+  dbt = add_cfgs()
   args.update_applicability = True
   args.label = 'test_fin_builder'
   worker_lst = compose_worker_list(machine_lst, args)
@@ -108,7 +108,7 @@ def test_fin_builder():
     worker.join()
 
   #load jobs
-  num_jobs, dbt = add_fin_find_compile_job(args.session_id)
+  num_jobs = add_fin_find_compile_job(args.session_id, dbt)
   print(num_jobs)
 
   #compile

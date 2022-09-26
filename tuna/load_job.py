@@ -57,9 +57,14 @@ def parse_args():
       '--tag',
       type=str,
       dest='tag',
+      default=None,
       help='All configs with this tag will be added to the job table. \
                         By default adds jobs with no solver specified (all solvers).'
   )
+  config_filter.add_argument('--all_configs',
+                             dest='all_configs',
+                             action='store_true',
+                             help='Add all convolution jobs')
   solver_filter.add_argument(
       '-A',
       '--algo',

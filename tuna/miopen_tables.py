@@ -367,7 +367,7 @@ class JobMixin():
   cache_loc = Column(Text)
   gpu_id = Column(Integer, nullable=False, server_default="-1")
   retries = Column(Integer, nullable=False, server_default="0")
-  solver = Column(String(length=128), nullable=False, server_default="")
+  solver = Column(String(length=128), nullable=True, server_default="")
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   fin_step = Column(mysql.MSSet(*(list(k for k in FinStep.__members__))),
                     nullable=False,
