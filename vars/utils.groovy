@@ -431,7 +431,6 @@ def pytestSuite1() {
            sh "pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
            sh "pytest tests/test_importconfigs.py -s"
-           sh "pytest tests/test_worker.py -s"
            sh "pytest tests/test_machine.py -s"
            sh "pytest tests/test_dbBase.py -s"
            sh "pytest tests/test_driver.py -s"
@@ -465,6 +464,7 @@ def pytestSuite2() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
+           sh "pytest tests/test_worker.py -s"
            sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
         }
     }
