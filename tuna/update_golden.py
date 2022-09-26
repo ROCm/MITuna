@@ -224,7 +224,7 @@ def main():
   query = get_fdb_query(dbt)
   add, err = merge_golden_entries(dbt, args.golden_v, query.all())
 
-  print(f"Merged: {add}, Errored: {err}")
+  LOGGER.info("Merged: %s, Errored: %s", add, err)
 
 
 if __name__ == '__main__':

@@ -30,7 +30,6 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy import create_engine
 from tuna.miopen_tables import get_miopen_tables
 from tuna.miopen_db_helpers import get_miopen_triggers, drop_miopen_triggers
-from tuna.miopen_db_helpers import get_miopen_indices
 from tuna.db_engine import ENV_VARS, ENGINE
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
@@ -123,8 +122,6 @@ def main():
   #setup MIOpen DB
   ret_t = create_tables(get_miopen_tables())
   LOGGER.info('DB creation successful: %s', ret_t)
-  ret_idx = create_indices(get_miopen_indices())
-  LOGGER.info('DB Index creation successful: %s', ret_idx)
   recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
 
 
