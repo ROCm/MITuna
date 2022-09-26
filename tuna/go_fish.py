@@ -54,8 +54,10 @@ def parse_args():
   # pylint: disable=too-many-statements
   """Function to parse arguments"""
   parser = setup_arg_parser(
-      'Run Performance Tuning on a certain architecture',
-      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      'Run Performance Tuning on a certain architecture', [
+          TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
+          TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
+      ])
 
   parser.add_argument(
       '--find_mode',
@@ -64,13 +66,6 @@ def parse_args():
       default=1,
       help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
       choices=[1, 3])
-  parser.add_argument('--session_id',
-                      action='store',
-                      type=int,
-                      dest='session_id',
-                      help=
-                      'Session ID to be used as tuning tracker. ' \
-                      'Allows to correlate DB results to tuning sessions')
   parser.add_argument('--remote_machine',
                       dest='remote_machine',
                       action='store_true',
