@@ -1,11 +1,9 @@
-ARG BASEIMAGE=ubuntu:18.04
+ARG BASEIMAGE=ubuntu:20.04
 FROM $BASEIMAGE
 
 
 RUN set -xe
 
-RUN wget --no-check-certificate -qO - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add -
-RUN sh -c "echo deb https://apt.kitware.com/ubuntu/ bionic main | tee -a /etc/apt/sources.list"
 
 ADD requirements.txt requirements.txt
 # Install dependencies
@@ -13,8 +11,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-
     apt-utils \
     sshpass \
     build-essential \
-    cmake-data=3.15.1-0kitware1 \
-    cmake=3.15.1-0kitware1 \
     curl \
     doxygen \
     g++ \
@@ -30,11 +26,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-
     llvm-amdgpu \
     miopengemm \
     pkg-config \
-    python \
     python3 \
-    python-dev \
     python3-dev \
-    python-pip \
     python3-pip \
     software-properties-common \
     sqlite3 \
@@ -110,7 +103,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=176de41e012341d8b98531bde70b2af8b6468103
+ARG FIN_BRANCH=30d699b9edc014c6076a9649f849bd3c4588d4ab
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 

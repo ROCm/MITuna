@@ -25,7 +25,7 @@ ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
 ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
 ADD requirements.txt requirements.txt
 # Install dependencies
-RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-properties-common && add-apt-repository -y ppa:deadsnakes/ppa && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated \
     apt-utils \
     sshpass \
     build-essential \
@@ -47,10 +47,10 @@ RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-pro
     miopengemm \
     pkg-config \
     python \
-    python3.9 \
+    python3 \
     python-dev \
-    python3.9-dev \
-    python3.9-distutils \
+    python3-dev \
+    python-pip \
     python3-pip \
     software-properties-common \
     sqlite3 \
@@ -68,23 +68,6 @@ RUN apt-get update -y && apt-get install -y --allow-unauthenticated software-pro
     mysql-client && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# create dir for temp stuff
-RUN mkdir __tuna_setup_docker_artifacts__/
-
-# download pip for python 3.9
-RUN curl https://bootstrap.pypa.io/get-pip.py -o __tuna_setup_docker_artifacts__/get-pip.py
-RUN python3.9 __tuna_setup_docker_artifacts__/get-pip.py
-RUN rm __tuna_setup_docker_artifacts__/get-pip.py
-
-# setup symlinks to python 3.9
-RUN ln -sf /usr/bin/python3.9 /usr/bin/python3 
-RUN ln -sf /usr/bin/python3.9-dev /usr/bin/python3-dev
-RUN alias pip3='python3.9 -m pip'
-
-RUN pip3 install --upgrade setuptools  
-RUN pip3 install --upgrade pip  
-RUN pip3 install --upgrade distlib  
 
 RUN pip3 install --default-timeout=100000 -r requirements.txt
 RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysql_connector mysql-connector-python==8.0.20
@@ -143,7 +126,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=176de41e012341d8b98531bde70b2af8b6468103
+ARG FIN_BRANCH=30d699b9edc014c6076a9649f849bd3c4588d4ab
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 
@@ -178,6 +161,4 @@ ADD tests /tuna/tests/
 ADD utils /tuna/utils/
 ADD requirements.txt /tuna/
 WORKDIR /tuna
-RUN python3.9 setup.py install
-
-RUN rm -rf __tuna_setup_docker_artifacts__/
+RUN python3 setup.py install

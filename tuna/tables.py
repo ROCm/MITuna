@@ -27,11 +27,11 @@
 """Module that encapsulates the DB representation based on configuration type"""
 from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
-from tuna.miopen_tables import ConvPerfDB, ConvPerfConfig
 from tuna.miopen_tables import ConvJobCache, Solver
-from tuna.miopen_tables import BNJob, BNConfig, BNPerfDB, BNJobCache, BNFinJobCache, BNConfigTags
+from tuna.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
 from tuna.miopen_tables import ConvSolverApplicability, BNSolverApplicability
 from tuna.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
+from tuna.miopen_tables import TensorTable
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.session import Session
@@ -54,15 +54,15 @@ class DBTables():
     self.config_tags_table = None
     self.find_db_table = None
     self.solver_app = None
-    self.perf_config_table = None
-    self.perf_db_table = None
     self.cache_table = None
     self.fin_cache_table = None
     self.solver_table = None
     self.kernel_cache = None
+    self.tensor_table = TensorTable
+
     self.config_type = None
-    self.session = None
     self.session_id = None
+    self.session = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -84,8 +84,6 @@ class DBTables():
       self.config_tags_table = BNConfigTags
       self.find_db_table = BNFindDB
       self.solver_app = BNSolverApplicability
-      self.perf_config_table = BNConfig
-      self.perf_db_table = BNPerfDB
       self.cache_table = BNJobCache
       self.fin_cache_table = BNFinJobCache
       self.kernel_cache = BNKernelCache
@@ -95,8 +93,6 @@ class DBTables():
       self.config_tags_table = ConvolutionConfigTags
       self.find_db_table = ConvolutionFindDB
       self.solver_app = ConvSolverApplicability
-      self.perf_config_table = ConvPerfConfig
-      self.perf_db_table = ConvPerfDB
       self.cache_table = ConvJobCache
       self.fin_cache_table = ConvFinJobCache
       self.kernel_cache = ConvolutionKernelCache

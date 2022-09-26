@@ -32,8 +32,8 @@ from time import sleep
 from sqlalchemy.exc import OperationalError
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.worker_interface import WorkerInterface, NUM_SQL_RETRIES
-from tuna.metadata import KCACHE_DIR
+from tuna.worker_interface import WorkerInterface
+from tuna.metadata import KCACHE_DIR, NUM_SQL_RETRIES
 from tuna.utils.utility import arch2targetid
 
 
