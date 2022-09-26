@@ -72,7 +72,7 @@ def add_job(w):
   #get applicability
   args.update_applicability = True
   args.label = 'tuna_pytest_worker'
-  args.session_id = w.session_id 
+  args.session_id = w.session_id
   worker_lst = compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
@@ -178,7 +178,7 @@ def test_worker():
   v = Value('i', 0)
   e = Value('i', 0)
 
-  session_id = add_test_session() 
+  session_id = add_test_session()
 
   keys = {
       'machine': machine,

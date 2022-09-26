@@ -56,7 +56,6 @@ def test_fin_evaluator():
     dbt.session_id = session.query(dbt.job_table.session).filter(dbt.job_table.state=='compiled')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').first().session
 
-
   kwargs = {
       'machine': DummyMachine(False),
       'gpu_id': 0,
