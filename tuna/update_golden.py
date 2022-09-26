@@ -25,13 +25,14 @@
 #
 ###############################################################################
 """! @brief Script to populate the golden table based on session_id"""
-from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import func
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.db_utility import session_retry
+from tuna.session import Session
 
 # Setup logging
 LOGGER = setup_logger('update_golden')
@@ -150,56 +151,106 @@ def update_gold_entry(session, golden_table, gold_entry):
   return ret
 
 
-def merge_golden_entries(dbt, golden_v, entries):
+def sess_info(session):
+  """ get map for session id to arch / num_cu """
+  sess_map = {}
+  query = session.query(Session.id, Session.arch, Session.num_cu)
+  for entry in query.all():
+    sess_map[entry.id] = (entry.arch, entry.num_cu)
+
+  return sess_map
+
+
+def init_gold_entry(dbt, golden_v, config, solver, arch, num_cu):
+  """ initialize golden_table entry with key values """
+  gold_entry = dbt.golden_table()
+  #unique identifiers
+  gold_entry.golden_miopen_v = golden_v
+  gold_entry.config = config
+  gold_entry.solver = solver
+  gold_entry.arch = arch
+  gold_entry.num_cu = num_cu
+  return gold_entry
+
+
+def copy_gold_data(gold_entry, entry):
+  """ copy data fields for a golden_table entry """
+  gold_entry.valid = 1
+  gold_entry.session = entry.session
+
+  gold_entry.fdb_key = entry.fdb_key
+  gold_entry.params = entry.params
+  gold_entry.kernel_time = entry.kernel_time
+  gold_entry.workspace_sz = entry.workspace_sz
+  gold_entry.alg_lib = entry.alg_lib
+  gold_entry.opencl = entry.opencl
+
+  gold_entry.kernel_group = entry.kernel_group
+
+
+def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
   """! Retrieve fdb entries and populate golden table"""
+  sess_map = sess_info(session)
   count = 0
-  rev = 0
+  print_interval = len(entries) // 10
+  for copy_entry in entries:
+    arch, num_cu = sess_map[copy_entry.session]
+    golden_entry = init_gold_entry(dbt, golden_v, copy_entry.config, copy_entry.solver, arch, num_cu)
+
+    if simple_copy:
+      session.add(golden_entry)
+    else:
+      #resolve to existing entry if present
+      golden_entry = update_gold_entry(session, dbt.golden_table,
+                                        golden_entry)
+
+    copy_gold_data(golden_entry, copy_entry)
+
+    count += 1
+    if count % print_interval == 0:
+      g = golden_entry
+      t_str = f"{count}: {g.golden_miopen_v}-{g.config}-{g.solver}-{g.arch}-{g.num_cu}"
+      LOGGER.info(t_str)
+
+  session.commit()
+
+  return count
+
+
+def process_merge_golden(dbt, golden_v, entries, s_copy=False):
+  total = 0
+  pack_sz = 10000
+  pack_i = 0
+  pack = []
+  all_packs = []
+  for elem in entries:
+    pack.append(elem)
+    total += 1
+    pack_i += 1
+    if pack_i == pack_sz:
+      all_packs.append(pack)
+      pack = []
+      pack_i = 0
+  if pack:
+    all_packs.append(pack)
+
+  pcnt = 0
+  prev_pcnt = 0
   with DbSession() as session:
-    for retry in range(10):
-      count = 0
-      rev = 0
-      for copy_entry in entries:
-        golden_entry = dbt.golden_table()
-        #unique identifiers
-        golden_entry.golden_miopen_v = golden_v
-        golden_entry.config = copy_entry.config
-        golden_entry.solver = copy_entry.solver
-        golden_entry.arch = dbt.session.arch
-        golden_entry.num_cu = dbt.session.num_cu
+    sz = len(all_packs)
+    for i, pack in enumerate(all_packs):
+      ret = session_retry(
+          session, merge_golden_entries,
+          lambda x: x(session, dbt, golden_v, pack, simple_copy=s_copy), LOGGER)
+      if not ret:
+        LOGGER.error("Failed to merge db pack %s", i)
+        return False
+      pcnt = int((i+1) * 100 / sz)
+      if pcnt > prev_pcnt:
+        prev_pcnt = pcnt
+        LOGGER.info("Merged: %s%%", pcnt)
 
-        #resolve to existing entry if present
-        golden_entry = update_gold_entry(session, dbt.golden_table,
-                                         golden_entry)
-
-        golden_entry.valid = 1
-        golden_entry.session = copy_entry.session
-
-        golden_entry.fdb_key = copy_entry.fdb_key
-        golden_entry.params = copy_entry.params
-        golden_entry.kernel_time = copy_entry.kernel_time
-        golden_entry.workspace_sz = copy_entry.workspace_sz
-        golden_entry.alg_lib = copy_entry.alg_lib
-        golden_entry.opencl = copy_entry.opencl
-
-        golden_entry.kernel_group = copy_entry.kernel_group
-
-        count += 1
-
-      try:
-        #session.merge(golden_entry)
-        session.commit()
-        break
-      except OperationalError as oerror:
-        rev += 1
-        LOGGER.warning('DB error: %s', oerror)
-        session.rollback()
-      except IntegrityError as ierror:
-        rev += 1
-        LOGGER.warning('DB error: %s', ierror)
-        session.rollback()
-        break
-
-  return count - rev, rev
+  return total
 
 
 def main():
@@ -207,7 +258,7 @@ def main():
   args = parse_args()
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
 
-  gold_db = get_golden_query(dbt, args.golden_v).all()
+  gold_db = get_golden_query(dbt, args.golden_v).first()
   if not gold_db:
     if args.overwrite:
       raise ValueError(f'Target golden version {args.golden_v} does not exist.')
@@ -226,12 +277,12 @@ def main():
         raise ValueError(
             f'Base golden version {args.base_golden_v} does not exist.')
     else:
-      merge_golden_entries(dbt, args.golden_v, base_gold_db)
+      process_merge_golden(dbt, args.golden_v, base_gold_db, s_copy=True)
 
   query = get_fdb_query(dbt)
-  add, err = merge_golden_entries(dbt, args.golden_v, query.all())
+  total = process_merge_golden(dbt, args.golden_v, query.all())
 
-  LOGGER.info("Merged: %s, Errored: %s", add, err)
+  LOGGER.info("Merged: %s", total)
 
 
 if __name__ == '__main__':
