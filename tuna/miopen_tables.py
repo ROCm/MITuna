@@ -272,7 +272,7 @@ class BNConfig(BASE):
 
   def get_direction(self):
     """synthesize direction"""
-    return DIR_MAP[str(self.forw + 4 * self.back)]
+    return DIR_MAP[(self.forw + 4 * self.back)]
 
 
 class ConfigTagMixin():
