@@ -38,6 +38,7 @@ from tuna.config_type import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.import_configs import insert_config
 from tuna.metadata import PREC_TO_CMD
+from tuna.metadata import get_solver_ids
 
 LOGGER = setup_logger('import_db')
 
@@ -90,7 +91,6 @@ def get_fdb_entry(session, dbt, config, solver, ocl):
   else:
     # Insert the above entry
     session.add(fdb_entry)
-    session.refresh(fdb_entry)
 
   return fdb_entry
 
@@ -105,21 +105,29 @@ def set_fdb_data(fdb_entry, fdb_key, alg_lib, workspace, kernel_time):
 
 def set_pdb_data(fdb_entry, params):
   fdb_entry.params = params
+  if not fdb_entry.kernel_time:
+    fdb_entry.kernel_time = -1 
+  if not fdb_entry.workspace_sz:
+    fdb_entry.workspace_sz = -1 
 
 
 def insert_perf_db(dbt, perf_rows, perf_cols, cvrt):
   """insert sqlite perf_db table into mysql perf_db"""
   insert_ids = []
-  for row in perf_rows:
-    entry = dict(zip(perf_cols, row))
-    cfg_id = cvrt[entry['config']]
+  solver_id_map, _ = get_solver_ids()
+  with DbSession() as session:
+    for row in perf_rows:
+      entry = dict(zip(perf_cols, row))
+      cfg_id = cvrt[entry['config']]
+      slv_id = solver_id_map[entry['solver']]
 
-    with DbSession() as session:
-      fdb_entry = get_fdb_entry(session, dbt, cfg_id, entry['solver'], False)
+      fdb_entry = get_fdb_entry(session, dbt, cfg_id, slv_id, False)
       set_pdb_data(fdb_entry, entry['params'])
 
       fdb_entry.valid = True
       insert_ids.append(fdb_entry.id)
+
+    session.commit()
 
   return insert_ids
 
