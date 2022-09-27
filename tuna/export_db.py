@@ -214,6 +214,7 @@ def get_fdb_alg_lists(query):
 def build_miopen_fdb(fdb_alg_lists):
   """ create miopen find db object for export
   """
+  total_entries = len(fdb_alg_lists)
   num_fdb_entries = 0
   miopen_fdb = OrderedDict()
   for fdbkey_alg, alg_entries in fdb_alg_lists.items():
@@ -228,7 +229,8 @@ def build_miopen_fdb(fdb_alg_lists):
     else:
       lst.append(fastest_entry)
 
-    LOGGER.info("MIOpen fdb: %s, cfg: %s, slv: %s", fastest_entry.fdb_key,
+    if num_fdb_entries % (total_entries // 10) == 0:
+      LOGGER.info("MIOpen count: %s, fdb: %s, cfg: %s, slv: %s", num_fdb_entries, fastest_entry.fdb_key,
                 fastest_entry.config, ID_SOLVER_MAP[fastest_entry.solver])
 
   LOGGER.warning("Total number of entries in Find DB: %s", num_fdb_entries)
@@ -276,17 +278,17 @@ def build_miopen_kdb(dbt, find_db):
   num_kdb_blobs = 0
   kern_db = []
   with DbSession() as session:
-    total = len(find_db.items()) * 4
+    total = len(find_db.items())
     last_pcnt = 0
     for _, entries in find_db.items():
-      total += len(entries) - 4
-      for fdb_entry in entries:
-        num_fdb_entries += 1
-        query = session.query(dbt.kernel_cache)\
-            .filter(dbt.kernel_cache.kernel_group == fdb_entry.kernel_group)
-        for kinder in query.all():
-          kern_db.append(kinder)
-          num_kdb_blobs += 1
+      num_fdb_entries += 1
+      entries.sort(key=lambda x: float(x.kernel_time))
+      fastest_slv = entries[0]
+      query = session.query(dbt.kernel_cache)\
+          .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)
+      for kinder in query.all():
+        num_kdb_blobs += 1
+        kern_db.append(kinder)
       pcnt = int(num_fdb_entries * 100 / total)
       if pcnt > last_pcnt:
         LOGGER.warning("Building db: %s%%, blobs: %s", pcnt, num_kdb_blobs)
@@ -338,6 +340,8 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
   conn.commit()
   cur.close()
   conn.close()
+
+  LOGGER.warning("Inserted blobs: %s", len(ins_list))
   return file_name
 
 
