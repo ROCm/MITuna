@@ -42,7 +42,17 @@ LOGGER = setup_logger('driver_conv')
 class DriverConvolution(DriverBase):
   """Represents an MIOpenDriver convolution command"""
 
-  def __init__(self, line, cmd=None):
+  def __init__(self, line, cmd=None, kwargs={}):
+
+    allowed_keys = set([
+        'batchsize', 'spatial_dim', 'pad_h', 'pad_w', 'pad_d', 'conv_stride_h',
+        'conv_stride_w', 'conv_stride_d', 'dilation_h', 'dilation_w',
+        'dilation_d', 'group_count', 'conv_mode', 'pad_mode',
+        'trans_output_pad_h', 'trans_output_pad_w', 'trans_output_pad_d',
+        'out_layout', 'in_layout', 'fil_layout', 'in_d', 'in_h', 'in_w',
+        'fil_d', 'fil_h', 'fil_w', 'in_channels', 'out_channels', 'num_dims',
+        'direction', 'cmd'
+    ])
 
     self.batchsize = None
     self.spatial_dim = None
@@ -76,7 +86,13 @@ class DriverConvolution(DriverBase):
     self.direction = None
     self._cmd = None
 
-    super().__init__(line)
+    if kwargs:
+      self.__dict__.update(
+          (key, value) for key, value in kwargs.items() if key in allowed_keys)
+      self.config_set_defaults()
+    else:
+      super().__init__(line)
+
     #allow cmd input to override driver line
     if cmd:
       self._cmd = cmd

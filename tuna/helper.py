@@ -173,7 +173,7 @@ def mysqldb_overwrite_table(table, dict_list, filter_cols):
     else:
       return False, insert_ids
 
-    if i % 100 == 0:
+    if i % 1000 == 0:
       LOGGER.info('Inserting sql... %s', i)
 
   return ret, insert_ids
@@ -252,13 +252,13 @@ def insert_tensor(fds, tensor_dict):
 def get_tid(session, tensor_dict):
   """Return tensor id based on dict"""
 
-  query = Query(TensorTable.id).filter_by(**tensor_dict)
+  query = session.query(TensorTable.id).filter_by(**tensor_dict)
   ret_id = None
   try:
-    res = session.execute(query).fetchall()
-    if len(res) != 1:
-      raise ValueError('Tensor table duplication. Only one row should match')
-    ret_id = res[0][0]
+    res = session.execute(query).one()
+    #if len(res) != 1:
+    #  raise ValueError('Tensor table duplication. Only one row should match')
+    ret_id = res[0]
   except IntegrityError as err:
     LOGGER.error("Error occurred: %s \n", err)
     raise ValueError(

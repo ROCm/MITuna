@@ -230,8 +230,9 @@ def build_miopen_fdb(fdb_alg_lists):
       lst.append(fastest_entry)
 
     if num_fdb_entries % (total_entries // 10) == 0:
-      LOGGER.info("MIOpen count: %s, fdb: %s, cfg: %s, slv: %s", num_fdb_entries, fastest_entry.fdb_key,
-                fastest_entry.config, ID_SOLVER_MAP[fastest_entry.solver])
+      LOGGER.info("MIOpen count: %s, fdb: %s, cfg: %s, slv: %s",
+                  num_fdb_entries, fastest_entry.fdb_key, fastest_entry.config,
+                  ID_SOLVER_MAP[fastest_entry.solver])
 
   LOGGER.warning("Total number of entries in Find DB: %s", num_fdb_entries)
 

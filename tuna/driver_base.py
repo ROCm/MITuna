@@ -103,10 +103,12 @@ class DriverBase():
         session.add(tid)
         session.commit()
         ret_id = tid.id
+        LOGGER.info("Ins Tensor: %s", ret_id)
       except IntegrityError as err:
         LOGGER.warning(err)
         session.rollback()
         ret_id = self.get_tensor_id(session, tensor_dict)
+        LOGGER.info("Get Tensor: %s", ret_id)
 
     return ret_id
 
