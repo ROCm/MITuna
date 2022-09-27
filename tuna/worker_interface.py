@@ -362,15 +362,19 @@ class WorkerInterface(Process):
     # Now we have the ID, lets add the binary cache objects
     for kern_obj in fdb_obj['kernel_objects']:
       kernel_obj = self.dbt.kernel_cache()
-      kernel_obj.kernel_name = kern_obj['kernel_file']
-      kernel_obj.kernel_args = kern_obj['comp_options']
-      kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
-      kernel_obj.kernel_hash = kern_obj['md5_sum']
-      kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
-
+      self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.kernel_group = fdb_entry.kernel_group
       session.add(kernel_obj)
     return True
+
+  def populate_kernels(self, kern_obj, kernel_obj):
+    """populate kernel object"""
+    kernel_obj.kernel_name = kern_obj['kernel_file']
+    kernel_obj.kernel_args = kern_obj['comp_options']
+    kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
+    kernel_obj.kernel_hash = kern_obj['md5_sum']
+    kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
+    return kernel_obj
 
   def update_fdb_w_kernels(self,
                            session,

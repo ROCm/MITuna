@@ -27,7 +27,7 @@
 """ Module for creating DB tables"""
 import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
-from sqlalchemy import Text, Enum
+from sqlalchemy import Text, Enum, Index
 from sqlalchemy import Float, BigInteger, Boolean
 from sqlalchemy.databases import mysql
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
@@ -379,7 +379,16 @@ class ConvolutionJob(BASE, JobMixin):
   __tablename__ = "conv_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  config = Column(Integer,
+                  ForeignKey("conv_config.id"),
+                  nullable=False,
+                  index=True)
+  get_job_ids1 = Index('get_job_idx1', 'session', 'valid', 'reason', 'fin_step',
+                       'retries')
+  get_job_ids2 = Index('get_job_idx2', 'session', 'valid')
+  get_job_ids3 = Index('get_job_idx3', 'session', 'valid', 'retries')
+  get_job_compile = Index('get_job_compile', 'valid', 'state', 'reason',
+                          'session')
 
 
 class BNJob(BASE, JobMixin):
@@ -387,7 +396,10 @@ class BNJob(BASE, JobMixin):
   __tablename__ = "bn_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
-  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
+  config = Column(Integer,
+                  ForeignKey("bn_config.id"),
+                  nullable=False,
+                  index=True)
 
 
 class FusionJob(BASE, JobMixin):
@@ -404,12 +416,12 @@ class SolverApplicabilityMixin():
   @declared_attr
   def solver(self):
     """solver column"""
-    return Column(Integer, ForeignKey("solver.id"), nullable=False)
+    return Column(Integer, ForeignKey("solver.id"), nullable=False, index=True)
 
   @declared_attr
   def session(self):
     """session key"""
-    return Column(Integer, ForeignKey("session.id"), nullable=False)
+    return Column(Integer, ForeignKey("session.id"), nullable=False, index=True)
 
   applicable = Column(TINYINT, nullable=False, server_default="1")
 
@@ -419,7 +431,11 @@ class ConvSolverApplicability(BASE, SolverApplicabilityMixin):
   __tablename__ = "conv_solver_applicability"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  config = Column(Integer,
+                  ForeignKey("conv_config.id"),
+                  nullable=False,
+                  index=True)
+  app_idx = Index('app_idx', 'config', 'solver', 'session')
 
 
 class BNSolverApplicability(BASE, SolverApplicabilityMixin):
@@ -427,7 +443,10 @@ class BNSolverApplicability(BASE, SolverApplicabilityMixin):
   __tablename__ = "bn_solver_applicability"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
-  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
+  config = Column(Integer,
+                  ForeignKey("bn_config.id"),
+                  nullable=False,
+                  index=True)
 
 
 class SolverFusionApplicability(BASE, SolverApplicabilityMixin):
@@ -500,7 +519,7 @@ class BNGolden(BASE, GoldenMixin):
 def add_conv_tables(miopen_tables):
   """Append Convolution specific MIOpen DB tables"""
   miopen_tables.append(ConvolutionConfig())
-  miopen_tables.append(ConvolutionJob)
+  miopen_tables.append(ConvolutionJob())
   miopen_tables.append(ConvolutionConfigTags())
   miopen_tables.append(ConvSolverApplicability())
   miopen_tables.append(ConvolutionKernelCache())

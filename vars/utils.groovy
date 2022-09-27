@@ -508,7 +508,7 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "cd tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string='  ' *.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --indent-string='  ' *.py"
           }
     }
 }
