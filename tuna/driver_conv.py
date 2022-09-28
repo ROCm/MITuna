@@ -25,6 +25,8 @@
 #
 ###############################################################################
 """Module that a convolution MIOpenDriver cmd"""
+from re import search
+
 from tuna.utils.logger import setup_logger
 from tuna.driver_base import DriverBase
 from tuna.metadata import CONV_CONFIG_COLS
@@ -117,6 +119,10 @@ class DriverConvolution(DriverBase):
     setattr(self, 'direction', DIR_MAP[direction])
     for key, val in fds.items():
       setattr(self, key, val)
+
+    pattern_3d = '[0-9]x[0-9]x[0-9]'
+    if search(pattern_3d, line):
+      setattr(self, 'spatial_dim', 3)
 
   def parse_driver_line(self, line):
     super().parse_driver_line(line)
