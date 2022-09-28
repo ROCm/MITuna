@@ -130,15 +130,15 @@ def set_fdb_data(fdb_entry, fdb_key, alg_lib, workspace, kernel_time):
   fdb_entry.kernel_group = fdb_entry.id
 
   if not fdb_entry.params:
-    fdb_entry.params = '' 
+    fdb_entry.params = ''
 
 
 def set_pdb_data(fdb_entry, params):
   fdb_entry.params = params
   if not fdb_entry.kernel_time:
-    fdb_entry.kernel_time = -1 
+    fdb_entry.kernel_time = -1
   if not fdb_entry.workspace_sz:
-    fdb_entry.workspace_sz = -1 
+    fdb_entry.workspace_sz = -1
 
 
 def get_fdb_entry(session, dbt, config, solver, ocl):
@@ -152,8 +152,6 @@ def get_fdb_entry(session, dbt, config, solver, ocl):
   obj = fdb_query.first()
   if obj:  # existing entry in db
     fdb_entry = obj
-    session.query(dbt.kernel_cache).filter(
-        dbt.kernel_cache.kernel_group == fdb_entry.kernel_group).delete()
   else:
     # Insert the above entry
     session.add(fdb_entry)
@@ -209,7 +207,7 @@ def record_fdb(dbt, args):
       for line in infile:
         driver = DriverConvolution(line)
         ins_id = insert_config(driver, counts, dbt, args)
-      
+
         fdb_data = parse_fdb_line(line)
         for fdb_key, algs in fdb_data.items():
           for alg in algs:
