@@ -31,6 +31,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.miopen_tables import TensorTable
 from tuna.metadata import TENSOR_PRECISION
+from tuna.parsing import parse_line
 
 LOGGER = setup_logger('driver_base')
 
@@ -170,12 +171,7 @@ class DriverBase():
 
   def parse_driver_line(self, line):
     """Parse line and set attributes"""
-    line = line.strip()
-    start = line.find('MIOpenDriver')
-    if start == -1:
-      raise ValueError(f"Invalid driver commmand line: '{line}'")
-
-    line = line[start:]
+    line = parse_line(line)
     tok = line.split()
     #pylint: disable=attribute-defined-outside-init
     self.cmd = tok[1]

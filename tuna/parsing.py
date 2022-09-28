@@ -377,15 +377,22 @@ def arg_valid(arg, val):
   return True
 
 
-def parse_driver_line(line):
-  """return network parameters from driver invocation"""
-  fds = {}
+def parse_line(line):
+  """parse the lines from MIopenDriver"""
   line = line.strip()
   start = line.find('MIOpenDriver')
   if start == -1:
     raise ValueError(f"Invalid driver commmand line: '{line}'")
 
   line = line[start:]
+
+  return line
+
+
+def parse_driver_line(line):
+  """return network parameters from driver invocation"""
+  fds = {}
+  line = parse_line(line)
   direction = None
   if line.find('-F') != -1:
     direction = line.partition("-F")[2][:2].strip()

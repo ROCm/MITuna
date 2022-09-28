@@ -113,7 +113,6 @@ class DummyArgs(object):
     """Constructor"""
     pass
 
-
 def get_worker_args(args, machine):
   worker_ids = range(machine.get_num_cpus())
   f_vals = compose_f_vals(args, machine)
