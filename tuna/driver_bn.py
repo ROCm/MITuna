@@ -93,7 +93,7 @@ class DriverBatchNorm(DriverBase):
   def parse_bn_row(self, db_obj):
     """Compose obj from bn_config row"""
     for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
-      if key not in ('id', 'input_t'):
+      if key not in ('id', 'input_t', 'driver'):
         setattr(self, key, value)
     self.compute_direction()
 

@@ -210,11 +210,11 @@ class ConvolutionConfig(BASE):
   input_t = relationship("TensorTable",
                          backref="conv_input_tensor",
                          foreign_keys=[input_tensor],
-                         lazy="joined")
+                         lazy="dynamic")
   weight_t = relationship("TensorTable",
                           backref="weight_tensor",
                           foreign_keys=[weight_tensor],
-                          lazy="joined")
+                          lazy="dynamic")
   out_layout = Column(String(60), nullable=False, server_default="NCHW")
   md5 = Column(String(length=40), nullable=False, unique=True)
   driver = Column(String(length=512), nullable=False, server_default="")
@@ -233,7 +233,7 @@ class FusionConfig(BASE):
   input_t = relationship("TensorTable",
                          backref="input_tensor_fusion",
                          foreign_keys=[input_tensor],
-                         lazy="joined")
+                         lazy="dynamic")
   weight_tensor = Column(Integer, ForeignKey("tensor.id"), nullable=False)
   activ_mode = Column(Integer, nullable=False, server_default="1")
   fusion_mode = Column(Integer, nullable=False, server_default="1")
@@ -266,7 +266,7 @@ class BNConfig(BASE):
   input_t = relationship("TensorTable",
                          backref="bn_input_tensor",
                          foreign_keys=[input_tensor],
-                         lazy="joined")
+                         lazy="dynamic")
   in_layout = Column(String(60), nullable=False, server_default="NCHW")
   driver = Column(String(length=512), nullable=False, server_default="")
 
