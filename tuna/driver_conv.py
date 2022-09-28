@@ -112,7 +112,7 @@ class DriverConvolution(DriverBase):
     """Compose obj from conv_config row"""
     self.decompose_weight_t(db_obj)
     for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
-      if key not in ('id', 'input_t', 'weight_t'):
+      if key not in ('id', 'input_t', 'weight_t', 'driver'):
         setattr(self, key, value)
 
     return True
