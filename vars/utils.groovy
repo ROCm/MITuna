@@ -304,7 +304,7 @@ def loadJobTest() {
         out_bn = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test' and session=${sesh2} ;")
         assert out_bn.toInteger() > 0
 
-        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test_app -C batch_norm --only_applicable --session_id ${sesh2}"
+        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test_app -C batch_norm --session_id ${sesh2}"
         out_bn_app = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test_app' and session=${sesh2} ;")
         assert out_bn_app.toInteger() > 0
 
@@ -558,10 +558,7 @@ def LoadJobs()
   }
   if(params.all_configs)
   {
-      if(params.only_applicable)
-          script_args = script_args + " --all_configs -o "
-      else
-          script_args = script_args + " --all_configs "
+      script_args = script_args + " --all_configs "
   }
   else
   {
