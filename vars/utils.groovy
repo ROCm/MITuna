@@ -1,6 +1,6 @@
 import groovy.transform.Field
 
-@Field String job_lim = "-A miopenConvolutionAlgoGEMM -o"
+@Field String job_lim = "-A miopenConvolutionAlgoGEMM "
 
 def rocmnode(name) {
     def node_name = 'tunatest'
