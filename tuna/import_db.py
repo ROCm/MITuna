@@ -213,7 +213,8 @@ def record_fdb(dbt, args):
           for alg in algs:
             slv_id = solver_id_map[alg['solver']]
             fdb_entry = get_fdb_entry(session, dbt, ins_id, slv_id, False)
-            set_fdb_data(fdb_entry, fdb_key, alg['alg_lib'], alg['workspace_sz'], alg['kernel_time'])
+            set_fdb_data(fdb_entry, fdb_key, alg['alg_lib'],
+                         alg['workspace_sz'], alg['kernel_time'])
 
         num_line += 1
         if num_line % COMMIT_FREQ == 0:
