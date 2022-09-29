@@ -129,15 +129,15 @@ def set_fdb_data(fdb_entry, fdb_key, alg_lib, workspace, kernel_time):
   fdb_entry.kernel_time = kernel_time
   fdb_entry.kernel_group = fdb_entry.id
 
-  if not fdb_entry.params:
+  if fdb_entry.params is None:
     fdb_entry.params = ''
 
 
 def set_pdb_data(fdb_entry, params):
   fdb_entry.params = params
-  if not fdb_entry.kernel_time:
+  if fdb_entry.kernel_time is None:
     fdb_entry.kernel_time = -1
-  if not fdb_entry.workspace_sz:
+  if fdb_entry.workspace_sz is None:
     fdb_entry.workspace_sz = -1
 
 

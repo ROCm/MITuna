@@ -135,10 +135,8 @@ def get_filename(arch, num_cu, filename, ocl, db_type):
 
   return final_name
 
-
-def get_fdb_query(dbt, args):
-  """ Helper function to create find db query
-  """
+def get_base_query(dbt, args):
+  """ general query for fdb/pdb results """
   src_table = dbt.find_db_table
   if args.golden_v is not None:
     src_table = dbt.golden_table
@@ -157,8 +155,6 @@ def get_fdb_query(dbt, args):
       LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
 
     query = query.filter(src_table.valid == 1)\
-        .filter(src_table.kernel_time != -1)\
-        .filter(src_table.workspace_sz != -1)\
         .filter(src_table.opencl == args.opencl)\
         .filter(src_table.config == dbt.config_table.id)\
         .filter(src_table.solver == dbt.solver_table.id)
@@ -168,8 +164,23 @@ def get_fdb_query(dbt, args):
       query = query.filter(dbt.config_tags_table.tag == args.config_tag)\
           .filter(dbt.config_table.config == dbt.config_table.id)
 
-    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
-    LOGGER.info("fdb query returned: %s", len(query.all()))
+    LOGGER.info("base db query returned: %s", len(query.all()))
+
+  return query
+
+
+def get_fdb_query(dbt, args):
+  """ Helper function to create find db query
+  """
+  src_table = dbt.find_db_table
+  if args.golden_v is not None:
+    src_table = dbt.golden_table
+
+  query = get_base_query(dbt, args)
+  query = query.filter(src_table.kernel_time != -1)\
+      .filter(src_table.workspace_sz != -1)
+
+  query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
 
   return query
 
@@ -179,9 +190,12 @@ def get_pdb_query(dbt, args):
   src_table = dbt.find_db_table
   if args.golden_v is not None:
     src_table = dbt.golden_table
-  query = get_fdb_query(dbt, args)
+
+  query = get_base_query(dbt, args)
   query = query.filter(dbt.solver_table.tunable == 1)\
-        .filter(src_table.params != '')
+      .filter(src_table.params != '')
+
+  LOGGER.info("pdb query returned: %s", len(query.all()))
 
   return query
 
@@ -424,7 +438,8 @@ def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
   perf_db_dict['solver'] = query.one().solver
 
   insert_solver_sqlite(cnx, perf_db_dict)
-  LOGGER.info("Inserting row in perf_db: %s", perf_db_dict)
+
+  return perf_db_dict
 
 
 def export_pdb(dbt, args):
@@ -434,9 +449,9 @@ def export_pdb(dbt, args):
   with DbSession() as session:
     query = get_pdb_query(dbt, args)
     cfg_map = {}
-    for perf_db_entry, cfg_entry in query.all():
-      LOGGER.info("%s", cfg_entry.id)
-
+    db_entries = query.all()
+    total_entries = len(db_entries)
+    for perf_db_entry, cfg_entry in db_entries:
       if cfg_entry.id in cfg_map:
         ins_cfg_id = cfg_map[cfg_entry.id]
       else:
@@ -445,8 +460,13 @@ def export_pdb(dbt, args):
         ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
         cfg_map[cfg_entry.id] = ins_cfg_id
 
-      insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id)
+      pdb_dict = insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id)
       num_perf += 1
+
+      if num_perf % (total_entries // 10) == 0:
+        LOGGER.info("MIOpen count: %s, mysql cfg: %s, pdb: %s",
+                    num_perf, cfg_entry.id, pdb_dict)
+
 
   LOGGER.warning("Total number of entries in perf_db: %s", num_perf)
 
