@@ -135,6 +135,7 @@ def get_filename(arch, num_cu, filename, ocl, db_type):
 
   return final_name
 
+
 def get_base_query(dbt, args):
   """ general query for fdb/pdb results """
   src_table = dbt.find_db_table
@@ -464,9 +465,8 @@ def export_pdb(dbt, args):
       num_perf += 1
 
       if num_perf % (total_entries // 10) == 0:
-        LOGGER.info("MIOpen count: %s, mysql cfg: %s, pdb: %s",
-                    num_perf, cfg_entry.id, pdb_dict)
-
+        LOGGER.info("MIOpen count: %s, mysql cfg: %s, pdb: %s", num_perf,
+                    cfg_entry.id, pdb_dict)
 
   LOGGER.warning("Total number of entries in perf_db: %s", num_perf)
 
