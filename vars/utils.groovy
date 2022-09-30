@@ -304,10 +304,6 @@ def loadJobTest() {
         out_bn = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test' and session=${sesh2} ;")
         assert out_bn.toInteger() > 0
 
-        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test_app -C batch_norm --session_id ${sesh2}"
-        out_bn_app = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test_app' and session=${sesh2} ;")
-        assert out_bn_app.toInteger() > 0
-
         //reset jobs and test load solver
         runsql("DELETE FROM conv_job;")
         runsql("INSERT INTO solver(solver, valid) SELECT 'gemm', 1;")
