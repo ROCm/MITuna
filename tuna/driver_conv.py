@@ -52,7 +52,7 @@ class DriverConvolution(DriverBase):
         'dilation_d', 'group_count', 'conv_mode', 'pad_mode',
         'trans_output_pad_h', 'trans_output_pad_w', 'trans_output_pad_d',
         'out_layout', 'in_layout', 'fil_layout', 'in_d', 'in_h', 'in_w',
-        'fil_d', 'fil_h', 'fil_w', 'in_channels', 'out_channels', 'num_dims',
+        'fil_d', 'fil_h', 'fil_w', 'in_channels', 'out_channels',
         'direction', 'cmd'
     ])
 
@@ -158,8 +158,10 @@ class DriverConvolution(DriverBase):
     """Setting config DB defaults to avoid duplicates through SELECT"""
     if self.spatial_dim == 3:
       self.set_defaults(CONV_3D_DEFAULTS)
+      self.num_dims=3
     else:
       self.set_defaults(CONV_2D_DEFAULTS)
+      self.num_dims=2
 
   def set_defaults(self, defaults):
     """Set fds defaults"""
