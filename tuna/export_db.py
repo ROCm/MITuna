@@ -31,7 +31,6 @@ from collections import OrderedDict
 import base64
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen_tables import Solver  # pylint: disable=unused-import
 from tuna.tables import DBTables
 from tuna.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
@@ -245,7 +244,7 @@ def build_miopen_fdb(fdb_alg_lists):
       lst.append(fastest_entry)
 
     if num_fdb_entries % (total_entries // 10) == 0:
-      LOGGER.info("MIOpen count: %s, fdb: %s, cfg: %s, slv: %s",
+      LOGGER.info("FDB count: %s, fdb: %s, cfg: %s, slv: %s",
                   num_fdb_entries, fastest_entry.fdb_key, fastest_entry.config,
                   ID_SOLVER_MAP[fastest_entry.solver])
 
@@ -435,8 +434,7 @@ def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
   perf_db_dict = {
       k: v for k, v in perf_db_dict.items() if k in SQLITE_PERF_DB_COLS
   }
-  query = session.query(Solver).filter(Solver.id == perf_db_dict['solver'])
-  perf_db_dict['solver'] = query.one().solver
+  perf_db_dict['solver'] = ID_SOLVER_MAP[perf_db_dict['solver']]
 
   insert_solver_sqlite(cnx, perf_db_dict)
 
@@ -465,10 +463,12 @@ def export_pdb(dbt, args):
       num_perf += 1
 
       if num_perf % (total_entries // 10) == 0:
-        LOGGER.info("MIOpen count: %s, mysql cfg: %s, pdb: %s", num_perf,
+        cnx.commit()
+        LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf,
                     cfg_entry.id, pdb_dict)
 
-  LOGGER.warning("Total number of entries in perf_db: %s", num_perf)
+  cnx.commit()
+  LOGGER.warning("Total number of entries in Perf DB: %s", num_perf)
 
   return local_path
 
