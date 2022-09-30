@@ -93,7 +93,6 @@ def get_fdb_query(dbt):
   with DbSession() as session:
     query = session.query(dbt.find_db_table)\
             .filter(dbt.find_db_table.session == dbt.session_id)\
-            .filter(dbt.find_db_table.kernel_time != -1)\
             .filter(dbt.find_db_table.valid == 1)
 
   return query
