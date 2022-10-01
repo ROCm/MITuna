@@ -126,7 +126,7 @@ class DriverBase():
     i_dict['num_dims'] = self.num_dims
     i_dict['dim0'] = 1
 
-    if self.in_layout == 'NCHW' or self.in_layout == 'NCDHW':
+    if self.in_layout in ('NCHW', 'NCDHW'):
       i_dict['dim1'] = self.in_channels
       i_dict['dim2'] = self.in_d
       i_dict['dim3'] = self.in_h
@@ -154,7 +154,7 @@ class DriverBase():
     w_dict['data_type'] = TENSOR_PRECISION[self.cmd]
     w_dict['num_dims'] = self.num_dims
 
-    if self.fil_layout == 'NCHW' or self.fil_layout == 'NCDHW':
+    if self.fil_layout in ('NCHW', 'NCDHW'):
       w_dict['dim0'] = self.out_channels
       w_dict['dim1'] = self.in_channels
       w_dict['dim2'] = self.fil_d

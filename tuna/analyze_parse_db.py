@@ -171,21 +171,21 @@ def insert_solver_sqlite(cnx, slv):
   config = slv['config']
   solver_id = slv['solver']
   params = slv['params']
-  mk = "?"
+  mrk = "?"
 
-  where_clause = f" where config = {mk} and solver = {mk}"
+  where_clause = f" where config = {mrk} and solver = {mrk}"
   query = "select id from perf_db " + where_clause
   cur = cnx.cursor()
   cur.execute(query, (config, solver_id))
   res = cur.fetchall()
   if not res:
     query = f"insert into perf_db(config, solver, params) values \
-    ({mk}, {mk}, {mk});"
+    ({mrk}, {mrk}, {mrk});"
 
     cur.execute(query, (config, solver_id, params))
   else:
     perf_id = res[0][0]
-    query = f"update perf_db set params = {mk} where id={mk};"
+    query = f"update perf_db set params = {mrk} where id={mrk};"
     cur.execute(query, (params, perf_id))
 
   cur.close()

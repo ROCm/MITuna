@@ -385,8 +385,8 @@ class FinClass(WorkerInterface):
 
     with DbSession() as session:
       callback = self.insert_applicability
-      for pack in all_packs:
-        session_retry(session, callback, lambda x: x(session, pack),
+      for app_pack in all_packs:
+        session_retry(session, callback, lambda x: x(session, app_pack),
                       self.logger)
 
     with DbSession() as session:

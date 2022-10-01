@@ -123,6 +123,7 @@ def get_sql_cfg_id_map(dbt, cnx, args):
 
 
 def set_fdb_data(fdb_entry, fdb_key, alg_lib, workspace, kernel_time):
+  """ set fdb specific data, default for pdb if missing """
   fdb_entry.fdb_key = fdb_key
   fdb_entry.alg_lib = alg_lib
   fdb_entry.workspace_sz = workspace
@@ -134,6 +135,7 @@ def set_fdb_data(fdb_entry, fdb_key, alg_lib, workspace, kernel_time):
 
 
 def set_pdb_data(fdb_entry, params):
+  """ set pdb specific data, fill defaults for fdb if missing """
   fdb_entry.params = params
   if fdb_entry.kernel_time is None:
     fdb_entry.kernel_time = -1
@@ -142,6 +144,7 @@ def set_pdb_data(fdb_entry, params):
 
 
 def get_fdb_entry(session, dbt, config, solver, ocl):
+  """ return referenc to fdb entry in mysql, existing one if present"""
   fdb_entry = dbt.find_db_table()
   fdb_entry.config = config
   fdb_entry.solver = solver
@@ -164,7 +167,7 @@ def insert_perf_db(dbt, perf_rows, perf_cols, cvrt):
   insert_ids = []
   solver_id_map, _ = get_solver_ids()
   with DbSession() as session:
-    for i, row in enumerate(perf_rows):
+    for row in perf_rows:
       entry = dict(zip(perf_cols, row))
       cfg_id = cvrt[entry['config']]
       slv_id = solver_id_map[entry['solver']]
@@ -192,7 +195,7 @@ def record_perfdb(dbt, args):  #pylint: disable=too-many-locals
   cvrt = get_sql_cfg_id_map(dbt, cnx, args)
 
   perf_rows, perf_cols = get_sqlite_data(
-      cnx, 'perf_db', {'config': [cfg_id for cfg_id in cvrt.keys()]})
+      cnx, 'perf_db', {'config': list(cvrt.keys())})
 
   #inserting perf_fb entry
   LOGGER.info("Insert Performance db")
@@ -200,6 +203,7 @@ def record_perfdb(dbt, args):  #pylint: disable=too-many-locals
 
 
 def record_fdb(dbt, args):
+  """insert find_db entries from fdb text file """
   counts = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
@@ -208,8 +212,7 @@ def record_fdb(dbt, args):
     with DbSession() as session:
       num_line = 0
       for line in infile:
-        driver = DriverConvolution(line)
-        ins_id = insert_config(driver, counts, dbt, args)
+        ins_id = insert_config(DriverConvolution(line), counts, dbt, args)
 
         fdb_data = parse_fdb_line(line)
         for fdb_key, algs in fdb_data.items():

@@ -242,7 +242,7 @@ def add_jobs(args, counts, dbt):
       while True:
         for solv_app, slv in query.all():
           try:
-            LOGGER.info(f"{solv_app.config} {slv.solver}")
+            LOGGER.info("%s %s", solv_app.config, slv.solver)
             job = dbt.job_table()
             job.config = solv_app.config
             job.state = 'new'

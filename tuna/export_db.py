@@ -427,7 +427,7 @@ def get_cfg_dict(cfg_entry, tensor_entry):
   return dict(cfg_dict)
 
 
-def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
+def insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id):
   """insert perf_db entry into sqlite"""
   perf_db_dict = perf_db_entry.to_dict()
   perf_db_dict['config'] = ins_cfg_id
@@ -459,7 +459,7 @@ def export_pdb(dbt, args):
         ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
         cfg_map[cfg_entry.id] = ins_cfg_id
 
-      pdb_dict = insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id)
+      pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
       num_perf += 1
 
       if num_perf % (total_entries // 10) == 0:

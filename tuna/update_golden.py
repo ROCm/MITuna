@@ -207,8 +207,8 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
 
     count += 1
     if count % print_interval == 0:
-      g = golden_entry
-      t_str = f"{count}: {g.golden_miopen_v}-{g.config}-{g.solver}-{g.arch}-{g.num_cu}"
+      gld = golden_entry
+      t_str = f"{count}: {gld.golden_miopen_v}-{gld.config}-{gld.solver}-{gld.arch}-{gld.num_cu}"
       LOGGER.info(t_str)
 
   session.commit()
@@ -217,39 +217,37 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
 
 
 def process_merge_golden(dbt, golden_v, entries, s_copy=False):
-  total = 0
+  """" retry loop for merging into golden table """
+  num_packs = 0
   pack_sz = 10000
-  pack_i = 0
   pack = []
   all_packs = []
   for elem in entries:
     pack.append(elem)
-    total += 1
-    pack_i += 1
-    if pack_i == pack_sz:
+    num_packs += 1
+    if num_packs % pack_sz == 0:
       all_packs.append(pack)
       pack = []
-      pack_i = 0
   if pack:
     all_packs.append(pack)
 
   pcnt = 0
   prev_pcnt = 0
   with DbSession() as session:
-    sz = len(all_packs)
-    for i, pack in enumerate(all_packs):
+    num_packs = len(all_packs)
+    for i, fdb_pack in enumerate(all_packs):
       ret = session_retry(
           session, merge_golden_entries,
-          lambda x: x(session, dbt, golden_v, pack, simple_copy=s_copy), LOGGER)
+          lambda x: x(session, dbt, golden_v, fdb_pack, simple_copy=s_copy), LOGGER)
       if not ret:
         LOGGER.error("Failed to merge db pack %s", i)
         return False
-      pcnt = int((i + 1) * 100 / sz)
+      pcnt = int((i + 1) * 100 / num_packs)
       if pcnt > prev_pcnt:
         prev_pcnt = pcnt
         LOGGER.info("Merged: %s%%", pcnt)
 
-  return total
+  return num_packs
 
 
 def main():

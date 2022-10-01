@@ -44,7 +44,7 @@ LOGGER = setup_logger('driver_conv')
 class DriverConvolution(DriverBase):
   """Represents an MIOpenDriver convolution command"""
 
-  def __init__(self, line, cmd=None, kwargs={}):
+  def __init__(self, line, cmd=None, kwargs=None):
 
     allowed_keys = set([
         'batchsize', 'spatial_dim', 'pad_h', 'pad_w', 'pad_d', 'conv_stride_h',
