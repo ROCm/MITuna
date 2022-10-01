@@ -181,6 +181,7 @@ def insert_solver_sqlite(cnx, slv):
   if not res:
     query = f"insert into perf_db(config, solver, params) values \
     ({mk}, {mk}, {mk});"
+
     cur.execute(query, (config, solver_id, params))
   else:
     perf_id = res[0][0]

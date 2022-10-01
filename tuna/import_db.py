@@ -178,7 +178,8 @@ def insert_perf_db(dbt, perf_rows, perf_cols, cvrt):
       if len(insert_ids) % COMMIT_FREQ == 0:
         session.commit()
         session.refresh(fdb_entry)
-        LOGGER.info("Ins pdb count %s, fdb_id: %s, fdb_key: %s", len(insert_ids), fdb_entry.id, fdb_entry.fdb_key)
+        LOGGER.info("Ins pdb count %s, fdb_id: %s, fdb_key: %s",
+                    len(insert_ids), fdb_entry.id, fdb_entry.fdb_key)
 
     session.commit()
 
@@ -222,7 +223,8 @@ def record_fdb(dbt, args):
         if num_line % COMMIT_FREQ == 0:
           session.commit()
           session.refresh(fdb_entry)
-          LOGGER.info("Ins fdb count %s, fdb_id: %s, fdb_key: %s", num_line, fdb_entry.id, fdb_entry.fdb_key)
+          LOGGER.info("Ins fdb count %s, fdb_id: %s, fdb_key: %s", num_line,
+                      fdb_entry.id, fdb_entry.fdb_key)
 
       session.commit()
 
