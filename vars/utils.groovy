@@ -306,7 +306,7 @@ def loadJobTest() {
 
         //reset jobs and test load solver
         runsql("DELETE FROM conv_job;")
-        runsql("INSERT INTO solver(solver, valid) VALUES ('ConvHipImplicitGemmV4R1Fwd', 1);")
+        //runsql("INSERT INTO solver(solver, valid) VALUES ('ConvHipImplicitGemmV4R1Fwd', 1);")
         runsql("INSERT INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 1, 1, 'ConvHipImplicitGemmV4R1Fwd', 1);")
         runsql("INSERT INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 2, 1, 'ConvHipImplicitGemmV4R1Fwd', 1);")
         runsql("INSERT INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 3, 1, 'ConvHipImplicitGemmV4R1Fwd', 1);")
