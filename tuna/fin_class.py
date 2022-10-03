@@ -29,7 +29,6 @@
 import json
 import os
 import tempfile
-import functools
 import paramiko
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
@@ -385,14 +384,12 @@ class FinClass(WorkerInterface):
       all_packs.append(pack)
 
     with DbSession() as session:
-      callback = self.insert_applicability
-
-      def actuator(func, pack):
-        return func(session, pack)
-
       for pack in all_packs:
-        session_retry(session, callback, functools.partial(actuator, pack),
-                      self.logger)
+
+        def actuator(func):
+          return func(session, pack)
+
+        session_retry(session, self.insert_applicability, actuator, self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
