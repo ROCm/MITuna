@@ -344,7 +344,7 @@ class FinClass(WorkerInterface):
           try:
             solver_id = solver_id_map_h[solver]
             obj = app_query.filter(
-                self.dbt.solver_app.solver == solver_id).first()
+                self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
             if obj:
               obj.applicable = 1
             else:
@@ -396,7 +396,7 @@ class FinClass(WorkerInterface):
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
-      query = query.filter(self.dbt.solver_app.session == self.session_id)
+      query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
       sapp_count = query.one()[0]
       self.logger.warning(
           "Finished parsing solver applicability, new session size: %d entries",

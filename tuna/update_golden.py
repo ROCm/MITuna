@@ -26,7 +26,7 @@
 ###############################################################################
 """! @brief Script to populate the golden table based on session_id"""
 import functools
-from sqlalchemy.sql.expression import sqlfunc
+from sqlalchemy.sql.expression import func as sqlfunc
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
