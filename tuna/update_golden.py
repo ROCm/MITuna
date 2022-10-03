@@ -26,7 +26,7 @@
 ###############################################################################
 """! @brief Script to populate the golden table based on session_id"""
 import functools
-from sqlalchemy.sql.expression import func
+from sqlalchemy.sql.expression import sqlfunc
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
@@ -113,7 +113,7 @@ def latest_golden_v(dbt):
   """Get highest golden version in the table """
   version = -1
   with DbSession() as session:
-    query = session.query(func.max(dbt.golden_table.golden_miopen_v))
+    query = session.query(sqlfunc.max(dbt.golden_table.golden_miopen_v))
     obj = query.first()
     if obj:
       version = obj[0]
@@ -237,14 +237,12 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
   with DbSession() as session:
     num_packs = len(all_packs)
 
-    callback = merge_golden_entries
-
     def actuator(func, pack):
       return func(session, dbt, golden_v, pack, s_copy)
 
     for i, pack in enumerate(all_packs):
-      ret = session_retry(session, callback, functools.partial(actuator, pack),
-                          LOGGER)
+      ret = session_retry(session, merge_golden_entries,
+                          functools.partial(actuator, pack), LOGGER)
 
       if not ret:
         LOGGER.error("Failed to merge db pack %s", i)
