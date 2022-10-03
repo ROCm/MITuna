@@ -194,8 +194,8 @@ def record_perfdb(dbt, args):  #pylint: disable=too-many-locals
   cnx = sqlite3.connect(args.target_file)
   cvrt = get_sql_cfg_id_map(dbt, cnx, args)
 
-  perf_rows, perf_cols = get_sqlite_data(
-      cnx, 'perf_db', {'config': list(cvrt.keys())})
+  perf_rows, perf_cols = get_sqlite_data(cnx, 'perf_db',
+                                         {'config': list(cvrt.keys())})
 
   #inserting perf_fb entry
   LOGGER.info("Insert Performance db")

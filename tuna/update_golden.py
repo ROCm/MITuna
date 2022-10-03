@@ -238,7 +238,8 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
     for i, fdb_pack in enumerate(all_packs):
       ret = session_retry(
           session, merge_golden_entries,
-          lambda x: x(session, dbt, golden_v, fdb_pack, simple_copy=s_copy), LOGGER)
+          lambda x: x(session, dbt, golden_v, fdb_pack, simple_copy=s_copy),
+          LOGGER)
       if not ret:
         LOGGER.error("Failed to merge db pack %s", i)
         return False
