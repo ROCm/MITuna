@@ -307,9 +307,9 @@ def loadJobTest() {
         //reset jobs and test load solver
         runsql("DELETE FROM conv_job;")
         //runsql("INSERT INTO solver(solver, valid) VALUES ('ConvHipImplicitGemmV4R1Fwd', 1);")
-        runsql("INSERT INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 1, 1, 26, 1);")
-        runsql("INSERT INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 2, 1, 26, 1);")
-        runsql("INSERT INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 3, 1, 26, 1);")
+        runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 1, 1, 26, 1);")
+        runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 2, 1, 26, 1);")
+        runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 3, 1, 26, 1);")
         sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} -s ConvHipImplicitGemmV4R1Fwd --session_id ${sesh1}"
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and solver='ConvHipImplicitGemmV4R1Fwd' and session=${sesh1};")
         assert out.toInteger() > 0
