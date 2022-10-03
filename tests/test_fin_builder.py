@@ -58,7 +58,6 @@ def add_cfgs():
 
 def add_fin_find_compile_job(session_id, dbt):
   #load jobs
-  print('Loading jobs')
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
   args.tag = 'test_fin_builder'
@@ -78,12 +77,6 @@ def add_fin_find_compile_job(session_id, dbt):
   args.only_applicable = True
 
   connect_db()
-  #if args.tag:
-  #  try:
-  #    tag_name_test(args.tag, dbt)
-  #  except ValueError as terr:
-  #    print(terr)
-
   return add_jobs(args, dbt)
 
 
@@ -109,7 +102,6 @@ def test_fin_builder():
 
   #load jobs
   num_jobs = add_fin_find_compile_job(args.session_id, dbt)
-  print(num_jobs)
 
   #compile
   args.update_applicability = False
@@ -119,7 +111,6 @@ def test_fin_builder():
   for worker in worker_lst:
     worker.join()
 
-  print(args.session_id)
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
                                          .filter(dbt.job_table.state=='errored')\

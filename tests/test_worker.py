@@ -99,7 +99,6 @@ def get_job(w):
   with DbCursor() as cur:
     cur.execute("UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker'")
   # to force commit
-  print(w.session_id)
   with DbCursor() as cur:
     cur.execute(
         f"SELECT id FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} LIMIT 1"
@@ -111,7 +110,6 @@ def get_job(w):
     cur.execute(
         f"UPDATE conv_job SET state='new', valid=1, retries=0 WHERE id={job_id}"
     )
-    print('ID: '.format(job_id))
 
   #test get_job()
   job = w.get_job('new', 'compile_start', True)
