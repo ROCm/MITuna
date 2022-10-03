@@ -192,7 +192,7 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
   """! Retrieve fdb entries and populate golden table"""
   sess_map = sess_info(session)
   count = 0
-  print_interval = len(entries) // 10
+  print_interval = (len(entries) + 9) // 10
   for copy_entry in entries:
     arch, num_cu = sess_map[copy_entry.session]
     golden_entry = init_gold_entry(dbt, golden_v, copy_entry.config,
