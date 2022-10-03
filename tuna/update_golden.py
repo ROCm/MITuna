@@ -25,6 +25,7 @@
 #
 ###############################################################################
 """! @brief Script to populate the golden table based on session_id"""
+import functools
 from sqlalchemy.sql.expression import func
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
@@ -235,11 +236,16 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
   prev_pcnt = 0
   with DbSession() as session:
     num_packs = len(all_packs)
-    for i, fdb_pack in enumerate(all_packs):
-      ret = session_retry(
-          session, merge_golden_entries,
-          lambda x: x(session, dbt, golden_v, fdb_pack, simple_copy=s_copy),
-          LOGGER)
+
+    callback = merge_golden_entries
+
+    def actuator(func, pack):
+      return func(session, dbt, golden_v, pack, s_copy)
+
+    for i, pack in enumerate(all_packs):
+      ret = session_retry(session, callback, functools.partial(actuator, pack),
+                          LOGGER)
+
       if not ret:
         LOGGER.error("Failed to merge db pack %s", i)
         return False

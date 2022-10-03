@@ -445,27 +445,26 @@ def export_pdb(dbt, args):
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
-  with DbSession() as session:
-    query = get_pdb_query(dbt, args)
-    cfg_map = {}
-    db_entries = query.all()
-    total_entries = len(db_entries)
-    for perf_db_entry, cfg_entry in db_entries:
-      if cfg_entry.id in cfg_map:
-        ins_cfg_id = cfg_map[cfg_entry.id]
-      else:
-        cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
-        #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
-        ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
-        cfg_map[cfg_entry.id] = ins_cfg_id
+  query = get_pdb_query(dbt, args)
+  cfg_map = {}
+  db_entries = query.all()
+  total_entries = len(db_entries)
+  for perf_db_entry, cfg_entry in db_entries:
+    if cfg_entry.id in cfg_map:
+      ins_cfg_id = cfg_map[cfg_entry.id]
+    else:
+      cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
+      #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
+      ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
+      cfg_map[cfg_entry.id] = ins_cfg_id
 
-      pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
-      num_perf += 1
+    pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
+    num_perf += 1
 
-      if num_perf % (total_entries // 10) == 0:
-        cnx.commit()
-        LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf,
-                    cfg_entry.id, pdb_dict)
+    if num_perf % (total_entries // 10) == 0:
+      cnx.commit()
+      LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf,
+                  cfg_entry.id, pdb_dict)
 
   cnx.commit()
   LOGGER.warning("Total number of entries in Perf DB: %s", num_perf)
