@@ -147,15 +147,14 @@ def insert_config(driver, counts, dbt, args):
         Tags the newly inserted config. It config already exists,
         it will only tag it and log a warning for duplication."""
   new_cf = driver.get_db_obj(keep_id=True)
-  driver_id = new_cf.id
 
   with DbSession() as session:
     if new_cf.id is None:
       try:
         session.add(new_cf)
         session.commit()
-        driver_id = new_cf.id
         counts['cnt_configs'] += 1
+        session.refresh(new_cf)
       except IntegrityError as err:
         LOGGER.warning("Err occurred: %s", err)
         session.rollback()
@@ -167,7 +166,6 @@ def insert_config(driver, counts, dbt, args):
                                              config=new_cf.id)
           session.add(new_cf_tag)
           session.commit()
-          driver_id = new_cf.id
           counts['cnt_tagged_configs'].add(new_cf.id)
       except IntegrityError as err:
         LOGGER.warning("Err occurred: %s", err)
@@ -175,7 +173,7 @@ def insert_config(driver, counts, dbt, args):
     if args.mark_recurrent or args.tag:
       _ = tag_config_v2(driver, counts, dbt, args, new_cf)
 
-  return driver_id
+  return new_cf.id
 
 
 def process_config_line_v2(driver, args, counts, dbt):
