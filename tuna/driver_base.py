@@ -103,7 +103,7 @@ class DriverBase():
         session.add(tid)
         session.commit()
         ret_id = tid.id
-        LOGGER.info("Ins Tensor: %s", ret_id)
+        LOGGER.info("Insert Tensor: %s", ret_id)
       except IntegrityError as err:
         LOGGER.warning(err)
         session.rollback()

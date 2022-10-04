@@ -56,14 +56,14 @@ Enter the Tuna directory
 ```
 cd MITuna
 ```
-Activate the virtualenv and source the virtual env for subsequent use
+Create a virtual envornment, and activate it (by sourcing its `activate` script)
 ```
-virtualenv -p python3 myvenv
+virtualenv -p python3.9 myvenv
 source myvenv/bin/activate
 ```
 Install the required dependencies:
 ```
-pip install -r requirements.txt
+python3.9 -m pip install -r requirements.txt
 ```
 The above assumes that Tuna lives in the home directory and the virtual environment was created using the command indicated above.
 
@@ -83,7 +83,7 @@ have all-to-all machine communication available and passwords must not be requir
 
 Run the setup scripts:
 ```
-python3 setup.py develop
+python3.9 setup.py develop
 ```
 
 The root tuna folder needs to be appended to the PYTHONAPTH:

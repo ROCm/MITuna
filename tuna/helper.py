@@ -256,8 +256,6 @@ def get_tid(session, tensor_dict):
   ret_id = None
   try:
     res = session.execute(query).one()
-    #if len(res) != 1:
-    #  raise ValueError('Tensor table duplication. Only one row should match')
     ret_id = res[0]
   except IntegrityError as err:
     LOGGER.error("Error occurred: %s \n", err)

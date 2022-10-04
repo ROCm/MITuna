@@ -189,7 +189,7 @@ def insert_perf_db(dbt, perf_rows, perf_cols, cvrt):
   return insert_ids
 
 
-def record_perfdb(dbt, args):  #pylint: disable=too-many-locals
+def record_perfdb(dbt, args):
   """insert perf_db entry from sqlite file to mysql"""
   cnx = sqlite3.connect(args.target_file)
   cvrt = get_sql_cfg_id_map(dbt, cnx, args)
