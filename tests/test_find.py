@@ -40,30 +40,31 @@ from utils import CfgImportArgs, LdJobArgs
 from tuna.db_tables import connect_db
 from tuna.tables import DBTables
 from tuna.import_configs import import_cfgs
+from utils import add_test_session
 
 
 def add_job(arch, num_cu):
 
   #import configs
-  session = 1
+  session_id = add_test_session()
   args = CfgImportArgs()
   args.tag = 'recurrent_pytest'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
-  dbt = DBTables(session_id=session, config_type=args.config_type)
+  dbt = DBTables(session_id=session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_find'
   args.tag = 'recurrent_pytest'
-  args.session_id = session
+  args.session_id = session_id
   args.arch = arch
   args.num_cu = num_cu
 
   connect_db()
-  dbt = DBTables(session_id=None, config_type=args.config_type)
+  dbt = DBTables(session_id=session_id, config_type=args.config_type)
   if args.tag:
     try:
       tag_name_test(args.tag, dbt)

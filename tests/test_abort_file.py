@@ -43,17 +43,18 @@ from tuna.tables import DBTables
 from tuna.import_configs import import_cfgs
 from tuna.db_tables import connect_db
 from load_job import test_tag_name as tag_name_test, add_jobs
+from utils import add_test_session
 
 
 def test_abort():
   #import configs
-  session = 1
+  session_id = add_test_session()
   args = CfgImportArgs()
   args.tag = 'test_builder'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
-  dbt = DBTables(session_id=session, config_type=args.config_type)
+  dbt = DBTables(session_id=session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
   #load jobs
@@ -61,10 +62,10 @@ def test_abort():
   args.label = 'tuna_pytest_abort'
   args.tag = 'test_builder'
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
-  args.session_id = session
+  args.session_id = session_id
 
   connect_db()
-  dbt = DBTables(session_id=None, config_type=args.config_type)
+  dbt = DBTables(session_id=session_id, config_type=args.config_type)
   if args.tag:
     try:
       tag_name_test(args.tag, dbt)
@@ -99,7 +100,7 @@ def test_abort():
         'queue_lock': Lock(),
         'end_jobs': e,
         'config_type': ConfigType.convolution,
-        'session_id': 1
+        'session_id': session_id
     }
 
   w = FinBuilder(**kwargs)
