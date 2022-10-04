@@ -42,8 +42,10 @@ from utils import CfgImportArgs, LdJobArgs
 from tuna.tables import DBTables
 from tuna.import_configs import import_cfgs
 from tuna.db_tables import connect_db
+from tuna.miopen_tables import ConvolutionJob
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import add_test_session
+from tuna.dbBase.sql_alchemy import DbSession
 
 
 def test_abort():
@@ -58,11 +60,22 @@ def test_abort():
   counts = import_cfgs(args, dbt)
 
   #load jobs
-  args = LdJobArgs
-  args.label = 'tuna_pytest_abort'
-  args.tag = 'test_builder'
-  args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
-  args.session_id = session_id
+  job_list = []
+  for i in list(range(4)):
+    job_list.append(ConvolutionJob())
+  for i in range(len(job_list)):
+    print(i)
+    job_list[i].reason = 'tuna_pytest_abort'
+    job_list[i].tag = 'test_abort'
+    job_list[i].fin_steps = ['miopen_find_compile', 'miopen_find_eval']
+    job_list[i].session = session_id
+    job_list[i].solver = i + 1
+    job_list[i].config = i + 1
+  with DbSession() as session:
+    for job in job_list:
+      session.add(job)
+    session.commit()
+  num_jobs = len(job_list)
 
   connect_db()
   dbt = DBTables(session_id=session_id, config_type=args.config_type)
@@ -71,9 +84,6 @@ def test_abort():
       tag_name_test(args.tag, dbt)
     except ValueError as terr:
       print(terr)
-
-  num_jobs = add_jobs(args, dbt)
-  assert num_jobs > 0
 
   hostname = socket.gethostname()
   m = Machine(hostname=hostname, local_machine=True)

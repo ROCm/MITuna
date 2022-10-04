@@ -35,44 +35,7 @@ this_path = os.path.dirname(__file__)
 from tuna.sql import DbCursor
 from tuna.utils.logger import setup_logger
 from tuna.find_db import ConvolutionFindDB
-from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs
-from tuna.db_tables import connect_db
-from tuna.tables import DBTables
-from tuna.import_configs import import_cfgs
-from utils import add_test_session
-
-
-def add_job(arch, num_cu):
-
-  #import configs
-  session_id = add_test_session()
-  args = CfgImportArgs()
-  args.tag = 'recurrent_pytest'
-  args.mark_recurrent = True
-  args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
-
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
-  counts = import_cfgs(args, dbt)
-
-  #load jobs
-  args = LdJobArgs
-  args.label = 'tuna_pytest_find'
-  args.tag = 'recurrent_pytest'
-  args.session_id = session_id
-  args.arch = arch
-  args.num_cu = num_cu
-
-  connect_db()
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
-  if args.tag:
-    try:
-      tag_name_test(args.tag, dbt)
-    except ValueError as terr:
-      print(terr)
-
-  num_jobs = add_jobs(args, dbt)
-  assert num_jobs > 0
 
 
 def parsing(find_db):
@@ -103,5 +66,4 @@ def test_find():
 
   find_db = ConvolutionFindDB(**keys)
 
-  add_job('gfx908', 120)
   parsing(find_db)
