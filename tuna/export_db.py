@@ -31,7 +31,6 @@ from collections import OrderedDict
 import base64
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen_tables import Solver  # pylint: disable=unused-import
 from tuna.tables import DBTables
 from tuna.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
@@ -136,9 +135,8 @@ def get_filename(arch, num_cu, filename, ocl, db_type):
   return final_name
 
 
-def get_fdb_query(dbt, args):
-  """ Helper function to create find db query
-  """
+def get_base_query(dbt, args):
+  """ general query for fdb/pdb results """
   src_table = dbt.find_db_table
   if args.golden_v is not None:
     src_table = dbt.golden_table
@@ -149,24 +147,40 @@ def get_fdb_query(dbt, args):
       query = query.filter(src_table.golden_miopen_v == args.golden_v)\
               .filter(src_table.arch == args.arch)\
               .filter(src_table.num_cu == args.num_cu)
+      LOGGER.info("golden_miopen_v: %s, arch: %s, num_cu: %s", args.golden_v,
+                  args.arch, args.num_cu)
     else:
       query = query.filter(src_table.session == dbt.session.id)
       LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
       LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
 
-    query = query.filter(src_table.config == dbt.config_table.id)\
-        .filter(src_table.solver == dbt.solver_table.id)\
-        .filter(src_table.valid == 1)\
-        .filter(src_table.kernel_time != -1)\
-        .filter(src_table.workspace_sz != -1)\
-        .filter(src_table.opencl == args.opencl)
+    query = query.filter(src_table.valid == 1)\
+        .filter(src_table.opencl == args.opencl)\
+        .filter(src_table.config == dbt.config_table.id)\
+        .filter(src_table.solver == dbt.solver_table.id)
 
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
       query = query.filter(dbt.config_tags_table.tag == args.config_tag)\
           .filter(dbt.config_table.config == dbt.config_table.id)
 
-    query = query.order_by(src_table.config, src_table.update_ts.desc())
+    LOGGER.info("base db query returned: %s", len(query.all()))
+
+  return query
+
+
+def get_fdb_query(dbt, args):
+  """ Helper function to create find db query
+  """
+  src_table = dbt.find_db_table
+  if args.golden_v is not None:
+    src_table = dbt.golden_table
+
+  query = get_base_query(dbt, args)
+  query = query.filter(src_table.kernel_time != -1)\
+      .filter(src_table.workspace_sz != -1)
+
+  query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
 
   return query
 
@@ -176,9 +190,12 @@ def get_pdb_query(dbt, args):
   src_table = dbt.find_db_table
   if args.golden_v is not None:
     src_table = dbt.golden_table
-  query = get_fdb_query(dbt, args)
+
+  query = get_base_query(dbt, args)
   query = query.filter(dbt.solver_table.tunable == 1)\
-        .filter(src_table.params != '')
+      .filter(src_table.params != '')
+
+  LOGGER.info("pdb query returned: %s", len(query.all()))
 
   return query
 
@@ -211,6 +228,7 @@ def get_fdb_alg_lists(query):
 def build_miopen_fdb(fdb_alg_lists):
   """ create miopen find db object for export
   """
+  total_entries = len(fdb_alg_lists)
   num_fdb_entries = 0
   miopen_fdb = OrderedDict()
   for fdbkey_alg, alg_entries in fdb_alg_lists.items():
@@ -225,8 +243,10 @@ def build_miopen_fdb(fdb_alg_lists):
     else:
       lst.append(fastest_entry)
 
-    LOGGER.info("MIOpen fdb: %s, cfg: %s, slv: %s", fastest_entry.fdb_key,
-                fastest_entry.config, ID_SOLVER_MAP[fastest_entry.solver])
+    if num_fdb_entries % (total_entries // 10) == 0:
+      LOGGER.info("FDB count: %s, fdb: %s, cfg: %s, slv: %s", num_fdb_entries,
+                  fastest_entry.fdb_key, fastest_entry.config,
+                  ID_SOLVER_MAP[fastest_entry.solver])
 
   LOGGER.warning("Total number of entries in Find DB: %s", num_fdb_entries)
 
@@ -273,17 +293,24 @@ def build_miopen_kdb(dbt, find_db):
   num_kdb_blobs = 0
   kern_db = []
   with DbSession() as session:
+    total = len(find_db.items())
+    last_pcnt = 0
     for _, entries in find_db.items():
-      for fdb_entry in entries:
-        num_fdb_entries += 1
-        query = session.query(dbt.kernel_cache)\
-            .filter(dbt.kernel_cache.kernel_group == fdb_entry.kernel_group)
-        for kinder in query.all():
-          kern_db.append(kinder)
-          num_kdb_blobs += 1
+      num_fdb_entries += 1
+      entries.sort(key=lambda x: float(x.kernel_time))
+      fastest_slv = entries[0]
+      query = session.query(dbt.kernel_cache)\
+          .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)
+      for kinder in query.all():
+        num_kdb_blobs += 1
+        kern_db.append(kinder)
+      pcnt = int(num_fdb_entries * 100 / total)
+      if pcnt > last_pcnt:
+        LOGGER.warning("Building db: %s%%, blobs: %s", pcnt, num_kdb_blobs)
+        last_pcnt = pcnt
 
-  LOGGER.warning("Total number of FDB entries: %s", num_fdb_entries)
-  LOGGER.warning("Total number of blobs: %s", num_kdb_blobs)
+  LOGGER.warning("Total FDB entries: %s, Total blobs: %s", num_fdb_entries,
+                 num_kdb_blobs)
   return kern_db
 
 
@@ -328,6 +355,8 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
   conn.commit()
   cur.close()
   conn.close()
+
+  LOGGER.warning("Inserted blobs: %s", len(ins_list))
   return file_name
 
 
@@ -398,42 +427,47 @@ def get_cfg_dict(cfg_entry, tensor_entry):
   return dict(cfg_dict)
 
 
-def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
+def insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id):
   """insert perf_db entry into sqlite"""
   perf_db_dict = perf_db_entry.to_dict()
   perf_db_dict['config'] = ins_cfg_id
   perf_db_dict = {
       k: v for k, v in perf_db_dict.items() if k in SQLITE_PERF_DB_COLS
   }
-  query = session.query(Solver).filter(Solver.id == perf_db_dict['solver'])
-  perf_db_dict['solver'] = query.one().solver
+  perf_db_dict['solver'] = ID_SOLVER_MAP[perf_db_dict['solver']]
 
   insert_solver_sqlite(cnx, perf_db_dict)
-  LOGGER.info("Inserting row in perf_db: %s", perf_db_dict)
+
+  return perf_db_dict
 
 
 def export_pdb(dbt, args):
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
-  with DbSession() as session:
-    query = get_pdb_query(dbt, args)
-    cfg_map = {}
-    for perf_db_entry, cfg_entry in query.all():
-      LOGGER.info("%s", cfg_entry.id)
+  query = get_pdb_query(dbt, args)
+  cfg_map = {}
+  db_entries = query.all()
+  total_entries = len(db_entries)
+  for perf_db_entry, cfg_entry in db_entries:
+    if cfg_entry.id in cfg_map:
+      ins_cfg_id = cfg_map[cfg_entry.id]
+    else:
+      cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
+      #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
+      ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
+      cfg_map[cfg_entry.id] = ins_cfg_id
 
-      if cfg_entry.id in cfg_map:
-        ins_cfg_id = cfg_map[cfg_entry.id]
-      else:
-        cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
-        #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
-        ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
-        cfg_map[cfg_entry.id] = ins_cfg_id
+    pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
+    num_perf += 1
 
-      insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id)
-      num_perf += 1
+    if num_perf % (total_entries // 10) == 0:
+      cnx.commit()
+      LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf,
+                  cfg_entry.id, pdb_dict)
 
-  LOGGER.warning("Total number of entries in perf_db: %s", num_perf)
+  cnx.commit()
+  LOGGER.warning("Total number of entries in Perf DB: %s", num_perf)
 
   return local_path
 

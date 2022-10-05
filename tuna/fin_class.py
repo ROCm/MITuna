@@ -29,6 +29,7 @@
 import json
 import os
 import tempfile
+import functools
 import paramiko
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
@@ -330,21 +331,29 @@ class FinClass(WorkerInterface):
       if "applicable_solvers" in elem.keys():
         #remove old applicability
         # pylint: disable=comparison-with-callable
-        query = session.query(self.dbt.solver_app)\
+        app_query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
           .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
         # pylint: enable=comparison-with-callable
-        query.delete()
+        app_query.update({self.dbt.solver_app.applicable: 0},
+                         synchronize_session='fetch')
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s",
                               elem["input"]["config_tuna_id"])
         for solver in elem["applicable_solvers"]:
           try:
-            new_entry = self.dbt.solver_app(
-                solver=solver_id_map_h[solver],
-                config=elem["input"]["config_tuna_id"],
-                session=self.session_id)
-            session.add(new_entry)
+            solver_id = solver_id_map_h[solver]
+            obj = app_query.filter(
+                self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
+            if obj:
+              obj.applicable = 1
+            else:
+              new_entry = self.dbt.solver_app(
+                  solver=solver_id,
+                  config=elem["input"]["config_tuna_id"],
+                  session=self.session_id,
+                  applicable=1)
+              session.add(new_entry)
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
@@ -361,18 +370,36 @@ class FinClass(WorkerInterface):
       self.logger.error("JSON file returned from Fin is empty")
       return False
 
+    #break down commits into smaller packets
+    pack_i = 0
+    pack = []
+    all_packs = []
+    for elem in json_in:
+      pack.append(elem)
+      pack_i += 1
+      if pack_i == 100:
+        all_packs.append(pack)
+        pack = []
+        pack_i = 0
+    if pack:
+      all_packs.append(pack)
+
     with DbSession() as session:
-      callback = self.insert_applicability
-      session_retry(session, callback, lambda x: x(session, json_in),
-                    self.logger)
+
+      def actuator(func, pack):
+        return func(session, pack)
+
+      for pack in all_packs:
+        session_retry(session, self.insert_applicability,
+                      functools.partial(actuator, pack=pack), self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
+      query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
       sapp_count = query.one()[0]
-      self.logger.info("Solver applicability table updated to %d entries",
-                       sapp_count)
-
-    self.logger.info('Done parsing fin solver applicability output')
+      self.logger.warning(
+          "Finished parsing solver applicability, new session size: %d entries",
+          sapp_count)
     return True
 
   def invalidate_solvers(self, sids, max_id):

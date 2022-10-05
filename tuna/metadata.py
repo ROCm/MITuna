@@ -220,8 +220,10 @@ TENSOR_PRECISION = {
     'conv': 'FP32',
     'FP16': 'FP16',
     'convfp16': 'FP16',
-    'BF16': 'BFP16',
-    'convbfp16': 'BFP16',
+    'BF16': 'BF16',
+    'convbfp16': 'BF16',
+    'INT8': 'INT8',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }
@@ -230,11 +232,12 @@ INVERS_CONV_TENSOR_PRECISION = {
     'FP32': 'conv',
     'FP16': 'convfp16',
     'BF16': 'convbfp16'
+    'INT8': 'convint8'
 }
 
 INVERS_BN_TENSOR_PRECISION = {'FP32': 'bnorm', 'FP16': 'bnormfp16'}
 
-SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16']
+SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16', 'convint8']
 SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16']
 
 CONV_CONFIG_COLS = [
@@ -291,7 +294,7 @@ TABLE_COLS_FUSION_MAP = {
 FUSION_COLS = [v for _, v in TABLE_COLS_FUSION_MAP.items()]
 CONV_COLS = [v for _, v in TABLE_COLS_CONV_MAP.items()]
 
-CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S']
+CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S', 'Z']
 BN_SKIP_ARGS = ['i', 't', 'V', 's', 'w', 'S']
 
 DIR_MAP = {1: 'F', 2: 'B', 4: 'W'}
@@ -617,7 +620,7 @@ PREC_TO_CMD = {
         'FP32': 'conv',
         'FP16': 'convfp16',
         'BF16': 'convbfp16',
-        'BFP16': 'convbfp16'
+        'INT8': 'convint8'
     },
     ConfigType.batch_norm: {
         'FP32': 'bnorm',
@@ -628,6 +631,7 @@ CMD_TO_PREC = {
     'conv': 'FP32',
     'convfp16': 'FP16',
     'convbfp16': 'BF16',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }

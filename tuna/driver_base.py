@@ -122,10 +122,12 @@ class DriverBase():
         session.add(tid)
         session.commit()
         ret_id = tid.id
+        LOGGER.info("Insert Tensor: %s", ret_id)
       except IntegrityError as err:
         LOGGER.warning(err)
         session.rollback()
         ret_id = self.get_tensor_id(session, tensor_dict)
+        LOGGER.info("Get Tensor: %s", ret_id)
 
     return ret_id
 
@@ -143,18 +145,18 @@ class DriverBase():
     i_dict['num_dims'] = self.num_dims
     i_dict['dim0'] = 1
 
-    if self.in_layout == 'NCHW':
+    if self.in_layout in ('NCHW', 'NCDHW'):
       i_dict['dim1'] = self.in_channels
       i_dict['dim2'] = self.in_d
       i_dict['dim3'] = self.in_h
       i_dict['dim4'] = self.in_w
-      i_dict['layout'] = 'NCHW'
+      i_dict['layout'] = self.in_layout
     elif self.in_layout == 'NHWC':
       i_dict['dim1'] = self.in_d
       i_dict['dim2'] = self.in_h
       i_dict['dim3'] = self.in_w
       i_dict['dim4'] = self.in_channels
-      i_dict['layout'] = 'NHWC'
+      i_dict['layout'] = self.in_layout
 
     return i_dict
 

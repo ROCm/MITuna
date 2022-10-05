@@ -25,27 +25,32 @@
 #
 ###############################################################################
 """script for merging find db or perf db files, across machines or locally"""
+import os
 import sqlite3
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg, parse_pdb_filename
-from tuna.metadata import MYSQL_PERF_CONFIG
-from tuna.metadata import CONV_CONFIG_COLS
-from tuna.miopen_tables import Solver
 from tuna.tables import DBTables
-from tuna.helper import compose_tensors, valid_cfg_dims
-from tuna.helper import mysqldb_insert_dict, mysqldb_overwrite_table
+from tuna.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.session import Session
+from tuna.config_type import ConfigType
+from tuna.driver_conv import DriverConvolution
+from tuna.import_configs import insert_config
+from tuna.metadata import PREC_TO_CMD
+from tuna.metadata import get_solver_ids
+from tuna.parsing import parse_fdb_line
 
 LOGGER = setup_logger('import_db')
+
+COMMIT_FREQ = 1000
 
 
 def parse_args():
   """command line parsing"""
   parser = setup_arg_parser('Import Performance DBs once tunning is finished',
-                            [TunaArgs.VERSION])
+                            [TunaArgs.VERSION, TunaArgs.SESSION_ID])
   parser.add_argument(
       '-t',
       '--target_file',
@@ -74,132 +79,157 @@ def parse_args():
   return args
 
 
-def insert_configs(context, configs):
-  """Read in perf_config sqlite table from configs arg and insert into mysql tables.
-  This function constructs a temporary perf_cfg dict that translates a sqlite perf_config entry
-  into mysql conv_config and perf_config entry"""
-  #fields from perf_config table sans conv_config FKEY and timestamps
-  insert_ids = []
-  ret = False
-
-  for i, config in enumerate(configs):
-    perf_cfg = {
-        key: val for key, val in config.items() if key in MYSQL_PERF_CONFIG
-    }
-
-    #mysql_cfg represents a conv_config entry
-    mysql_cfg = {
-        key: val for key, val in config.items() if key in CONV_CONFIG_COLS
-    }
-    mysql_cfg['input_tensor'] = config['input_tensor']
-    mysql_cfg['weight_tensor'] = config['weight_tensor']
-    #only use valid mysql configs
-    mysql_cfg['valid'] = '1'
-    cfg_filter = mysql_cfg.copy()
-    ret, cfg_idx = mysqldb_insert_dict(context.table_cfg, mysql_cfg, cfg_filter)
-    if not ret:
-      LOGGER.error('Could not update config: %s', mysql_cfg)
-      break
-
-    if ret:
-      insert_ids.append(cfg_idx)
-    else:
-      LOGGER.error('Could not update perf_config: %s', perf_cfg)
-      break
-
-    if i % 100 == 0:
-      LOGGER.info('Loading configs... %s', i)
-
-  return ret, insert_ids
-
-
-def insert_perf_db(context, perf_rows, perf_cols, cvrt):
-  """insert sqlite perf_db table into mysql perf_db"""
-
-  perf_db = []
-  for row in perf_rows:
-    entry = dict(zip(perf_cols, row))
-    entry['config'] = cvrt[entry['config']]
-    entry.pop('id', None)
-    entry['session'] = context.session_id
-    entry['valid'] = 1
-
-    with DbSession() as session:
-      query = session.query(Solver).filter(Solver.solver == entry['solver'])
-      entry['solver'] = query.one().id
-
-    perf_db.append(entry)
-
-  ret, insert_ids = mysqldb_overwrite_table(context.table_perf_db, perf_db,
-                                            ['solver', 'config', 'session'])
-  if not ret:
-    LOGGER.error('Could not update perf_db: %s', perf_db)
-
-  return ret, insert_ids
-
-
-def record_perfdb(args, cfg_filter=None):
-  """insert perf_db entry from sqlite file to mysql"""
-  cnx = sqlite3.connect(args.target_file)
-
-  config_rows, config_cols = get_sqlite_data(cnx, 'config', cfg_filter)
-  ret = record_perfdb_v2(args, cnx, config_rows, config_cols, cfg_filter)
-
-  return ret
-
-
-def record_perfdb_v2(args, cnx, config_rows, config_cols, cfg_filter):  #pylint: disable=too-many-locals
-  """Get sqlite db rows and insert into msyql for Tuna version 1.0.0"""
-  #configs will contain a mysql perf_config entry + its associated
-  #conv_config(with tensors) entry in the same dict
-  configs = []
-  for cfg_row in config_rows:
-    perf_cfg = dict(zip(config_cols, cfg_row))
-    perf_cfg = valid_cfg_dims(perf_cfg)
-    configs.append(get_perf_cfg(perf_cfg, args))
-
-  if not configs:
-    print_sqlite_rows(cnx, cfg_filter)
-    return False
-
-  perf_rows, perf_cols = get_sqlite_data(
-      cnx, 'perf_db', {'config': [perf_cfg['id'] for perf_cfg in configs]})
-
-  #inserting perf_config from sqlite configs
-  ret, insert_ids = insert_configs(args, configs)
-  if not ret:
-    return False
-
-  cvrt = {}  #update config id to inserted location
-  for i, _ in enumerate(insert_ids):
-    cvrt[configs[i]['id']] = insert_ids[i]
-
-  #inserting perf_fb entry
-  ret, _ = insert_perf_db(args, perf_rows, perf_cols, cvrt)
-
-  return ret
-
-
-def get_perf_cfg(perf_cfg, args):
-  """Takes in a dict containing a sqlite perf_config row
-  and returns a dict that will contain all cols needed for a
-  mysql perf_config and its associated (conv) config row/FKey"""
-  perf_cfg = sqlite_to_mysql_cfg(perf_cfg)
-  #setting aside perf_config cols that are hidden in tensor/not in conv_config
-  p_dict = {}
-  p_dict['data_type'] = perf_cfg['data_type']
-  p_dict['bias'] = perf_cfg['bias']
-  p_dict['layout'] = perf_cfg['layout']
+def get_cfg_driver(sqlite_cfg):
+  """Takes in a dict containing a sqlite config row
+  and returns convolution driver object"""
+  mysql_cfg = sqlite_to_mysql_cfg(sqlite_cfg)
 
   #constructing a conv_config entry (dict)
-  perf_cfg = compose_tensors(perf_cfg, args, True)
-  #appending perf_config cols from tensors/not in conv_config
-  for key, value in p_dict.items():
-    perf_cfg[key] = value
-  #TODOS: do we need to remove these? they are used in composing a tensor row
-  #perf_cfg = valid_cfg_dims(perf_cfg)
-  #LOGGER.info('post prune: %s', perf_cfg)
-  return perf_cfg
+  mysql_cfg['in_layout'] = mysql_cfg['layout']
+  mysql_cfg['out_layout'] = mysql_cfg['layout']
+  mysql_cfg['fil_layout'] = mysql_cfg['layout']
+  cnv_cmd = PREC_TO_CMD.get(ConfigType.convolution).get(mysql_cfg['data_type'])
+
+  driver = DriverConvolution('', cmd=cnv_cmd, kwargs=mysql_cfg)
+
+  return driver
+
+
+def get_sql_cfg_id_map(dbt, cnx, args):
+  """ load configs into db from sqlite, create mapping to mysql configs """
+  counts = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+
+  cfg_filter = None
+  config_rows, config_cols = get_sqlite_data(cnx, 'config', cfg_filter)
+
+  total = len(config_rows)
+  cvrt = {}  #update config id to inserted location
+  LOGGER.info("Insert Configurations")
+  for i, cfg_row in enumerate(config_rows):
+    sqlite_cfg = dict(zip(config_cols, cfg_row))
+    sqlite_id = sqlite_cfg['id']
+    sqlite_cfg = valid_cfg_dims(sqlite_cfg)
+
+    driver = get_cfg_driver(sqlite_cfg)
+    ins_id = insert_config(driver, counts, dbt, args)
+    cvrt[sqlite_id] = ins_id
+
+    if (total / 10) % (i + 1) == 0:
+      LOGGER.info("Config Insert %s: %s", i, cfg_row)
+
+  return cvrt
+
+
+def set_fdb_data(fdb_entry, fdb_key, alg_lib, workspace, kernel_time):
+  """ set fdb specific data, default for pdb if missing """
+  fdb_entry.fdb_key = fdb_key
+  fdb_entry.alg_lib = alg_lib
+  fdb_entry.workspace_sz = workspace
+  fdb_entry.kernel_time = kernel_time
+  fdb_entry.kernel_group = fdb_entry.id
+
+  if fdb_entry.params is None:
+    fdb_entry.params = ''
+
+
+def set_pdb_data(fdb_entry, params):
+  """ set pdb specific data, fill defaults for fdb if missing """
+  fdb_entry.params = params
+  if fdb_entry.kernel_time is None:
+    fdb_entry.kernel_time = -1
+  if fdb_entry.workspace_sz is None:
+    fdb_entry.workspace_sz = -1
+
+
+def get_fdb_entry(session, dbt, config, solver, ocl):
+  """ return referenc to fdb entry in mysql, existing one if present"""
+  fdb_entry = dbt.find_db_table()
+  fdb_entry.config = config
+  fdb_entry.solver = solver
+  fdb_entry.session = dbt.session_id
+  fdb_entry.opencl = ocl
+  fdb_entry.logger = LOGGER
+  fdb_query = fdb_entry.get_query(session, dbt.find_db_table, dbt.session_id)
+  obj = fdb_query.first()
+  if obj:  # existing entry in db
+    fdb_entry = obj
+  else:
+    # Insert the above entry
+    session.add(fdb_entry)
+
+  return fdb_entry
+
+
+def insert_perf_db(dbt, perf_rows, perf_cols, cvrt):
+  """insert sqlite perf_db table into mysql perf_db"""
+  insert_ids = []
+  solver_id_map, _ = get_solver_ids()
+  with DbSession() as session:
+    for row in perf_rows:
+      entry = dict(zip(perf_cols, row))
+      cfg_id = cvrt[entry['config']]
+      slv_id = solver_id_map[entry['solver']]
+
+      fdb_entry = get_fdb_entry(session, dbt, cfg_id, slv_id, False)
+      set_pdb_data(fdb_entry, entry['params'])
+
+      fdb_entry.valid = True
+      insert_ids.append(fdb_entry.id)
+
+      if len(insert_ids) % COMMIT_FREQ == 0:
+        session.commit()
+        session.refresh(fdb_entry)
+        LOGGER.info("Ins pdb count %s, fdb_id: %s, fdb_key: %s",
+                    len(insert_ids), fdb_entry.id, fdb_entry.fdb_key)
+
+    session.commit()
+
+  return insert_ids
+
+
+def record_perfdb(dbt, args):
+  """insert perf_db entry from sqlite file to mysql"""
+  cnx = sqlite3.connect(args.target_file)
+  cvrt = get_sql_cfg_id_map(dbt, cnx, args)
+
+  perf_rows, perf_cols = get_sqlite_data(cnx, 'perf_db',
+                                         {'config': list(cvrt.keys())})
+
+  #inserting perf_fb entry
+  LOGGER.info("Insert Performance db")
+  insert_perf_db(dbt, perf_rows, perf_cols, cvrt)
+
+
+def record_fdb(dbt, args):
+  """insert find_db entries from fdb text file """
+  counts = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  solver_id_map, _ = get_solver_ids()
+  with open(os.path.expanduser(args.target_file), "r") as infile:  # pylint: disable=unspecified-encoding
+    with DbSession() as session:
+      num_line = 0
+      for line in infile:
+        ins_id = insert_config(DriverConvolution(line), counts, dbt, args)
+
+        fdb_data = parse_fdb_line(line)
+        for fdb_key, algs in fdb_data.items():
+          for alg in algs:
+            slv_id = solver_id_map[alg['solver']]
+            fdb_entry = get_fdb_entry(session, dbt, ins_id, slv_id, False)
+            set_fdb_data(fdb_entry, fdb_key, alg['alg_lib'],
+                         alg['workspace_sz'], alg['kernel_time'])
+
+        num_line += 1
+        if num_line % COMMIT_FREQ == 0:
+          session.commit()
+          session.refresh(fdb_entry)
+          LOGGER.info("Ins fdb count %s, fdb_id: %s, fdb_key: %s", num_line,
+                      fdb_entry.id, fdb_entry.fdb_key)
+
+      session.commit()
 
 
 def print_sqlite_rows(cnx, cfg_filter):
@@ -217,14 +247,20 @@ def main():
   """main"""
   args = parse_args()
 
-  args.label = "imported perf db"
+  args.label = "imported_perf_db"
+  args.docker_name = "n_a"
+  args.solver_id = None
+  args.mark_recurrent = False
+  args.tag = None
+  args.config_type = ConfigType.convolution
   args.arch, args.num_cu = parse_pdb_filename(args.target_file)
-  args.session_id = Session().add_new_session(args, None)
-
+  if not args.session_id:
+    args.session_id = Session().add_new_session(args, None)
   dbt = DBTables(session_id=args.session_id)
-  args.table_cfg = dbt.config_table
-  args.table_perf_db = dbt.find_db_table
-  record_perfdb(args)
+  if args.target_file.endswith(".db"):
+    record_perfdb(dbt, args)
+  elif args.target_file.endswith(".fdb.txt"):
+    record_fdb(dbt, args)
 
 
 if __name__ == '__main__':
