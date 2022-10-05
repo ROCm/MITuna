@@ -124,10 +124,16 @@ def get_mmi_env_vars(env_vars={}):
   """Utility function to get machine management interface specific env vars"""
   if 'gateway_ip' in os.environ:
     env_vars['gateway_ip'] = os.environ['gateway_ip']
+  else:
+    env_vars['gateway_ip'] = None
   if 'gateway_port' in os.environ:
     env_vars['gateway_port'] = os.environ['gateway_port']
+  else:
+    env_vars['gateway_port'] = None
   if 'gateway_user' in os.environ:
     env_vars['gateway_user'] = os.environ['gateway_user']
+  else:
+    env_vars['gateway_user'] = None
 
   return env_vars
 
