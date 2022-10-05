@@ -54,6 +54,7 @@ def VerifyArgs()
 pipeline {
   agent { node { label 'mysql' } }
   parameters {
+    string(name: 'branch_name', defaultValue: 'init_session', description: '')
     string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
     string(name: 'slurm_partition', defaultValue: 'gpu-node', description: 'Name of the slurm partition to run jobs on')    
     string(name: 'job_label', defaultValue: '', description: 'Label for new session')
