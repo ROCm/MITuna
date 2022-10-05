@@ -30,7 +30,9 @@ import os
 from tuna.metadata import TUNA_LOG_DIR
 
 
-def setup_logger(logger_name='Tuna', add_streamhandler=False):
+def setup_logger(logger_name='Tuna',
+                 add_streamhandler=True,
+                 add_filehandler=False):
   """std setup for tuna logger"""
   log_level = os.environ.get('TUNA_LOGLEVEL', 'INFO').upper()
   logging.basicConfig(level=log_level)
@@ -40,10 +42,11 @@ def setup_logger(logger_name='Tuna', add_streamhandler=False):
       '%(asctime)s - %(name)s - %(levelname)s -  [%(filename)s:%(lineno)d] - %(message)s'
   )
   logger.propagate = False
-  file_handler = logging.FileHandler(log_file, mode='a')
-  file_handler.setFormatter(formatter)
-  file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
-  logger.addHandler(file_handler)
+  if add_filehandler:
+    file_handler = logging.FileHandler(log_file, mode='a')
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
+    logger.addHandler(file_handler)
   if add_streamhandler:
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
