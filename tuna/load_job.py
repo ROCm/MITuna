@@ -41,7 +41,6 @@ from tuna.config_type import ConfigType
 from tuna.tables import DBTables
 
 LOGGER = setup_logger('load_jobs')
-LOG_FREQ = 100
 
 
 def parse_args():
@@ -212,8 +211,6 @@ def add_jobs(args, dbt):
     do_commit = False
     while True:
       for solv_app, slv in res:
-        if counts % LOG_FREQ == 0:
-          print('.', flush=True, end='')
         try:
           job = dbt.job_table()
           job.config = solv_app.config

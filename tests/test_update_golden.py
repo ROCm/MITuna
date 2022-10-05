@@ -69,9 +69,9 @@ def test_update_golden():
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
   entries = get_fdb_query(dbt).all()
   assert entries
-  assert merge_golden_entries(dbt, args.golden_v, entries)
 
   with DbSession() as session:
+    assert merge_golden_entries(session, dbt, args.golden_v, entries)
     query = session.query(ConvolutionGolden)
     res = query.all()
   assert len(res) is not None

@@ -25,6 +25,9 @@
 #
 ###############################################################################
 """Module that a convolution MIOpenDriver cmd"""
+from re import search
+
+from tuna.utils.logger import setup_logger
 from tuna.driver_base import DriverBase
 from tuna.metadata import CONV_CONFIG_COLS
 from tuna.helper import get_db_id
@@ -34,12 +37,24 @@ from tuna.metadata import CONV_3D_DEFAULTS, TENSOR_COLS, TABLE_COLS_CONV_MAP
 from tuna.metadata import DIRECTION, DIR_MAP, CONV_SKIP_ARGS
 from tuna.parsing import get_fd_name, conv_arg_valid, get_fds_from_cmd
 
+LOGGER = setup_logger('driver_conv')
+
 
 #pylint: disable=too-many-instance-attributes
 class DriverConvolution(DriverBase):
   """Represents an MIOpenDriver convolution command"""
 
-  def __init__(self, line, cmd=None):
+  def __init__(self, line, cmd=None, kwargs=None):
+
+    allowed_keys = set([
+        'batchsize', 'spatial_dim', 'pad_h', 'pad_w', 'pad_d', 'conv_stride_h',
+        'conv_stride_w', 'conv_stride_d', 'dilation_h', 'dilation_w',
+        'dilation_d', 'group_count', 'conv_mode', 'pad_mode',
+        'trans_output_pad_h', 'trans_output_pad_w', 'trans_output_pad_d',
+        'out_layout', 'in_layout', 'fil_layout', 'in_d', 'in_h', 'in_w',
+        'fil_d', 'fil_h', 'fil_w', 'in_channels', 'out_channels', 'direction',
+        'cmd'
+    ])
 
     self.batchsize = None
     self.spatial_dim = None
@@ -73,7 +88,13 @@ class DriverConvolution(DriverBase):
     self.direction = None
     self._cmd = None
 
-    super().__init__(line)
+    if kwargs:
+      self.__dict__.update(
+          (key, value) for key, value in kwargs.items() if key in allowed_keys)
+      self.config_set_defaults()
+    else:
+      super().__init__(line)
+
     #allow cmd input to override driver line
     if cmd:
       self._cmd = cmd
@@ -98,6 +119,10 @@ class DriverConvolution(DriverBase):
     setattr(self, 'direction', DIR_MAP[direction])
     for key, val in fds.items():
       setattr(self, key, val)
+
+    pattern_3d = '[0-9]x[0-9]x[0-9]'
+    if search(pattern_3d, line):
+      setattr(self, 'spatial_dim', 3)
 
   def parse_driver_line(self, line):
     super().parse_driver_line(line)
@@ -133,14 +158,22 @@ class DriverConvolution(DriverBase):
     """Setting config DB defaults to avoid duplicates through SELECT"""
     if self.spatial_dim == 3:
       self.set_defaults(CONV_3D_DEFAULTS)
+      self.num_dims = 3
     else:
       self.set_defaults(CONV_2D_DEFAULTS)
+      self.num_dims = 2
 
   def set_defaults(self, defaults):
     """Set fds defaults"""
     for k, val in self.to_dict().items():
-      if val is None and k in defaults.keys():
-        setattr(self, k, defaults[k])
+      if k in defaults.keys():
+        if val is None:
+          setattr(self, k, defaults[k])
+        #for 2d configs filter out 3rd dimensional paramaters from unscrupulous users
+        elif self.spatial_dim != 3 and k.endswith('_d'):
+          setattr(self, k, defaults[k])
+          LOGGER.warning("Using default for key %s, because spatial_dim is %s.",
+                         k, self.spatial_dim)
 
   @staticmethod
   def get_params(tok1):

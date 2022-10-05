@@ -1,66 +1,14 @@
-def runsql(query) {
-    echo "query: ${query}"
-    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${db_name}" -e "${query}" -N -s /$
-    def res = sh (script: "${cmd}", returnStdout: true).trim()
-    return res
-}
+def shared_library_branch = scm.branches[0].name
+if (shared_library_branch .contains("*/")) {
+    shared_library_branch  = shared_library_branch.split("\\*/")[1]
+   }
+def util_lib="jenkins-shared@${shared_library_branch}"
+echo "${util_lib}"
 
-def getDockerName(backend)
-{
-  def tuna_docker_name = "${docker_registry}/ci-tuna:${backend}_${env.BUILD_ID}"
-  return tuna_docker_name
-}
-
-def finSolvers(){
-  backend = "HIPNOGPU"
-  def tuna_docker
-  def tuna_docker_name = getDockerName("HIPNOGPU")
-  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
-
-  if(params.base_image != '')
-  {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
-  }
-  sh "echo ${build_args}"
-
-  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.push()
-
-  def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
-
-  if(params.UPDATE_SOLVERS)
-  {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_solvers'"
-    def num_solvers = runsql("SELECT count(*) from solver;")
-    println "Number of solvers: ${num_solvers}"
-    if (num_solvers.toInteger() == 0){
-        error("Unable to add solvers from Fin")
-    }
-  }
-  if(params.UPDATE_APPLICABILITY)
-  { 
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id} --arch_num_cu_list ${params.architecture}'"
-    def num_sapp = runsql("SELECT count(*) from conv_solver_applicability;")
-    println "Count(*) conv_solver_applicability table: ${num_sapp}"
-    if (num_sapp.toInteger() == 0){
-      error("Unable to get applicability from Fin")
-    }
-  }
-
-}
+library "${util_lib}"
 
 def VerifyArgs()
 {
-    if(params.rocm_version == '' && params.osdb_bkc_version == '')
-    {
-      error "Either ROCm version or OSDB build number is required"
-    }
-
-    if(params.rocm_version != '' && params.osdb_bkc_version != '')
-    {
-      error "Can only specify either the ROCm version or the OSDB build number"
-    }
-
     if(params.session_id=='')
     {
         error "Session id is required!"
@@ -69,18 +17,25 @@ def VerifyArgs()
 
 pipeline {
   agent { node { label 'mysql' } }
+    environment {
+      db_host = "${params.db_host}"
+      db_name = "${params.db_name}"
+      db_user = "${params.db_user}"
+      db_password = "${params.db_password}"
+      branch_name = "${params.branch_name}"
+      backend = 'HIPNOGPU'
+      tuna_docker_name = utils.getDockerName("${backend}")
+  }
   parameters {
+    string(name: 'branch_name', defaultValue: 'applic_pipe_gold', description: '')
     booleanParam(name: "UPDATE_SOLVERS", defaultValue: true, description: "Enable or disable the solver update stage")
     booleanParam(name: "UPDATE_APPLICABILITY", defaultValue: false, description: "Enable or disable the applicability update stage")
-    choice(name: 'architecture', choices: ["gfx90a-104", "gfx90a-110", "gfx900-56", "gfx900-64", "gfx906-60", "gfx908-120", "gfx1030-36"], description: 'Log level for TUNA')
-    string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
     string(name: 'session_id', defaultValue: '', description: 'session id for update applicability')
+    string(name: 'config_tag', defaultValue: '', description: 'add a config tag to restrict the search')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
-    string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
-    string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
-    string(name: 'db_name', defaultValue: "${TUNA_DB_NAME}", description: 'Name of the database schema')
+    string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
     string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
@@ -96,7 +51,9 @@ pipeline {
     stage('fin Solvers') 
     {
       steps{
-        finSolvers()
+        script {
+          utils.applicUpdate()
+        }
       }
     }
   }

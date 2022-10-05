@@ -318,6 +318,25 @@ def get_pdb_key(fds_dict, precision, direction='F'):
   return '-'.join(lst)
 
 
+def parse_fdb_line(cmd):
+  """Return dict with find db line data"""
+  out_dict = {}
+  if cmd.find('=') != -1:
+    fdb_key = cmd.split('=')[0]
+    slv_arr = (cmd.split('=')[1]).split(';')
+    out_dict[fdb_key] = []
+    for solver in slv_arr:
+      fields = solver.split(',')
+      alg = {}
+      alg['alg_lib'] = fields[3]
+      alg['solver'] = fields[0].split(':')[1]
+      alg['kernel_time'] = fields[1]
+      alg['workspace_sz'] = fields[2]
+      out_dict[fdb_key].append(alg)
+
+  return out_dict
+
+
 def get_fds_from_cmd(cmd):
   """Return dict of db var to value from MIOpenDriver cmd"""
   if cmd.find('=') != -1:
