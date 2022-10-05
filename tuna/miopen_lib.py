@@ -79,13 +79,6 @@ class MIOpen(MITunaInterface):
         default=1,
         help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
         choices=[1, 3])
-    parser.add_argument('--session_id',
-                        action='store',
-                        type=int,
-                        dest='session_id',
-                        help=
-                        'Session ID to be used as tuning tracker. ' \
-                        'Allows to correlate DB results to tuning sessions')
     parser.add_argument('--remote_machine',
                         dest='remote_machine',
                         action='store_true',

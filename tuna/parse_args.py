@@ -84,7 +84,6 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parents=None):
                         default=ConfigType.convolution,
                         choices=ConfigType,
                         type=ConfigType)
-  """
   if TunaArgs.SESSION_ID in arg_list:
     parser.add_argument(
         '--session_id',
@@ -94,6 +93,5 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parents=None):
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
     )
-  """
 
   return parser
