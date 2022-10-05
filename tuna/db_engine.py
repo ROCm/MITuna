@@ -31,8 +31,7 @@ from sqlalchemy.orm import sessionmaker
 from tuna.utils.utility import get_env_vars
 
 ENV_VARS = get_env_vars()
-ENGINE = create_engine("mysql+pymysql://{}:{}@{}:3306/{}".format(
-    ENV_VARS['user_name'], ENV_VARS['user_password'], ENV_VARS['db_hostname'],
-    ENV_VARS['db_name']),
+ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" \
+                       f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}",
                        poolclass=NullPool)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)

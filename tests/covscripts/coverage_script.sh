@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/bin/bash 
 ###############################################################################
 #
 # MIT License
@@ -24,14 +24,17 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Dummy args object to be used for testing"""
+previous_file="./utils/coverage_files/coverage_percentage.txt"
+old_var=$(cat "$previous_file")
+python3 -m coverage run -m pytest #runs coverage reports
+python3 -m coverage json #exports coverage reports into a JSON file 
+mv coverage.json ./utils/coverage_files #move file into covscripts/buffer folder
+python3 tests/covscripts/coverage_parse_attributes.py #parse coverage from JSON file and saves it into buffer file
+file="./utils/coverage_files/coverage_percentage.txt" #picks up the file with the coverage percentage
+new_var=$(cat "$file")        #assigns the output from the file
+echo "Total Coverage Percentage is:" $new_var" %"   #testing that the variable is correct
 
-
-class DummyArgs(object):
-  """Dummy args object class to be used for testing"""
-
-  # pylint: disable=too-many-instance-attributes
-
-  def __init__(self, **kwargs):
-    """Constructor"""
-    pass
+echo "----------------------------------------------------------";
+echo "Coverage Status:";
+echo "[Prior Repo Coverage Stats] --: $old_var%";
+echo "[New coverage Committed Coverage Stats] --: % $new_var%";
