@@ -1,6 +1,6 @@
 import groovy.transform.Field
 
-@Field String job_lim = "-A miopenConvolutionAlgoGEMM -o"
+@Field String job_lim = "-A miopenConvolutionAlgoGEMM "
 
 def rocmnode(name) {
     def node_name = 'tunatest'
@@ -304,15 +304,14 @@ def loadJobTest() {
         out_bn = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test' and session=${sesh2} ;")
         assert out_bn.toInteger() > 0
 
-        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test_app -C batch_norm --only_applicable --session_id ${sesh2}"
-        out_bn_app = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test_app' and session=${sesh2} ;")
-        assert out_bn_app.toInteger() > 0
-
         //reset jobs and test load solver
         runsql("DELETE FROM conv_job;")
-        runsql("INSERT INTO solver(solver, valid) SELECT 'gemm', 1;")
-        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} -s gemm --session_id ${sesh1}"
-        out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and solver='gemm' and session=${sesh1};")
+        //runsql("INSERT INTO solver(solver, valid) VALUES ('ConvHipImplicitGemmV4R1Fwd', 1);")
+        runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 1, 1, 26, 1);")
+        runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 2, 1, 26, 1);")
+        runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 3, 1, 26, 1);")
+        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} -s ConvHipImplicitGemmV4R1Fwd --session_id ${sesh1}"
+        out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and solver='ConvHipImplicitGemmV4R1Fwd' and session=${sesh1};")
         assert out.toInteger() > 0
     }
 }
@@ -431,7 +430,6 @@ def pytestSuite1() {
            sh "pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
            sh "pytest tests/test_importconfigs.py -s"
-           sh "pytest tests/test_worker.py -s"
            sh "pytest tests/test_machine.py -s"
            sh "pytest tests/test_dbBase.py -s"
            sh "pytest tests/test_driver.py -s"
@@ -465,6 +463,7 @@ def pytestSuite2() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
+           sh "pytest tests/test_worker.py -s"
            sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
         }
     }
@@ -558,10 +557,7 @@ def LoadJobs()
   }
   if(params.all_configs)
   {
-      if(params.only_applicable)
-          script_args = script_args + " --all_configs -o "
-      else
-          script_args = script_args + " --all_configs "
+      script_args = script_args + " --all_configs "
   }
   else
   {

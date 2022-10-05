@@ -1,20 +1,16 @@
-def runsql(query) {
-    echo "query: ${query}"
-    def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password} "${params.db_name}" -e "${query}" -N -s /$
-    def res = sh (script: "${cmd}", returnStdout: true).trim()
-    return res
-}
+def shared_library_branch = scm.branches[0].name
+if (shared_library_branch .contains("*/")) {
+    shared_library_branch  = shared_library_branch.split("\\*/")[1]
+   }
+def util_lib="jenkins-shared@${shared_library_branch}"
+echo "${util_lib}"
 
-def getDockerName(backend)
-{
-  def tuna_docker_name = "${docker_registry}/ci-tuna:${backend}_${env.BUILD_ID}"
-  return tuna_docker_name
-}
+library "${util_lib}"
 
 def initSession(){
   backend = "HIPNOGPU"
   def tuna_docker
-  def tuna_docker_name = getDockerName("HIPNOGPU")
+  def tuna_docker_name = utils.getDockerName("HIPNOGPU")
   def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
@@ -28,9 +24,9 @@ def initSession(){
 
   def docker_run_args = "--network host  --dns 8.8.8.8 --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
-  def num_session = runsql("SELECT count(*) from session where reason='${job_label}';")
+  def num_session = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
   sh "srun --no-kill -p ${slurm_partition} -N 1 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py --init_session -l ${job_label}'"
-  def num_session2 = runsql("SELECT count(*) from session where reason='${job_label}';")
+  def num_session2 = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
   println "Number of ${job_label} sessions: ${num_session2}"
   if(num_session.toInteger() <= num_session2.toInteger()){
       error("Session is not correctly initialized with the reason:${job_label}")

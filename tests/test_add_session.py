@@ -38,7 +38,7 @@ from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
-from dummy_args import DummyArgs
+from utils import DummyArgs
 
 
 def test_add_session():

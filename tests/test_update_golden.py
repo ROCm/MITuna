@@ -25,14 +25,13 @@
 ###############################################################################
 
 import sys
-from dummy_args import DummyArgs
 from tuna.update_golden import merge_golden_entries, get_fdb_query
 from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
 from tuna.miopen_tables import ConvolutionGolden
 from tuna.find_db import ConvolutionFindDB
-from utils import add_test_session
+from utils import add_test_session, DummyArgs
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
