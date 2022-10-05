@@ -231,7 +231,7 @@ TENSOR_PRECISION = {
 INVERS_CONV_TENSOR_PRECISION = {
     'FP32': 'conv',
     'FP16': 'convfp16',
-    'BF16': 'convbfp16'
+    'BF16': 'convbfp16',
     'INT8': 'convint8'
 }
 
