@@ -72,7 +72,7 @@ def print_solvers():
   """Pretty print solvers list"""
   slv_dict, _ = get_solver_ids()
   for name, sid in slv_dict.items():
-    print("{0:>4} - {1}".format(sid, name))
+    print(f"{sid:>4} - {name}")
 
 
 # fill in the missing columns with defaults to avoid duplicate entries
@@ -173,7 +173,7 @@ def mysqldb_overwrite_table(table, dict_list, filter_cols):
     else:
       return False, insert_ids
 
-    if i % 100 == 0:
+    if i % 1000 == 0:
       LOGGER.info('Inserting sql... %s', i)
 
   return ret, insert_ids
@@ -252,19 +252,18 @@ def insert_tensor(fds, tensor_dict):
 def get_tid(session, tensor_dict):
   """Return tensor id based on dict"""
 
-  query = Query(TensorTable.id).filter_by(**tensor_dict)
+  query = session.query(TensorTable.id).filter_by(**tensor_dict)
   ret_id = None
   try:
-    res = session.execute(query).fetchall()
-    if len(res) != 1:
-      raise ValueError('Tensor table duplication. Only one row should match')
-    ret_id = res[0][0]
+    res = session.execute(query).one()
+    ret_id = res[0]
   except IntegrityError as err:
     LOGGER.error("Error occurred: %s \n", err)
     raise ValueError(
-        'Something went wrong with getting input tensor id from tensor table')
-  except IndexError:
-    raise ValueError('Tensor not found in table: {}'.format(tensor_dict))
+        'Something went wrong with getting input tensor id from tensor table'
+    ) from err
+  except IndexError as err:
+    raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
 
   return ret_id
 

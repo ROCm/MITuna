@@ -27,7 +27,6 @@
 #Dummy machine class for unit tests
 from tuna.metadata import LOG_TIMEOUT
 from tuna.machine import Machine
-from io import StringIO
 
 
 class DummyMachine:
@@ -38,7 +37,7 @@ class DummyMachine:
     self.port = None
     self.hostname = None
     self.arch = 'gfx908'
-    self.num_cu = 1
+    self.num_cu = 120
     self.id = 1
     self.machine = Machine(local_machine=True)
 

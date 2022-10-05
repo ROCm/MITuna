@@ -26,8 +26,7 @@
 ###############################################################################
 """find db class"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, orm
-from sqlalchemy import Float, BigInteger, Boolean, and_, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import Float, BigInteger, Boolean, Text, Index
 from sqlalchemy.ext.declarative import declared_attr
 
 from tuna.dbBase.base_class import BASE
@@ -58,29 +57,18 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   workspace_sz = Column(BigInteger, nullable=False)
   alg_lib = Column(String(length=64), nullable=True)
   opencl = Column(Boolean, nullable=False)
+  fdb_idx = Index('fdb_idx', 'session', 'config', 'opencl', 'valid', 'solver')
 
-  def get_query(self, sess, fdb_obj, slv_app, session_id):
+  def get_query(self, sess, fdb_obj, session_id):
     """Construct a Db query for the find object
     """
-
-    # CE: Solver applicability can change between miopen versions
-    # find if this fdb entry is currently applicable
-    query = sess.query(fdb_obj, slv_app).filter(
-        and_(fdb_obj.session == session_id, slv_app.session == session_id,
-             fdb_obj.config == self.config, fdb_obj.opencl == self.opencl),
-        fdb_obj.valid == 1, fdb_obj.solver == slv_app.solver,
-        fdb_obj.config == slv_app.config, slv_app.applicable == 1)
+    query = sess.query(fdb_obj).filter(fdb_obj.session == session_id,
+                                       fdb_obj.config == self.config,
+                                       fdb_obj.opencl == self.opencl,
+                                       fdb_obj.valid == 1)
 
     if self.solver:
       query = query.filter(fdb_obj.solver == self.solver)
-
-    fdb_entries = query.all()
-    if not fdb_entries:
-      self.logger.warning(
-          "No applicable fdb entries for config %s, session id %s", self.config,
-          session_id)
-    ids = tuple([str(fdb_e.id) for fdb_e, _ in fdb_entries])
-    query = sess.query(fdb_obj).filter(fdb_obj.id.in_(ids))
 
     return query
 
@@ -144,13 +132,12 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-  blobs = relationship("ConvolutionKernelCache",
-                       back_populates="conv_find_db_entries",
-                       cascade="all, delete-orphan")
+
+  kernel_group = Column(Integer, nullable=True)
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs['logger'] if 'logger' in kwargs.keys() else None
+    self.logger = kwargs['logger'] if 'logger' in kwargs else None  #pylint: disable=multiple-statements
     self.fdb_slv_dir = {}
 
 
@@ -162,12 +149,12 @@ class BNFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attribute
                                      "fdb_key",
                                      "alg_lib",
                                      "opencl",
+                                     "session",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
-  blobs = relationship("BNKernelCache",
-                       back_populates="bn_find_db_entries",
-                       cascade="all, delete-orphan")
+
+  kernel_group = Column(Integer, nullable=True)
 
   @orm.reconstructor
   def __init__(self, **kwargs):

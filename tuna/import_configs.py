@@ -43,8 +43,8 @@ LOGGER = setup_logger('import_configs')
 def parse_args():
   """Parsing arguments"""
   parser = setup_arg_parser(
-      'Import driver commands and perf db entries ',
-      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      'Import MIOpenDriver commands and MIOpen performance DB entries.',
+      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
   parser.add_argument(
       '-c',
       '--command',
@@ -154,6 +154,7 @@ def insert_config(driver, counts, dbt, args):
         session.add(new_cf)
         session.commit()
         counts['cnt_configs'] += 1
+        session.refresh(new_cf)
       except IntegrityError as err:
         LOGGER.warning("Err occurred: %s", err)
     else:
@@ -170,7 +171,7 @@ def insert_config(driver, counts, dbt, args):
     if args.mark_recurrent or args.tag:
       _ = tag_config_v2(driver, counts, dbt, args, new_cf)
 
-  return True
+  return new_cf.id
 
 
 def process_config_line_v2(driver, args, counts, dbt):
@@ -210,13 +211,13 @@ def import_cfgs(args, dbt):
   counts = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
-  infile = open(os.path.expanduser(args.file_name), "r")
-  for line in infile:
-    try:
-      parse_line(args, line, counts, dbt)
-    except ValueError as err:
-      LOGGER.warning(err)
-      continue
+  with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+    for line in infile:
+      try:
+        parse_line(args, line, counts, dbt)
+      except ValueError as err:
+        LOGGER.warning(err)
+        continue
 
   return counts
 

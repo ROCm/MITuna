@@ -34,28 +34,8 @@ this_path = os.path.dirname(__file__)
 
 from tuna.sql import DbCursor
 from tuna.utils.logger import setup_logger
-from tuna.find_db import FindDB
-from tuna.db_tables import ConvConfig, Job
-
-
-def add_job():
-  find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='recurrent_pytest' GROUP BY tag"
-
-  del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job (config, state, solver, valid, reason, session) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1 \
-        FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'recurrent_pytest'"
-
-  with DbCursor() as cur:
-    cur.execute(find_configs)
-    res = cur.fetchall()
-    if len(res) == 0:
-      add_cfg = "{0}/../tuna/import_config.py -f {0}/../utils/recurrent_cfgs/alexnet_4jobs.txt -t recurrent_pytest -V 1.0.0".format(
-          this_path)
-      os.system(add_cfg)
-
-    cur.execute(del_q)
-    cur.execute(ins_q)
+from tuna.find_db import ConvolutionFindDB
+from utils import CfgImportArgs, LdJobArgs
 
 
 def parsing(find_db):
@@ -84,7 +64,6 @@ def test_find():
   logger = setup_logger('Machine')
   keys = {'logger': logger}
 
-  find_db = FindDB(**keys)
+  find_db = ConvolutionFindDB(**keys)
 
-  add_job('gfx908', 120)
   parsing(find_db)
