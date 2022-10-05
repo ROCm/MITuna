@@ -70,7 +70,7 @@ class MIOpen(MITunaInterface):
             TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
             TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
         ],
-        parents=parser)
+        parser=[parser])
 
     parser.add_argument(
         '--find_mode',

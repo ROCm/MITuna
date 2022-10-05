@@ -41,12 +41,14 @@ class TunaArgs(Enum):
   SESSION_ID = 5
 
 
-def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parents=None):
+def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
   """ function to aggregate common command line args """
-  if parents is not None:
-    parser = argparse.ArgumentParser(description=desc)
+  if parser is not None:
+    parser = argparse.ArgumentParser(description=desc,
+                                     parents=parser,
+                                     conflict_handler='resolve')
   else:
-    parser = argparse.ArgumentParser(description=desc, parents=parser)
+    parser = argparse.ArgumentParser(description=desc)
   if TunaArgs.ARCH in arg_list:
     parser.add_argument(
         '-a',
