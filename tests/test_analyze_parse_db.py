@@ -33,6 +33,8 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.metadata import SQLITE_CONFIG_COLS
+from tuna.helper import prune_cfg_dims
+from tuna.analyze_parse_db import parse_pdb_filename
 
 
 def test_prune_cfg_dims():
@@ -54,3 +56,38 @@ def test_prune_cfg_dims():
   assert ((cfg_obj_3d is pruned) == False)
   for key in SQLITE_CONFIG_COLS:
     assert (key in pruned.keys())
+
+
+def test_parse_pdb_filename():
+
+  #pass
+  nm1 = 'gfx90878.db'
+  nm2 = 'gfx90a6e.db'
+  nm3 = 'gfx906_60.db'
+  #fails
+  nm4 = 'gfx90aaa.db'
+  nm5 = 'gfx908_70.db'
+
+  arch, num_cu = parse_pdb_filename(nm1)
+  assert (arch == 'gfx908')
+  assert (num_cu == 120)
+  arch, num_cu = parse_pdb_filename(nm2)
+  assert (arch == 'gfx90a')
+  assert (num_cu == 110)
+  arch, num_cu = parse_pdb_filename(nm3)
+  assert (arch == 'gfx906')
+  assert (num_cu == 60)
+
+  err_throw = False
+  try:
+    arch, num_cu = parse_pdb_filename(nm4)
+  except ValueError:
+    err_throw = True
+  assert (err_throw)
+
+  err_throw = False
+  try:
+    arch, num_cu = parse_pdb_filename(nm5)
+  except ValueError:
+    err_throw = True
+  assert (err_throw)

@@ -27,13 +27,16 @@
 """Fin Evaluator class implements the worker interface. The purpose of this class
 is to run fin commands in benchmarking mode"""
 from time import sleep
+import functools
 import json
 
 from sqlalchemy.exc import OperationalError
 
 from tuna.worker_interface import WorkerInterface
 from tuna.fin_utils import fin_job
+from tuna.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.db_utility import session_retry
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -42,10 +45,14 @@ class FinEvaluator(WorkerInterface):
   """ The Evaluator class implements the worker class. Its purpose is to run benchmarking jobs
   and when completed sets the state of the job to evaluated. """
 
+  def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
+
   def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""
     self.logger.info('find job: %s', find_state)
-    if not super().get_job(find_state, set_state, self.label):
+    if not super().get_job(find_state, set_state, imply_end):
       with self.bar_lock:
         self.num_procs.value -= 1
       return False
@@ -70,12 +77,13 @@ class FinEvaluator(WorkerInterface):
     with DbSession() as session:
       perf_compile_res = []
 
+      # pylint: disable=comparison-with-callable
       query = session.query(self.dbt.solver_app).filter(
           self.dbt.solver_app.session == self.dbt.session.id,
           self.dbt.solver_app.config == self.job.config,
-          self.dbt.solver_app.arch == self.dbt.session.arch,
-          self.dbt.solver_app.num_cu == self.dbt.session.num_cu,
           self.dbt.solver_app.applicable == 1)
+      # pylint: enable=comparison-with-callable
+
       for slv_entry in query.all():
         slv_name = self.id_solver_map[slv_entry.solver]
         if not self.job.solver or slv_name == self.job.solver:
@@ -122,7 +130,7 @@ class FinEvaluator(WorkerInterface):
       fdb_entry.session = self.dbt.session.id
       fdb_entry.logger = self.logger
       fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
-                                      self.dbt.solver_app, self.dbt.session.id)
+                                      self.dbt.session.id)
       # JD: The solvers which throw on GetSolution are marked with
       # negative workspace
       fdb_query = fdb_query.filter(self.dbt.find_db_table.workspace_sz != -1,
@@ -140,7 +148,9 @@ class FinEvaluator(WorkerInterface):
               'workspace': fdb_rec.workspace_sz
           }
           kernel_objects = []
-          for obj in fdb_rec.blobs:
+          blobs = session.query(self.dbt.kernel_cache).filter(
+              self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
+          for obj in blobs.all():
             kernel_objects.append({
                 'blob': obj.kernel_blob.decode('utf-8'),
                 'comp_options': obj.kernel_args,
@@ -171,69 +181,62 @@ class FinEvaluator(WorkerInterface):
     except AssertionError as err:
       self.logger.error('Unable to get compiled objects for job %s : %s',
                         self.job.id, err)
-      raise AssertionError
+      raise AssertionError from err
 
     return self.machine.write_file(json.dumps(fjob, indent=2).encode(),
                                    is_temp=True)
 
+  def update_fdb_eval_entry(self, session, fdb_obj):
+    """update fdb with individual fin json entry"""
+    if fdb_obj['evaluated']:
+      obj, _ = self.get_fdb_entry(session,
+                                  self.solver_id_map[fdb_obj['solver_name']])
+      if not obj:
+        self.logger.info(
+            'Unable to find fdb entry for config: %s, solver: %s, '\
+            'arch: %s, num_cu: %s, direction: %s',
+            self.config.id, self.solver_id_map[fdb_obj['solver_name']],
+            self.dbt.session.arch, self.dbt.session.num_cu, self.config.direction)
+        raise ValueError("Unable to query find db entry")
+      fdb_entry = obj
+      fdb_entry.alg_lib = fdb_obj['algorithm']
+      fdb_entry.kernel_time = fdb_obj['time']
+      fdb_entry.workspace_sz = fdb_obj['workspace']
+      fdb_entry.session = self.dbt.session.id
+      fdb_entry.params = fdb_obj['params']
+    else:
+      self.logger.warning("Not evaluated: job(%s), solver(%s), %s", self.job.id,
+                          fdb_obj['solver_name'], fdb_obj['reason'])
+
+    self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
+    session.commit()
+
+    return True
+
   def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
     """process find db eval json results"""
-    failed_job = False
-    for fdb_obj in fin_json[result_str]:
-      self.logger.info('Processing object: %s', fdb_obj)
-      with DbSession() as session:
-        if fdb_obj['evaluated']:
-          obj, _ = self.get_fdb_entry(
-              session, self.solver_id_map[fdb_obj['solver_name']])
-          if not obj:
-            self.logger.info(
-                'Unable to find fdb entry for config: %s, solver: %s, '\
-                'arch: %s, num_cu: %s, direction: %s',
-                self.config.id, self.solver_id_map[fdb_obj['solver_name']],
-                self.dbt.session.arch, self.dbt.session.num_cu, self.config.direction)
-            raise ValueError("Unable to query find db entry")
-          fdb_entry = obj
-          fdb_entry.alg_lib = fdb_obj['algorithm']
-          fdb_entry.kernel_time = fdb_obj['time']
-          # workspace
-          fdb_entry.workspace_sz = fdb_obj['workspace']
-          fdb_entry.session = self.dbt.session.id
-        else:
-          self.logger.warning("Not evaluated: job(%s), solver(%s), %s",
-                              self.job.id, fdb_obj['solver_name'],
-                              fdb_obj['reason'])
+    status = []
+    fdb_obj = None
+    with DbSession() as session:
 
-        self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
-        try:
-          session.commit()
-        except OperationalError as err:
-          self.logger.warning('FinEval: Unable to update Database: %s', err)
-          failed_job = True
+      def actuator(func, fdb_obj):
+        return func(session, fdb_obj)
 
-    return failed_job
+      for fdb_obj in fin_json[result_str]:
+        self.logger.info('Processing object: %s', fdb_obj)
+        slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
+        #retry returns false on failure, callback return on success
+        ret = session_retry(session, self.update_fdb_eval_entry,
+                            functools.partial(actuator, fdb_obj=fdb_obj),
+                            self.logger)
+        if not ret:
+          self.logger.warning('FinEval: Unable to update Database')
+          slv_stat['success'] = False
+          slv_stat['result'] = 'FinEval: Unable to update Database'
 
-  def process_pdb_eval(self, fin_json):
-    """process perf db eval json results"""
-    failed_job = False
-    for pdb_obj in fin_json['miopen_perf_eval_result']:
-      self.logger.info('Processing object: %s', pdb_obj)
-      with DbSession() as session:
-        if pdb_obj['evaluated'] and pdb_obj['tunable']:
-          try:
-            solver = self.solver_id_map[pdb_obj['solver_name']]
-            layout = pdb_obj['layout']
-            data_type = pdb_obj['data_type']
-            bias = pdb_obj['bias']
-            params = pdb_obj['params']
-            #call also updates perf_db+perf_config tables
-            _, _ = self.update_pdb_entry(session, solver, layout, data_type,
-                                         bias, params)
+        status.append(slv_stat)
 
-          except OperationalError as err:
-            self.logger.warning('FinEval: Unable to update Database: %s', err)
-            failed_job = True
-
-    return failed_job
+    return status
 
   def clean_cache_table(self):
     """Remove the fin cache kernel entries for this job"""
@@ -251,9 +254,18 @@ class FinEvaluator(WorkerInterface):
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
-    ret = self.get_job("compiled", "eval_start", True)
-    if not ret:
+
+    # pylint: disable=duplicate-code
+    try:
+      self.check_env()
+    except ValueError as verr:
+      self.logger.error(verr)
       return False
+    # pylint: enable=duplicate-code
+
+    if not self.get_job("compiled", "eval_start", True):
+      return False
+
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
@@ -265,35 +277,35 @@ class FinEvaluator(WorkerInterface):
       return True
 
     failed_job = True
+    result_str = ''
     if fin_json:
       if 'miopen_find_eval_result' in fin_json:
-        failed_job = self.process_fdb_eval(fin_json)
+        status = self.process_fdb_eval(fin_json)
 
       elif 'miopen_perf_eval_result' in fin_json:
-        failed_job = self.process_pdb_eval(fin_json)
-        #also update fdb
-        if not failed_job:
-          with DbSession() as session:
-            failed_job = not self.process_fdb_compile(
-                session,
-                fin_json,
-                result_str='miopen_perf_eval_result',
-                check_str='evaluated')
-        if not failed_job:
-          failed_job = self.process_fdb_eval(
-              fin_json, result_str='miopen_perf_eval_result')
+        with DbSession() as session:
+          status = self.process_fdb_w_kernels(
+              session,
+              fin_json,
+              result_str='miopen_perf_eval_result',
+              check_str='evaluated')
+
+      success, result_str = get_fin_result(status)
+      failed_job = not success
 
     if failed_job:
       self.check_gpu()
       if self.job.retries == (MAX_ERRORED_JOB_RETRIES - 1):
         self.logger.warning('max job retries exhausted, setting to errored')
-        self.set_job_state('errored')
+        self.set_job_state('errored', result=result_str)
       else:
         self.logger.warning('resetting job state to %s, incrementing retries',
                             orig_state)
-        self.set_job_state(orig_state, increment_retries=True)
+        self.set_job_state(orig_state,
+                           increment_retries=True,
+                           result=result_str)
     else:
-      self.set_job_state('evaluated')
+      self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()
 
     return True

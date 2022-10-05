@@ -41,7 +41,7 @@ MIOPEN_USER_DB_PATH = "/tmp/miopenpdb/config/miopen"
 MIOPEN_CACHE_DIR = "/tmp/miopenpdb/cache"
 if 'MIOPEN_CACHE_DIR' in os.environ:
   MIOPEN_CACHE_DIR = os.environ['MIOPEN_CACHE_DIR']
-KCACHE_DIR = "{}/tuna_kcache".format(MIOPEN_CACHE_DIR)
+KCACHE_DIR = f"{MIOPEN_CACHE_DIR}/tuna_kcache"
 FIN_CACHE = "/tmp/miopenpdb/cache"
 TUNA_LOG_DIR = os.path.expanduser("~/tmp/tuna_logs")
 if 'TUNA_LOG_DIR' in os.environ:
@@ -54,6 +54,7 @@ if 'FIN_CACHE' in os.environ:
 
 LOG_TIMEOUT = 10 * 60.0  # seconds
 MYSQL_LOCK_WAIT_TIMEOUT = 1205
+NUM_SQL_RETRIES = 10
 
 TABLE_COLS_CONV_MAP = {
     '-forw': ('direction', 0),
@@ -215,13 +216,15 @@ TENSOR_PRECISION = {
     'conv': 'FP32',
     'FP16': 'FP16',
     'convfp16': 'FP16',
-    'BF16': 'BFP16',
-    'convbfp16': 'BFP16',
+    'BF16': 'BF16',
+    'convbfp16': 'BF16',
+    'INT8': 'INT8',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }
 
-SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16']
+SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16', 'convint8']
 SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16']
 
 CONV_CONFIG_COLS = [
@@ -278,7 +281,7 @@ TABLE_COLS_FUSION_MAP = {
 FUSION_COLS = [v for _, v in TABLE_COLS_FUSION_MAP.items()]
 CONV_COLS = [v for _, v in TABLE_COLS_CONV_MAP.items()]
 
-CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S']
+CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S', 'Z']
 BN_SKIP_ARGS = ['i', 't', 'V', 's', 'w', 'S']
 
 DIR_MAP = {'1': 'F', '2': 'B', '4': 'W'}
@@ -301,7 +304,11 @@ ALG_TO_ENV = {
 ENV_TO_ALG = {x: y for y, x in ALG_TO_ENV.items()}
 
 ALG_SLV_MAP = {
-    'miopenConvolutionAlgoGEMM': ['gemm'],
+    'miopenConvolutionAlgoGEMM': [
+        'GemmFwd1x1_0_1', 'GemmFwd1x1_0_1_int8', 'GemmFwd1x1_0_2',
+        'GemmFwdRest', 'GemmBwd1x1_stride2', 'GemmBwd1x1_stride1',
+        'GemmBwdRest', 'GemmWrw1x1_stride1', 'GemmWrwUniversal'
+    ],
     'miopenConvolutionAlgoDirect': [
         'ConvAsm3x3U', 'ConvAsm1x1U', 'ConvAsm1x1UV2', 'ConvBiasActivAsm1x1U',
         'ConvAsm5x10u2v2f1', 'ConvAsm5x10u2v2b1',
@@ -601,7 +608,7 @@ PREC_TO_CMD = {
         'FP32': 'conv',
         'FP16': 'convfp16',
         'BF16': 'convbfp16',
-        'BFP16': 'convbfp16'
+        'INT8': 'convint8'
     },
     ConfigType.batch_norm: {
         'FP32': 'bnorm',
@@ -612,6 +619,7 @@ CMD_TO_PREC = {
     'conv': 'FP32',
     'convfp16': 'FP16',
     'convbfp16': 'BF16',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }

@@ -31,6 +31,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.miopen_tables import TensorTable
 from tuna.metadata import TENSOR_PRECISION
+from tuna.parsing import parse_line
 
 LOGGER = setup_logger('driver_base')
 
@@ -78,16 +79,17 @@ class DriverBase():
         for row in res:
           LOGGER.error(row)
         raise ValueError('Tensor table duplication. Only one row should match')
-      elif not res:
+      if not res:
         raise ValueError('Missing from Tensor table. One row should match')
       ret_id = res[0][0]
     except IntegrityError as err:
       session.rollback()
       LOGGER.error("Error occurred: %s \n", err)
       raise ValueError(
-          'Something went wrong with getting input tensor id from tensor table')
-    except IndexError:
-      raise ValueError(f'Tensor not found in table: {tensor_dict}')
+          'Something went wrong with getting input tensor id from tensor table'
+      ) from err
+    except IndexError as err:
+      raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
 
     return ret_id
 
@@ -101,10 +103,12 @@ class DriverBase():
         session.add(tid)
         session.commit()
         ret_id = tid.id
+        LOGGER.info("Insert Tensor: %s", ret_id)
       except IntegrityError as err:
         LOGGER.warning(err)
         session.rollback()
         ret_id = self.get_tensor_id(session, tensor_dict)
+        LOGGER.info("Get Tensor: %s", ret_id)
 
     return ret_id
 
@@ -122,18 +126,18 @@ class DriverBase():
     i_dict['num_dims'] = self.num_dims
     i_dict['dim0'] = 1
 
-    if self.in_layout == 'NCHW':
+    if self.in_layout in ('NCHW', 'NCDHW'):
       i_dict['dim1'] = self.in_channels
       i_dict['dim2'] = self.in_d
       i_dict['dim3'] = self.in_h
       i_dict['dim4'] = self.in_w
-      i_dict['layout'] = 'NCHW'
+      i_dict['layout'] = self.in_layout
     elif self.in_layout == 'NHWC':
       i_dict['dim1'] = self.in_d
       i_dict['dim2'] = self.in_h
       i_dict['dim3'] = self.in_w
       i_dict['dim4'] = self.in_channels
-      i_dict['layout'] = 'NHWC'
+      i_dict['layout'] = self.in_layout
 
     return i_dict
 
@@ -150,31 +154,26 @@ class DriverBase():
     w_dict['data_type'] = TENSOR_PRECISION[self.cmd]
     w_dict['num_dims'] = self.num_dims
 
-    if self.fil_layout == 'NCHW':
+    if self.fil_layout in ('NCHW', 'NCDHW'):
       w_dict['dim0'] = self.out_channels
       w_dict['dim1'] = self.in_channels
       w_dict['dim2'] = self.fil_d
       w_dict['dim3'] = self.fil_h
       w_dict['dim4'] = self.fil_w
-      w_dict['layout'] = 'NCHW'
+      w_dict['layout'] = self.fil_layout
     elif self.fil_layout == 'NHWC':
       w_dict['dim0'] = self.out_channels
       w_dict['dim1'] = self.in_channels
       w_dict['dim2'] = self.fil_d
       w_dict['dim3'] = self.fil_h
       w_dict['dim4'] = self.fil_w
-      w_dict['layout'] = 'NHWC'
+      w_dict['layout'] = self.fil_layout
 
     return w_dict
 
   def parse_driver_line(self, line):
     """Parse line and set attributes"""
-    line = line.strip()
-    start = line.find('MIOpenDriver')
-    if start == -1:
-      raise ValueError(f"Invalid driver commmand line: '{line}'")
-
-    line = line[start:]
+    line = parse_line(line)
     tok = line.split()
     #pylint: disable=attribute-defined-outside-init
     self.cmd = tok[1]

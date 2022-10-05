@@ -143,7 +143,8 @@ def test_fin_utils():
       'fil_h': 1,
       'fil_w': 7,
       'cmd': 'conv',
-      'direction': 'F'
+      'direction': 'F',
+      'valid': 1
   })
 
   dict = fu.fin_job("fin_find_compile", True, my_job, conv_config, dbt)
@@ -184,7 +185,8 @@ def test_fin_utils():
       'fil_h': 1,
       'fil_w': 7,
       'cmd': 'conv',
-      'direction': 'F'
+      'direction': 'F',
+      'valid': 1
   })
 
   #Test config with layout NHWC
@@ -286,7 +288,8 @@ def test_fin_utils():
       'fil_h': 13,
       'fil_w': 9,
       'cmd': 'conv',
-      'direction': 'F'
+      'direction': 'F',
+      'valid': 1
   })
 
   dict = fu.fin_job("fin_find_compile", True, my_job, conv_config, dbt)
@@ -327,5 +330,6 @@ def test_fin_utils():
       'fil_h': 13,
       'fil_w': 9,
       'cmd': 'conv',
-      'direction': 'F'
+      'direction': 'F',
+      'valid': 1
   })

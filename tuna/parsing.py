@@ -42,7 +42,7 @@ LOGGER = setup_logger()
 def parse_pdb_key(key, version='1.0.0'):
   """return network parameters from fdb key string"""
   if key.find('=') != -1:
-    raise ValueError('Invalid 2D PDB key: {}'.format(key))
+    raise ValueError(f'Invalid 2D PDB key: {key}')
   tensors = {}
 
   pattern_3d = '[0-9]x[0-9]x[0-9]'
@@ -206,8 +206,8 @@ def build_driver_cmd(fds, vals, precision, direction):
   if precision == 'FP16':
     conv = 'convfp16'
 
-  arg_strs = ['--{} {}'.format(key, args[key]) for key in sorted(args)]
-  cmd = 'MIOpenDriver {} {}'.format(conv, ' '.join(arg_strs))
+  arg_strs = [f'--{key} {args[key]}' for key in sorted(args)]
+  cmd = f"MIOpenDriver {conv} {' '.join(arg_strs)}"
   return cmd
 
 
@@ -223,12 +223,11 @@ def build_driver_cmd_from_config(conv_config, non_driver_cols):
     if fusion_col in cc_dict.keys():
       cc_dict.pop(fusion_col)
   arg_strs = [
-      '--{} {}'.format(key, value)
-      for key, value in cc_dict.items()
+      f'--{key} {value}' for key, value in cc_dict.items()
       if key not in non_driver_cols
   ]
   conv = cc_dict['cmd']
-  cmd = 'MIOpenDriver {} {}'.format(conv, ' '.join(arg_strs))
+  cmd = f"MIOpenDriver {conv} {' '.join(arg_strs)}"
   return cmd
 
 
@@ -247,15 +246,14 @@ def set_forward_dir(lst, fds_dict, output_h, output_w, precision):
   lst.append(str(fds_dict['in_channels']))
   lst.append(str(fds_dict['in_h']))
   lst.append(str(fds_dict['in_w']))
-  lst.append('{}x{}'.format(fds_dict['fil_h'], fds_dict['fil_w']))
+  lst.append(f"{fds_dict['fil_h']}x{fds_dict['fil_w']}")
   lst.append(str(fds_dict['out_channels']))
   lst.append(str(int(output_h)))
   lst.append(str(int(output_w)))
   lst.append(str(fds_dict['batchsize']))
-  lst.append('{}x{}'.format(fds_dict['pad_h'], fds_dict['pad_w']))
-  lst.append('{}x{}'.format(fds_dict['conv_stride_w'],
-                            fds_dict['conv_stride_h']))
-  lst.append('{}x{}'.format(fds_dict['dilation_h'], fds_dict['dilation_w']))
+  lst.append(f"{fds_dict['pad_h']}x{fds_dict['pad_w']}")
+  lst.append(f"{fds_dict['conv_stride_w']}x{fds_dict['conv_stride_h']}")
+  lst.append(f"{fds_dict['dilation_h']}x{fds_dict['dilation_w']}")
   lst.append('0')  # bias
   lst.append('NCHW')  # only supported format
   lst.append(precision)
@@ -269,15 +267,14 @@ def set_nonforward_dir(lst, fds_dict, output_h, output_w, precision, direction):
   lst.append(str(fds_dict['out_channels']))
   lst.append(str(int(output_h)))
   lst.append(str(int(output_w)))
-  lst.append('{}x{}'.format(fds_dict['fil_h'], fds_dict['fil_w']))
+  lst.append(f"{fds_dict['fil_h']}x{fds_dict['fil_w']}")
   lst.append(str(fds_dict['in_channels']))
   lst.append(str(fds_dict['in_h']))
   lst.append(str(fds_dict['in_w']))
   lst.append(str(fds_dict['batchsize']))
-  lst.append('{}x{}'.format(fds_dict['pad_h'], fds_dict['pad_w']))
-  lst.append('{}x{}'.format(fds_dict['conv_stride_w'],
-                            fds_dict['conv_stride_h']))
-  lst.append('{}x{}'.format(fds_dict['dilation_h'], fds_dict['dilation_w']))
+  lst.append(f"{fds_dict['pad_h']}x{fds_dict['pad_w']}")
+  lst.append(f"{fds_dict['conv_stride_w']}x{fds_dict['conv_stride_h']}")
+  lst.append(f"{fds_dict['dilation_h']}x{fds_dict['dilation_w']}")
   lst.append('0')  # bias
   lst.append('NCHW')  # only supported format
   lst.append(precision)
@@ -303,7 +300,7 @@ def get_pdb_key(fds_dict, precision, direction='F'):
     output_w = ((in_w - fil_w + 2 * pad_w) / conv_stride_h) + 1
   except ZeroDivisionError as zerr:
     LOGGER.error(zerr)
-    raise ValueError('Zero Division Error caught')
+    raise ValueError('Zero Division Error caught') from zerr
 
   if precision not in ('FP32', 'FP16', 'BF16'):
     assert False & 'Invalid precision specified for PDB key generation'
@@ -316,9 +313,28 @@ def get_pdb_key(fds_dict, precision, direction='F'):
                              direction)
 
   if int(fds_dict['group_count']) != 1:
-    return '{}_g{}'.format('-'.join(lst), fds_dict['group_count'])
+    return f"{'-'.join(lst)}_g{fds_dict['group_count']}"
 
   return '-'.join(lst)
+
+
+def parse_fdb_line(cmd):
+  """Return dict with find db line data"""
+  out_dict = {}
+  if cmd.find('=') != -1:
+    fdb_key = cmd.split('=')[0]
+    slv_arr = (cmd.split('=')[1]).split(';')
+    out_dict[fdb_key] = []
+    for solver in slv_arr:
+      fields = solver.split(',')
+      alg = {}
+      alg['alg_lib'] = fields[3]
+      alg['solver'] = fields[0].split(':')[1]
+      alg['kernel_time'] = fields[1]
+      alg['workspace_sz'] = fields[2]
+      out_dict[fdb_key].append(alg)
+
+  return out_dict
 
 
 def get_fds_from_cmd(cmd):
@@ -362,7 +378,7 @@ def get_fd_name(tok1, cols_map):
     return tok1
 
   LOGGER.error('Unknown parameter: %s', tok1)
-  raise Exception('Unknown parameter: {}'.format(tok1))
+  raise Exception(f'Unknown parameter: {tok1}')
 
 
 def conv_arg_valid(arg, val):
@@ -380,15 +396,22 @@ def arg_valid(arg, val):
   return True
 
 
-def parse_driver_line(line):
-  """return network parameters from driver invocation"""
-  fds = {}
+def parse_line(line):
+  """parse the lines from MIopenDriver"""
   line = line.strip()
   start = line.find('MIOpenDriver')
   if start == -1:
-    raise ValueError("Invalid driver commmand line: '{}'".format(line))
+    raise ValueError(f"Invalid driver commmand line: '{line}'")
 
   line = line[start:]
+
+  return line
+
+
+def parse_driver_line(line):
+  """return network parameters from driver invocation"""
+  fds = {}
+  line = parse_line(line)
   direction = None
   if line.find('-F') != -1:
     direction = line.partition("-F")[2][:2].strip()
@@ -416,8 +439,8 @@ def compose_fds(fds, tok, line):
       if conv_arg_valid(tok1[0], tok2):
         fds[tok1[0]] = tok2
       else:
-        raise ValueError('Invalid command line arg: {} - {} line: {}'.format(
-            tok1[0], tok2, line))
+        raise ValueError(
+            f'Invalid command line arg: {tok1[0]} - {tok2} line: {line}')
     elif fds['cmd'] in ['CBAInfer', 'CBAInferfp16']:
       tok1 = get_fd_name(tok1, TABLE_COLS_FUSION_MAP)
       if arg_valid(tok1[0], tok2):
@@ -427,8 +450,8 @@ def compose_fds(fds, tok, line):
       if arg_valid(tok1[0], tok2):
         fds[tok1[0]] = tok2
       else:
-        raise ValueError('Invalid command line arg: {} - {} line: {}'.format(
-            tok1[0], tok2, line))
+        raise ValueError(
+            f'Invalid command line arg: {tok1[0]} - {tok2} line: {line}')
     else:
       return {}
 

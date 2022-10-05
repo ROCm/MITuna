@@ -33,6 +33,7 @@ from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.fin_utils import fin_job
+from tuna.fin_utils import get_fin_slv_status, get_fin_result
 
 
 class FinBuilder(WorkerInterface):
@@ -56,11 +57,7 @@ class FinBuilder(WorkerInterface):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
       kernel_obj = self.dbt.fin_cache_table()
-      kernel_obj.kernel_name = kern_obj['kernel_file']
-      kernel_obj.kernel_args = kern_obj['comp_options']
-      kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
-      kernel_obj.kernel_hash = kern_obj['md5_sum']
-      kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
+      self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
@@ -71,19 +68,34 @@ class FinBuilder(WorkerInterface):
 
   def process_pdb_compile(self, session, fin_json):
     """retrieve perf db compile json results"""
-    success = True
+    status = []
     if fin_json['miopen_perf_compile_result']:
       for pdb_obj in fin_json['miopen_perf_compile_result']:
+        slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
+        status.append(slv_stat)
         if pdb_obj['perf_compiled']:
           self.compose_job_cache_entrys(session, pdb_obj)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
-      success = False
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Perf Compile: No results'
+      }]
 
-    return success
+    return status
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+
+    # pylint: disable=duplicate-code
+    try:
+      self.check_env()
+    except ValueError as verr:
+      self.logger.error(verr)
+      return False
+    # pylint: enable=duplicate-code
+
     if not self.get_job("new", "compile_start", True):
       return False
 
@@ -93,15 +105,19 @@ class FinBuilder(WorkerInterface):
     fin_json = self.run_fin_cmd()
 
     failed_job = True
+    result_str = ''
     if fin_json:
       failed_job = False
       with DbSession() as session:
         try:
           if 'miopen_find_compile_result' in fin_json:
-            failed_job = not self.process_fdb_compile(session, fin_json)
+            status = self.process_fdb_w_kernels(session, fin_json)
 
           elif 'miopen_perf_compile_result' in fin_json:
-            failed_job = not self.process_pdb_compile(session, fin_json)
+            status = self.process_pdb_compile(session, fin_json)
+
+          success, result_str = get_fin_result(status)
+          failed_job = not success
 
         except (OperationalError, IntegrityError) as err:
           self.logger.warning('FinBuild: Unable to update Database %s', err)
@@ -115,7 +131,7 @@ class FinBuilder(WorkerInterface):
           failed_job = True
 
     if failed_job:
-      self.set_job_state('errored')
+      self.set_job_state('errored', result=result_str)
     else:
-      self.set_job_state('compiled')
+      self.set_job_state('compiled', result=result_str)
     return True

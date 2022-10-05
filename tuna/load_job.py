@@ -28,7 +28,6 @@
 Script for adding jobs to the MySQL database
 """
 
-import mysql.connector  # pylint: disable=unused-import
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
 
@@ -42,7 +41,6 @@ from tuna.config_type import ConfigType
 from tuna.tables import DBTables
 
 LOGGER = setup_logger('load_jobs')
-LOG_FREQ = 100
 
 
 def parse_args():
@@ -50,8 +48,7 @@ def parse_args():
   #pylint: disable=duplicate-code
   parser = setup_arg_parser(
       'Insert jobs into MySQL db by tag from" \
-      " config_tags table.',
-      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
   config_filter = parser.add_mutually_exclusive_group(required=True)
   solver_filter = parser.add_mutually_exclusive_group()
   config_filter.add_argument(
@@ -59,6 +56,7 @@ def parse_args():
       '--tag',
       type=str,
       dest='tag',
+      default=None,
       help='All configs with this tag will be added to the job table. \
                         By default adds jobs with no solver specified (all solvers).'
   )
@@ -82,11 +80,11 @@ def parse_args():
                              help='add jobs with only these solvers '\
                                '(can be a comma separated list)')
   parser.add_argument(
-      '-o',
-      '--only_applicable',
-      dest='only_app',
+      '-d',
+      '--only_dynamic',
+      dest='only_dynamic',
       action='store_true',
-      help='Use with --tag to create a job for each applicable solver.')
+      help='Use with --tag to create a job for dynamic solvers only.')
   parser.add_argument('--tunable',
                       dest='tunable',
                       action='store_true',
@@ -135,7 +133,7 @@ def parse_args():
     for solver in solver_arr:
       sid = solver_id_map.get(solver, None)
       if not sid:
-        parser.error('Invalid solver: {}'.format(solver))
+        parser.error(f'Invalid solver: {solver}')
       solver_ids.append((solver, sid))
     args.solvers = solver_ids
   else:
@@ -147,53 +145,13 @@ def parse_args():
 def test_tag_name(tag, dbt):
   """ test if a tag name is in config_tags table """
   with DbSession() as session:
-    query = session.query(dbt.config_tags_table.tag).distinct()
-  tag_names = []
-  for row in query.all():
-    tag_names.append(row.tag)
+    query = session.query(dbt.config_tags_table.tag)\
+            .filter(dbt.config_tags_table.tag == tag)
+    res = query.all()
 
-  if tag not in tag_names:
-    raise ValueError("tag '{}' not in config_tags".format(tag))
+  if not res:
+    raise ValueError(f"tag '{tag}' not in config_tags")
 
-  return True
-
-
-def insert_job_all(args, counts, cfg_query, dbt):
-  """ insert all jobs for the given session for applicable solvers"""
-  do_commit = False
-  with DbSession() as session:
-    while True:  #pylint: disable=too-many-nested-blocks
-      for config_entry in cfg_query.all():
-        for solver_name, _ in args.solvers:
-          if counts['cnt_jobs'] % LOG_FREQ == 0:
-            print('.', flush=True, end='')
-          try:
-            job = dbt.job_table()
-            job.config = config_entry.id
-            job.state = 'new'
-            job.valid = True
-            job.reason = args.label
-            job.fin_step = args.fin_steps
-            job.solver = solver_name
-            job.session = args.session_id
-            session.add(job)
-            if do_commit:
-              session.commit()
-            counts['cnt_jobs'] += 1
-          except IntegrityError as err:
-            session.rollback()
-            LOGGER.warning("Integrity Error: %s", err)
-      if not do_commit:
-        try:
-          session.commit()
-        except IntegrityError as err:
-          session.rollback()
-          counts['cnt_jobs'] = 0
-          do_commit = True
-          LOGGER.warning(
-              "Quick update failed, rolling back to add one by one: %s", err)
-          continue
-      break
   return True
 
 
@@ -231,63 +189,63 @@ def compose_query(args, session, dbt, cfg_query):
   else:
     query = query.filter(Solver.config_type == ConfigType('convolution').name)
 
+  if args.only_dynamic:
+    query = query.filter(Solver.is_dynamic == true())
+
   cfg_ids = [config.id for config in cfg_query.all()]
   query = query.filter(dbt.solver_app.config.in_(cfg_ids))
 
   return query
 
 
-def add_jobs(args, counts, dbt):
+def add_jobs(args, dbt):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
+  counts = 0
   with DbSession() as session:
     cfg_query = config_query(args, session, dbt)
-    if args.only_app:
-      query = compose_query(args, session, dbt, cfg_query)
-      do_commit = False
-      while True:
-        for solv_app, slv in query.all():
-          if counts['cnt_jobs'] % LOG_FREQ == 0:
-            print('.', flush=True, end='')
-          try:
-            job = dbt.job_table()
-            job.config = solv_app.config
-            job.state = 'new'
-            job.valid = 1
-            job.reason = args.label
-            job.solver = slv.solver
-            job.fin_step = args.fin_steps
-            job.session = args.session_id
-            session.add(job)
-            if do_commit:
-              session.commit()
-            counts['cnt_jobs'] += 1
-          except IntegrityError as err:
-            session.rollback()
-            LOGGER.warning('Integrity Error: %s', err)
-        if not do_commit:
-          try:
+    query = compose_query(args, session, dbt, cfg_query)
+    res = query.all()
+    if not res:
+      LOGGER.error('No applicable solvers found for args %s', args.__dict__)
+    do_commit = False
+    while True:
+      for solv_app, slv in res:
+        try:
+          job = dbt.job_table()
+          job.config = solv_app.config
+          job.state = 'new'
+          job.valid = 1
+          job.reason = args.label
+          job.solver = slv.solver
+          job.fin_step = args.fin_steps
+          job.session = args.session_id
+          session.add(job)
+          if do_commit:
             session.commit()
-          except IntegrityError as err:
-            session.rollback()
-            counts['cnt_jobs'] = 0
-            do_commit = True
-            LOGGER.warning(
-                'Quick update failed, rolling back to add one by one : %s', err)
-            continue
-        break
+          counts += 1
+        except IntegrityError as err:
+          session.rollback()
+          LOGGER.warning('Integrity Error: %s', err)
+      if not do_commit:
+        try:
+          session.commit()
+        except IntegrityError as err:
+          session.rollback()
+          counts = 0
+          do_commit = True
+          LOGGER.warning(
+              'Quick update failed, rolling back to add one by one : %s', err)
+          continue
+      break
 
-    else:
-      insert_job_all(args, counts, cfg_query, dbt)
+  return counts
 
 
 def main():
   """ main """
   args = parse_args()
   connect_db()
-
-  counts = {}
-  counts['cnt_jobs'] = 0
 
   dbt = DBTables(session_id=None, config_type=args.config_type)
   if args.tag:
@@ -296,9 +254,9 @@ def main():
     except ValueError as terr:
       LOGGER.error(terr)
 
-  add_jobs(args, counts, dbt)
+  cnt = add_jobs(args, dbt)
 
-  print('New jobs added: {}'.format(counts['cnt_jobs']))
+  print(f"New jobs added: {cnt}")
 
 
 if __name__ == '__main__':

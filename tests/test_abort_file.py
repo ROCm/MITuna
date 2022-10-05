@@ -26,7 +26,7 @@
 
 import os
 import sys
-#import pytest
+import socket
 from multiprocessing import Value, Lock, Queue
 
 sys.path.append("../tuna")
@@ -34,120 +34,113 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.builder import Builder
+from tuna.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.tables import ConfigType
+from utils import CfgImportArgs, LdJobArgs
+from tuna.tables import DBTables
+from tuna.import_configs import import_cfgs
+from tuna.db_tables import connect_db
+from tuna.miopen_tables import ConvolutionJob
+from load_job import test_tag_name as tag_name_test, add_jobs
+from utils import add_test_session
+from tuna.dbBase.sql_alchemy import DbSession
 
 
-def add_job():
-  find_configs = "SELECT count(*), tag FROM conv_config_tags WHERE tag='test_builder' GROUP BY tag"
+def test_abort():
+  #import configs
+  session_id = add_test_session()
+  args = CfgImportArgs()
+  args.tag = 'test_builder'
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
-  del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest'"
-  ins_q = "INSERT INTO conv_job(config, state, solver, valid, reason, session) \
-        SELECT conv_config_tags.config, 'new', NULL, 1, 'tuna_pytest', 1 \
-        FROM conv_config_tags WHERE conv_config_tags.tag LIKE 'test_builder'"
+  dbt = DBTables(session_id=session_id, config_type=args.config_type)
+  counts = import_cfgs(args, dbt)
 
-  print(ins_q)
-  with DbCursor() as cur:
-    cur.execute(find_configs)
-    res = cur.fetchall()
-    if len(res) == 0:
-      add_cfg = "{0}/../tuna/import_configs.py -f {0}/../utils/recurrent_cfgs/alexnet_4jobs.txt -t test_builder -C convolution".format(
-          this_path)
-      os.system(add_cfg)
+  #load jobs
+  job_list = []
+  for i in list(range(4)):
+    job_list.append(ConvolutionJob())
+  for i in range(len(job_list)):
+    print(i)
+    job_list[i].reason = 'tuna_pytest_abort'
+    job_list[i].tag = 'test_abort'
+    job_list[i].fin_steps = ['miopen_find_compile', 'miopen_find_eval']
+    job_list[i].session = session_id
+    job_list[i].solver = i + 1
+    job_list[i].config = i + 1
+  with DbSession() as session:
+    for job in job_list:
+      session.add(job)
+    session.commit()
+  num_jobs = len(job_list)
 
-    cur.execute(del_q)
-    cur.execute(ins_q)
+  connect_db()
+  dbt = DBTables(session_id=session_id, config_type=args.config_type)
+  if args.tag:
+    try:
+      tag_name_test(args.tag, dbt)
+    except ValueError as terr:
+      print(terr)
 
+  hostname = socket.gethostname()
+  m = Machine(hostname=hostname, local_machine=True)
+  arch = m.arch = 'gfx908'
+  num_gpus = Value('i', 4)
+  v = Value('i', 0)
+  e = Value('i', 0)
 
-def test_builder():
-  res = None
-  with DbCursor() as cur:
-    select_text = "SELECT id, hostname, avail_gpus, user, password, port, arch, num_cu, sclk, mclk FROM machine WHERE available = TRUE LIMIT 1"
-    cur.execute(select_text)
-    res = cur.fetchall()
-  assert (len(res) > 0)
+  for gpu_idx in range(0, 4):
+    w = None
 
-  keys = {}
-  for machine_id, hostname, avail_gpus, user, password, port, arch, num_cu, sclk, mclk in res:
-    num_gpus = Value('i', len(avail_gpus.split(',')))
-    v = Value('i', 0)
-    e = Value('i', 0)
-
-    keys = {
-        'id': machine_id,
-        'hostname': hostname,
-        'user': user,
-        'password': password,
-        'port': port,
-        'sclk': sclk,
-        'mclk': mclk,
-        'arch': arch,
-        'num_cu': num_cu,
-        'avail_gpus': avail_gpus
+    kwargs = {
+        'machine': m,
+        'gpu_id': gpu_idx,
+        'num_procs': num_gpus,
+        'barred': v,
+        'bar_lock': Lock(),
+        'envmt': ["MIOPEN_LOG_LEVEL=7"],
+        'reset_interval': False,
+        'app_test': False,
+        'label': 'tuna_pytest_abort',
+        'use_tuner': False,
+        'job_queue': Queue(),
+        'queue_lock': Lock(),
+        'end_jobs': e,
+        'config_type': ConfigType.convolution,
+        'session_id': session_id
     }
 
-    m = Machine(**keys)
-    for gpu_idx in m.avail_gpus:
-      w = None
+  w = FinBuilder(**kwargs)
 
-      kwargs = {
-          'machine': m,
-          'gpu_id': gpu_idx,
-          'num_procs': num_gpus,
-          'barred': v,
-          'bar_lock': Lock(),
-          'envmt': ["MIOPEN_LOG_LEVEL=7"],
-          'reset_interval': False,
-          'app_test': False,
-          'label': 'tuna_pytest',
-          'use_tuner': False,
-          'job_queue': Queue(),
-          'queue_lock': Lock(),
-          'end_jobs': e,
-          'config_type': ConfigType.convolution,
-          'session_id': 1
-      }
+  #creating abort file just before we execute
+  arch_abort = '/tmp/miopen_abort_{}'.format(arch)
+  if not os.path.exists(arch_abort):
+    os.mknod(arch_abort)
 
-    w = Builder(**kwargs)
-    add_job()
+  w.run()
 
-    num_jobs = 0
-    with DbCursor() as cur:
-      get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest' and state='new';"
-      cur.execute(get_jobs)
-      res = cur.fetchall()
-      print(res)
-      assert (res[0][0] > 0)
-      num_jobs = res[0][0]
+  #checking that no job where actually run due to abort_file_arch being present
+  with DbCursor() as cur:
+    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
+    cur.execute(get_jobs)
+    res = cur.fetchall()
+    print(res)
+    assert (res[0][0] == num_jobs)
+  os.remove(arch_abort)
 
-    #creating abort file just before we execute
-    arch_abort = '/tmp/miopen_abort_{}'.format(arch)
-    if not os.path.exists(arch_abort):
-      os.mknod(arch_abort)
+  #creating file for abort by mid
+  if not os.path.exists('/tmp/miopen_abort_mid_{}'.format(m.id)):
+    os.mknod('/tmp/miopen_abort_mid_{}'.format(m.id))
+  w.run()
 
-    w.run()
-
-    #checking that no job where actually run due to abort_file_arch being present
-    with DbCursor() as cur:
-      get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest' and state='new';"
-      cur.execute(get_jobs)
-      res = cur.fetchall()
-      print(res)
-      assert (res[0][0] == num_jobs)
-    os.remove(arch_abort)
-
-    #creating file for abort by mid
-    if not os.path.exists('/tmp/miopen_abort_mid_{}'.format(m.id)):
-      os.mknod('/tmp/miopen_abort_mid_{}'.format(m.id))
-    w.run()
-
-    #checking that no job where actually run due to abort_file_mid being present
-    with DbCursor() as cur:
-      get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest' and state='new';"
-      cur.execute(get_jobs)
-      res = cur.fetchall()
-      print(res)
-      assert (res[0][0] == num_jobs)
-    os.remove('/tmp/miopen_abort_mid_{}'.format(m.id))
+  #checking that no job where actually run due to abort_file_mid being present
+  with DbCursor() as cur:
+    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
+    cur.execute(get_jobs)
+    res = cur.fetchall()
+    print(res)
+    assert (res[0][0] == num_jobs)
+  os.remove('/tmp/miopen_abort_mid_{}'.format(m.id))
