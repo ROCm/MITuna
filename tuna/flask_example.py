@@ -35,9 +35,8 @@ from tuna.find_db import ConvolutionFindDB
 
 LOGGER = setup_logger('flask')
 ENV_VARS = get_env_vars()
-ENGINE = create_engine("mysql+pymysql://{}:{}@{}:3306/{}".format(
-    ENV_VARS['user_name'], ENV_VARS['user_password'], ENV_VARS['db_hostname'],
-    ENV_VARS['db_name']))
+ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" +\
+                         f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
 
 
 def get_table_example(grafana_req, data):
@@ -52,8 +51,7 @@ def get_table_example(grafana_req, data):
 
   #To populate the table with data from your DB:
   with DbSession() as session:
-    query = session.query(ConvolutionFindDB.rocm_v, ConvolutionFindDB.miopen_v,
-                          ConvolutionFindDB.valid,
+    query = session.query(ConvolutionFindDB.valid,
                           ConvolutionFindDB.kernel_time).limit(5).all()
     for res in query:
       EXAMPLE_TABLE['rows'].append([res[0], res[1], res[2], res[3]])

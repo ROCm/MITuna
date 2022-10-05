@@ -66,7 +66,7 @@ def main():
       params = vals[-1]
       solver = vals[-2]
       vals = vals[:-2]
-      fds = {k: v for k, v in zip(SQLITE_CONFIG_COLS, vals)}
+      fds = dict(zip(SQLITE_CONFIG_COLS, vals))
       key = get_pdb_key(fds, fds['data_type'], fds['direction'])
       if key in perf_db:
         vals = perf_db[key]
@@ -75,21 +75,20 @@ def main():
       else:
         perf_db[key] = [':'.join([solver, params])]
     LOGGER.info('Writing file for %s_%s', arch, num_cu)
-    filename = '{}_{}.cd.pdb.txt'.format(arch, num_cu)
-    f_file = open(filename, 'w')
-    cnt = 0
-    for key, vals in perf_db.items():
-      if not vals:
-        continue
-      solvers_str = ';'.join(vals)
-      cnt += 1
-      if cnt % 500 == 0:
-        LOGGER.info('%s lines written', cnt)
-      f_file.write('{}={}\n'.format(key, solvers_str))
-    LOGGER.info('Done writing %s lines for %s_%s', cnt, arch, num_cu)
-    f_file.flush()
-    os.fsync(f_file)
-    f_file.close()
+    filename = f'{arch}_{num_cu}.cd.pdb.txt'
+    with open(filename, 'w') as f_file:  # pylint: disable=unspecified-encoding
+      cnt = 0
+      for key, vals in perf_db.items():
+        if not vals:
+          continue
+        solvers_str = ';'.join(vals)
+        cnt += 1
+        if cnt % 500 == 0:
+          LOGGER.info('%s lines written', cnt)
+        f_file.write(f'{key}={solvers_str}\n')
+      LOGGER.info('Done writing %s lines for %s_%s', cnt, arch, num_cu)
+      f_file.flush()
+      os.fsync(f_file)
   cur.close()
 
 

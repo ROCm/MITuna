@@ -29,6 +29,7 @@
 import json
 import os
 import tempfile
+import functools
 import paramiko
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
@@ -53,9 +54,8 @@ class FinClass(WorkerInterface):
     """Constructor"""
     super().__init__(**kwargs)
     allowed_keys = set([
-        'fin_steps', 'arch_num_cu_list', 'local_file', 'fin_outfile',
-        'fin_infile', 'machine', 'docker_name', 'version', 'config_type',
-        'label', 'session_id'
+        'fin_steps', 'local_file', 'fin_outfile', 'fin_infile', 'machine',
+        'docker_name', 'version', 'config_type', 'label', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
@@ -69,7 +69,6 @@ class FinClass(WorkerInterface):
     self.fin_infile = self.local_file.split("/tmp/", 1)[1] + ".json"
     _, self.local_output = tempfile.mkstemp()
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
-    self.arch_num_cu_list = None
     self.fin_steps = []
     self.machine = None
     self.docker_name = None
@@ -89,10 +88,10 @@ class FinClass(WorkerInterface):
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
-    if os.path.exists('/tmp/miopen_abort_{}'.format(self.machine.arch)):
+    if os.path.exists(f'/tmp/miopen_abort_{self.machine.arch}'):
       abort_reason.append(self.machine.arch)
 
-    if os.path.exists('/tmp/miopen_abort_mid_{}'.format(self.machine.id)):
+    if os.path.exists(f'/tmp/miopen_abort_mid_{self.machine.id}'):
       abort_reason.append('mid_' + str(self.machine.id))
     if abort_reason:
       for reason in abort_reason:
@@ -125,7 +124,7 @@ class FinClass(WorkerInterface):
                             fin_ifile)
 
       fin_ofile = FIN_CACHE + "/" + self.fin_outfile
-    bash_cmd = "/opt/rocm/bin/fin -i {0} -o {1}".format(fin_ifile, fin_ofile)
+    bash_cmd = f"/opt/rocm/bin/fin -i {fin_ifile} -o {fin_ofile}"
     self.logger.info('Executing fin cmd: %s', bash_cmd)
     return bash_cmd
 
@@ -151,9 +150,9 @@ class FinClass(WorkerInterface):
       ret_code, out, err = self.exec_docker_cmd(fin_cmd)
       if ret_code > 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
-        self.logger.warning(out.read())
-        raise Exception('Failed to execute fin cmd: {} err: {}'.format(
-            fin_cmd, err.read()))
+        self.logger.warning(out)
+        raise Exception(
+            f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 
       result = self.parse_out()
 
@@ -166,7 +165,7 @@ class FinClass(WorkerInterface):
     if not self.machine.local_machine:
       fin_outfile = FIN_CACHE + "/" + self.fin_outfile
       # TODO: This should be copied back out using cat is bad # pylint: disable=fixme
-      _, ssh_stdout, _ = self.exec_command("cat {}".format(fin_outfile))
+      _, ssh_stdout, _ = self.exec_command(f"cat {fin_outfile}")
       result_json = []
 
       for line in ssh_stdout:
@@ -177,7 +176,7 @@ class FinClass(WorkerInterface):
         self.logger.warning('Err loading fin json: %s', err)
         return None
     else:
-      with open(self.local_output) as out_file:
+      with open(self.local_output) as out_file:  # pylint: disable=unspecified-encoding
         try:
           result = json.load(out_file)
         except Exception as err:
@@ -293,18 +292,17 @@ class FinClass(WorkerInterface):
     if to_file is True:
       if not os.path.exists(outfile):
         os.mknod(outfile)
-      fout = open(outfile, 'w')
-      fout.write("[\n")
-      i = 0
-      while i < len(self.fin_list):
-        json_out = json.dumps(self.fin_list[i])
-        fout.write(json_out)
-        if i != len(self.fin_list) - 1:
-          fout.write(',\n')
-        i += 1
+      with open(outfile, 'w') as fout:  # pylint: disable=unspecified-encoding
+        fout.write("[\n")
+        i = 0
+        while i < len(self.fin_list):
+          json_out = json.dumps(self.fin_list[i])
+          fout.write(json_out)
+          if i != len(self.fin_list) - 1:
+            fout.write(',\n')
+          i += 1
 
-      fout.write("\n]")
-      fout.close()
+        fout.write("\n]")
       self.logger.info('Fin input file written to %s', outfile)
     else:
       jdump = json.dumps(self.fin_list)
@@ -332,20 +330,30 @@ class FinClass(WorkerInterface):
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
         #remove old applicability
-        query = session.query(self.dbt.solver_app)\
+        # pylint: disable=comparison-with-callable
+        app_query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
           .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
-        query.delete()
+        # pylint: enable=comparison-with-callable
+        app_query.update({self.dbt.solver_app.applicable: 0},
+                         synchronize_session='fetch')
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s",
                               elem["input"]["config_tuna_id"])
         for solver in elem["applicable_solvers"]:
           try:
-            new_entry = self.dbt.solver_app(
-                solver=solver_id_map_h[solver],
-                config=elem["input"]["config_tuna_id"],
-                session=self.session_id)
-            session.add(new_entry)
+            solver_id = solver_id_map_h[solver]
+            obj = app_query.filter(
+                self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
+            if obj:
+              obj.applicable = 1
+            else:
+              new_entry = self.dbt.solver_app(
+                  solver=solver_id,
+                  config=elem["input"]["config_tuna_id"],
+                  session=self.session_id,
+                  applicable=1)
+              session.add(new_entry)
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
@@ -362,18 +370,36 @@ class FinClass(WorkerInterface):
       self.logger.error("JSON file returned from Fin is empty")
       return False
 
+    #break down commits into smaller packets
+    pack_i = 0
+    pack = []
+    all_packs = []
+    for elem in json_in:
+      pack.append(elem)
+      pack_i += 1
+      if pack_i == 100:
+        all_packs.append(pack)
+        pack = []
+        pack_i = 0
+    if pack:
+      all_packs.append(pack)
+
     with DbSession() as session:
-      callback = self.insert_applicability
-      actuator = lambda x: x(session, json_in)
-      session_retry(session, callback, actuator, self.logger)
+
+      def actuator(func, pack):
+        return func(session, pack)
+
+      for pack in all_packs:
+        session_retry(session, self.insert_applicability,
+                      functools.partial(actuator, pack=pack), self.logger)
 
     with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
+      query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
       sapp_count = query.one()[0]
-      self.logger.info("Solver applicability table updated to %d entries",
-                       sapp_count)
-
-    self.logger.info('Done parsing fin solver applicability output')
+      self.logger.warning(
+          "Finished parsing solver applicability, new session size: %d entries",
+          sapp_count)
     return True
 
   def invalidate_solvers(self, sids, max_id):

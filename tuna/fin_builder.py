@@ -57,11 +57,7 @@ class FinBuilder(WorkerInterface):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
       kernel_obj = self.dbt.fin_cache_table()
-      kernel_obj.kernel_name = kern_obj['kernel_file']
-      kernel_obj.kernel_args = kern_obj['comp_options']
-      kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
-      kernel_obj.kernel_hash = kern_obj['md5_sum']
-      kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
+      self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
@@ -91,6 +87,15 @@ class FinBuilder(WorkerInterface):
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+
+    # pylint: disable=duplicate-code
+    try:
+      self.check_env()
+    except ValueError as verr:
+      self.logger.error(verr)
+      return False
+    # pylint: enable=duplicate-code
+
     if not self.get_job("new", "compile_start", True):
       return False
 

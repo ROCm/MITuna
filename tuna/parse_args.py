@@ -38,6 +38,7 @@ class TunaArgs(Enum):
   DIRECTION = 2
   VERSION = 3
   CONFIG_TYPE = 4
+  SESSION_ID = 5
 
 
 def setup_arg_parser(desc: str, arg_list: List[TunaArgs]):
@@ -80,4 +81,14 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs]):
                         default=ConfigType.convolution,
                         choices=ConfigType,
                         type=ConfigType)
+  if TunaArgs.SESSION_ID in arg_list:
+    parser.add_argument(
+        '--session_id',
+        action='store',
+        type=int,
+        dest='session_id',
+        help=
+        'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
+    )
+
   return parser

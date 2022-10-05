@@ -26,68 +26,98 @@
 
 import os
 import sys
-from multiprocessing import Value, Lock, Queue
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.machine import Machine
-from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.go_fish import load_machines, compose_worker_list
+from tuna.fin_class import FinClass
+from tuna.tables import DBTables
+from tuna.db_tables import connect_db
+from import_configs import import_cfgs
+from load_job import test_tag_name as tag_name_test, add_jobs
+from utils import CfgImportArgs, LdJobArgs, GoFishArgs
+from utils import get_worker_args, add_test_session
+from tuna.metadata import ALG_SLV_MAP, get_solver_ids
 
 
-def add_fin_find_compile_job():
-  del_q = "DELETE FROM conv_job WHERE reason = 'tuna_pytest_fin_builder'"
-  del_q2 = "DELETE FROM conv_config_tags WHERE tag = 'test_fin_builder'"
+def add_cfgs():
+  #import configs
+  args = CfgImportArgs()
+  args.tag = 'test_fin_builder'
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  with DbCursor() as cur:
-    cur.execute(del_q)
-    cur.execute(del_q2)
+  dbt = DBTables(config_type=args.config_type)
+  counts = import_cfgs(args, dbt)
+  return dbt
 
-  add_cfg = "{0}/../tuna/import_configs.py -t test_fin_builder --mark_recurrent -f {0}/../utils/configs/conv_configs_NCHW.txt".format(
-      this_path)
 
-  trun_q = "DELETE FROM conv_job;"
-  with DbCursor() as cur:
-    cur.execute(trun_q)
+def add_fin_find_compile_job(session_id, dbt):
+  #load jobs
+  args = LdJobArgs
+  args.label = 'tuna_pytest_fin_builder'
+  args.tag = 'test_fin_builder'
+  args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
+  args.session_id = session_id
 
-  load_job = "{0}/../tuna/load_job.py -l tuna_pytest_fin_builder -t test_fin_builder \
-      --fin_steps 'miopen_find_compile, miopen_find_eval' --session_id 1".format(
-      this_path)
+  #limit job scope
+  args.algo = "miopenConvolutionAlgoGEMM"
+  solver_arr = ALG_SLV_MAP[args.algo]
+  solver_id_map, _ = get_solver_ids()
+  if solver_arr:
+    solver_ids = []
+    for solver in solver_arr:
+      sid = solver_id_map.get(solver, None)
+      solver_ids.append((solver, sid))
+    args.solvers = solver_ids
+  args.only_applicable = True
 
-  os.system(add_cfg)
-  os.system(load_job)
+  connect_db()
+  return add_jobs(args, dbt)
 
 
 def test_fin_builder():
-  res = None
+  args = GoFishArgs()
+  machine_lst = load_machines(args)
+  machine = machine_lst[0]
+
+  args.session_id = add_test_session()
+
+  #update solvers
+  kwargs = get_worker_args(args, machine)
+  fin_worker = FinClass(**kwargs)
+  assert (fin_worker.get_solvers())
+
+  #get applicability
+  dbt = add_cfgs()
+  args.update_applicability = True
+  args.label = 'test_fin_builder'
+  worker_lst = compose_worker_list(machine_lst, args)
+  for worker in worker_lst:
+    worker.join()
+
+  #load jobs
+  num_jobs = add_fin_find_compile_job(args.session_id, dbt)
+
+  #compile
+  args.update_applicability = False
+  args.fin_steps = ["miopen_find_compile"]
+  args.label = ''
+  worker_lst = compose_worker_list(machine_lst, args)
+  for worker in worker_lst:
+    worker.join()
 
   with DbSession() as session:
-    query = session.query(Machine)
-    query = query.filter(Machine.available == 1)
-    res = query.all()
-
-  assert (len(res) > 0)
-
-  for machine in res:
-    add_fin_find_compile_job()
-
-    num_jobs = 0
-    with DbCursor() as cur:
-      get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state='new';"
-      cur.execute(get_jobs)
-      res = cur.fetchall()
-      assert (res[0][0] > 0)
-      num_jobs = res[0][0]
-
-    go_fish_run = "{0}/../tuna/go_fish.py --local_machine --fin_steps miopen_find_compile --session_id 1".format(
-        this_path)
-    os.system(go_fish_run)
-
-    with DbCursor() as cur:
-      get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_fin_builder' and state in ('compiled');"
-      cur.execute(get_jobs)
-      res = cur.fetchall()
-      assert (res[0][0] == num_jobs)
+    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='errored')\
+                                         .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
+                                         .count()
+    #ommiting valid Fin/MIOpen errors
+    num_jobs = (num_jobs - valid_fin_err)
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='compiled').count()
+    assert (count == num_jobs)

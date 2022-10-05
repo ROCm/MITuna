@@ -28,8 +28,8 @@
 
 import enum
 import random
-import pymysql
 from time import sleep
+import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
@@ -77,7 +77,8 @@ def session_retry(session, callback, actuator, logger=LOGGER):
   return False
 
 
-class DB_Type(enum.Enum):
+class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?
+  """@alex defines the types of databases produced in tuning sessions?"""
   FIND_DB = 1
   KERN_DB = 2
   PERF_DB = 3

@@ -86,8 +86,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     self.cnx_list = {}
     self.log_list = {}
     self.num_cpus = 0
-    if self.local_machine:
-      self.logger = setup_logger('Machine_{}'.format(self.hostname))
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
+      self.logger = setup_logger(f'Machine_{self.hostname}')
       self.connect()
       self.mmi = None
       self.id = 0  # pylint: disable=invalid-name
@@ -99,12 +99,12 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         self.avail_gpus = list(range(len(self.gpus)))
     else:
       cmd = 'hostname'
-      subp = Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True)
-      hostname = subp.stdout.readline().strip()
+      with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
+        hostname = subp.stdout.readline().strip()
       if self.local_ip is not None and check_qts(hostname):
         self.hostname = self.local_ip
         self.port = self.local_port
-      self.logger = setup_logger('Machine_{}'.format(self.id))
+      self.logger = setup_logger('Machine_{self.id}')
       self.mmi = MachineManagementInterface(self.ipmi_ip, self.ipmi_port,
                                             self.ipmi_user, self.ipmi_password)
 
@@ -151,7 +151,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         'user': self.user,
         'password': self.password,
         'port': self.port,
-        'local_machine': self.local_machine,
+        'local_machine': self.local_machine,  # pylint: disable=no-member ; false alarm
         'chk_abort_file': chk_abort_file
     }
     keys['logger'] = logger
@@ -292,7 +292,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       _, filename = tempfile.mkstemp()
     else:
       assert filename is not None
-    if self.local_machine:
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
       with open(filename, 'wb') as fout:
         fout.write(contents)
         fout.flush()
@@ -308,7 +308,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     Read a file from this machine and return the contents
     """
-    if self.local_machine:
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
+      # pylint: disable-next=unspecified-encoding
       with open(filename, 'rb' if byteread else 'r') as rfile:
         return rfile.read()
     else:
@@ -331,12 +332,12 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     Execute a command on this machine
     - through docker if on a remote machine
-    - no docker with --local_machine
+    - no docker on local machine
     """
     logger = self.get_logger()
     if isinstance(command, list):
       command = ' '.join(command)
-    if not self.local_machine:
+    if not self.local_machine:  # pylint: disable=no-member ; false alarm
       assert docker_name
       command = DOCKER_CMD.format(docker_name, command)
     logger.info('Running command: %s', command)
@@ -350,7 +351,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   def get_gpu_clock(self, gpu_num=0):
     """query gpu clock levels with rocm-smi"""
 
-    gpu_clk_cmd = '{} -c'.format(ROCMSMI)
+    gpu_clk_cmd = f'{ROCMSMI} -c'
     _, stdout, _ = self.connect().exec_command(gpu_clk_cmd)
 
     base_idx = None
@@ -382,10 +383,10 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     cnx = self.connect()
 
     if self.sclk is not None:
-      sclk_cmd = '{} --setsclk {}'.format(ROCMSMI, self.sclk)
+      sclk_cmd = f'{ROCMSMI} --setsclk {self.sclk}'
       cnx.exec_command(sclk_cmd)
     if self.mclk is not None:
-      mclk_cmd = '{} --setmclk {}'.format(ROCMSMI, self.mclk)
+      mclk_cmd = f'{ROCMSMI} --setmclk {self.mclk}'
       cnx.exec_command(mclk_cmd)
 
   def restart_server(self, wait=True):
@@ -418,8 +419,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       return False
     logger.info('Checking GPU %u status', gpu_id)
     _, stdout, _ = cnx.exec_command(
-        'GPU_DEVICE_ORDINAL={} {} | grep gfx'.format(gpu_id, CLINFO),
-        timeout=30)
+        f'GPU_DEVICE_ORDINAL={gpu_id} {CLINFO} | grep gfx', timeout=30)
     if stdout is None:
       return False
     if hasattr(stdout, 'channel'):
@@ -428,7 +428,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       try:
         line = line.strip()
         logger.info(line)
-        if line.find('{}'.format(self.get_gpu(gpu_id)['arch'])) == -1:
+        if line.find(f"{self.get_gpu(gpu_id)['arch']}") == -1:
           logger.warning('clinfo failed: %s', line)
           logger.warning('clinfo failed for Device ID: %u', gpu_id)
           return False
@@ -447,7 +447,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """examine used space on disk"""
     logger = self.get_logger()
     logger.info("Getting free space")
-    if self.local_machine:
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
       file_stat = os.statvfs('/')
       total = file_stat.f_blocks * file_stat.f_frsize
       used = (file_stat.f_blocks - file_stat.f_bfree) * file_stat.f_frsize
