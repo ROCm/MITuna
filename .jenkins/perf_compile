@@ -18,10 +18,10 @@ def VerifyArgs()
 
 
 pipeline {
-  agent { node { label 'ixt-rack-15' } }
+  agent { node { label 'slurm' } }
   environment {
       backend = 'HIPNOGPU'
-      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
+      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password}"
       tuna_docker_name = utils.getDockerName("${backend}")
       db_name = "${params.db_name}"
       partition = "${params.slurm_partition}"
@@ -39,9 +39,6 @@ pipeline {
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
     string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
-    //string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
-    //string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
-    //string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
     string(name: 'base_image', defaultValue: '', description: 'Put a fully qualified docker name here to use (optional)')
     choice(name: 'stage', choices: ['perf', 'fin_find'], description: 'Compile method')
   }
