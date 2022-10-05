@@ -36,6 +36,7 @@ from tuna.miopen_tables import Solver  # pylint: disable=unused-import
 from tuna.tables import DBTables
 from tuna.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
+from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
@@ -145,7 +146,14 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
       "`uncompressed_size` INT NOT NULL);")
   cur.execute(
       "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
+
+  arch_ext = arch2targetid(arch)
   for (name, args), (blob, kern_hash, kern_size) in kern_db.items():
+    #check if extensions should be added
+    if not name.endswith('.o') and not "-mcpu=" in args:
+      if not name.endswith('.mlir'):
+        args += f" -mcpu={arch_ext}"
+      name += ".o"
     cur.execute(
         "INSERT INTO kern_db (kernel_name, kernel_args, kernel_blob, kernel_hash, "
         "uncompressed_size) VALUES(?, ?, ?, ?, ?);",
@@ -361,13 +369,19 @@ def create_sqlite_tables(arch, num_cu, filename=None):
   return cnx, local_path
 
 
-def get_cfg_dict(cfg_entry, perf_cfg_entry):
+def get_cfg_dict(cfg_entry, tensor_entry):
   """compose config_dict"""
   cfg_dict = compose_config_obj(cfg_entry)
-  cfg_dict.update(perf_cfg_entry.to_dict())
 
   if cfg_entry.valid == 1:
     cfg_dict = mysql_to_sqlite_cfg(cfg_dict)
+
+  ext_dict = tensor_entry.to_dict(ommit_valid=True)
+  ext_dict.pop('id')
+  cfg_dict.update(ext_dict)
+
+  #bias is always 0
+  cfg_dict['bias'] = 0
 
   return dict(cfg_dict)
 
@@ -386,25 +400,28 @@ def insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id):
   LOGGER.info("Inserting row in perf_db: %s", perf_db_dict)
 
 
-def get_query(dbt, args):
+def get_pdb_query(dbt, args):
   """Compose query to get perf_db rows based on filters from args"""
   with DbSession() as session:
-    query = session.query(dbt.perf_db_table, dbt.perf_config_table,
-                          dbt.config_table)\
-        .filter(dbt.perf_db_table.valid == 1)\
-        .filter(dbt.perf_db_table.session == dbt.session.id)\
-        .filter(dbt.perf_db_table.miopen_config == dbt.perf_config_table.id)\
-        .filter(dbt.perf_config_table.config == dbt.config_table.id)
+    query = session.query(dbt.find_db_table,
+                          dbt.config_table, dbt.tensor_table)\
+        .filter(dbt.find_db_table.session == dbt.session.id)\
+        .filter(dbt.find_db_table.valid == 1)\
+        .filter(dbt.find_db_table.kernel_time != -1)\
+        .filter(dbt.find_db_table.params != '')\
+        .filter(dbt.find_db_table.config == dbt.config_table.id)\
+        .filter(dbt.config_table.input_tensor == dbt.tensor_table.id)\
+        .filter(dbt.find_db_table.solver == dbt.solver_table.id)\
+        .filter(dbt.solver_table.tunable == 1)
 
     LOGGER.info("rocm_v : %s", dbt.session.rocm_v)
     LOGGER.info("miopen_v : %s", dbt.session.miopen_v)
-    query = query.filter(dbt.perf_db_table.session == dbt.session.id)
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
       tag_query = session.query(dbt.config_tags_table.config).filter(
           dbt.config_tags_table.tag == args.config_tag)
       ids = tuple([str(tag_row.config) for tag_row in tag_query.all()])
-      query = query.filter(dbt.perf_config_table.config.in_(ids))
+      query = query.filter(dbt.config_table.id.in_(ids))
 
   return query
 
@@ -414,19 +431,19 @@ def export_pdb(dbt, args):
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
   with DbSession() as session:
-    query = get_query(dbt, args)
+    query = get_pdb_query(dbt, args)
     cfg_map = {}
-    for perf_db_entry, perf_cfg_entry, cfg_entry in query.all():
+    for perf_db_entry, cfg_entry, tensor_entry in query.all():
       LOGGER.info("%s, %s, %s", dbt.session.miopen_v, dbt.session.rocm_v,
-                  perf_db_entry.miopen_config)
+                  cfg_entry.id)
 
-      if perf_cfg_entry.id in cfg_map:
-        ins_cfg_id = cfg_map[perf_cfg_entry.id]
+      if cfg_entry.id in cfg_map:
+        ins_cfg_id = cfg_map[cfg_entry.id]
       else:
-        cfg_dict = get_cfg_dict(cfg_entry, perf_cfg_entry)
+        cfg_dict = get_cfg_dict(cfg_entry, tensor_entry)
         #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
         ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
-        cfg_map[perf_cfg_entry.id] = ins_cfg_id
+        cfg_map[cfg_entry.id] = ins_cfg_id
 
       insert_perf_db_sqlite(session, cnx, perf_db_entry, ins_cfg_id)
       num_perf += 1
@@ -441,6 +458,9 @@ def main():
   args = parse_args()
   result_file = ''
   dbt = DBTables(session_id=args.session_id)
+
+  args.arch = dbt.session.arch
+  args.num_cu = dbt.session.num_cu
 
   if args.kern_db:
     result_file = export_kdb(dbt, args)
