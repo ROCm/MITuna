@@ -27,6 +27,7 @@
 """Utility module for helper functions"""
 
 import os
+from multiprocessing import Value, Lock, Queue as mpQueue
 from tuna.utils.logger import setup_logger
 from tuna.sql import DbCursor
 
@@ -137,3 +138,42 @@ class DotDict(dict):
   __getattr__ = dict.get
   __setattr__ = dict.__setitem__
   __delattr__ = dict.__delitem__
+
+
+def compose_f_vals(args, machine):
+  """! Compose dict for WorkerInterface constructor
+    @param args The command line arguments
+    @param machine Machine instance
+  """
+  f_vals = {}
+  f_vals["barred"] = Value('i', 0)
+  f_vals["bar_lock"] = Lock()
+  f_vals["queue_lock"] = Lock()
+  #multiprocess queue for jobs, shared on machine
+  f_vals["job_queue"] = mpQueue()
+  f_vals["machine"] = machine
+  f_vals["envmt"] = get_envmt(args)
+  f_vals["b_first"] = True
+  f_vals["end_jobs"] = Value('i', 0)
+
+  return f_vals
+
+
+def get_envmt(self, args):
+  """! Function to construct environment var
+     @param args The command line arguments
+  """
+  envmt = ["MIOPEN_LOG_LEVEL=4"]
+
+  envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
+  envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
+
+  if args.find_mode:
+    envmt.append(f"MIOPEN_FIND_MODE={args.find_mode}")
+
+  if args.blacklist:
+    bk_str = ", ".join([f"{arg}=0" for arg in args.blacklist])
+    for bk_var in bk_str.split(','):
+      envmt.append(bk_var)
+
+  return envmt

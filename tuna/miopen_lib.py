@@ -28,8 +28,8 @@
 
 import argparse
 import sys
-from multiprocessing import Value, Lock, Queue as mpQueue
 from subprocess import Popen, PIPE
+from multiprocessing import Value
 from sqlalchemy.exc import InterfaceError
 
 from tuna.dbBase.sql_alchemy import DbSession
@@ -45,7 +45,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
 from tuna.tables import ConfigType
 from tuna.machine import Machine
-from tuna.utils.utility import get_env_vars
+from tuna.utils.utility import get_env_vars, compose_f_vals
 from tuna.libraries import Library
 
 
@@ -277,25 +277,6 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def get_envmt(self, args):
-    """! Function to construct environment var
-       @param args The command line arguments
-    """
-    envmt = ["MIOPEN_LOG_LEVEL=4"]
-
-    envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
-    envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
-
-    if args.find_mode:
-      envmt.append(f"MIOPEN_FIND_MODE={args.find_mode}")
-
-    if args.blacklist:
-      bk_str = ", ".join([f"{arg}=0" for arg in args.blacklist])
-      for bk_var in bk_str.split(','):
-        envmt.append(bk_var)
-
-    return envmt
-
   def launch_worker(self, gpu_idx, f_vals, worker_lst, args):
     """! Function to launch worker
       @param gpu_idx Unique ID of the GPU
@@ -376,7 +357,7 @@ class MIOpen(MITunaInterface):
         self.logger.error('Cannot launch worker on machine: %s', machine.id)
         return None
 
-      f_vals = self.compose_f_vals(self.args, machine)
+      f_vals = compose_f_vals(self.args, machine)
       f_vals["num_procs"] = Value('i', len(worker_ids))
 
       if (self.args.update_solvers) and not fin_work_done:
@@ -400,24 +381,6 @@ class MIOpen(MITunaInterface):
     res = self.load_machines()
     res = self.compose_worker_list(res)
     return res
-
-  def compose_f_vals(self, args, machine):
-    """! Compose dict for WorkerInterface constructor
-      @param args The command line arguments
-      @param machine Machine instance
-    """
-    f_vals = {}
-    f_vals["barred"] = Value('i', 0)
-    f_vals["bar_lock"] = Lock()
-    f_vals["queue_lock"] = Lock()
-    #multiprocess queue for jobs, shared on machine
-    f_vals["job_queue"] = mpQueue()
-    f_vals["machine"] = machine
-    f_vals["envmt"] = self.get_envmt(args)
-    f_vals["b_first"] = True
-    f_vals["end_jobs"] = Value('i', 0)
-
-    return f_vals
 
   def get_kwargs(self, gpu_idx, f_vals, args):
     """! Helper function to set up kwargs for worker instances
