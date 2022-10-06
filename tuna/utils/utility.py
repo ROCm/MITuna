@@ -30,7 +30,7 @@ import os
 from multiprocessing import Value, Lock, Queue as mpQueue
 from tuna.utils.logger import setup_logger
 from tuna.sql import DbCursor
-from tuna.tables import ConfigType
+from tuna.config_type import ConfigType
 
 LOGGER = setup_logger('utility')
 
