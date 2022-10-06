@@ -31,7 +31,8 @@ Script for adding jobs to the MySQL database
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
 
-from tuna.metadata import ALG_SLV_MAP, get_solver_ids, TENSOR_PRECISION
+from tuna.metadata import ALG_SLV_MAP, TENSOR_PRECISION
+from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.db_tables import connect_db

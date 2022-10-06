@@ -30,9 +30,9 @@ from sqlalchemy import create_engine
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen_tables import ConvolutionConfig, ConvolutionConfigTags
-from tuna.metadata import get_solver_ids, DIRECTION
+from tuna.metadata import DIRECTION
 from tuna.utils.utility import get_env_vars
-from tuna.utils.db_utility import get_id_solvers
+from tuna.utils.db_utility import get_id_solvers, get_solver_ids
 from tuna.parsing import build_driver_cmd_from_config
 
 LOGGER = setup_logger('flask')
