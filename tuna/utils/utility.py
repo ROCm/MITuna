@@ -27,7 +27,7 @@
 """Utility module for helper functions"""
 
 import os
-from subprocess import Popen, PIPE
+from multiprocessing import Value, Lock, Queue as mpQueue
 from tuna.utils.logger import setup_logger
 from tuna.sql import DbCursor
 from tuna.config_type import ConfigType

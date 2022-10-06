@@ -25,10 +25,13 @@
 #
 ###############################################################################
 """Utility module for helper functions"""
-from multiprocessing import Value, Lock, Queue as mpQueue
+from subprocess import Popen, PIPE
 from sqlalchemy.exc import InterfaceError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
+from tuna.utils.logger import setup_logger
+
+LOGGER = setup_logger('miopen_utility')
 
 
 def load_machines(args, logger=LOGGER):
