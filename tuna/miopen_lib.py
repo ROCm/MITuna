@@ -28,11 +28,8 @@
 
 import argparse
 import sys
-from subprocess import Popen, PIPE
 from multiprocessing import Value
-from sqlalchemy.exc import InterfaceError
 
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.mituna_interface import MITunaInterface
 from tuna.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser
@@ -43,8 +40,7 @@ from tuna.fin_builder import FinBuilder
 from tuna.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
-from tuna.machine import Machine
-from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
+from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs, load_machines
 from tuna.libraries import Library
 
 
@@ -377,47 +373,6 @@ class MIOpen(MITunaInterface):
     self.args = self.parse_args(parser)
     if self.args is None:
       return res
-    res = self.load_machines()
+    res = load_machines(self.args)
     res = self.compose_worker_list(res)
-    return res
-
-  def load_machines(self):
-    """! Function to get available machines from the DB
-       @param args The command line arguments
-    """
-    cmd = 'hostname'
-    with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
-      hostname = subp.stdout.readline().strip()
-    self.logger.info('hostname = %s', hostname)
-    try:
-      with DbSession() as session:
-        query = session.query(Machine)
-        if self.args.arch:
-          query = query.filter(Machine.arch == self.args.arch)
-        if self.args.num_cu:
-          query = query.filter(Machine.num_cu == self.args.num_cu)
-        if not self.args.machines and not self.args.local_machine:
-          query = query.filter(Machine.available == 1)
-        if self.args.machines:
-          query = query.filter(Machine.id.in_(self.args.machines))
-        if self.args.local_machine:
-          query = query.filter(Machine.remarks == hostname)
-
-        res = query.all()
-
-        if self.args.local_machine:
-          if res:
-            res[0].local_machine = True
-          else:
-            res = [Machine(hostname=hostname, local_machine=True)]
-            self.logger.info(
-                'Local machine not in database, continue with incomplete details'
-            )
-
-        if not res:
-          self.logger.info('No machine found for specified requirements')
-    except InterfaceError as ierr:
-      self.logger.warning(ierr)
-      session.rollback()
-
     return res

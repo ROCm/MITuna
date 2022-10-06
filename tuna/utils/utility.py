@@ -28,9 +28,13 @@
 
 import os
 from multiprocessing import Value, Lock, Queue as mpQueue
+from sqlalchemy.exc import InterfaceError
+from subprocess import Popen, PIPE
 from tuna.utils.logger import setup_logger
 from tuna.sql import DbCursor
 from tuna.config_type import ConfigType
+from tuna.dbBase.sql_alchemy import DbSession
+from tuna.machine import Machine
 
 LOGGER = setup_logger('utility')
 
@@ -210,3 +214,44 @@ def get_kwargs(gpu_idx, f_vals, args):
   }
 
   return kwargs
+
+
+def load_machines(args, logger=LOGGER):
+  """! Function to get available machines from the DB
+     @param args The command line arguments
+  """
+  cmd = 'hostname'
+  with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
+    hostname = subp.stdout.readline().strip()
+  logger.info('hostname = %s', hostname)
+  try:
+    with DbSession() as session:
+      query = session.query(Machine)
+      if args.arch:
+        query = query.filter(Machine.arch == args.arch)
+      if args.num_cu:
+        query = query.filter(Machine.num_cu == args.num_cu)
+      if not args.machines and not args.local_machine:
+        query = query.filter(Machine.available == 1)
+      if args.machines:
+        query = query.filter(Machine.id.in_(args.machines))
+      if args.local_machine:
+        query = query.filter(Machine.remarks == hostname)
+
+      res = query.all()
+
+      if args.local_machine:
+        if res:
+          res[0].local_machine = True
+        else:
+          res = [Machine(hostname=hostname, local_machine=True)]
+          logger.info(
+              'Local machine not in database, continue with incomplete details')
+
+      if not res:
+        logger.info('No machine found for specified requirements')
+  except InterfaceError as ierr:
+    logger.warning(ierr)
+    session.rollback()
+
+  return res
