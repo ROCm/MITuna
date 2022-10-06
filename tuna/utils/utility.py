@@ -159,7 +159,7 @@ def compose_f_vals(args, machine):
   return f_vals
 
 
-def get_envmt(self, args):
+def get_envmt(args):
   """! Function to construct environment var
      @param args The command line arguments
   """
