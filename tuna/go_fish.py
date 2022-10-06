@@ -69,7 +69,6 @@ def main():
   library = setup_library(args)
 
   try:
-    #res = library.load_machines(args)
 
     #worker_lst = library.compose_worker_list(res, args)
     #returns a list of workers/processes it ran

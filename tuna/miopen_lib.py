@@ -40,7 +40,8 @@ from tuna.fin_builder import FinBuilder
 from tuna.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
-from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs, load_machines
+from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
+from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 
 
