@@ -517,7 +517,7 @@ class BNGolden(BASE, GoldenMixin):
 
 
 class BenchmarkTable(BASE, GoldenMixin):
-  """bnechmark table for performance parameters"""
+  """benchmark table for framework and model parameters"""
   __tablename__ = "benchmark_table"
   __table_args__ = (UniqueConstraint("framework",
                                      "model",
@@ -531,6 +531,24 @@ class BenchmarkTable(BASE, GoldenMixin):
   batchsize = Column(Integer, nullable=False, server_default="32")
   gpu_number = Column(Integer, nullable=True, server_default="1")  #nullable?
   driver_cmd = Column(String(length=128), nullable=False)
+
+
+class BenchmarkPerfTable(BASE, GoldenMixin):
+  """benchmark table for performance parameters"""
+  __tablename__ = "benchmark_perf_table"
+  __table_args__ = (UniqueConstraint("kernel_time",
+                                     "solver",
+                                     "workspace_sz",
+                                     "rocm_v",
+                                     "miopen_v",
+                                     name="uq_idx"),)
+
+  config = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
+  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
+  solver = Column(String(length=128), nullable=True, server_default="")
+  workspace_sz = Column(BigInteger, nullable=False)
+  rocm_v = Column(Integer, nullable=False)
+  miopen_v = Column(Integer, nullable=False)
 
 
 def add_conv_tables(miopen_tables):
@@ -578,6 +596,7 @@ def get_miopen_tables():
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
   miopen_tables.append(BenchmarkTable())
+  miopen_tables.append(BenchmarkPerfTable())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)
