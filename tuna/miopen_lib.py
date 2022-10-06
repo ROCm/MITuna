@@ -43,9 +43,8 @@ from tuna.fin_builder import FinBuilder
 from tuna.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
-from tuna.tables import ConfigType
 from tuna.machine import Machine
-from tuna.utils.utility import get_env_vars, compose_f_vals
+from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
 from tuna.libraries import Library
 
 
@@ -268,7 +267,7 @@ class MIOpen(MITunaInterface):
       @param gpu Unique ID of the GPU
       @param f_vals Dict containing runtime information
     """
-    kwargs = self.get_kwargs(gpu, f_vals, args)
+    kwargs = get_kwargs(gpu, f_vals, args)
     fin_worker = FinClass(**kwargs)
 
     if args.update_solvers:
@@ -287,7 +286,7 @@ class MIOpen(MITunaInterface):
     """
     # pylint: disable=too-many-branches
     worker = None
-    kwargs = self.get_kwargs(gpu_idx, f_vals, args)
+    kwargs = get_kwargs(gpu_idx, f_vals, args)
 
     if args.fin_steps:
       if 'miopen_find_compile' in args.fin_steps or 'miopen_perf_compile' in args.fin_steps:
@@ -381,37 +380,6 @@ class MIOpen(MITunaInterface):
     res = self.load_machines()
     res = self.compose_worker_list(res)
     return res
-
-  def get_kwargs(self, gpu_idx, f_vals, args):
-    """! Helper function to set up kwargs for worker instances
-      @param gpu_idx Unique ID of the GPU
-      @param f_vals Dict containing runtime information
-      @param args The command line arguments
-    """
-    envmt = f_vals["envmt"].copy()
-    if args.config_type is None:
-      args.config_type = ConfigType.convolution
-
-    kwargs = {
-        'machine': f_vals["machine"],
-        'gpu_id': gpu_idx,
-        'num_procs': f_vals["num_procs"],
-        'barred': f_vals["barred"],
-        'bar_lock': f_vals["bar_lock"],
-        'envmt': envmt,
-        'reset_interval': args.reset_interval,
-        'fin_steps': args.fin_steps,
-        'dynamic_solvers_only': args.dynamic_solvers_only,
-        'job_queue': f_vals["job_queue"],
-        'queue_lock': f_vals["queue_lock"],
-        'label': args.label,
-        'docker_name': args.docker_name,
-        'end_jobs': f_vals['end_jobs'],
-        'config_type': args.config_type,
-        'session_id': args.session_id
-    }
-
-    return kwargs
 
   def load_machines(self):
     """! Function to get available machines from the DB
