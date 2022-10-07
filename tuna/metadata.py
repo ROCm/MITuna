@@ -29,7 +29,6 @@
 
 import os
 
-from tuna.sql import DbCursor
 from tuna.config_type import ConfigType
 
 DOCKER_CMD = "sudo docker run --device='/dev/kfd' --device='/dev/dri' -w /tmp/miopenpdb \
