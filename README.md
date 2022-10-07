@@ -8,36 +8,36 @@ Prerequisites
 -------------
 
 Install python3.9
-```
+```zsh
 apt-get update && apt-get install software-properties-common
 add-apt-repository ppa:deadsnakes/ppa
 apt install python3.9
 ```
 
 Install pip for python3.9
-```
+```zsh
 wget https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 python3.9 get-pip.py
 rm get-pip.py
 ```
 
 Install MySQL server
-```
+```zsh
 apt-get install mysql-server
 ```
 
 Enable the service
-```
+```zsh
 systemctl start mysql
 ```
 
 Install ipmitool
-```
+```zsh
 apt-get install ipmitool
 ```
 
 Setup passwordless ssh between all machines, for example:
-```
+```zsh
 ssh-keygen -t rsa
 ssh-copy-id <user>@<ip-address>
 ssh <user>@<ip-address>
@@ -49,26 +49,26 @@ passwordless ssh.
 Installation
 ------------
 Clone the repo using 
-```
+```zsh
 git clone <repo url>
 ```
 Enter the Tuna directory
-```
+```zsh
 cd MITuna
 ```
 Create a virtual envornment, and activate it (by sourcing its `activate` script)
-```
+```zsh
 virtualenv -p python3.9 myvenv
 source myvenv/bin/activate
 ```
 Install the required dependencies:
-```
+```zsh
 python3.9 -m pip install -r requirements.txt
 ```
 The above assumes that Tuna lives in the home directory and the virtual environment was created using the command indicated above.
 
 Add the following environment variables to a local file and then source the file:
-```
+```zsh
 export TUNA_DB_USER_NAME=root
 export TUNA_DB_PASSWORD=<password for root>
 export TUNA_DB_HOSTNAME=localhost
@@ -82,17 +82,17 @@ All machines used in the tuning process must have ssh-keys enabled. MITuna needs
 have all-to-all machine communication available and passwords must not be required at run-time.
 
 Run the setup scripts:
-```
+```zsh
 python3.9 setup.py develop
 ```
 
 The root tuna folder needs to be appended to the PYTHONAPTH:
-```
+```zsh
 export PYTHONPATH=/<path_to_MITuna>/:$PYTHONPATH
 ```
 
 To create the database run the following script:
-```
+```zsh
 ./tuna/db_tables.py
 ```
 
@@ -103,7 +103,7 @@ Code formatting
 ---------------
 
 MITuna used yapf for code formatting:
-```
+```zsh
 yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tuna/
 yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tests/
 ```
@@ -112,16 +112,16 @@ Static code analysis
 --------------------
 
 In order for a PR to be accepted the following pylint command needs to result in 10/10 analysis:
+```zsh
+cd MITuna/tuna && pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py && cd utils/ && pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py && cd tools/ && pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
 ```
-cd MITuna/tuna
-pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
-```
+
 ## Coverage 
 
 To extract coverage percentage from the underlying code base prior to opening Pull Request:
 
-```
-cd MITunaX
+```zsh
+cd MITuna
 ./tests/covscripts/coverage_script.sh
 ```
 
