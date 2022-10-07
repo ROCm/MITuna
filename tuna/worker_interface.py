@@ -42,7 +42,7 @@ from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import get_id_solvers, session_retry
+from tuna.utils.db_utility import get_solver_ids, get_id_solvers, session_retry
 from tuna.abort import chk_abort_file
 from tuna.fin_utils import compose_config_obj
 from tuna.fin_utils import get_fin_slv_status
@@ -50,7 +50,7 @@ from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME, PREC_TO_CMD
 from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR_MAP
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
 from tuna.metadata import FIND_ONLY_EXCEPTION
-from tuna.metadata import get_solver_ids, TENSOR_PRECISION
+from tuna.metadata import TENSOR_PRECISION
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db

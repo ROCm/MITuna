@@ -445,24 +445,6 @@ SLV_ENV_MAP = {
 }
 
 
-def get_solver_ids():
-  """DB solver name to id map"""
-  # TODO: Get this info from the SQLAlchemy class  # pylint: disable=fixme
-  solver_id_map_c = {}
-  solver_id_map_h = {}
-  with DbCursor() as sql_cur:
-    sql_cur.execute("SELECT solver, id FROM solver WHERE valid=1;")
-    slv_info = sql_cur.fetchall()
-
-  for slv, sid in slv_info:
-    solver_id_map_c[slv] = sid
-    solver_id_map_h[slv.replace(', ', '-')] = sid
-
-  solver_id_map = solver_id_map_c.copy()
-  solver_id_map.update(solver_id_map_h)
-  return solver_id_map, solver_id_map_h
-
-
 #used in Parsing
 FDS_3D = [
     'pad_d', 'pad_h', 'pad_w', 'out_channels', 'fil_d', 'fil_w', 'fil_h',
