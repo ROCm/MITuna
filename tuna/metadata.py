@@ -444,7 +444,6 @@ SLV_ENV_MAP = {
         'MIOPEN_DEBUG_AMD_FUSED_WINOGRAD'  #variable filter size.
 }
 
-
 #used in Parsing
 FDS_3D = [
     'pad_d', 'pad_h', 'pad_w', 'out_channels', 'fil_d', 'fil_w', 'fil_h',
