@@ -90,6 +90,10 @@ class DriverBatchNorm(DriverBase):
       raise ValueError("Can't import driver commmand line, \
           one and only one of forw or back must be set")
 
+  def parse_row(self, db_obj):
+    """Overwritting base class function for batch_norm"""
+    return self.parse_bn_row(db_obj)
+
   def parse_bn_row(self, db_obj):
     """Compose obj from bn_config row"""
     for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():

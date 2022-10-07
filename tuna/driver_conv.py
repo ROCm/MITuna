@@ -133,6 +133,10 @@ class DriverConvolution(DriverBase):
       raise ValueError(
           f"Can't import driver commmand line, needs direction: '{line}'")
 
+  def parse_row(self, db_obj):
+    """Overwritting base class function for conv"""
+    return self.parse_conv_row(db_obj)
+
   def parse_conv_row(self, db_obj):
     """Compose obj from conv_config row"""
     self.decompose_weight_t(db_obj)

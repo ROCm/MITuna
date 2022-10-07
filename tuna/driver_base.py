@@ -31,7 +31,6 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.miopen_tables import TensorTable
 from tuna.metadata import TENSOR_PRECISION
-from tuna.miopen_tables import ConvolutionConfig, BNConfig
 from tuna.parsing import parse_line
 
 LOGGER = setup_logger('driver_base')
@@ -47,10 +46,13 @@ class DriverBase():
     if line:
       if not self.construct_driver(line):
         raise ValueError(f"Error creating Driver from line: '{line}'")
-    if db_obj:
+    elif db_obj:
       if not self.construct_driver_from_db(db_obj):
         raise ValueError(
             f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
+    else:
+      raise ValueError(
+          "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
   @staticmethod
   def get_common_cols():
@@ -78,10 +80,7 @@ class DriverBase():
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
     self.decompose_input_t(db_obj)
-    if isinstance(db_obj, ConvolutionConfig):
-      self.parse_conv_row(db_obj)
-    elif isinstance(db_obj, BNConfig):
-      self.parse_bn_row(db_obj)
+    self.parse_row(db_obj)
 
     return True
 
