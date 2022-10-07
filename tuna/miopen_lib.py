@@ -322,7 +322,7 @@ class MIOpen(MITunaInterface):
 
     return ret
 
-  def compose_worker_list(self, res):
+  def compose_worker_list(self, res, args):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
       @param res DB query return item containg available machines
@@ -331,12 +331,12 @@ class MIOpen(MITunaInterface):
     worker_lst = []
     fin_work_done = False
     for machine in res:
-      if self.args.restart_machine:
+      if args.restart_machine:
         machine.restart_server(wait=False)
         continue
 
       #fin_steps should only contain one step
-      if self.args.fin_steps and 'eval' in self.args.fin_steps[0]:
+      if args.fin_steps and 'eval' in args.fin_steps[0]:
         worker_ids = machine.get_avail_gpus()
       else:
         #determine number of processes by compute capacity
@@ -353,17 +353,17 @@ class MIOpen(MITunaInterface):
         self.logger.error('Cannot launch worker on machine: %s', machine.id)
         return None
 
-      f_vals = compose_f_vals(self.args, machine)
+      f_vals = compose_f_vals(args, machine)
       f_vals["num_procs"] = Value('i', len(worker_ids))
 
-      if (self.args.update_solvers) and not fin_work_done:
-        self.do_fin_work(self.args, 0, f_vals)
+      if (args.update_solvers) and not fin_work_done:
+        self.do_fin_work(args, 0, f_vals)
         fin_work_done = True
         break
 
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
-        if not self.launch_worker(gpu_idx, f_vals, worker_lst, self.args):
+        if not self.launch_worker(gpu_idx, f_vals, worker_lst, args):
           break
 
     return worker_lst
@@ -375,5 +375,5 @@ class MIOpen(MITunaInterface):
     if self.args is None:
       return res
     res = load_machines(self.args)
-    res = self.compose_worker_list(res)
+    res = self.compose_worker_list(res, self.args)
     return res
