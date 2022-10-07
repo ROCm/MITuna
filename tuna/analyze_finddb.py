@@ -402,8 +402,9 @@ def main():
   default_out_dirname = _DEFAULT_OUTPUT_DIR
 
   parser = argparse.ArgumentParser(
-      description='Fetches finddb and exports it as a Pandas DataFrame')
+      description='Analyzes finddb and dumps solver statistics')
 
+  # pylint: disable=duplicate-code
   parser.add_argument(
       '-o',
       '--out',
@@ -412,6 +413,7 @@ def main():
       help=
       f'directory for the output pickled Pandas Dataframe (current: {default_out_dirname})'
   )
+  # pylint: enable=duplicate-code
   parser.add_argument('-i', '--in', type=str, default=None, dest='input',
                       help='filename for finddb pickle (default: None). \n' +\
                       'Note: This overrides the finddb flags for fetching finddb from the database')

@@ -279,6 +279,7 @@ def main():
       help=
       f'filename for the pickled finddb Pandas dataframe (current: {default_in_filename})'
   )
+  # pylint: disable=duplicate-code
   parser.add_argument(
       '-o',
       '--out',
@@ -288,6 +289,7 @@ def main():
       help=
       f'dir to output the pickled fastdb Pandas dataframe to (current: {default_out_dirname})'
   )
+  # pylint: enable=duplicate-code
   parser.add_argument(
       '-t',
       '--threshold',
