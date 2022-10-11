@@ -39,7 +39,7 @@ from tuna.config_type import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.import_configs import insert_config
 from tuna.metadata import PREC_TO_CMD
-from tuna.metadata import get_solver_ids
+from tuna.utils.db_utility import get_solver_ids
 from tuna.parsing import parse_fdb_line
 
 LOGGER = setup_logger('import_db')
