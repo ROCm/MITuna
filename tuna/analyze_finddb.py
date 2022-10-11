@@ -41,7 +41,6 @@ the corresponding csv files.
 
 import os
 import argparse
-from collections.abc import Iterable
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -49,7 +48,6 @@ import matplotlib.pyplot as plt
 from tuna.utils import logging
 import tuna.utils.tools.io as io_tools
 import tuna.utils.tools.df as df_tools
-from tuna.gen_finddb import FinddbParsing
 from tuna.utils.History import History
 import tuna.utils.tools.file as file_tools
 import tuna.utils.tools.plot as plot_tools
@@ -57,12 +55,12 @@ from tuna.utils.progress_bars import ProgressBar
 from tuna.utils.db_utility import get_id_solvers
 from tuna.utils.fdb_key_utils import explode_fdb_keys
 from tuna.utils.finddb_like_utils import get_solver_counts
-from tuna.gen_finddb import gen_finddb, load_finddb, describe_finddb
+from tuna.gen_finddb import load_finddb, describe_finddb
 from tuna.gen_fastdb import finddb_to_nonthresholded_fastdb, describe_fastdb, check_finddb
 from tuna.utils.helpers import sort_dict, invert_dict, print_heading, print_dict_as_table, \
-    dict_to_csv, print_title, map_list, proper_dict_of_dicts_to_csv, wierd_ratio, \
-    pretty_iterator
+    dict_to_csv, print_title, map_list, proper_dict_of_dicts_to_csv, wierd_ratio
 
+_DEFAULT_INPUT_DIR = os.path.join(os.getcwd(), 'finddb_')
 _DEFAULT_OUTPUT_DIR = os.path.join(os.getcwd(), 'finddb_')
 
 _, _ID_TO_SOLVER = get_id_solvers()
@@ -399,20 +397,28 @@ def set_explodedfinddb_args(parser):
 
 def main():
   """ main """
+  default_in_filename = os.path.join(_DEFAULT_INPUT_DIR, 'finddb.pkl')
   default_out_dirname = _DEFAULT_OUTPUT_DIR
 
   parser = argparse.ArgumentParser(
       description='Analyzes finddb and dumps solver statistics')
 
   parser.add_argument(
+      '-i',
+      '--in',
+      type=str,
+      default=default_in_filename,
+      dest='input',
+      help=
+      f'filename for finddb pickle (default: (current: {default_in_filename})')
+  parser.add_argument(
       '-o',
       '--out',
       type=str,
       default=default_out_dirname,
-      help=f'directory to output statistics results to {default_out_dirname})')
-  parser.add_argument('-i', '--in', type=str, default=None, dest='input',
-                      help='filename for finddb pickle (default: None). \n' +\
-                      'Note: This overrides the finddb flags for fetching finddb from the database')
+      help=
+      f'directory to output statistics results to (current: {default_out_dirname})'
+  )
   parser.add_argument(
       '-v',
       '--verbosity',
@@ -420,24 +426,14 @@ def main():
       default=0,
       help='higher verbosity => more logs and files dumped (current: 0)',
       choices=[0, 1])
-  FinddbParsing.set_finddb_args(parser)
+
   set_explodedfinddb_args(parser)
 
   args = parser.parse_args()
 
-  if args.session_ids is None:
-    analyzed_finddb_dir = os.path.join(args.out, 'analysis')
-  if isinstance(args.session_ids, Iterable):
-    analyzed_finddb_dir = os.path.join(
-        args.out, f'analysis_{pretty_iterator(args.session_ids, sep="_")}')
-  else:
-    analyzed_finddb_dir = os.path.join(args.out, f'analysis_{args.session_ids}')
+  analyzed_finddb_dir = os.path.join(args.out, 'analysis')
 
-  if args.input is not None:
-    finddb = load_finddb(args.input)
-  else:
-    finddb = gen_finddb(**FinddbParsing.get_finddb_args(args))
-
+  finddb = load_finddb(args.input)
   explodedfinddb, cols_with_conv_params = to_explodedfinddb(
       finddb, args.direction, args.layout, args.precision)
 

@@ -31,7 +31,7 @@ import argparse
 from enum import Enum
 
 import pandas as pd
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from tuna.utils import logging
 from tuna.tables import DBTables
@@ -73,6 +73,11 @@ def describe_finddb(finddb, tag=''):
     logging.info(f'Total unique solvers in {tag}finddb: %d' %
                  len(finddb['solver'].unique()))
 
+    if "arch" in finddb.columns and "num_cu" in finddb.columns:
+      gpus_present = df_tools.unique_combinations(finddb, ["arch", "num_cu"])
+      gpus_present_lst = [f"{x['arch']}({x['num_cu']})" for x in gpus_present]
+      logging.info(f'GPUS in {tag}finddb: %s' % pretty_list(gpus_present_lst))
+
 
 def gen_finddb(session_ids, invalid_too, opencl_only):
   """pulls down finddb into a pandas dataframe from the mysql database
@@ -83,7 +88,7 @@ def gen_finddb(session_ids, invalid_too, opencl_only):
     opencl_only: finddb dataframe will only contain entries with opencl
   """
   db_tables = DBTables(config_type=ConfigType.convolution)
-  finddb = db_tables.find_db_table
+  finddb = db_tables.golden_table
 
   logging.info(f'tuna database name: {os.environ["TUNA_DB_NAME"]}')
   logging.info(f'finddb table name: {finddb.__tablename__}')
@@ -94,9 +99,13 @@ def gen_finddb(session_ids, invalid_too, opencl_only):
     query = query.filter(
         and_(finddb.kernel_time != -1, finddb.workspace_sz != -1))
     if session_ids is not None:
-      for session_id in session_ids:
-        # pylint: disable-next=comparison-with-callable
-        query = query.filter(finddb.session == session_id)
+      # why is False the first argument in the OR clause below? see:
+      # docs.sqlalchemy.org/en/14/core/sqlelement.html#sqlalchemy.sql.expression.or_
+      # pylint: disable=comparison-with-callable
+      query = query.filter(
+          or_(False,
+              *(finddb.session == session_id for session_id in session_ids)))
+      # pylint: enable=comparison-with-callable
     if invalid_too is False:
       query = query.filter(finddb.valid == True)  # pylint: disable=singleton-comparison
     if opencl_only is True:
