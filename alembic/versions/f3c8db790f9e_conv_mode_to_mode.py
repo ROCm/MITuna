@@ -25,4 +25,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-  pass
+  op.alter_column('conv_config',
+                  'mode',
+                  new_column_name='conv_mode',
+                  existing_type=sa.VARCHAR(40),
+                  nullable=False,
+                  server_default="conv")
