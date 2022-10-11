@@ -196,7 +196,7 @@ class FinddbParsing:
 
 def main():
   """ main """
-  default_out_dirname = _DEFAULT_OUTPUT_DIR
+  default_output_dir = _DEFAULT_OUTPUT_DIR
 
   parser = argparse.ArgumentParser(
       description='Fetches finddb and exports it as a Pandas DataFrame')
@@ -204,9 +204,9 @@ def main():
       '-o',
       '--out',
       type=str,
-      default=default_out_dirname,
+      default=default_output_dir,
       help=
-      f'directory to out pickled finddb pandas-dataframe to (current: {default_out_dirname})'
+      f'directory to out pickled finddb pandas-dataframe to (current: {default_output_dir})'
   )
   FinddbParsing.set_finddb_args(parser)
 
