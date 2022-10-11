@@ -150,7 +150,7 @@ class FinddbParsing:
     """
     # SESSION_IDS
     parser.add_argument(
-        f'--{FinddbParsing.ARGS.SESSION_IDS.value}',
+        f'--{FinddbParsing.ARGS.SESSION_IDS.name}',
         type=int,
         nargs='*',
         default=FinddbParsing.ARGS.SESSION_IDS.default,
@@ -160,14 +160,14 @@ class FinddbParsing:
     )
     # INVALID_TOO
     parser.add_argument(
-        f'--{FinddbParsing.ARGS.INVALID_TOO.value}',
+        f'--{FinddbParsing.ARGS.INVALID_TOO.name}',
         action='store_true',
         default=FinddbParsing.ARGS.INVALID_TOO.default,
         dest=FinddbParsing.ARGS.INVALID_TOO.name,
         help='dump both valid and invalid kernels (default: False)')
     # OPENCL_ONLY
     parser.add_argument(
-        f'--{FinddbParsing.ARGS.OPENCL_ONLY.value}',
+        f'--{FinddbParsing.ARGS.OPENCL_ONLY.name}',
         action='store_true',
         default=FinddbParsing.ARGS.OPENCL_ONLY.default,
         dest=FinddbParsing.ARGS.OPENCL_ONLY.name,
@@ -206,7 +206,7 @@ def main():
       type=str,
       default=default_out_dirname,
       help=
-      f'directory for the output pickled Pandas Dataframe (current: {default_out_dirname})'
+      f'directory to out pickled finddb pandas-dataframe to (current: {default_out_dirname})'
   )
   FinddbParsing.set_finddb_args(parser)
 

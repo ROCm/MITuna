@@ -225,7 +225,6 @@ def main():
   default_in_filename = os.path.join(_DEFAULT_INPUT_DIR, 'fastdb.pkl')
 
   parser = argparse.ArgumentParser(description='Generate MLDB from fastdb')
-  # pylint: disable=duplicate-code
   parser.add_argument(
       '-i',
       '--in',
@@ -244,7 +243,6 @@ def main():
       help=
       f'dirname for the output mldb dataframes (current: {default_out_dirname})'
   )
-  # pylint: enable=duplicate-code
   parser.add_argument(
       '--train_ratio',
       type=float,
