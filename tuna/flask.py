@@ -29,21 +29,14 @@
 from sqlalchemy import create_engine
 from tuna.utils.logger import setup_logger
 from tuna.miopen_tables import ConvolutionConfig, ConvolutionConfigTags
-from tuna.metadata import get_solver_ids
 from tuna.utils.utility import get_env_vars
-from tuna.utils.db_utility import get_id_solvers
+from tuna.utils.db_utility import get_id_solvers, get_solver_ids
 
 LOGGER = setup_logger('flask')
-SOLVER_ID_MAP_C, SOLVER_ID_MAP_H = get_solver_ids()
-ID_SOLVER_MAP_C, ID_SOLVER_MAP_H = get_id_solvers()
 ENV_VARS = get_env_vars()
 ENGINE = create_engine(
     f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
     f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
-
-CFTable = ConvolutionConfig
-CFTTable = ConvolutionConfigTags
-
 
 def get_driver_cmds(filters, grafana_req=None):
   """Return driver cmds from req"""

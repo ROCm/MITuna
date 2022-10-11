@@ -48,7 +48,6 @@ def parse_args():
       dest='session_id',
       action='store',
       type=int,
-      required=True,
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
@@ -76,6 +75,8 @@ def parse_args():
   args = parser.parse_args()
 
   if args.overwrite:
+    if args.session_id is None:
+      parser.error('--session_id must be set with --overwrite')
     if args.base_golden_v is not None:
       parser.error('--base_golden_v must not be set with --overwrite')
   elif args.base_golden_v is None:
@@ -261,10 +262,7 @@ def main():
   dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
 
   gold_db = get_golden_query(dbt, args.golden_v).first()
-  if not gold_db:
-    if args.overwrite:
-      raise ValueError(f'Target golden version {args.golden_v} does not exist.')
-  elif not args.overwrite:
+  if gold_db and not args.overwrite:
     raise ValueError(
         f'Target golden version {args.golden_v} exists, but --overwrite is not specified.'
     )

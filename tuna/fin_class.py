@@ -37,12 +37,12 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable
 from tuna.worker_interface import WorkerInterface
 from tuna.db_tables import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.metadata import get_solver_ids, FIN_CACHE
+from tuna.metadata import FIN_CACHE
 from tuna.metadata import INVERS_DIR_MAP
 from tuna.fin_utils import compose_config_obj
 from tuna.tables import DBTables
 from tuna.config_type import ConfigType
-from tuna.utils.db_utility import session_retry
+from tuna.utils.db_utility import get_solver_ids, session_retry
 
 
 class FinClass(WorkerInterface):
