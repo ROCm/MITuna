@@ -266,27 +266,27 @@ def gen_fastdb(finddb, threshold=0, keep_fundamental=False, verbosity=0):
 
 def main():
   """ main """
-  default_in_filename = os.path.join(_DEFAULT_INPUT_DIR, 'finddb.pkl')
-  default_out_dirname = _DEFAULT_OUTPUT_DIR
+  default_in_file = os.path.join(_DEFAULT_INPUT_DIR, 'finddb.pkl')
+  default_out_dir = _DEFAULT_OUTPUT_DIR
 
   parser = argparse.ArgumentParser(description='Generate fastdb from finddb')
   parser.add_argument(
       '-i',
       '--in',
       type=str,
-      default=default_in_filename,
+      default=default_in_file,
       dest='input',
       help=
-      f'filename for the pickled finddb Pandas dataframe (current: {default_in_filename})'
+      f'filename for the pickled finddb Pandas dataframe (current: {default_in_file})'
   )
   parser.add_argument(
       '-o',
       '--out',
       type=str,
-      default=default_out_dirname,
+      default=default_out_dir,
       dest='output',
       help=
-      f'dir to output pickled fastdb pandas-dataframe to (current: {default_out_dirname})'
+      f'dir to output pickled fastdb pandas-dataframe to (current: {default_out_dir})'
   )
   parser.add_argument(
       '-t',

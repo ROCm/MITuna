@@ -221,27 +221,27 @@ def process_mldb(mldb, train_ratio, random_split, seed):
 
 def main():
   """ main """
-  default_out_dirname = _DEFAULT_OUTPUT_DIR
-  default_in_filename = os.path.join(_DEFAULT_INPUT_DIR, 'fastdb.pkl')
+  default_output_dirname = _DEFAULT_OUTPUT_DIR
+  default_input_filename = os.path.join(_DEFAULT_INPUT_DIR, 'fastdb.pkl')
 
   parser = argparse.ArgumentParser(description='Generate MLDB from fastdb')
   parser.add_argument(
       '-i',
       '--in',
       type=str,
-      default=default_in_filename,
+      default=default_input_filename,
       dest='input',
       help=
-      f'filename for the fastdb Pandas dataframe (current: {default_in_filename})'
+      f'filename for the fastdb Pandas dataframe (current: {default_input_filename})'
   )
   parser.add_argument(
       '-o',
       '--out',
       type=str,
-      default=default_out_dirname,
+      default=default_output_dirname,
       dest='output',
       help=
-      f'dirname for the output mldb dataframes (current: {default_out_dirname})'
+      f'dirname for the output mldb dataframes (current: {default_output_dirname})'
   )
   parser.add_argument(
       '--train_ratio',
