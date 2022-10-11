@@ -34,14 +34,13 @@ class MITunaInterface():
   """ Interface class extended by Builder and Evaluator. The purpose of this class is to define
   common functionalities. """
 
-  def __init__(self):
+  def __init__(self, library=Library.MITUNA):
     #for pylint
     #default library set to MIOpen
-    self.library = Library.MIOPEN
+    self.library = library
     print('Setting up logger')
 
-    self.logger = setup_logger(logger_name=f"mituna_{self.library}",
-                               add_streamhandler=True)
+    self.logger = setup_logger(logger_name=self.library, add_streamhandler=True)
 
   def check_docker(self, worker, dockername="miopentuna"):
     """! Checking for docker

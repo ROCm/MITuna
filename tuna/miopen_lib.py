@@ -49,7 +49,7 @@ class MIOpen(MITunaInterface):
   """Class to support MIOpen specific tuning functionality"""
 
   def __init__(self):
-    super().__init__()
+    super().__init__(library=Library.MIOPEN)
     self.args = None
     try:
       # pylint: disable=no-member
