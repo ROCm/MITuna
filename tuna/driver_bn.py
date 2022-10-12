@@ -26,12 +26,13 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a batch_normDriver cmd"""
 from tuna.driver_base import DriverBase
-from tuna.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS
+from tuna.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS, PREC_TO_CMD
 from tuna.metadata import SUPPORTED_BN_CMDS, TABLE_COLS_BN_MAP, BN_DEFAULTS
-from tuna.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS, INVERS_BN_TENSOR_PRECISION
+from tuna.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
 from tuna.miopen_tables import BNConfig
 from tuna.parsing import get_fd_name, arg_valid
 from tuna.helper import get_db_id
+from tuna.config_type import ConfigType
 
 
 #pylint: disable=too-many-instance-attributes
@@ -160,4 +161,4 @@ class DriverBatchNorm(DriverBase):
 
   def set_cmd(self, data_type):
     """Set cmd based on tensor data type"""
-    self.cmd = INVERS_BN_TENSOR_PRECISION[data_type]
+    self.cmd = PREC_TO_CMD[ConfigType.batch_norm][data_type]

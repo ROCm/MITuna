@@ -227,15 +227,6 @@ TENSOR_PRECISION = {
     'bnormfp16': 'FP16'
 }
 
-INVERS_CONV_TENSOR_PRECISION = {
-    'FP32': 'conv',
-    'FP16': 'convfp16',
-    'BF16': 'convbfp16',
-    'INT8': 'convint8'
-}
-
-INVERS_BN_TENSOR_PRECISION = {'FP32': 'bnorm', 'FP16': 'bnormfp16'}
-
 SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16', 'convint8']
 SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16']
 

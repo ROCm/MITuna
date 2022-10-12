@@ -32,10 +32,11 @@ from tuna.driver_base import DriverBase
 from tuna.metadata import CONV_CONFIG_COLS
 from tuna.helper import get_db_id
 from tuna.miopen_tables import ConvolutionConfig
-from tuna.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, INVERS_CONV_TENSOR_PRECISION
+from tuna.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PREC_TO_CMD
 from tuna.metadata import CONV_3D_DEFAULTS, TENSOR_COLS, TABLE_COLS_CONV_MAP, TENSOR_PRECISION
 from tuna.metadata import DIRECTION, DIR_MAP, CONV_SKIP_ARGS, INVERS_DIR_MAP
 from tuna.parsing import get_fd_name, conv_arg_valid, get_fds_from_cmd
+from tuna.config_type import ConfigType
 
 LOGGER = setup_logger('driver_conv')
 
@@ -269,4 +270,4 @@ class DriverConvolution(DriverBase):
 
   def set_cmd(self, data_type):
     """Set cmd based on tensor data type"""
-    self.cmd = INVERS_CONV_TENSOR_PRECISION[data_type]
+    self.cmd = PREC_TO_CMD[ConfigType.convolution][data_type]
