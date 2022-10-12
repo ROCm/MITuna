@@ -28,9 +28,7 @@
 
 from sqlalchemy import create_engine
 from tuna.utils.logger import setup_logger
-from tuna.miopen_tables import ConvolutionConfig, ConvolutionConfigTags
 from tuna.utils.utility import get_env_vars
-from tuna.utils.db_utility import get_id_solvers, get_solver_ids
 
 LOGGER = setup_logger('flask')
 ENV_VARS = get_env_vars()
