@@ -42,7 +42,7 @@ from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import get_id_solvers
+from tuna.utils.db_utility import get_solver_ids, get_id_solvers, session_retry
 from tuna.abort import chk_abort_file
 from tuna.fin_utils import compose_config_obj
 from tuna.fin_utils import get_fin_slv_status
@@ -50,7 +50,7 @@ from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME, PREC_TO_CMD
 from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR_MAP
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
 from tuna.metadata import FIND_ONLY_EXCEPTION
-from tuna.metadata import get_solver_ids, TENSOR_PRECISION
+from tuna.metadata import TENSOR_PRECISION
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
@@ -329,9 +329,10 @@ class WorkerInterface(Process):
     obj, fdb_entry = self.get_fdb_entry(session, solver)
     if obj:  # existing entry in db
       # This can be removed if we implement the delete orphan cascade
-      for blob in obj.blobs:
-        session.delete(blob)
       fdb_entry = obj
+      session.query(
+          self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
+                                        fdb_entry.kernel_group).delete()
     else:
       # Insert the above entry
       session.add(fdb_entry)
@@ -339,8 +340,8 @@ class WorkerInterface(Process):
 
   def compose_fdb_entry(self, session, fin_json, fdb_obj):
     """Compose a FindDB table entry from fin_output"""
-    fdb_entry = self.update_fdb_entry(
-        session, self.solver_id_map[fdb_obj['solver_name']])
+    solver = self.solver_id_map[fdb_obj['solver_name']]
+    fdb_entry = self.update_fdb_entry(session, solver)
     fdb_entry.fdb_key = fin_json['db_key']
     fdb_entry.alg_lib = fdb_obj['algorithm']
     fdb_entry.params = fdb_obj['params']
@@ -351,29 +352,36 @@ class WorkerInterface(Process):
     if 'time' in fdb_obj:
       fdb_entry.kernel_time = fdb_obj['time']
 
+    fdb_entry, _ = self.get_fdb_entry(session, solver)
+    fdb_entry.kernel_group = fdb_entry.id
+
     return fdb_entry
 
-  def compose_kernel_entry(self, fdb_obj, fdb_entry):
+  def compose_kernel_entry(self, session, fdb_obj, fdb_entry):
     """Compose a new Kernel Cache entry from fin input"""
     # Now we have the ID, lets add the binary cache objects
-    fdb_entry.blobs = []
     for kern_obj in fdb_obj['kernel_objects']:
       kernel_obj = self.dbt.kernel_cache()
-      kernel_obj.conv_find_db_key = fdb_entry.id
-      kernel_obj.kernel_name = kern_obj['kernel_file']
-      kernel_obj.kernel_args = kern_obj['comp_options']
-      kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
-      kernel_obj.kernel_hash = kern_obj['md5_sum']
-      kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
-      fdb_entry.blobs.append(kernel_obj)
+      self.populate_kernels(kern_obj, kernel_obj)
+      kernel_obj.kernel_group = fdb_entry.kernel_group
+      session.add(kernel_obj)
     return True
 
-  def process_fdb_w_kernels(self,
-                            session,
-                            fin_json,
-                            result_str='miopen_find_compile_result',
-                            check_str='find_compiled'):
-    """retrieve find db compile json results"""
+  def populate_kernels(self, kern_obj, kernel_obj):
+    """populate kernel object"""
+    kernel_obj.kernel_name = kern_obj['kernel_file']
+    kernel_obj.kernel_args = kern_obj['comp_options']
+    kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
+    kernel_obj.kernel_hash = kern_obj['md5_sum']
+    kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
+    return kernel_obj
+
+  def update_fdb_w_kernels(self,
+                           session,
+                           fin_json,
+                           result_str='miopen_find_compile_result',
+                           check_str='find_compiled'):
+    """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:
       for fdb_obj in fin_json[result_str]:
@@ -384,7 +392,7 @@ class WorkerInterface(Process):
           #returned entry is added to the table
           fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
           if fdb_obj['reason'] == 'Success':
-            self.compose_kernel_entry(fdb_obj, fdb_entry)
+            self.compose_kernel_entry(session, fdb_obj, fdb_entry)
             self.logger.info('Updating find Db(Build) for job_id=%s',
                              self.job.id)
           else:
@@ -400,14 +408,28 @@ class WorkerInterface(Process):
           'result': 'Find Compile: No results'
       }]
 
-    try:
-      session.commit()
-    except OperationalError as err:
-      self.logger.warning('FinEval: Unable to update Database: %s', err)
+    session.commit()
+
+    return status
+
+  def process_fdb_w_kernels(self,
+                            session,
+                            fin_json,
+                            result_str='miopen_find_compile_result',
+                            check_str='find_compiled'):
+    """initiate find db update"""
+
+    callback = self.update_fdb_w_kernels
+    status = session_retry(
+        session, callback,
+        lambda x: x(session, fin_json, result_str, check_str), self.logger)
+
+    if not status:
+      self.logger.warning('Fin: Unable to update Database')
       status = [{
           'solver': 'all',
           'success': False,
-          'result': f'FinEval: Unable to update Database: {err}'
+          'result': 'Fin: Unable to update Database'
       }]
 
     return status

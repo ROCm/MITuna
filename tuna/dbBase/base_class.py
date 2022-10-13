@@ -33,6 +33,7 @@ from sqlalchemy import Column, Integer, DateTime, text
 
 class BASE():
   """Base class for our own common functionalities among tables"""
+
   __table_args__ = {'mysql_engine': 'InnoDB'}
   __mapper_args__ = {'always_refresh': True}
 
@@ -47,7 +48,7 @@ class BASE():
   def to_dict(self, ommit_ts=True, ommit_valid=False):
     """Helper function"""
     copy_dict = {}
-    for key, val in self.__dict__.items():
+    for key, val in vars(self).items():
       copy_dict[key] = val
     exclude_cols = [
         '_sa_instance_state', 'md5', 'valid', 'input_tensor', 'weight_tensor'
@@ -56,19 +57,17 @@ class BASE():
       exclude_cols.remove('valid')
 
     for col in exclude_cols:
-      if col in self.__dict__:
+      if col in vars(self):
         copy_dict.pop(col)
 
     if ommit_ts:
-      if 'update_ts' in self.__dict__:
+      if 'update_ts' in vars(self):
         copy_dict.pop('update_ts')
-      if 'insert_ts' in self.__dict__:  # @alex why not use vars(self) instead of self.__dict__?
-        # legacy code or some software optimization mumbo jumbo?
+      if 'insert_ts' in vars(self):
         copy_dict.pop('insert_ts')
     return copy_dict
 
   def __repr__(self):
-    # pylint: disable-next=no-member ; @alex no __init__, so unclear whr __table__'s coming from
     return f"Table name: {self.__table__}\nTable columns: {self.__table__.columns}"
 
 

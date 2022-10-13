@@ -54,8 +54,10 @@ def parse_args():
   # pylint: disable=too-many-statements
   """Function to parse arguments"""
   parser = setup_arg_parser(
-      'Run Performance Tuning on a certain architecture',
-      [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      'Run Performance Tuning on a certain architecture', [
+          TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
+          TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
+      ])
 
   parser.add_argument(
       '--find_mode',
@@ -64,13 +66,6 @@ def parse_args():
       default=1,
       help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
       choices=[1, 3])
-  parser.add_argument('--session_id',
-                      action='store',
-                      type=int,
-                      dest='session_id',
-                      help=
-                      'Session ID to be used as tuning tracker. ' \
-                      'Allows to correlate DB results to tuning sessions')
   parser.add_argument('--remote_machine',
                       dest='remote_machine',
                       action='store_true',
@@ -510,8 +505,9 @@ def compose_worker_list(res, args):
       continue
 
     #fin_steps should only contain one step
-    if args.update_applicability or (args.fin_steps and
-                                     'compile' in args.fin_steps[0]):
+    if args.fin_steps and 'eval' in args.fin_steps[0]:
+      worker_ids = machine.get_avail_gpus()
+    else:
       #determine number of processes by compute capacity
       env = get_env_vars()
       if env['slurm_cpus'] > 0:
@@ -519,13 +515,12 @@ def compose_worker_list(res, args):
       else:
         # JD: This sould be the responsibility of the machine class
         num_procs = int(machine.get_num_cpus())
-      if num_procs <= 0:
-        LOGGER.error('num_procs must be bigger than zero to launch worker')
-        LOGGER.error('Cannot launch worker on machine: %s', machine.id)
-        return None
       worker_ids = range(num_procs)
-    else:
-      worker_ids = machine.get_avail_gpus()
+
+    if len(worker_ids) == 0:
+      LOGGER.error('num_procs must be bigger than zero to launch worker')
+      LOGGER.error('Cannot launch worker on machine: %s', machine.id)
+      return None
 
     f_vals = compose_f_vals(args, machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))

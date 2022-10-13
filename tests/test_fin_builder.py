@@ -26,7 +26,6 @@
 
 import os
 import sys
-from multiprocessing import Value
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -34,40 +33,16 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.go_fish import load_machines, compose_worker_list, compose_f_vals, get_kwargs
-from tuna.worker_interface import WorkerInterface
+from tuna.go_fish import load_machines, compose_worker_list
 from tuna.fin_class import FinClass
-from tuna.session import Session
-from tuna.tables import DBTables, ConfigType
+from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
-from tuna.metadata import ALG_SLV_MAP, get_solver_ids
-
-
-class CfgImportArgs():
-  config_type = ConfigType.convolution,
-  command = None
-  batches = None
-  batch_list = []
-  file_name = None
-  mark_recurrent = False
-  tag = None
-  tag_only = False
-
-
-class LdJobArgs():
-  config_type = ConfigType.convolution,
-  tag = None
-  all_configs = False
-  algo = None
-  solvers = [('', None)]
-  only_app = False
-  tunable = False
-  cmd = None
-  label = None
-  fin_steps = None
-  session_id = None
+from utils import CfgImportArgs, LdJobArgs, GoFishArgs
+from utils import get_worker_args, add_test_session
+from tuna.metadata import ALG_SLV_MAP
+from tuna.utils.db_utility import get_solver_ids
 
 
 def add_cfgs():
@@ -79,15 +54,16 @@ def add_cfgs():
 
   dbt = DBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt)
+  return dbt
 
 
-def add_fin_find_compile_job(session):
+def add_fin_find_compile_job(session_id, dbt):
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
   args.tag = 'test_fin_builder'
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
-  args.session_id = session
+  args.session_id = session_id
 
   #limit job scope
   args.algo = "miopenConvolutionAlgoGEMM"
@@ -102,37 +78,7 @@ def add_fin_find_compile_job(session):
   args.only_applicable = True
 
   connect_db()
-  counts = {}
-  counts['cnt_jobs'] = 0
-  dbt = DBTables(session_id=None, config_type=args.config_type)
-  if args.tag:
-    try:
-      tag_name_test(args.tag, dbt)
-    except ValueError as terr:
-      print(terr)
-
-  add_jobs(args, counts, dbt)
-
-
-class GoFishArgs():
-  local_machine = True
-  fin_steps = None
-  session_id = None
-  arch = None
-  num_cu = None
-  machines = None
-  restart_machine = None
-  update_applicability = None
-  find_mode = None
-  blacklist = None
-  update_solvers = None
-  config_type = None
-  reset_interval = None
-  dynamic_solvers_only = False
-  label = 'pytest_fin_builder'
-  docker_name = None
-  ticket = None
-  solver_id = None
+  return add_jobs(args, dbt)
 
 
 def test_fin_builder():
@@ -140,24 +86,15 @@ def test_fin_builder():
   machine_lst = load_machines(args)
   machine = machine_lst[0]
 
-  #create a session
-  worker_ids = range(machine.get_num_cpus())
-  f_vals = compose_f_vals(args, machine)
-  f_vals["num_procs"] = Value('i', len(worker_ids))
-  kwargs = get_kwargs(0, f_vals, args)
-  worker = WorkerInterface(**kwargs)
-  worker.machine.arch = 'gfx908'
-  worker.machine.num_cu = 120
-  args.session_id = Session().add_new_session(args, worker)
-  assert (args.session_id)
+  args.session_id = add_test_session()
 
   #update solvers
-  kwargs = get_kwargs(0, f_vals, args)
+  kwargs = get_worker_args(args, machine)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
   #get applicability
-  add_cfgs()
+  dbt = add_cfgs()
   args.update_applicability = True
   args.label = 'test_fin_builder'
   worker_lst = compose_worker_list(machine_lst, args)
@@ -165,14 +102,7 @@ def test_fin_builder():
     worker.join()
 
   #load jobs
-  add_fin_find_compile_job(args.session_id)
-  num_jobs = 0
-  with DbSession() as session:
-    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state='new';"
-    res = session.execute(get_jobs)
-    for row in res:
-      assert (row[0] > 0)
-      num_jobs = row[0]
+  num_jobs = add_fin_find_compile_job(args.session_id, dbt)
 
   #compile
   args.update_applicability = False
@@ -183,7 +113,12 @@ def test_fin_builder():
     worker.join()
 
   with DbSession() as session:
-    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state in ('compiled');"
-    row = session.execute(get_jobs)
-    for row in res:
-      assert (row[0] == num_jobs)
+    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='errored')\
+                                         .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
+                                         .count()
+    #ommiting valid Fin/MIOpen errors
+    num_jobs = (num_jobs - valid_fin_err)
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='compiled').count()
+    assert (count == num_jobs)

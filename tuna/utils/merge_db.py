@@ -384,6 +384,7 @@ def merge_sqlite_pdb(cnx_to, local_paths):  # pylint: disable=too-many-locals
       LOGGER.info("insert: %s", perf)
       insert_solver_sqlite(cnx_to, perf)
 
+    cnx_to.commit()
     cnx_from.close()
 
   cur = cnx_to.cursor()

@@ -4,8 +4,19 @@ if (shared_library_branch .contains("*/")) {
     }
 echo shared_library_branch 
 
+library "jenkins-shared@${shared_library_branch}"
+
 def VerifyArgs()
 {
+    if(params.rocm_version == '' && params.osdb_bkc_version == '')
+    {
+      error "Either ROCm version or OSDB build number is required"
+    }
+
+    if(params.rocm_version != '' && params.osdb_bkc_version != '')
+    {
+      error "Can only specify either the ROCm version or the OSDB build number"
+    }        
     if(params.job_label == '')
     {
         def new_label = utils.getJobReason()
@@ -15,6 +26,11 @@ def VerifyArgs()
     {
         echo "Using specified label: ${params.job_label}"
     }
+
+    if(params.session_id == '')
+    {
+        error "Session id is required!"
+    }   
     
     if(params.all_configs)
     {
@@ -23,17 +39,7 @@ def VerifyArgs()
             error "config_tags must be empty when specifying all_configs"
         }
     }
-    
-    if(params.arch != '')
-    {
-        if(params.num_cu == '')
-        {
-            error "Arch and num_cu must both be specified"
-        }
-    }
 }
-
-library "jenkins-shared@${shared_library_branch}"
 
 pipeline {
   agent { node { label 'mysql' } }
@@ -41,14 +47,25 @@ pipeline {
     tuna_docker_name = utils.getDockerName("HIPNOGPU")
   }
   parameters {
-    string(name: 'branch_name', defaultValue: 'tuning_pipeline', description: '')
+    string(name: 'branch_name', defaultValue: 'load_job_pipeline', description: '')
     string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
-    string(name: 'job_label', defaultValue: '', description: 'Label for new jobs. Leave empty for one to be generated')
+    string(name: 'slurm_partition', defaultValue: 'gpu-node', description: 'Name of the slurm partition to run jobs on') 
+    string(name: 'job_label', defaultValue: '', description: 'Label for new jobs.')
+    string(name: 'session_id', defaultValue: '', description: 'session id for new jobs')
+    choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')    
     booleanParam(name: 'all_configs', defaultValue: false, description: 'Create jobs for all configs in the Db. Useful for find db generation')
     booleanParam(name: 'only_applicable', defaultValue: false, description: 'Create a job for each applicable solver (requires all_configs)')
     string(name: 'config_tag', defaultValue: 'inception3', description: 'Configs matching this tag would be added to jobs. Must be empty if all_configs is set')
-    choice(name: 'arch', choices: ['', 'gfx908', 'gfx906', 'gfx900', 'gfx1030', 'gfx90a'], description: 'Target architecture, empty means all')
-    choice(name: 'num_cu', choices: ['', '120', '110', '104', '64', '60', '56', '36'], description: 'Target architecture num_cu, empty means all')
+    //choice(name: 'arch', choices: ['', 'gfx908', 'gfx906', 'gfx900', 'gfx1030', 'gfx90a'], description: 'Target architecture, empty means all')
+    //choice(name: 'num_cu', choices: ['', '120', '110', '104', '64', '60', '56', '36'], description: 'Target architecture num_cu, empty means all')
+    string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
+    string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
+    string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
+    string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
+    string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
+    string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
+    string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
+    string(name: 'base_image', defaultValue: '', description: 'Put a fully qualified docker name here to use (optional)')   
     choice(name: 'cmd', choices: ['', 'conv', 'convfp16', 'convbfp16'], description: 'get configs for cmd type')
     choice(name: 'stage', choices: ['perf', 'fin_find'], description: 'Load jobs args')
   }

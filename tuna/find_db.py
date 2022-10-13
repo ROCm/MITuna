@@ -26,8 +26,7 @@
 ###############################################################################
 """find db class"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, orm
-from sqlalchemy import Float, BigInteger, Boolean, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import Float, BigInteger, Boolean, Text, Index
 from sqlalchemy.ext.declarative import declared_attr
 
 from tuna.dbBase.base_class import BASE
@@ -58,6 +57,7 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
   workspace_sz = Column(BigInteger, nullable=False)
   alg_lib = Column(String(length=64), nullable=True)
   opencl = Column(Boolean, nullable=False)
+  fdb_idx = Index('fdb_idx', 'session', 'config', 'opencl', 'valid', 'solver')
 
   def get_query(self, sess, fdb_obj, session_id):
     """Construct a Db query for the find object
@@ -132,9 +132,8 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-  blobs = relationship("ConvolutionKernelCache",
-                       back_populates="conv_find_db_entries",
-                       cascade="all, delete-orphan")
+
+  kernel_group = Column(Integer, nullable=True)
 
   @orm.reconstructor
   def __init__(self, **kwargs):
@@ -154,11 +153,10 @@ class BNFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attribute
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
-  blobs = relationship("BNKernelCache",
-                       back_populates="bn_find_db_entries",
-                       cascade="all, delete-orphan")
+
+  kernel_group = Column(Integer, nullable=True)
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs.get('logger', None)  #pylint: disable=multiple-statements
+    self.logger = kwargs.get('logger', None)
     self.fdb_slv_dir = {}

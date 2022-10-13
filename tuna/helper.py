@@ -34,6 +34,7 @@ from sqlalchemy.orm import Query
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
+from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.utility import check_qts
 from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, CONV_CONFIG_COLS, TENSOR_PRECISION
 from tuna.metadata import BN_DEFAULTS, BN_CONFIG_COLS
@@ -41,7 +42,6 @@ from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.miopen_tables import TensorTable, Session
 from tuna.config_type import ConfigType
-from tuna.metadata import get_solver_ids
 
 LOGGER = setup_logger('helper')
 
@@ -173,7 +173,7 @@ def mysqldb_overwrite_table(table, dict_list, filter_cols):
     else:
       return False, insert_ids
 
-    if i % 100 == 0:
+    if i % 1000 == 0:
       LOGGER.info('Inserting sql... %s', i)
 
   return ret, insert_ids
@@ -252,13 +252,11 @@ def insert_tensor(fds, tensor_dict):
 def get_tid(session, tensor_dict):
   """Return tensor id based on dict"""
 
-  query = Query(TensorTable.id).filter_by(**tensor_dict)
+  query = session.query(TensorTable.id).filter_by(**tensor_dict)
   ret_id = None
   try:
-    res = session.execute(query).fetchall()
-    if len(res) != 1:
-      raise ValueError('Tensor table duplication. Only one row should match')
-    ret_id = res[0][0]
+    res = session.execute(query).one()
+    ret_id = res[0]
   except IntegrityError as err:
     LOGGER.error("Error occurred: %s \n", err)
     raise ValueError(
