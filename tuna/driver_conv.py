@@ -50,11 +50,10 @@ class DriverConvolution(DriverBase):
     allowed_keys = set([
         'batchsize', 'spatial_dim', 'pad_h', 'pad_w', 'pad_d', 'conv_stride_h',
         'conv_stride_w', 'conv_stride_d', 'dilation_h', 'dilation_w',
-        'dilation_d', 'group_count', 'conv_mode', 'pad_mode',
-        'trans_output_pad_h', 'trans_output_pad_w', 'trans_output_pad_d',
-        'out_layout', 'in_layout', 'fil_layout', 'in_d', 'in_h', 'in_w',
-        'fil_d', 'fil_h', 'fil_w', 'in_channels', 'out_channels', 'direction',
-        'cmd'
+        'dilation_d', 'group_count', 'mode', 'pad_mode', 'trans_output_pad_h',
+        'trans_output_pad_w', 'trans_output_pad_d', 'out_layout', 'in_layout',
+        'fil_layout', 'in_d', 'in_h', 'in_w', 'fil_d', 'fil_h', 'fil_w',
+        'in_channels', 'out_channels', 'direction', 'cmd'
     ])
 
     self.batchsize = None
