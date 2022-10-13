@@ -40,6 +40,22 @@ from tuna.metadata import NUM_SQL_RETRIES
 LOGGER = setup_logger('db_utility')
 
 
+def get_solver_ids():
+  """DB solver name to id map"""
+  # TODO: Get this info from the SQLAlchemy class  # pylint: disable=fixme
+  solver_id_map_c = {}
+  solver_id_map_h = {}
+  with DbSession() as session:
+    query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
+    for slv, sid in query.all():
+      solver_id_map_c[slv] = sid
+      solver_id_map_h[slv.replace(', ', '-')] = sid
+
+  solver_id_map = solver_id_map_c.copy()
+  solver_id_map.update(solver_id_map_h)
+  return solver_id_map, solver_id_map_h
+
+
 def get_id_solvers():
   """DB solver id to name map"""
   solver_id_map_c = {}

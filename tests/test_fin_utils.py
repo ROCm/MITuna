@@ -59,7 +59,7 @@ def test_fin_utils():
   conv_config.dilation_w = 1
   conv_config.dilation_d = 1
   conv_config.group_count = 1
-  conv_config.conv_mode = 'conv'
+  conv_config.mode = 'conv'
   conv_config.pad_mode = 'default'
   conv_config.trans_output_pad_h = 0
   conv_config.trans_output_pad_w = 0
@@ -126,7 +126,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,
@@ -168,7 +168,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,
@@ -204,7 +204,7 @@ def test_fin_utils():
   conv_config.dilation_w = 1
   conv_config.dilation_d = 1
   conv_config.group_count = 1
-  conv_config.conv_mode = 'conv'
+  conv_config.mode = 'conv'
   conv_config.pad_mode = 'default'
   conv_config.trans_output_pad_h = 0
   conv_config.trans_output_pad_w = 0
@@ -271,7 +271,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,
@@ -313,7 +313,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,
