@@ -22,6 +22,8 @@ def upgrade() -> None:
                   existing_type=sa.VARCHAR(60),
                   nullable=False,
                   server_default="NCHW")
+  op.add_column('conv_config', sa.Column('driver', sa.String(512)))
+  op.add_column('bn_config', sa.Column('driver', sa.String(512)))
 
 
 def downgrade() -> None:
@@ -31,3 +33,5 @@ def downgrade() -> None:
                   existing_type=sa.VARCHAR(60),
                   nullable=False,
                   server_default="NCHW")
+  op.drop_column('conv_config', "driver")
+  op.drop_column('bn_config', "driver")
