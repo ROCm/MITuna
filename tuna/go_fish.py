@@ -29,7 +29,7 @@ import argparse
 import sys
 from tuna.utils.logger import setup_logger
 from tuna.libraries import Library
-from tuna.miopen_lib import MIOpen
+from tuna.miopen.miopen_lib import MIOpen
 
 # Setup logging
 LOGGER = setup_logger('go_fish')

@@ -31,12 +31,10 @@ from tuna.utils.logger import setup_logger
 
 
 class MITunaInterface():
-  """ Interface class extended by Builder and Evaluator. The purpose of this class is to define
+  """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
   def __init__(self, library=Library.MITUNA):
-    #for pylint
-    #default library set to MIOpen
     self.library = library
     print('Setting up logger')
 
