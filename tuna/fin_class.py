@@ -337,6 +337,7 @@ class FinClass(WorkerInterface):
     """write applicability to sql"""
     _, solver_id_map_h = get_solver_ids()
 
+    inserts=[]
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
         cfg_id = elem["input"]["config_tuna_id"]
@@ -366,19 +367,27 @@ class FinClass(WorkerInterface):
               if obj.applicable == 0:
                 obj.applicable = 1
             else:
-              new_entry = self.dbt.solver_app(
-                  solver=solver_id,
-                  config=cfg_id,
-                  session=self.session_id,
-                  applicable=1)
-              session.add(new_entry)
+              inserts.append((cfg_id, solver_id))
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
             return False
 
-    self.logger.info('Commit bulk transaction, please wait')
+    #commit updates
     session.commit()
+
+    #bulk inserts
+    with self.queue_lock:
+      self.logger.info('Commit bulk inserts, please wait')
+      for cfg_id, solver_id in inserts:
+        new_entry = self.dbt.solver_app(
+            solver=solver_id,
+            config=cfg_id,
+            session=self.session_id,
+            applicable=1)
+        session.add(new_entry)
+      session.commit()
+
     return True
 
 
@@ -395,9 +404,8 @@ class FinClass(WorkerInterface):
       def actuator(func, pack):
         return func(session, pack)
 
-      with self.queue_lock:
-        for pack in all_packs:
-          session_retry(session, self.insert_applicability,
+      for pack in all_packs:
+        session_retry(session, self.insert_applicability,
                       functools.partial(actuator, pack=pack), self.logger)
 
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
