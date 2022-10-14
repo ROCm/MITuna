@@ -135,7 +135,6 @@ class WorkerInterface(Process):
     self.hostname = self.machine.hostname
     self.job = None
     self.config = None
-    self.solver = None
     self.cmd_iter = 1
     self.claim_num = self.num_procs.value
     self.last_reset = datetime.now()
@@ -454,35 +453,7 @@ class WorkerInterface(Process):
           f'Failed to load job queue. #ids: {len(ids)} - #job_cgfs: {len(job_cfgs)}'
       )
     for job, config in job_cfgs:
-      if job.solver:
-        query = session.query(self.dbt.solver_table)\
-            .filter(self.dbt.solver_table.solver == job.solver)
-        solver = query.one()
-      else:
-        query = session.query(self.dbt.solver_app, self.dbt.solver_table)
-
-        # pylint: disable=comparison-with-callable
-        query = query.filter(self.dbt.solver_app.session == self.dbt.session.id)\
-                     .filter(self.dbt.solver_app.applicable == 1)\
-                     .filter(self.dbt.solver_table.tunable == 1)\
-                     .filter(self.dbt.solver_app.config == job.config)\
-                     .filter(self.dbt.solver_app.solver == self.dbt.solver_table.id)\
-                     .filter(self.dbt.solver_table.tunable == 1)
-        # pylint: enable=comparison-with-callable
-
-        app_solver_desc = query.all()
-        ids = [solver.id for _, solver in app_solver_desc]
-
-        solver = self.dbt.solver_table()
-        if ids:
-          solver.tunable = 1
-        else:
-          self.logger.warning(
-              "No applicable & tunable solvers found: id %s, solver %s, config %s",
-              job.id, job.solver, job.config)
-          solver.tunable = 0
-
-      self.job_queue.put((job, config, solver))
+      self.job_queue.put((job, config))
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
   #pylint: disable=too-many-branches
@@ -536,7 +507,7 @@ class WorkerInterface(Process):
               self.load_job_queue(session, ids)
 
           #also in queue_lock
-          self.job, self.config, self.solver = self.job_queue.get(True, 1)
+          self.job, self.config = self.job_queue.get(True, 1)
           self.config_dict = compose_config_obj(self.config)
           self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                            self.job.reason)
@@ -842,7 +813,7 @@ class WorkerInterface(Process):
 
     while not self.job_queue.empty():
       try:
-        self.job, self.config, self.solver = self.job_queue.get(True, 1)
+        self.job, self.config = self.job_queue.get(True, 1)
         if self.job.state == "compile_start":
           self.set_job_state("new")
         if self.job.state == "eval_start":

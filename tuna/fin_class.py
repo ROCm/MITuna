@@ -31,6 +31,10 @@ import os
 import tempfile
 import functools
 import paramiko
+try:
+  import queue
+except ImportError:
+  import Queue as queue
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 
@@ -43,6 +47,7 @@ from tuna.fin_utils import compose_config_obj
 from tuna.tables import DBTables
 from tuna.config_type import ConfigType
 from tuna.utils.db_utility import get_solver_ids, session_retry
+from tuna.utils.utility import split_packets
 
 
 class FinClass(WorkerInterface):
@@ -200,47 +205,51 @@ class FinClass(WorkerInterface):
 
   def set_all_configs(self, idx=0, num_blk=1):
     """Gathering all configs from Tuna DB to set up fin input file"""
-    with DbSession() as session:
-      query = session.query(
-          self.dbt.config_table).filter(self.dbt.config_table.valid == 1)
+    if idx == 0:
+      with DbSession() as session:
+        query = session.query(self.dbt.config_table)\
+                          .filter(self.dbt.config_table.valid == 1)
 
-      if self.label:
-        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
-            .filter(self.dbt.config_tags_table.tag == self.label)
+        if self.label:
+          query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
+              .filter(self.dbt.config_tags_table.tag == self.label)
 
-      #order by id for splitting configs into blocks
-      query = query.order_by(self.dbt.config_table.id)
-      rows = query.all()
+        #order by id for splitting configs into blocks
+        query = query.order_by(self.dbt.config_table.id)
+        rows = query.all()
 
-      block_size = len(rows) // num_blk  #size of the config block
-      extra = len(rows) % num_blk  #leftover configs, don't divide evenly
-      start = idx * block_size  #start of a process block
-      end = (idx + 1) * block_size
-      #distributing leftover configs to processes
-      if idx < extra:
-        start += idx
-        end += 1 + idx
-      else:
-        start += extra
-        end += extra
+        master_cfg_list = []
+        for row in rows:
+          r_dict = compose_config_obj(row, self.config_type)
+          if self.config_type == ConfigType.batch_norm:
+            r_dict['direction'] = row.get_direction()
+          master_cfg_list.append(r_dict)
 
-      self.logger.info("cfg workdiv: proc %s, start %s, end %s", self.gpu_id,
-                       start, end)
+        block_size = len(rows) // num_blk  #size of the config block
+        extra = len(rows) % num_blk  #leftover configs, don't divide evenly
+        self.logger.info("cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk, block_size, extra)
+        for i in range(num_blk):
+          start = i * block_size  #start of a process block
+          end = (i + 1) * block_size
+          #distributing leftover configs to processes
+          if i < extra:
+            start += i
+            end += 1 + i
+          else:
+            start += extra
+            end += extra
 
-      if start >= len(rows):
-        return False
+          if start >= len(rows):
+            break 
 
-      #copy the configs for this process
-      if end >= len(rows):
-        subarr = rows[start:]
-      else:
-        subarr = rows[start:end]
+          self.logger.info("cfg workdiv: start %s, end %s", start, end)
 
-      for row in subarr:
-        r_dict = compose_config_obj(row, self.config_type)
-        if self.config_type == ConfigType.batch_norm:
-          r_dict['direction'] = row.get_direction()
-        self.all_configs.append(r_dict)
+          self.job_queue.put(master_cfg_list[start:end])
+    try:
+      self.all_configs = self.job_queue.get(True, 30)
+    except queue.Empty:
+      self.logger.warning('No jobs found for process %s...', idx)
+      self.all_configs = None
 
     if self.all_configs is None:
       return False
@@ -327,30 +336,39 @@ class FinClass(WorkerInterface):
   def insert_applicability(self, session, json_in):
     """write applicability to sql"""
     _, solver_id_map_h = get_solver_ids()
+
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
-        #remove old applicability
+        cfg_id = elem["input"]["config_tuna_id"]
         # pylint: disable=comparison-with-callable
         app_query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
-          .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
+          .filter(self.dbt.solver_app.config == cfg_id)
         # pylint: enable=comparison-with-callable
-        app_query.update({self.dbt.solver_app.applicable: 0},
-                         synchronize_session='fetch')
+
         if not elem["applicable_solvers"]:
-          self.logger.warning("No applicable solvers for %s",
-                              elem["input"]["config_tuna_id"])
+          self.logger.warning("No applicable solvers for %s", cfg_id)
+
+        app_slv_ids = []
         for solver in elem["applicable_solvers"]:
+          solver_id = solver_id_map_h[solver]
+          app_slv_ids.append(solver_id)
+
+        #remove old applicability
+        not_app_query = app_query.filter(self.dbt.solver_app.solver.notin_(app_slv_ids))
+        not_app_query.update({self.dbt.solver_app.applicable: 0}, synchronize_session='fetch')
+
+        for solver_id in app_slv_ids:
           try:
-            solver_id = solver_id_map_h[solver]
             obj = app_query.filter(
                 self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
             if obj:
-              obj.applicable = 1
+              if obj.applicable == 0:
+                obj.applicable = 1
             else:
               new_entry = self.dbt.solver_app(
                   solver=solver_id,
-                  config=elem["input"]["config_tuna_id"],
+                  config=cfg_id,
                   session=self.session_id,
                   applicable=1)
               session.add(new_entry)
@@ -363,6 +381,7 @@ class FinClass(WorkerInterface):
     session.commit()
     return True
 
+
   def parse_applicability(self, json_in):
     """Function to parse fin outputfile and populate DB with results"""
     self.logger.info('Parsing fin solver applicability output...')
@@ -370,30 +389,17 @@ class FinClass(WorkerInterface):
       self.logger.error("JSON file returned from Fin is empty")
       return False
 
-    #break down commits into smaller packets
-    pack_i = 0
-    pack = []
-    all_packs = []
-    for elem in json_in:
-      pack.append(elem)
-      pack_i += 1
-      if pack_i == 100:
-        all_packs.append(pack)
-        pack = []
-        pack_i = 0
-    if pack:
-      all_packs.append(pack)
+    all_packs = split_packets(json_in, 10000)
 
     with DbSession() as session:
-
       def actuator(func, pack):
         return func(session, pack)
 
-      for pack in all_packs:
-        session_retry(session, self.insert_applicability,
+      with self.queue_lock:
+        for pack in all_packs:
+          session_retry(session, self.insert_applicability,
                       functools.partial(actuator, pack=pack), self.logger)
 
-    with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
       query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
       sapp_count = query.one()[0]
