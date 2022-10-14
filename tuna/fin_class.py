@@ -251,9 +251,9 @@ class FinClass(WorkerInterface):
       self.all_configs = self.job_queue.get(True, 30)
     except queue.Empty:
       self.logger.warning('No jobs found for process %s...', idx)
-      self.all_configs = None
+      self.all_configs = []
 
-    if self.all_configs is None:
+    if not self.all_configs:
       return False
 
     return True
