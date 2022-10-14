@@ -40,7 +40,7 @@ from tuna.metadata import DIR_MAP
 LOGGER = setup_logger('merge_pdb')
 
 DB_ALIAS = {'gfx803_36': 'gfx900_64', 'gfx803_64': 'gfx900_64'}
-SSH_TIMEOUT = 60.0  # in seconds
+
 
 def parse_jobline(line):
   """get entries from a fdb text line """

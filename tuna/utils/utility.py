@@ -118,4 +118,3 @@ def get_mmi_env_vars(env_vars={}):
     env_vars['gateway_user'] = None
 
   return env_vars
-
