@@ -48,7 +48,7 @@ from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
-from miopen_lib import MIOpen
+from miopen.miopen_lib import MIOpen
 
 
 def add_job(w):

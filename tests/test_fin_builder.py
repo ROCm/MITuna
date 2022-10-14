@@ -41,7 +41,7 @@ from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
-from tuna.miopen_lib import MIOpen
+from tuna.miopen.miopen_lib import MIOpen
 from tuna.metadata import ALG_SLV_MAP
 from tuna.utils.db_utility import get_solver_ids
 
