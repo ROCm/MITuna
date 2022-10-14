@@ -354,8 +354,13 @@ class FinClass(WorkerInterface):
 
         app_slv_ids = []
         for solver in elem["applicable_solvers"]:
-          solver_id = solver_id_map_h[solver]
-          app_slv_ids.append(solver_id)
+          try:
+            solver_id = solver_id_map_h[solver]
+            app_slv_ids.append(solver_id)
+          except KeyError:
+            self.logger.warning('Solver %s not found in solver table', solver)
+            self.logger.info("Please run 'go_fish.py --update_solver' first")
+            return False
 
         #remove old applicability
         not_app_query = app_query.filter(
@@ -364,18 +369,12 @@ class FinClass(WorkerInterface):
                              synchronize_session='fetch')
 
         for solver_id in app_slv_ids:
-          try:
-            obj = app_query.filter(
-                self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
-            if obj:
-              if obj.applicable == 0:
-                obj.applicable = 1
-            else:
-              inserts.append((cfg_id, solver_id))
-          except KeyError:
-            self.logger.warning('Solver %s not found in solver table', solver)
-            self.logger.info("Please run 'go_fish.py --update_solver' first")
-            return False
+          obj = app_query.filter(
+              self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
+          if obj:
+            obj.applicable = 1
+          else:
+            inserts.append((cfg_id, solver_id))
 
     #commit updates
     session.commit()
