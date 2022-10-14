@@ -53,20 +53,18 @@ class MIOpen(MITunaInterface):
     self.args = None
     try:
       # pylint: disable=no-member
-      #self.args = self.parse_args(parser)
-      print('Parsing args')
+      self.args = self.parse_args()
     except ValueError as verr:
       self.logger.info(verr)
 
-  def parse_args(self, parser):
+  def parse_args(self):
     # pylint: disable=too-many-statements
     """Function to parse arguments"""
     parser = setup_arg_parser(
         'Run Performance Tuning on a certain architecture', [
             TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
             TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
-        ],
-        parser=[parser])
+        ])
 
     parser.add_argument(
         '--find_mode',
@@ -187,12 +185,10 @@ class MIOpen(MITunaInterface):
                         type=Library)
 
     args = parser.parse_args()
-    if len(sys.argv) == 3 and '--lib' in sys.argv and 'miopen' in sys.argv:
+    if len(sys.argv) == 3 and ('--lib' in sys.argv or
+                               '-L' in sys.argv) and 'miopen' in sys.argv:
       parser.print_help()
-      return None
-    #print(args)
-    #print('restart_machines: {}'.format(args.restart_machine))
-    #print(f'args.arch: {args.arch}')
+      sys.exit(-1)
 
     if args.list_solvers:
       print_solvers()
@@ -368,12 +364,12 @@ class MIOpen(MITunaInterface):
 
     return worker_lst
 
-  def run(self, parser):
+  def run(self):
     """Main function to launch library"""
     res = None
-    self.args = self.parse_args(parser)
-    if self.args is None:
-      return res
+    #self.args = self.parse_args(parser)
+    #if self.args is None:
+    #  return res
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res

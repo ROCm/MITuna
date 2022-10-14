@@ -34,9 +34,8 @@ class MITunaInterface():
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
-  def __init__(self, library=Library.MITUNA):
+  def __init__(self, library=Library.MIOPEN):
     self.library = library
-    print('Setting up logger')
 
     self.logger = setup_logger(logger_name=self.library.value,
                                add_streamhandler=True)

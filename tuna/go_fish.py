@@ -48,13 +48,12 @@ def parse_args():
                       type=Library)
 
   args, _ = parser.parse_known_args()
-  return args, parser
+  return args
 
 
 def setup_library(args):
   """Return Library class based on args"""
   if args.lib == Library.MIOPEN or args.lib is None:
-    print(args)
     library = MIOpen()
   else:
     raise ValueError("Not implemented")
@@ -65,14 +64,14 @@ def setup_library(args):
 def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
-  args, parser = parse_args()
+  args = parse_args()
   library = setup_library(args)
 
   try:
 
     #worker_lst = library.compose_worker_list(res, args)
     #returns a list of workers/processes it ran
-    worker_lst = library.run(parser)
+    worker_lst = library.run()
     if worker_lst is None:
       return
 
