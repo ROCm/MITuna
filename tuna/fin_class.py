@@ -227,7 +227,9 @@ class FinClass(WorkerInterface):
 
         block_size = len(rows) // num_blk  #size of the config block
         extra = len(rows) % num_blk  #leftover configs, don't divide evenly
-        self.logger.info("cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk, block_size, extra)
+        self.logger.info(
+            "cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk,
+            block_size, extra)
         for i in range(num_blk):
           start = i * block_size  #start of a process block
           end = (i + 1) * block_size
@@ -240,7 +242,7 @@ class FinClass(WorkerInterface):
             end += extra
 
           if start >= len(rows):
-            break 
+            break
 
           self.logger.info("cfg workdiv: start %s, end %s", start, end)
 
@@ -337,7 +339,7 @@ class FinClass(WorkerInterface):
     """write applicability to sql"""
     _, solver_id_map_h = get_solver_ids()
 
-    inserts=[]
+    inserts = []
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
         cfg_id = elem["input"]["config_tuna_id"]
@@ -356,8 +358,10 @@ class FinClass(WorkerInterface):
           app_slv_ids.append(solver_id)
 
         #remove old applicability
-        not_app_query = app_query.filter(self.dbt.solver_app.solver.notin_(app_slv_ids))
-        not_app_query.update({self.dbt.solver_app.applicable: 0}, synchronize_session='fetch')
+        not_app_query = app_query.filter(
+            self.dbt.solver_app.solver.notin_(app_slv_ids))
+        not_app_query.update({self.dbt.solver_app.applicable: 0},
+                             synchronize_session='fetch')
 
         for solver_id in app_slv_ids:
           try:
@@ -380,16 +384,14 @@ class FinClass(WorkerInterface):
     with self.queue_lock:
       self.logger.info('Commit bulk inserts, please wait')
       for cfg_id, solver_id in inserts:
-        new_entry = self.dbt.solver_app(
-            solver=solver_id,
-            config=cfg_id,
-            session=self.session_id,
-            applicable=1)
+        new_entry = self.dbt.solver_app(solver=solver_id,
+                                        config=cfg_id,
+                                        session=self.session_id,
+                                        applicable=1)
         session.add(new_entry)
       session.commit()
 
     return True
-
 
   def parse_applicability(self, json_in):
     """Function to parse fin outputfile and populate DB with results"""
@@ -401,6 +403,7 @@ class FinClass(WorkerInterface):
     all_packs = split_packets(json_in, 10000)
 
     with DbSession() as session:
+
       def actuator(func, pack):
         return func(session, pack)
 
