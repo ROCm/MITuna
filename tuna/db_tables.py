@@ -29,7 +29,7 @@ import os
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy import create_engine
 from tuna.miopen.miopen_tables import get_miopen_tables
-from tuna.miopen_db_helpers import get_miopen_triggers, drop_miopen_triggers
+from tuna.miopen.miopen_db_helpers import get_miopen_triggers, drop_miopen_triggers
 from tuna.db_engine import ENV_VARS, ENGINE
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
