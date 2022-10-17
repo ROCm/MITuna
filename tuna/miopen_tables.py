@@ -540,7 +540,7 @@ class BenchmarkPerfTable(BASE, GoldenMixin):
   __tablename__ = "benchmark_perf_table"
   __table_args__ = (UniqueConstraint("kernel_time",
                                      "solver",
-                                     "workspace",
+                                     "workspace_sz",
                                      "rocm_v",
                                      "miopen_v",
                                      name="uq_idx"),)
@@ -548,7 +548,7 @@ class BenchmarkPerfTable(BASE, GoldenMixin):
   config = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   solver = Column(String(length=128), nullable=True, server_default="")
-  workspace = Column(BigInteger, nullable=False)
+  workspace_sz = Column(BigInteger, nullable=False)
   rocm_v = Column(Integer, nullable=False)
   miopen_v = Column(Integer, nullable=False)
 
