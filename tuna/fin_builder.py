@@ -30,13 +30,13 @@ import json
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 
-from tuna.worker_interface import WorkerInterface
+from tuna.fin_class import FinClass
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.fin_utils import fin_job
 from tuna.fin_utils import get_fin_slv_status, get_fin_result
 
 
-class FinBuilder(WorkerInterface):
+class FinBuilder(FinClass):
   """ The Builder class implementes the worker class. Its purpose is to compile jobs. It picks up
   new jobs and when completed, sets the state to compiled. """
 

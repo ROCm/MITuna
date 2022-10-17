@@ -32,46 +32,22 @@ except ImportError:
   import Queue as queue
 import logging
 import os
-import json
 from datetime import datetime
 import socket
 import random
 import string
 from time import sleep
-from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import get_solver_ids, get_id_solvers, session_retry
 from tuna.abort import chk_abort_file
-from tuna.fin_utils import compose_config_obj
-from tuna.fin_utils import get_fin_slv_status
-from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME, PREC_TO_CMD
-from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR_MAP
-from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
-from tuna.metadata import FIND_ONLY_EXCEPTION
-from tuna.metadata import TENSOR_PRECISION
+from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from tuna.config_type import ConfigType
 
 MAX_JOB_RETRIES = 10
-
-TABLE_COLS_CONV_INVMAP = {}
-for clarg, cnvparam in TABLE_COLS_CONV_MAP.items():
-  if not cnvparam[0] in TABLE_COLS_CONV_INVMAP:
-    TABLE_COLS_CONV_INVMAP[cnvparam[0]] = clarg
-  elif len(clarg) > len(TABLE_COLS_CONV_INVMAP[cnvparam[0]]):
-    TABLE_COLS_CONV_INVMAP[cnvparam[0]] = clarg
-
-TABLE_COLS_FUSION_INVMAP = {}
-for clarg, cnvparam in TABLE_COLS_FUSION_MAP.items():
-  if not cnvparam[0] in TABLE_COLS_FUSION_INVMAP:
-    TABLE_COLS_FUSION_INVMAP[cnvparam[0]] = clarg
-  elif len(clarg) > len(TABLE_COLS_FUSION_INVMAP[cnvparam[0]]):
-    TABLE_COLS_FUSION_INVMAP[cnvparam[0]] = clarg
-
 LOG_TIMEOUT = 10 * 60.0  # in seconds
 
 
@@ -89,54 +65,49 @@ class WorkerInterface(Process):
 
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
-        'reset_interval', 'fin_steps', 'fin_infile', 'fin_outfile', 'job_queue',
-        'queue_lock', 'label', 'fetch_state', 'docker_name', 'end_jobs',
-        'config_type', 'dynamic_solvers_only', 'session_id'
+        'reset_interval', 'fin_steps', 'job_queue', 'queue_lock', 'label',
+        'fetch_state', 'docker_name', 'end_jobs', 'config_type',
+        'dynamic_solvers_only', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    #for pylint
+    #system vars
     self.machine = None
+    #multiprocess vars
     self.gpu_id = None
     self.num_procs = None
     self.barred = None
     self.bar_lock = Lock()
-    self.envmt = []
-    self.fin_steps = []
-    self.fin_infile = None
-    self.fin_outfile = None
     self.job_queue = None
     self.queue_lock = Lock()
-    self.is_fdb = False
-    self.fetch_state = ['new']
-    self.compile_only = False
-    self.docker_name = TUNA_DOCKER_NAME
-    self.gpu = None
-    self.label = None
     self.end_jobs = None
-    self.solver_id_map, _ = get_solver_ids()
-    self.id_solver_map, _ = get_id_solvers()
+    #job detail vars
+    self.envmt = []
+    self.fin_steps = []
+    self.fetch_state = ['new']
+    self.docker_name = TUNA_DOCKER_NAME
+    self.label = None
     self.dynamic_solvers_only = False
-    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
-    self.config_dict = None
     self.session_id = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
+    #initialize tables
+    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
-
-    self.miopen_user_db_path = f"/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
+    #add cache directories
+    self.envmt.append(
+        f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
+    )
     self.envmt.append(
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
-    self.envmt.append(f"MIOPEN_USER_DB_PATH={self.miopen_user_db_path}")
 
     self.hostname = self.machine.hostname
     self.job = None
     self.config = None
     self.solver = None
-    self.cmd_iter = 1
     self.claim_num = self.num_procs.value
     self.last_reset = datetime.now()
 
@@ -152,21 +123,6 @@ class WorkerInterface(Process):
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx = self.machine.connect(chk_abort_file)
-
-  def check_env(self):
-    """Checking that presumed rocm/miopen_v corresponds to the env rocm/miopen_v"""
-    env_rocm_v = self.get_rocm_v()
-    if self.dbt.session.rocm_v != env_rocm_v:
-      raise ValueError(
-          f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
-      )
-    env_miopen_v = self.get_miopen_v()
-    if self.dbt.session.miopen_v != env_miopen_v:
-      raise ValueError(
-          f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
-      )
-
-    return True
 
   def set_logger(self, logger_name):
     """Build logger with given name"""
@@ -187,104 +143,10 @@ class WorkerInterface(Process):
     lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
     self.logger = lgr
 
-  #@staticmethod
-  def check_status(self, err):
-    """Function to check err status"""
-    if err is not None and hasattr(err,
-                                   'channel') and err.channel.exit_status > 0:
-      self.logger.warning(err)
-      status = False
-    else:  # -1 means the command is still running
-      status = True
-
-    return status
-
   def reset_machine(self):
     """Function to reset machhine"""
     self.machine.restart_server()
     self.last_reset = datetime.now()
-
-  def process_log_line(self, stdout):
-    """Parse log from run command"""
-    timeout = False
-    error_cfg = False
-    abort_cfg = False
-    error_bad_param = False
-    self.compile_only = False
-
-    for line in stdout:
-      try:
-        if chk_abort_file(self.machine.id, self.logger, self.machine.arch):
-          with self.bar_lock:
-            self.num_procs.value -= 1
-          break
-        decoded_line = line.strip()  # lines.strip().decode()
-        self.logger.info(decoded_line)
-        low_line = decoded_line.lower()
-        if low_line.find('error') != -1 and not self.compile_only:
-          #ingore search failed error from miopen
-          if 'search failed' in low_line:
-            continue
-          # miopen throws an error to escape after compiling when using MIOPEN_COMPILE_AND_RUN=0
-          err1 = 'search skipped' in low_line
-          # miopen also throws an error when MIOPEN_DEVICE_ARCH is used
-          err2 = 'escaping launching kernel' in low_line
-          # error thrown as a result of MIOPEN_DEBUG_COMPILE_ONLY
-          err3 = 'miopen_debug_compile_only is enabled, escaping' in low_line
-          if err1 or err2 or err3:
-            self.compile_only = True
-            error_cfg = False
-          else:
-            self.logger.error('Parser found error: %s', low_line)
-            error_cfg = True
-
-          # when miopen doesn't search for the specified solver, it will throw bad param
-          if 'incorrect param' in decoded_line:
-            error_bad_param = True
-        if low_line.find('aborted') != -1:
-          abort_cfg = True
-
-      except (socket.timeout, socket.error):
-        timeout = True
-        self.logger.warning('Socket error, aborted')
-        break
-    if stdout is None:
-      abort_cfg = True
-
-    return timeout, error_cfg, abort_cfg, error_bad_param
-
-  def handle_errors_or_complete(self, error_bad_param, status, timeout,
-                                error_cfg, abort_cfg, job_solver):
-    """Function to update job state"""
-    success = False
-    if error_bad_param:
-      self.logger.warning('job id %s: solver %s had incorrect parameters',
-                          self.job.id, job_solver)
-      self.set_job_state('bad_param')
-    elif not status:
-      # the command failed to run properly
-      self.logger.warning('job id %s: MIOpen Driver failed to run properly',
-                          self.job.id)
-      self.set_job_state('error_status')
-    elif timeout:
-      # write to value indicating this thing has hanged and wait for it to reach num_procs - 1 ,
-      # then restart
-      # then reopen the ssh, then continue
-      # update the job_id status in the database to new since the job failed
-      self.logger.error(
-          'job id %s: Timeout while waiting for command to finish', self.job.id)
-      self.set_job_state('timeout')
-      self.set_barrier(self.reset_machine, True)
-    elif error_cfg:
-      self.logger.warning('job id %s errored', self.job.id)
-      self.set_job_state('errored')
-    elif abort_cfg:
-      self.logger.warning('job id %s aborted', self.job.id)
-      self.set_job_state('aborted')
-    else:
-      success = True
-
-    return success
 
   def compose_job_query(self, find_state, session):
     """Helper function to compose query"""
@@ -310,129 +172,6 @@ class WorkerInterface(Process):
         self.claim_num).with_for_update()
 
     return query
-
-  def get_fdb_entry(self, session, solver):
-    """ Get FindDb entry from db """
-    fdb_entry = self.dbt.find_db_table()
-    fdb_entry.config = self.config.id
-    fdb_entry.solver = solver
-    fdb_entry.session = self.dbt.session.id
-    fdb_entry.opencl = False
-    fdb_entry.logger = self.logger
-    fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
-                                    self.dbt.session.id)
-    obj = fdb_query.first()
-    return obj, fdb_entry
-
-  def update_fdb_entry(self, session, solver):
-    """ Add a new entry to fdb if there isnt one already """
-    obj, fdb_entry = self.get_fdb_entry(session, solver)
-    if obj:  # existing entry in db
-      # This can be removed if we implement the delete orphan cascade
-      fdb_entry = obj
-      session.query(
-          self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
-                                        fdb_entry.kernel_group).delete()
-    else:
-      # Insert the above entry
-      session.add(fdb_entry)
-    return fdb_entry
-
-  def compose_fdb_entry(self, session, fin_json, fdb_obj):
-    """Compose a FindDB table entry from fin_output"""
-    solver = self.solver_id_map[fdb_obj['solver_name']]
-    fdb_entry = self.update_fdb_entry(session, solver)
-    fdb_entry.fdb_key = fin_json['db_key']
-    fdb_entry.alg_lib = fdb_obj['algorithm']
-    fdb_entry.params = fdb_obj['params']
-    fdb_entry.workspace_sz = fdb_obj['workspace']
-    fdb_entry.valid = True
-
-    fdb_entry.kernel_time = -1
-    if 'time' in fdb_obj:
-      fdb_entry.kernel_time = fdb_obj['time']
-
-    fdb_entry, _ = self.get_fdb_entry(session, solver)
-    fdb_entry.kernel_group = fdb_entry.id
-
-    return fdb_entry
-
-  def compose_kernel_entry(self, session, fdb_obj, fdb_entry):
-    """Compose a new Kernel Cache entry from fin input"""
-    # Now we have the ID, lets add the binary cache objects
-    for kern_obj in fdb_obj['kernel_objects']:
-      kernel_obj = self.dbt.kernel_cache()
-      self.populate_kernels(kern_obj, kernel_obj)
-      kernel_obj.kernel_group = fdb_entry.kernel_group
-      session.add(kernel_obj)
-    return True
-
-  def populate_kernels(self, kern_obj, kernel_obj):
-    """populate kernel object"""
-    kernel_obj.kernel_name = kern_obj['kernel_file']
-    kernel_obj.kernel_args = kern_obj['comp_options']
-    kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
-    kernel_obj.kernel_hash = kern_obj['md5_sum']
-    kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
-    return kernel_obj
-
-  def update_fdb_w_kernels(self,
-                           session,
-                           fin_json,
-                           result_str='miopen_find_compile_result',
-                           check_str='find_compiled'):
-    """update find db + kernels from json results"""
-    status = []
-    if fin_json[result_str]:
-      for fdb_obj in fin_json[result_str]:
-        slv_stat = get_fin_slv_status(fdb_obj, check_str)
-        status.append(slv_stat)
-
-        if fdb_obj[check_str]:
-          #returned entry is added to the table
-          fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
-          if fdb_obj['reason'] == 'Success':
-            self.compose_kernel_entry(session, fdb_obj, fdb_entry)
-            self.logger.info('Updating find Db(Build) for job_id=%s',
-                             self.job.id)
-          else:
-            # JD: add info about reason to the logs table
-            fdb_entry.valid = False
-        else:
-          self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
-                              fin_json['config_tuna_id'], fdb_obj)
-    else:
-      status = [{
-          'solver': 'all',
-          'success': False,
-          'result': 'Find Compile: No results'
-      }]
-
-    session.commit()
-
-    return status
-
-  def process_fdb_w_kernels(self,
-                            session,
-                            fin_json,
-                            result_str='miopen_find_compile_result',
-                            check_str='find_compiled'):
-    """initiate find db update"""
-
-    callback = self.update_fdb_w_kernels
-    status = session_retry(
-        session, callback,
-        lambda x: x(session, fin_json, result_str, check_str), self.logger)
-
-    if not status:
-      self.logger.warning('Fin: Unable to update Database')
-      status = [{
-          'solver': 'all',
-          'success': False,
-          'result': 'Fin: Unable to update Database'
-      }]
-
-    return status
 
   def queue_end_reset(self):
     """resets end queue flag"""
@@ -537,7 +276,6 @@ class WorkerInterface(Process):
 
           #also in queue_lock
           self.job, self.config, self.solver = self.job_queue.get(True, 1)
-          self.config_dict = compose_config_obj(self.config)
           self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                            self.job.reason)
 
@@ -652,115 +390,6 @@ class WorkerInterface(Process):
     self.logger.info('Got rocm version: %s', out)
     return out
 
-  @staticmethod
-  def compose_lcl_envmt(solver):
-    """Setting up local_envmt var"""
-    # pylint: disable=too-many-nested-blocks
-    lcl_envmt = []
-    solver_id_map, _ = get_solver_ids()  # pylint: disable=unused-variable ; false alarm
-    if solver not in FIND_ONLY_EXCEPTION:
-      lcl_envmt.append("MIOPEN_DEBUG_FIND_ONLY_SOLVER={solver_id_map[solver]}")
-      for key, env_var in FIND_ONLY_EXCEPTION.items():
-        lcl_envmt.append(f"{env_var}=0")
-    else:
-      for key, sol_group in ENV_SLVGRP_MAP.items():
-        if solver not in sol_group:
-          lcl_envmt.append(f"{key}=0")
-        else:
-          for item in sol_group:
-            if item != solver and item in SLV_ENV_MAP:
-              if solver not in SLV_ENV_MAP or SLV_ENV_MAP[item] != SLV_ENV_MAP[
-                  solver]:
-                cnstr = f"{SLV_ENV_MAP[item]}=0"
-                if cnstr not in lcl_envmt:
-                  lcl_envmt.append(cnstr)
-    return lcl_envmt
-
-  def run_fin_cmd(self):
-    """Run a fin command after generating the JSON"""
-    fin_output = self.machine.make_temp_file()
-    cmd = []
-
-    env_str = " ".join(self.envmt)
-    cmd.append(env_str)
-    cmd.extend(
-        ['/opt/rocm/bin/fin', '-i',
-         self.get_fin_input(), '-o', fin_output])  # pylint: disable=no-member
-
-    for i in range(MAX_JOB_RETRIES):
-      ret_code, _, err = self.exec_docker_cmd(cmd)
-
-      if ret_code != 0:
-        self.logger.error('Error executing command: %s', ' '.join(cmd))
-        if err:
-          err_str = err.read()
-          self.logger.error('%s : %s', ret_code, err_str)
-          if "disk I/O error" in err_str:
-            self.logger.error('fin retry : %u', i)
-            sleep(random.randint(1, 10))
-          else:
-            break
-        else:
-          self.logger.error('err code : %s', ret_code)
-          break
-      else:
-        break
-
-    if ret_code != 0:
-      return None
-
-    # load the output json file and strip the env
-    fin_json = json.loads(self.machine.read_file(fin_output))[1:]
-    assert len(fin_json) == 1
-    # JD: if we implement multiple jobs per fin launch, this would be a loop
-    fin_json = fin_json[0]
-    return fin_json
-
-  def run_driver_cmd(self):
-    """Definition of running the MIOpen driver cmd"""
-
-    sub_cmd = PREC_TO_CMD[self.config_type][self.config.input_t.data_type]
-
-    bash_cmd = f'MIOpenDriver {sub_cmd} -V 0 -i 1'
-
-    driver_args = self.config_dict
-    if "direction" in driver_args:
-      driver_args['direction'] = INVERS_DIR_MAP[driver_args['direction']]
-    for field, val in driver_args.items():
-      if val is None:
-        continue
-      if sub_cmd in TENSOR_PRECISION:
-        if field in TABLE_COLS_CONV_INVMAP:
-          arg_name = TABLE_COLS_CONV_INVMAP[field]
-          bash_cmd += f" -{arg_name} {val}"
-      elif sub_cmd in ['CBAInfer', 'CBAInferfp16']:
-        if field in TABLE_COLS_FUSION_INVMAP:
-          arg_name = TABLE_COLS_FUSION_INVMAP[field]
-          bash_cmd += f" -{arg_name} {val}"
-
-    lcl_envmt = self.envmt[:]
-
-    # solver = self.job.solver if self.job.solver and not self.job.solver == '' else None
-    if self.job.solver:  # None and empty string are both false
-      self.logger.info('Solver specified, filter using MIOpen env vars: %s',
-                       self.job.solver)
-      lcl_envmt.extend(self.compose_lcl_envmt(self.job.solver))
-
-    # create environment string for the command to execute,
-    # remote ssh is rejecting the env setting using dicts
-    export_all = [f"{x}" for x in lcl_envmt]
-    env_str = " ".join(export_all)
-
-    bash_cmd = bash_cmd + ' 2>&1 '
-    # p = os.path.join('/home',self.user, 'MLOpen')
-
-    cmd = f"{env_str} {bash_cmd}"
-
-    self.logger.warning("Machine: %s, GPU ID: %s, Executing: %s", self.hostname,
-                        self.gpu_id, cmd)
-
-    return self.exec_docker_cmd(cmd)
-
   def set_barrier(self, funct, with_timeout):
     """Setting time barrier for Process to define execution timeout"""
     if self.barred.value == 0:
@@ -804,52 +433,23 @@ class WorkerInterface(Process):
       return True
     return False
 
-  def get_compile_jobs(self):
-    """Checking num compile jobs left to determine
-    when the evaluator should stop waiting for jobs to compile"""
-    with DbSession() as session:
-      try:
-        # pylint: disable=comparison-with-callable
-        query = session.query(sqlalchemy_func.count(self.dbt.job_table.id))\
-            .filter(self.dbt.job_table.valid == 1)\
-            .filter(self.dbt.job_table.session == self.dbt.session.id)\
-            .filter(self.dbt.job_table.state.in_(('new', 'started', 'compile_start', 'compiling',
-                                                  'compiled')))
-        # pylint: enable=comparison-with-callable
-
-        if self.label:
-          query = query.filter(self.dbt.job_table.reason == self.label)
-        if self.fin_steps:
-          query = query.filter(
-              self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
-        else:
-          query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
-        compile_jobs = query.one()[0]
-      except IntegrityError as error:
-        session.rollback()
-        self.logger.warning('Attempt to get #compile jobs failed')
-        self.logger.warning(error)
-    return compile_jobs
-
   def reset_job_state(self):
     """Helper function to reset job state during signal interrupt"""
     if self.job and self.job.state != 'compiled' and self.job.state != 'evaluated':
       self.logger.warning('resetting job state to %s', self.fetch_state[0])
       if "new" in self.fetch_state:
         self.set_job_state("new")
-      if "compiled" in self.fetch_state:
+      elif "compiled" in self.fetch_state:
         self.set_job_state("compiled")
 
     while not self.job_queue.empty():
       try:
         self.job, self.config, self.solver = self.job_queue.get(True, 1)
-        if self.job.state == "compile_start":
+        if "new" in self.fetch_state:
           self.set_job_state("new")
-        if self.job.state == "eval_start":
-          if self.is_fdb:
-            self.set_job_state("new")
-          else:
-            self.set_job_state("compiled")
+        elif "compiled" in self.fetch_state:
+          self.set_job_state("compiled")
+
       except queue.Empty:
         break
 

@@ -32,7 +32,7 @@ import json
 
 from sqlalchemy.exc import OperationalError
 
-from tuna.worker_interface import WorkerInterface
+from tuna.fin_class import FinClass
 from tuna.fin_utils import fin_job
 from tuna.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
@@ -41,7 +41,7 @@ from tuna.utils.db_utility import session_retry
 MAX_ERRORED_JOB_RETRIES = 3
 
 
-class FinEvaluator(WorkerInterface):
+class FinEvaluator(FinClass):
   """ The Evaluator class implements the worker class. Its purpose is to run benchmarking jobs
   and when completed sets the state of the job to evaluated. """
 
