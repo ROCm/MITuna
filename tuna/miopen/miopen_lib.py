@@ -51,11 +51,6 @@ class MIOpen(MITunaInterface):
   def __init__(self):
     super().__init__(library=Library.MIOPEN)
     self.args = None
-    try:
-      # pylint: disable=no-member
-      self.args = self.parse_args()
-    except ValueError as verr:
-      self.logger.info(verr)
 
   def parse_args(self):
     # pylint: disable=too-many-statements
@@ -367,6 +362,7 @@ class MIOpen(MITunaInterface):
   def run(self):
     """Main function to launch library"""
     res = None
+    self.args = self.parse_args()
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res
