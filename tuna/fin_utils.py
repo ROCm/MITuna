@@ -92,6 +92,7 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
   in_layout = None
   weight_t_dict = None
   wei_layout = None
+  cmd = None
 
   if 'input_t' in config.__dict__.keys():
     input_t_dict = {'input_t': config.input_t.to_dict()}

@@ -41,7 +41,8 @@ from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
-from tuna.metadata import ALG_SLV_MAP, get_solver_ids
+from tuna.metadata import ALG_SLV_MAP
+from tuna.utils.db_utility import get_solver_ids
 
 
 def add_cfgs():
@@ -53,9 +54,10 @@ def add_cfgs():
 
   dbt = DBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt)
+  return dbt
 
 
-def add_fin_find_compile_job(session_id):
+def add_fin_find_compile_job(session_id, dbt):
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
@@ -76,16 +78,7 @@ def add_fin_find_compile_job(session_id):
   args.only_applicable = True
 
   connect_db()
-  counts = {}
-  counts['cnt_jobs'] = 0
-  dbt = DBTables(session_id=None, config_type=args.config_type)
-  if args.tag:
-    try:
-      tag_name_test(args.tag, dbt)
-    except ValueError as terr:
-      print(terr)
-
-  add_jobs(args, counts, dbt)
+  return add_jobs(args, dbt)
 
 
 def test_fin_builder():
@@ -101,7 +94,7 @@ def test_fin_builder():
   assert (fin_worker.get_solvers())
 
   #get applicability
-  add_cfgs()
+  dbt = add_cfgs()
   args.update_applicability = True
   args.label = 'test_fin_builder'
   worker_lst = compose_worker_list(machine_lst, args)
@@ -109,14 +102,7 @@ def test_fin_builder():
     worker.join()
 
   #load jobs
-  add_fin_find_compile_job(args.session_id)
-  num_jobs = 0
-  with DbSession() as session:
-    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state='new';"
-    res = session.execute(get_jobs)
-    for row in res:
-      assert (row[0] > 0)
-      num_jobs = row[0]
+  num_jobs = add_fin_find_compile_job(args.session_id, dbt)
 
   #compile
   args.update_applicability = False
@@ -127,7 +113,12 @@ def test_fin_builder():
     worker.join()
 
   with DbSession() as session:
-    get_jobs = f"SELECT count(*) from conv_job where session={args.session_id} and state in ('compiled');"
-    row = session.execute(get_jobs)
-    for row in res:
-      assert (row[0] == num_jobs)
+    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='errored')\
+                                         .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
+                                         .count()
+    #ommiting valid Fin/MIOpen errors
+    num_jobs = (num_jobs - valid_fin_err)
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+                                         .filter(dbt.job_table.state=='compiled').count()
+    assert (count == num_jobs)

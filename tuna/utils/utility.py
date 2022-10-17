@@ -125,15 +125,15 @@ def get_mmi_env_vars(env_vars={}):
   if 'gateway_ip' in os.environ:
     env_vars['gateway_ip'] = os.environ['gateway_ip']
   else:
-    raise ValueError("Please specify gateway IP env variable: gateway_ip")
+    env_vars['gateway_ip'] = None
   if 'gateway_port' in os.environ:
     env_vars['gateway_port'] = os.environ['gateway_port']
   else:
-    raise ValueError("Please specify gateway port env variable: gateway_port")
+    env_vars['gateway_port'] = None
   if 'gateway_user' in os.environ:
     env_vars['gateway_user'] = os.environ['gateway_user']
   else:
-    raise ValueError("Please specify gateway user env variable: gateway_user")
+    env_vars['gateway_user'] = None
 
   return env_vars
 

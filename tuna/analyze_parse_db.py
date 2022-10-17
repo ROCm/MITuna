@@ -171,26 +171,24 @@ def insert_solver_sqlite(cnx, slv):
   config = slv['config']
   solver_id = slv['solver']
   params = slv['params']
-  marker = "?"
+  mrk = "?"
 
-  where_clause = " where config = {mk} and solver = {mk}".format(mk=marker)
+  where_clause = f" where config = {mrk} and solver = {mrk}"
   query = "select id from perf_db " + where_clause
   cur = cnx.cursor()
   cur.execute(query, (config, solver_id))
   res = cur.fetchall()
-  cur.close()
   if not res:
-    query = "insert into perf_db(config, solver, params) values \
-    ({mk}, {mk}, {mk});".format(mk=marker)
-    cur = cnx.cursor()
+    query = f"insert into perf_db(config, solver, params) values \
+    ({mrk}, {mrk}, {mrk});"
+
     cur.execute(query, (config, solver_id, params))
-    cur.close()
   else:
-    query = f"update perf_db set params = {marker} " + where_clause
-    cur = cnx.cursor()
-    cur.execute(query, (params, config, solver_id))
-    cur.close()
-  cnx.commit()
+    perf_id = res[0][0]
+    query = f"update perf_db set params = {mrk} where id={mrk};"
+    cur.execute(query, (params, perf_id))
+
+  cur.close()
 
 
 def parse_pdb_filename(fname):

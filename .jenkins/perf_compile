@@ -2,56 +2,40 @@ def shared_library_branch = scm.branches[0].name
 if (shared_library_branch .contains("*/")) {
     shared_library_branch  = shared_library_branch.split("\\*/")[1]
    }
-echo shared_library_branch 
+def util_lib="jenkins-shared@${shared_library_branch}"
+echo "${util_lib}"
 
-library "jenkins-shared@${shared_library_branch}"
+library "${util_lib}"
 
 
 def VerifyArgs()
 {
-    if(params.job_label == '')
+    if(params.session_id == '')
     {
-      error "Please specify a job label"
-    }
-    
-    //if(params.arch == '' || params.num_cu == '')
-    //{
-    //  error "Arch and num_cu must both be specified"
-    //}
-
-    if(params.rocm_version == '' && params.osdb_bkc_version == '')
-    {
-      error "Either ROCm version or OSDB build number is required"
-    }
-
-    if(params.rocm_version != '' && params.osdb_bkc_version != '')
-    {
-      error "Can only specify either the ROCm version or the OSDB build number"
+      error "Please specify a session_id"
     }
 }
 
 
 pipeline {
-  agent { node { label 'mysql' } }
+  agent { node { label 'slurm' } }
   environment {
-      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
-      partition = "${slurm_partition}"
-      backend = "HIP"
+      backend = 'HIPNOGPU'
+      docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password}"
       tuna_docker_name = utils.getDockerName("${backend}")
+      db_name = "${params.db_name}"
+      partition = "${params.slurm_partition}"
   }
   parameters {
-    string(name: 'branch_name', defaultValue: 'compile_pipe', description: '')
-    string(name: 'miopen_branch_name', defaultValue: 'develop', description: 'MIOpen branch used to build dockers')
+    string(name: 'branch_name', defaultValue: 'compile_pipe_gold', description: '')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
-    string(name: 'job_label', defaultValue: '', description: 'Label for new jobs.')
-    string(name: 'slurm_partition', defaultValue: 'gpu-node', description: 'Name of the slurm partition to run jobs on')
+    string(name: 'session_id', defaultValue: '', description: 'session id for compile')
+    string(name: 'slurm_partition', defaultValue: 'build-only', description: 'Name of the slurm partition to run jobs on')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
     string(name: 'env', defaultValue: '', description: 'Additional environment variables for compilation.')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
-    string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
-    string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
-    string(name: 'db_name', defaultValue: "${TUNA_DB_NAME}", description: 'Name of the database schema')
+    string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
     string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')

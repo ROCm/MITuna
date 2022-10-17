@@ -42,7 +42,7 @@ from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import get_id_solvers
+from tuna.utils.db_utility import get_solver_ids, get_id_solvers, session_retry
 from tuna.abort import chk_abort_file
 from tuna.fin_utils import compose_config_obj
 from tuna.fin_utils import get_fin_slv_status
@@ -50,7 +50,7 @@ from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME, PREC_TO_CMD
 from tuna.metadata import TABLE_COLS_FUSION_MAP, TABLE_COLS_CONV_MAP, INVERS_DIR_MAP
 from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
 from tuna.metadata import FIND_ONLY_EXCEPTION
-from tuna.metadata import get_solver_ids, TENSOR_PRECISION
+from tuna.metadata import TENSOR_PRECISION
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
@@ -376,12 +376,12 @@ class WorkerInterface(Process):
     kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
     return kernel_obj
 
-  def process_fdb_w_kernels(self,
-                            session,
-                            fin_json,
-                            result_str='miopen_find_compile_result',
-                            check_str='find_compiled'):
-    """retrieve find db compile json results"""
+  def update_fdb_w_kernels(self,
+                           session,
+                           fin_json,
+                           result_str='miopen_find_compile_result',
+                           check_str='find_compiled'):
+    """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:
       for fdb_obj in fin_json[result_str]:
@@ -408,14 +408,28 @@ class WorkerInterface(Process):
           'result': 'Find Compile: No results'
       }]
 
-    try:
-      session.commit()
-    except OperationalError as err:
-      self.logger.warning('FinEval: Unable to update Database: %s', err)
+    session.commit()
+
+    return status
+
+  def process_fdb_w_kernels(self,
+                            session,
+                            fin_json,
+                            result_str='miopen_find_compile_result',
+                            check_str='find_compiled'):
+    """initiate find db update"""
+
+    callback = self.update_fdb_w_kernels
+    status = session_retry(
+        session, callback,
+        lambda x: x(session, fin_json, result_str, check_str), self.logger)
+
+    if not status:
+      self.logger.warning('Fin: Unable to update Database')
       status = [{
           'solver': 'all',
           'success': False,
-          'result': f'FinEval: Unable to update Database: {err}'
+          'result': 'Fin: Unable to update Database'
       }]
 
     return status

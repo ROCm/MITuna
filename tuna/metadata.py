@@ -29,7 +29,6 @@
 
 import os
 
-from tuna.sql import DbCursor
 from tuna.config_type import ConfigType
 
 DOCKER_CMD = "sudo docker run --device='/dev/kfd' --device='/dev/dri' -w /tmp/miopenpdb \
@@ -93,8 +92,8 @@ TABLE_COLS_CONV_MAP = {
     '-fil_h': ('fil_h', 3),
     'z': ('pad_mode', 'default'),
     '-pad_mode': ('pad_mode', 'default'),
-    'm': ('conv_mode', 'conv'),
-    '-mode': ('conv_mode', 'conv'),
+    'm': ('mode', 'conv'),
+    '-mode': ('mode', 'conv'),
     '!': ('in_d', '32'),
     '-in_d': ('in_d', '32'),
     '@': ('fil_d', '3'),
@@ -108,6 +107,10 @@ TABLE_COLS_CONV_MAP = {
     '-spatial_dim': ('spatial_dim', '2'),
     '%': ('trans_output_pad_d', '0'),
     '-trans_output_pad_d': ('trans_output_pad_d', '0'),
+    'X': ('trans_output_pad_w', '0'),
+    '-trans_output_pad_w': ('trans_output_pad_w', '0'),
+    'Y': ('trans_output_pad_h', '0'),
+    '-trans_output_pad_h': ('trans_output_pad_h', '0'),
     '-in_layout': ('in_layout', 'NCHW'),
     'I': ('in_layout', 'NCHW'),
     '-out_layout': ('out_layout', 'NCHW'),
@@ -216,19 +219,21 @@ TENSOR_PRECISION = {
     'conv': 'FP32',
     'FP16': 'FP16',
     'convfp16': 'FP16',
-    'BF16': 'BFP16',
-    'convbfp16': 'BFP16',
+    'BF16': 'BF16',
+    'convbfp16': 'BF16',
+    'INT8': 'INT8',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }
 
-SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16']
+SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16', 'convint8']
 SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16']
 
 CONV_CONFIG_COLS = [
     'batchsize', 'spatial_dim', 'pad_h', 'pad_w', 'pad_d', 'conv_stride_h',
     'conv_stride_w', 'conv_stride_d', 'dilation_h', 'dilation_w', 'dilation_d',
-    'group_count', 'conv_mode', 'pad_mode', 'trans_output_pad_h',
+    'group_count', 'mode', 'pad_mode', 'trans_output_pad_h',
     'trans_output_pad_w', 'trans_output_pad_d', 'out_layout', 'direction'
 ]
 
@@ -279,12 +284,12 @@ TABLE_COLS_FUSION_MAP = {
 FUSION_COLS = [v for _, v in TABLE_COLS_FUSION_MAP.items()]
 CONV_COLS = [v for _, v in TABLE_COLS_CONV_MAP.items()]
 
-CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S']
+CONV_SKIP_ARGS = ['i', 't', 'V', 's', 'b', 'w', 'S', 'Z']
 BN_SKIP_ARGS = ['i', 't', 'V', 's', 'w', 'S']
 
-DIR_MAP = {'1': 'F', '2': 'B', '4': 'W'}
-INVERS_DIR_MAP = {'F': '1', 'B': '2', 'W': '4'}
-DIRECTION = ['1', '2', '4']
+DIR_MAP = {1: 'F', 2: 'B', 4: 'W'}
+INVERS_DIR_MAP = {'F': 1, 'B': 2, 'W': 4}
+DIRECTION = [1, 2, 4]
 
 FIND_ONLY_EXCEPTION = {
     'gemm': 'MIOPEN_DEBUG_CONV_GEMM',
@@ -442,25 +447,6 @@ SLV_ENV_MAP = {
         'MIOPEN_DEBUG_AMD_FUSED_WINOGRAD'  #variable filter size.
 }
 
-
-def get_solver_ids():
-  """DB solver name to id map"""
-  # TODO: Get this info from the SQLAlchemy class  # pylint: disable=fixme
-  solver_id_map_c = {}
-  solver_id_map_h = {}
-  with DbCursor() as sql_cur:
-    sql_cur.execute("SELECT solver, id FROM solver WHERE valid=1;")
-    slv_info = sql_cur.fetchall()
-
-  for slv, sid in slv_info:
-    solver_id_map_c[slv] = sid
-    solver_id_map_h[slv.replace(', ', '-')] = sid
-
-  solver_id_map = solver_id_map_c.copy()
-  solver_id_map.update(solver_id_map_h)
-  return solver_id_map, solver_id_map_h
-
-
 #used in Parsing
 FDS_3D = [
     'pad_d', 'pad_h', 'pad_w', 'out_channels', 'fil_d', 'fil_w', 'fil_h',
@@ -513,7 +499,7 @@ CONV_2D_DEFAULTS = {
     'pad_w': 0,
     'batchsize': 32,
     'pad_mode': 'default',
-    'conv_mode': 'conv',
+    'mode': 'conv',
     'fil_d': 1,
     'in_d': 1,
     'spatial_dim': 2,
@@ -548,7 +534,7 @@ CONV_3D_DEFAULTS = {
     'pad_w': 0,
     'batchsize': 100,
     'pad_mode': 'default',
-    'conv_mode': 'conv',
+    'mode': 'conv',
     'fil_d': 3,
     'in_d': 32,
     'spatial_dim': 3,
@@ -583,7 +569,7 @@ FUSION_DEFAULTS = {
     'pad_w': 0,
     'batchsize': 100,
     'pad_mode': 'default',
-    'conv_mode': 'conv',
+    'mode': 'conv',
     'fil_d': 3,
     'in_d': 32,
     'spatial_dim': 3,
@@ -593,7 +579,6 @@ FUSION_DEFAULTS = {
     'trans_output_pad_d': 0
 }
 
-#Alex-NOTE: can someone double check this?
 BN_DEFAULTS = {'in_d': 1, 'out_channels': 1, 'num_dims': 2}
 
 ARCH_NUM_CU_LIST = [
@@ -606,7 +591,7 @@ PREC_TO_CMD = {
         'FP32': 'conv',
         'FP16': 'convfp16',
         'BF16': 'convbfp16',
-        'BFP16': 'convbfp16'
+        'INT8': 'convint8'
     },
     ConfigType.batch_norm: {
         'FP32': 'bnorm',
@@ -617,6 +602,7 @@ CMD_TO_PREC = {
     'conv': 'FP32',
     'convfp16': 'FP16',
     'convbfp16': 'BF16',
+    'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16'
 }

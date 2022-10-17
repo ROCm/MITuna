@@ -154,8 +154,10 @@ def insert_config(driver, counts, dbt, args):
         session.add(new_cf)
         session.commit()
         counts['cnt_configs'] += 1
+        session.refresh(new_cf)
       except IntegrityError as err:
         LOGGER.warning("Err occurred: %s", err)
+        session.rollback()
     else:
       try:
         if args.mark_recurrent or args.tag:
@@ -167,10 +169,11 @@ def insert_config(driver, counts, dbt, args):
           counts['cnt_tagged_configs'].add(new_cf.id)
       except IntegrityError as err:
         LOGGER.warning("Err occurred: %s", err)
+        session.rollback()
     if args.mark_recurrent or args.tag:
       _ = tag_config_v2(driver, counts, dbt, args, new_cf)
 
-  return True
+  return new_cf.id
 
 
 def process_config_line_v2(driver, args, counts, dbt):
