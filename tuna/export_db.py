@@ -38,7 +38,7 @@ from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
-from tuna.fin_utils import compose_config_obj
+from tuna.miopen.fin_utils import compose_config_obj
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
 

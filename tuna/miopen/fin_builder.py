@@ -30,10 +30,10 @@ import json
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 
-from tuna.fin_class import FinClass
+from tuna.miopen.fin_class import FinClass
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.fin_utils import fin_job
-from tuna.fin_utils import get_fin_slv_status, get_fin_result
+from tuna.miopen.fin_utils import fin_job
+from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
 
 
 class FinBuilder(FinClass):

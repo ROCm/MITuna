@@ -34,7 +34,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.fin_builder import FinBuilder
+from tuna.miopen.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.tables import ConfigType

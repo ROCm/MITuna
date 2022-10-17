@@ -37,7 +37,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.worker_interface import WorkerInterface
 from tuna.go_fish import load_machines, compose_worker_list
-from tuna.fin_class import FinClass
+from tuna.miopen.fin_class import FinClass
 from tuna.machine import Machine
 from utils import get_worker_args, add_test_session
 from tuna.sql import DbCursor

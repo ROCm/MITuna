@@ -34,7 +34,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.go_fish import load_machines, compose_worker_list
-from tuna.fin_class import FinClass
+from tuna.miopen.fin_class import FinClass
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
