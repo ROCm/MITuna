@@ -69,8 +69,7 @@ def main():
 
   try:
 
-    #worker_lst = library.compose_worker_list(res, args)
-    #returns a list of workers/processes it ran
+    #returns a list of workers/processes it started
     worker_lst = library.run()
     if worker_lst is None:
       return

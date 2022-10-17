@@ -367,9 +367,6 @@ class MIOpen(MITunaInterface):
   def run(self):
     """Main function to launch library"""
     res = None
-    #self.args = self.parse_args(parser)
-    #if self.args is None:
-    #  return res
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res
