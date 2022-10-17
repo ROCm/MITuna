@@ -70,7 +70,7 @@ def get_qts_machine_data(mid, mhost, slogger):
 
 def print_solvers():
   """Pretty print solvers list"""
-  slv_dict, _ = get_solver_ids()
+  slv_dict = get_solver_ids()
   for name, sid in slv_dict.items():
     print(f"{sid:>4} - {name}")
 

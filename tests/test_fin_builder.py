@@ -68,7 +68,7 @@ def add_fin_find_compile_job(session_id, dbt):
   #limit job scope
   args.algo = "miopenConvolutionAlgoGEMM"
   solver_arr = ALG_SLV_MAP[args.algo]
-  solver_id_map, _ = get_solver_ids()
+  solver_id_map = get_solver_ids()
   if solver_arr:
     solver_ids = []
     for solver in solver_arr:
