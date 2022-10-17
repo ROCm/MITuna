@@ -390,6 +390,21 @@ class WorkerInterface(Process):
     self.logger.info('Got rocm version: %s', out)
     return out
 
+  def check_env(self):
+    """Checking that presumed rocm/miopen_v corresponds to the env rocm/miopen_v"""
+    env_rocm_v = self.get_rocm_v()
+    if self.dbt.session.rocm_v != env_rocm_v:
+      raise ValueError(
+          f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
+      )
+    env_miopen_v = self.get_miopen_v()
+    if self.dbt.session.miopen_v != env_miopen_v:
+      raise ValueError(
+          f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
+      )
+
+    return True
+
   def set_barrier(self, funct, with_timeout):
     """Setting time barrier for Process to define execution timeout"""
     if self.barred.value == 0:
