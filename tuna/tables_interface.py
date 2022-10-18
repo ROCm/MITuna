@@ -44,7 +44,6 @@ class DBTablesInterface():
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
-    self.set_tables()
 
   def set_tables(self):
     """Set appropriate tables based on config type"""
