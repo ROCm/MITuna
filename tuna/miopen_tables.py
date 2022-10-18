@@ -537,13 +537,13 @@ class BenchmarkTable(BASE, GoldenMixin):
 
 class BenchmarkPerfTable(BASE, GoldenMixin):
   """benchmark table for performance parameters"""
-  __tablename__ = "benchmark_perf_table"
+  __tablename__ = "conv_benchmark_perf_table"
   __table_args__ = (UniqueConstraint("solver",
                                      "rocm_v",
                                      "miopen_v",
                                      name="uq_idx"),)
 
-  config = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
+  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   solver = Column(String(length=128), nullable=True, server_default="")
   workspace_sz = Column(BigInteger, nullable=False)
