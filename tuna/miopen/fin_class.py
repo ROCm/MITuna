@@ -43,6 +43,7 @@ from tuna.metadata import INVERS_DIR_MAP
 from tuna.miopen.fin_utils import compose_config_obj
 from tuna.miopen.fin_utils import get_fin_slv_status
 from tuna.config_type import ConfigType
+from tuna.tables import DBTables
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 
@@ -56,8 +57,7 @@ class FinClass(WorkerInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
-    super().__init__(**kwargs)
-    allowed_keys = set(['fin_steps', 'local_file', 'fin_infile', 'fin_outfile'])
+    allowed_keys = set(['fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type'])
     self.__dict__.update((key, None) for key in allowed_keys)
 
     self.supported_fin_steps = ["get_solvers", "applicability"]
@@ -77,6 +77,11 @@ class FinClass(WorkerInterface):
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
+    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
+
+    #call to set_db_tables in super must come after config_type is set
+    super().__init__(**kwargs)
+
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
@@ -91,6 +96,38 @@ class FinClass(WorkerInterface):
       return True
 
     return False
+
+  def set_db_tables(self):
+    """Initialize tables"""
+    self.dbt = DBTables(session_id=self.session_id,
+                        config_type=self.config_type)
+
+  def compose_work_query(self, session, job_query):
+    """query for fin command and config"""
+    job_ids = [job.id for job in job_query.all()]
+    query = session.query(self.dbt.job_table, self.dbt.config_table)\
+        .filter(self.dbt.config_table.valid == 1)\
+        .filter(self.dbt.job_table.id.in_(job_ids))\
+        .filter(self.dbt.job_table.config == self.dbt.config_table.id)
+
+    if self.fin_steps:
+      query = query.filter(
+          self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
+    else:
+      query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
+
+    return query
+
+  def check_jobs_found(self, job_cfgs, find_state, imply_end):
+    if not job_cfgs:
+      # we are done
+      self.logger.warning(
+          'No %s jobs found, fin_step: %s, session %s', find_state,
+          self.fin_steps, self.session_id)
+      if imply_end:
+        self.logger.warning("set end")
+        self.end_jobs.value = 1
+      return False
 
   def compose_fincmd(self):
     """Helper function to compose fin docker cmd"""

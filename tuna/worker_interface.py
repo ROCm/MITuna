@@ -45,7 +45,6 @@ from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables import DBTables
 from tuna.db_tables import connect_db
-from tuna.config_type import ConfigType
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -65,8 +64,8 @@ class WorkerInterface(Process):
 
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
-        'reset_interval', 'fin_steps', 'job_queue', 'queue_lock', 'label',
-        'fetch_state', 'docker_name', 'end_jobs', 'config_type',
+        'reset_interval', 'job_queue', 'queue_lock', 'label',
+        'fetch_state', 'docker_name', 'end_jobs',
         'dynamic_solvers_only', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
@@ -83,7 +82,6 @@ class WorkerInterface(Process):
     self.end_jobs = None
     #job detail vars
     self.envmt = []
-    self.fin_steps = []
     self.fetch_state = ['new']
     self.docker_name = TUNA_DOCKER_NAME
     self.label = None
@@ -93,10 +91,8 @@ class WorkerInterface(Process):
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-    #initialize tables
-    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
-    self.dbt = DBTables(session_id=self.session_id,
-                        config_type=self.config_type)
+    self.set_db_tables()
+
     #add cache directories
     self.envmt.append(
         f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
@@ -143,30 +139,32 @@ class WorkerInterface(Process):
     lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
     self.logger = lgr
 
+  def set_db_tables(self):
+    """Initialize tables"""
+    self.dbt = DBTables(session_id=self.session_id)
+
   def reset_machine(self):
     """Function to reset machhine"""
     self.machine.restart_server()
     self.last_reset = datetime.now()
 
+  def compose_work_query(self, session, job_query):
+    """default job description"""
+    return job_query
+
   def compose_job_query(self, find_state, session):
     """Helper function to compose query"""
-    # pylint: disable=comparison-with-callable
-    query = session.query(self.dbt.job_table, self.dbt.config_table)\
+    query = session.query(self.dbt.job_table)\
                           .filter(self.dbt.job_table.session == self.dbt.session.id)\
-                          .filter(self.dbt.job_table.valid == 1)\
-                          .filter(self.dbt.config_table.valid == 1)
-    # pylint: enable=comparison-with-callable
+                          .filter(self.dbt.job_table.valid == 1)
 
     if self.label:
       query = query.filter(self.dbt.job_table.reason == self.label)
-    if self.fin_steps:
-      query = query.filter(
-          self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
-    else:
-      query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
+
     query = query.filter(self.dbt.job_table.retries < MAX_JOB_RETRIES)\
-      .filter(self.dbt.job_table.state == find_state)\
-      .filter(self.dbt.config_table.id == self.dbt.job_table.config)
+      .filter(self.dbt.job_table.state == find_state)
+
+    query = self.compose_work_query(session, query)
 
     query = query.order_by(self.dbt.job_table.retries.asc()).limit(
         self.claim_num).with_for_update()
@@ -224,6 +222,33 @@ class WorkerInterface(Process):
       self.job_queue.put((job, config, solver))
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
+  def check_jobs_found(job_cfgs, find_state, imply_end):
+    """check for end of jobs"""
+    if not job_cfgs:
+      # we are done
+      self.logger.warning(
+          'No %s jobs found, session %s', find_state,
+          self.session_id)
+      if imply_end:
+        self.logger.warning("set end")
+        self.end_jobs.value = 1
+      return False
+    return True
+
+  def get_job_ids(self, job_rows):
+    """find job table in query results and return ids"""
+    for tble in job_rows:
+      if type(tble) == list):
+        if type(tble[0]) == type(self.dbt.job_table)
+          ids = tuple((str(job.id) for job in tble))
+          return ids;
+      elif type(tble) == type(self.dbt.job_table)
+        ids = tuple((str(job.id) for job in job_rows))
+        return ids;
+
+    ids = []
+    return ids
+
   #pylint: disable=too-many-branches
   def get_job(self, find_state, set_state, imply_end):
     """Interface function to get new job for builder/evaluator"""
@@ -237,19 +262,12 @@ class WorkerInterface(Process):
             ids = ()
             with DbSession() as session:
               query = self.compose_job_query(find_state, session)
-              job_cfgs = query.all()
+              job_rows = query.all()
 
-              if not job_cfgs:
-                # we are done
-                self.logger.warning(
-                    'No %s jobs found, fin_step: %s, session %s', find_state,
-                    self.fin_steps, self.session_id)
-                if imply_end:
-                  self.logger.warning("set end")
-                  self.end_jobs.value = 1
+              if not self.check_jobs_found(job_rows, find_state, imply_end):
                 return False
 
-              ids = tuple((str(job_row.id) for job_row, _ in job_cfgs))
+              ids = self.get_job_ids(job_rows)
               self.logger.info("%s jobs %s", find_state, ids)
               if set_state == "eval_start":
                 session.query(self.dbt.job_table).filter(
