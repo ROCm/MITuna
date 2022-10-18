@@ -538,8 +538,7 @@ class BenchmarkTable(BASE, GoldenMixin):
 class BenchmarkPerfTable(BASE, GoldenMixin):
   """benchmark table for performance parameters"""
   __tablename__ = "benchmark_perf_table"
-  __table_args__ = (UniqueConstraint("kernel_time",
-                                     "solver",
+  __table_args__ = (UniqueConstraint("solver",
                                      "workspace_sz",
                                      "rocm_v",
                                      "miopen_v",
