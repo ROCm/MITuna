@@ -50,7 +50,6 @@ class MIOpenDBTables(DBTablesInterface):
     self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
-    #self.job_table = None
     self.config_table = None
     self.config_tags_table = None
     self.find_db_table = None
@@ -61,10 +60,7 @@ class MIOpenDBTables(DBTablesInterface):
     self.kernel_cache = None
     self.tensor_table = TensorTable
     self.golden_table = None
-
     self.config_type = None
-    #self.session_id = None
-    #self.session = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
