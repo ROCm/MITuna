@@ -31,7 +31,7 @@ from collections import OrderedDict
 import base64
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.utils.utility import arch2targetid
@@ -476,7 +476,7 @@ def main():
   """Main module function"""
   args = parse_args()
   result_file = ''
-  dbt = DBTables(session_id=args.session_id)
+  dbt = MIOpenDBTables(session_id=args.session_id)
 
   if args.session_id:
     args.arch = dbt.session.arch

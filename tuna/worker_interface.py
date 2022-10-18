@@ -52,7 +52,7 @@ from tuna.metadata import ENV_SLVGRP_MAP, SLV_ENV_MAP
 from tuna.metadata import FIND_ONLY_EXCEPTION
 from tuna.metadata import TENSOR_PRECISION
 from tuna.metadata import NUM_SQL_RETRIES
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.db_tables import connect_db
 from tuna.config_type import ConfigType
 
@@ -124,8 +124,8 @@ class WorkerInterface(Process):
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-    self.dbt = DBTables(session_id=self.session_id,
-                        config_type=self.config_type)
+    self.dbt = MIOpenDBTables(session_id=self.session_id,
+                              config_type=self.config_type)
 
     self.miopen_user_db_path = f"/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
     self.envmt.append(

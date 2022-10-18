@@ -35,7 +35,7 @@ this_path = os.path.dirname(__file__)
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.go_fish import load_machines, compose_worker_list
 from tuna.fin_class import FinClass
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
@@ -52,7 +52,7 @@ def add_cfgs():
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = DBTables(config_type=args.config_type)
+  dbt = MIOpenDBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt)
   return dbt
 

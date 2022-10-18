@@ -37,9 +37,9 @@ this_path = os.path.dirname(__file__)
 from tuna.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
-from tuna.tables import ConfigType
+from tuna.miopen.tables import ConfigType
 from utils import CfgImportArgs, LdJobArgs
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.import_configs import import_cfgs
 from tuna.db_tables import connect_db
 from tuna.miopen_tables import ConvolutionJob
@@ -56,7 +56,7 @@ def test_abort():
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
   #load jobs
@@ -78,7 +78,7 @@ def test_abort():
   num_jobs = len(job_list)
 
   connect_db()
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
   if args.tag:
     try:
       tag_name_test(args.tag, dbt)

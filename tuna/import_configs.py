@@ -32,10 +32,10 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.db_tables import connect_db, ENGINE
-from tuna.tables import ConfigType
+from tuna.miopen.tables import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.driver_bn import DriverBatchNorm
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 
 LOGGER = setup_logger('import_configs')
 
@@ -229,7 +229,7 @@ def main():
   args = parse_args()
   counts = {}
 
-  dbt = DBTables(session_id=None, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
 
   counts = import_cfgs(args, dbt)
 

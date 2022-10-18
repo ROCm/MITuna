@@ -34,7 +34,7 @@ from tuna.machine import Machine
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.tables import ConfigType
+from tuna.miopen.tables import ConfigType
 from tuna.metadata import MIOPEN_ALG_LIST
 from tuna.helper import print_solvers
 from tuna.miopen_tables import FinStep
