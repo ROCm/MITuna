@@ -41,7 +41,7 @@ from tuna.fin_class import FinClass
 from tuna.machine import Machine
 from utils import get_worker_args, add_test_session
 from tuna.sql import DbCursor
-from tuna.miopen.tables import ConfigType
+from tuna.config_type import ConfigType
 from utils import add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from tuna.miopen.tables import MIOpenDBTables

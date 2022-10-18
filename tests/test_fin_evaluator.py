@@ -38,7 +38,7 @@ from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.tables import MIOpenDBTables
 from dummy_machine import DummyMachine
-from tuna.miopen.tables import ConfigType
+from tuna.config_type import ConfigType
 from utils import CfgImportArgs
 
 
