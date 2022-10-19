@@ -149,22 +149,6 @@ def get_config_mysql(fds, cnx):
   return config_id
 
 
-def get_solver(sol, cnx):
-  """get id for the solver name"""
-  query = "SELECT id from solver where name = %s"
-  cur = cnx.cursor()
-  cur.execute(query, (sol,))
-  res = cur.fetchall()
-  if len(res) > 1:
-    LOGGER.error('Duplicate entries in solver table for solver: %s', sol)
-    sys.exit(-1)
-  elif not res:
-    LOGGER.error('Unknown Solver: %s', sol)
-    sys.exit(-1)
-  cur.close()
-  return res[0][0]
-
-
 def insert_solver_sqlite(cnx, slv):
   """insert solver into sqlite """
 

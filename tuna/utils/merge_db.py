@@ -41,11 +41,6 @@ LOGGER = setup_logger('merge_pdb')
 
 DB_ALIAS = {'gfx803_36': 'gfx900_64', 'gfx803_64': 'gfx900_64'}
 
-SSH_TIMEOUT = 60.0  # in seconds
-SQLITE_REMOTE_TARGET_DB = 'miopen_1.0.0.udb'
-#  SQLITE_LOCAL_MERGE_DB = os.path.abspath(os.path.expanduser('miopen.db'))
-SQLITE_LOCAL_MERGE_DB = 'miopen.db'
-
 
 def parse_jobline(line):
   """get entries from a fdb text line """

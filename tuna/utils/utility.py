@@ -65,24 +65,6 @@ def split_packets(elements, pack_sz=1000):
   return all_packs
 
 
-def get_filter_time(time_arr):
-  """Get filter time"""
-  rmid = len(time_arr) // 3
-  warm_times = time_arr[rmid:]
-  warm_mean = sum(warm_times) / len(warm_times)
-
-  variance = sum(
-      (pow(x_var - warm_mean, 2) for x_var in warm_times)) / len(warm_times)
-  std_dev = pow(variance, 1 / 2)
-  filter_warm = []
-  for time in warm_times:
-    if abs(time - warm_mean) <= std_dev:
-      filter_warm.append(time)
-  filter_mean = sum(filter_warm) / len(filter_warm)
-
-  return filter_mean
-
-
 def check_qts(hostname, logger=LOGGER):
   """find if hostname string has a local ip in qts"""
   if hostname in QTS_LIST:
@@ -154,10 +136,3 @@ def get_mmi_env_vars(env_vars={}):
     env_vars['gateway_user'] = None
 
   return env_vars
-
-
-class DotDict(dict):
-  """dot.notation access to dictionary attributes"""
-  __getattr__ = dict.get
-  __setattr__ = dict.__setitem__
-  __delattr__ = dict.__delitem__

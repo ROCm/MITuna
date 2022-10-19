@@ -26,19 +26,20 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a batch_normDriver cmd"""
 from tuna.driver_base import DriverBase
-from tuna.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS
+from tuna.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS, PREC_TO_CMD
 from tuna.metadata import SUPPORTED_BN_CMDS, TABLE_COLS_BN_MAP, BN_DEFAULTS
 from tuna.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
 from tuna.miopen_tables import BNConfig
 from tuna.parsing import get_fd_name, arg_valid
 from tuna.helper import get_db_id
+from tuna.config_type import ConfigType
 
 
 #pylint: disable=too-many-instance-attributes
 class DriverBatchNorm(DriverBase):
   """Represents db tables based on ConfigType"""
 
-  def __init__(self, line, cmd=None):
+  def __init__(self, line=None, cmd=None, db_obj=None):
     self.batchsize = 0
     self.alpha = 1
     self.beta = 0
@@ -51,12 +52,13 @@ class DriverBatchNorm(DriverBase):
     self.in_w = 1
     self.in_channels = 1
     self.in_layout = 'NCHW'
-    self._cmd = cmd
     self.num_dims = None
     self.direction = None
+    self.save = 0
+    self.verify = 1
     self._cmd = 'bnorm'
 
-    super().__init__(line)
+    super().__init__(line, db_obj)
     #allow cmd input to override driver line
     if cmd:
       self._cmd = cmd
@@ -69,7 +71,6 @@ class DriverBatchNorm(DriverBase):
   @cmd.setter
   def cmd(self, value):
     """Checking allowed BN cmd values"""
-    print(value)
     if value not in SUPPORTED_BN_CMDS:
       raise ValueError(f'Cannot instantiate batch normalization Driver class. \
            Supported cmds are: {SUPPORTED_BN_CMDS}')
@@ -78,13 +79,28 @@ class DriverBatchNorm(DriverBase):
   def parse_driver_line(self, line):
     super().parse_driver_line(line)
 
-    self.direction = str(int(self.forw) + 4 * int(self.back))
+    self.compute_direction()
+
+  def compute_direction(self):
+    """Setting BN direction based on forw and back"""
+    self.direction = int(self.forw) + 4 * int(self.back)
 
     if self.direction and self.direction in DIRECTION:
       self.direction = DIR_MAP[self.direction]
     else:
-      raise ValueError(f"Can't import driver commmand line, \
-          one and only one of forw or back must be set: '{line}'")
+      raise ValueError("Can't import driver commmand line, \
+          one and only one of forw or back must be set")
+
+  def parse_row(self, db_obj):
+    """Overwritting base class function for batch_norm"""
+    return self.parse_bn_row(db_obj)
+
+  def parse_bn_row(self, db_obj):
+    """Compose obj from bn_config row"""
+    for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
+      if key not in ('id', 'input_t', 'driver'):
+        setattr(self, key, value)
+    self.compute_direction()
 
   def compose_tensors(self, keep_id=False):
     """Get tensors needed for DB table based on config type"""
@@ -132,7 +148,7 @@ class DriverBatchNorm(DriverBase):
 
   def __str__(self):
     return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(
-        f'--{key} {val}' for key, val in self.__dict__.items()
+        f'--{key} {val}' for key, val in vars(self).items()
         if key in BN_CONFIG_COLS or key in IN_TENSOR_COLS or
         key in self.get_common_cols())
 
@@ -142,3 +158,7 @@ class DriverBatchNorm(DriverBase):
     if tok1 in BN_SKIP_ARGS:
       return True
     return False
+
+  def set_cmd(self, data_type):
+    """Set cmd based on tensor data type"""
+    self.cmd = PREC_TO_CMD[ConfigType.batch_norm][data_type]
