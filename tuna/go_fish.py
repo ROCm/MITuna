@@ -39,7 +39,11 @@ def parse_args():
   """Function to parse arguments"""
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('lib', nargs='?', default=Library.MIOPEN.value.lower())
+  parser.add_argument('lib',
+                      nargs='?',
+                      default=Library.MIOPEN.value.lower(),
+                      help="Specify library to run",
+                      choices=Library)
 
   args, _ = parser.parse_known_args()
   return vars(args)
