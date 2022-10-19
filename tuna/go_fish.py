@@ -41,7 +41,8 @@ def parse_args():
 
   parser.add_argument('lib',
                       nargs='?',
-                      default=Library.MIOPEN.value.lower(),
+                      default=Library.MIOPEN,
+                      type=Library,
                       help="Specify library to run",
                       choices=Library)
 
@@ -51,7 +52,7 @@ def parse_args():
 
 def setup_library(args):
   """Return Library class based on args"""
-  if 'lib' not in args.keys() or args['lib'].lower(
+  if 'lib' not in args.keys() or args['lib'].value.lower(
   ) == Library.MIOPEN.value.lower():
     library = MIOpen()
   else:
