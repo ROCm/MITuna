@@ -129,6 +129,11 @@ class FinClass(WorkerInterface):
         self.end_jobs.value = 1
       return False
 
+  def job_queue_pop(self):
+    self.job, self.config, self.solver = self.job_queue.get(True, 1)
+    self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
+                      self.job.reason)
+
   def compose_fincmd(self):
     """Helper function to compose fin docker cmd"""
     if self.machine.local_machine:

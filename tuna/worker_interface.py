@@ -176,7 +176,7 @@ class WorkerInterface(Process):
     with self.bar_lock:
       self.end_jobs.value = 0
 
-  def load_job_queue(self, session, ids):
+  def job_queue_load(self, session, ids):
     """load job_queue with info for job ids"""
     # pylint: disable=comparison-with-callable
     job_cfgs = session.query(self.dbt.job_table, self.dbt.config_table)\
@@ -221,6 +221,11 @@ class WorkerInterface(Process):
 
       self.job_queue.put((job, config, solver))
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
+
+  def job_queue_pop(self):
+    self.job = self.job_queue.get(True, 1)
+    self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
+                      self.job.reason)
 
   def check_jobs_found(job_cfgs, find_state, imply_end):
     """check for end of jobs"""
@@ -290,12 +295,10 @@ class WorkerInterface(Process):
                         synchronize_session='fetch')
               session.commit()
 
-              self.load_job_queue(session, ids)
+              self.job_queue_load(session, ids)
 
           #also in queue_lock
-          self.job, self.config, self.solver = self.job_queue.get(True, 1)
-          self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
-                           self.job.reason)
+          self.job_queue_pop()
 
         return True
       except OperationalError as error:
