@@ -535,7 +535,7 @@ class BenchmarkTable(BASE, GoldenMixin):
   driver_cmd = Column(String(length=128), nullable=False)
 
 
-class BenchmarkPerfTable(BASE, GoldenMixin):
+class ConvBenchPerfTable(BASE, GoldenMixin):
   """benchmark table for performance parameters"""
   __tablename__ = "conv_benchmark_perf_table"
   __table_args__ = (UniqueConstraint("solver",
@@ -544,6 +544,7 @@ class BenchmarkPerfTable(BASE, GoldenMixin):
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  benchmark = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   solver = Column(String(length=128), nullable=True, server_default="")
   workspace_sz = Column(BigInteger, nullable=False)
@@ -596,7 +597,7 @@ def get_miopen_tables():
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
   miopen_tables.append(BenchmarkTable())
-  miopen_tables.append(BenchmarkPerfTable())
+  miopen_tables.append(ConvBenchPerfTable())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)
