@@ -52,8 +52,7 @@ def parse_args():
 
 def setup_library(args):
   """Return Library class based on args"""
-  if 'lib' not in args.keys() or args['lib'].value.lower(
-  ) == Library.MIOPEN.value.lower():
+  if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
     library = MIOpen()
   else:
     raise ValueError("Not implemented")
