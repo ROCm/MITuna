@@ -171,17 +171,9 @@ class MIOpen(MITunaInterface):
                        default=None,
                        help='execute on each machine')
 
-    parser.add_argument('-L',
-                        '--lib',
-                        dest='lib',
-                        help=argparse.SUPPRESS,
-                        default=Library.MIOPEN,
-                        choices=Library,
-                        type=Library)
-
+    self.clean_args()
     args = parser.parse_args()
-    if len(sys.argv) == 3 and ('--lib' in sys.argv or
-                               '-L' in sys.argv) and 'miopen' in sys.argv:
+    if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
 
@@ -223,6 +215,12 @@ class MIOpen(MITunaInterface):
       parser.error("session_id must be specified with this operation")
 
     return args
+
+  def clean_args(self):
+    if 'MIOPEN' in sys.argv:
+      sys.argv.remove('MIOPEN')
+    if 'miopen' in sys.argv:
+      sys.argv.remove('miopen')
 
   def check_fin_args(self, args, parser):
     """! Helper function for fin args

@@ -39,21 +39,16 @@ def parse_args():
   """Function to parse arguments"""
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('-L',
-                      '--lib',
-                      dest='lib',
-                      help='Specify library',
-                      default=Library.MIOPEN,
-                      choices=Library,
-                      type=Library)
+  parser.add_argument('lib', nargs='?', default=Library.MIOPEN.value.lower())
 
   args, _ = parser.parse_known_args()
-  return args
+  return vars(args)
 
 
 def setup_library(args):
   """Return Library class based on args"""
-  if args.lib == Library.MIOPEN or args.lib is None:
+  if 'lib' not in args.keys() or args['lib'].lower(
+  ) == Library.MIOPEN.value.lower():
     library = MIOpen()
   else:
     raise ValueError("Not implemented")
