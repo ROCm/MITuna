@@ -251,8 +251,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
   def get_properties(self):
     """return cpu and gpu device info as dicts"""
-    #agents = self.parse_agents()
-    agents = None
+    agents = self.parse_agents()
 
     self.cpus = []
     self.gpus = []
