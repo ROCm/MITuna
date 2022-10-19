@@ -47,6 +47,24 @@ def arch2targetid(arch):
   return targetid
 
 
+def split_packets(elements, pack_sz=1000):
+  """break elements into smaller packets"""
+  pack_i = 0
+  pack = []
+  all_packs = []
+  for elem in elements:
+    pack.append(elem)
+    pack_i += 1
+    if pack_i == pack_sz:
+      all_packs.append(pack)
+      pack = []
+      pack_i = 0
+  if pack:
+    all_packs.append(pack)
+
+  return all_packs
+
+
 def check_qts(hostname, logger=LOGGER):
   """find if hostname string has a local ip in qts"""
   if hostname in QTS_LIST:

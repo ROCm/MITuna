@@ -33,6 +33,10 @@ import functools
 import paramiko
 import random
 from time import sleep
+try:
+  import queue
+except ImportError:
+  import Queue as queue
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 
@@ -46,6 +50,7 @@ from tuna.config_type import ConfigType
 from tuna.tables import DBTables
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
+from tuna.utils.utility import split_packets
 
 MAX_JOB_RETRIES = 10
 
@@ -130,7 +135,7 @@ class FinClass(WorkerInterface):
       return False
 
   def job_queue_pop(self):
-    self.job, self.config, self.solver = self.job_queue.get(True, 1)
+    self.job, self.config = self.job_queue.get(True, 1)
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                       self.job.reason)
 
@@ -234,49 +239,55 @@ class FinClass(WorkerInterface):
 
   def set_all_configs(self, idx=0, num_blk=1):
     """Gathering all configs from Tuna DB to set up fin input file"""
-    with DbSession() as session:
-      query = session.query(
-          self.dbt.config_table).filter(self.dbt.config_table.valid == 1)
+    if idx == 0:
+      with DbSession() as session:
+        query = session.query(self.dbt.config_table)\
+                          .filter(self.dbt.config_table.valid == 1)
 
-      if self.label:
-        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
-            .filter(self.dbt.config_tags_table.tag == self.label)
+        if self.label:
+          query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
+              .filter(self.dbt.config_tags_table.tag == self.label)
 
-      #order by id for splitting configs into blocks
-      query = query.order_by(self.dbt.config_table.id)
-      rows = query.all()
+        #order by id for splitting configs into blocks
+        query = query.order_by(self.dbt.config_table.id)
+        rows = query.all()
 
-      block_size = len(rows) // num_blk  #size of the config block
-      extra = len(rows) % num_blk  #leftover configs, don't divide evenly
-      start = idx * block_size  #start of a process block
-      end = (idx + 1) * block_size
-      #distributing leftover configs to processes
-      if idx < extra:
-        start += idx
-        end += 1 + idx
-      else:
-        start += extra
-        end += extra
+        master_cfg_list = []
+        for row in rows:
+          r_dict = compose_config_obj(row, self.config_type)
+          if self.config_type == ConfigType.batch_norm:
+            r_dict['direction'] = row.get_direction()
+          master_cfg_list.append(r_dict)
 
-      self.logger.info("cfg workdiv: proc %s, start %s, end %s", self.gpu_id,
-                       start, end)
+        block_size = len(rows) // num_blk  #size of the config block
+        extra = len(rows) % num_blk  #leftover configs, don't divide evenly
+        self.logger.info(
+            "cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk,
+            block_size, extra)
+        for i in range(num_blk):
+          start = i * block_size  #start of a process block
+          end = (i + 1) * block_size
+          #distributing leftover configs to processes
+          if i < extra:
+            start += i
+            end += 1 + i
+          else:
+            start += extra
+            end += extra
 
-      if start >= len(rows):
-        return False
+          if start >= len(rows):
+            break
 
-      #copy the configs for this process
-      if end >= len(rows):
-        subarr = rows[start:]
-      else:
-        subarr = rows[start:end]
+          self.logger.info("cfg workdiv: start %s, end %s", start, end)
 
-      for row in subarr:
-        r_dict = compose_config_obj(row, self.config_type)
-        if self.config_type == ConfigType.batch_norm:
-          r_dict['direction'] = row.get_direction()
-        self.all_configs.append(r_dict)
+          self.job_queue.put(master_cfg_list[start:end])
+    try:
+      self.all_configs = self.job_queue.get(True, 30)
+    except queue.Empty:
+      self.logger.warning('No jobs found for process %s...', idx)
+      self.all_configs = []
 
-    if self.all_configs is None:
+    if not self.all_configs:
       return False
 
     return True
@@ -360,40 +371,57 @@ class FinClass(WorkerInterface):
 
   def insert_applicability(self, session, json_in):
     """write applicability to sql"""
+    inserts = []
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
-        #remove old applicability
+        cfg_id = elem["input"]["config_tuna_id"]
         # pylint: disable=comparison-with-callable
         app_query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
-          .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
+          .filter(self.dbt.solver_app.config == cfg_id)
         # pylint: enable=comparison-with-callable
-        app_query.update({self.dbt.solver_app.applicable: 0},
-                         synchronize_session='fetch')
+
         if not elem["applicable_solvers"]:
-          self.logger.warning("No applicable solvers for %s",
-                              elem["input"]["config_tuna_id"])
+          self.logger.warning("No applicable solvers for %s", cfg_id)
+
+        app_slv_ids = []
         for solver in elem["applicable_solvers"]:
           try:
             solver_id = self.solver_id_map[solver]
-            obj = app_query.filter(
-                self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
-            if obj:
-              obj.applicable = 1
-            else:
-              new_entry = self.dbt.solver_app(
-                  solver=solver_id,
-                  config=elem["input"]["config_tuna_id"],
-                  session=self.session_id,
-                  applicable=1)
-              session.add(new_entry)
+            app_slv_ids.append(solver_id)
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
             return False
 
-    self.logger.info('Commit bulk transaction, please wait')
+        #remove old applicability
+        not_app_query = app_query.filter(
+            self.dbt.solver_app.solver.notin_(app_slv_ids))
+        not_app_query.update({self.dbt.solver_app.applicable: 0},
+                             synchronize_session='fetch')
+
+        for solver_id in app_slv_ids:
+          obj = app_query.filter(
+              self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
+          if obj:
+            obj.applicable = 1
+          else:
+            inserts.append((cfg_id, solver_id))
+
+    #commit updates
     session.commit()
+
+    #bulk inserts
+    with self.queue_lock:
+      self.logger.info('Commit bulk inserts, please wait')
+      for cfg_id, solver_id in inserts:
+        new_entry = self.dbt.solver_app(solver=solver_id,
+                                        config=cfg_id,
+                                        session=self.session_id,
+                                        applicable=1)
+        session.add(new_entry)
+      session.commit()
+
     return True
 
   def parse_applicability(self, json_in):
@@ -403,19 +431,7 @@ class FinClass(WorkerInterface):
       self.logger.error("JSON file returned from Fin is empty")
       return False
 
-    #break down commits into smaller packets
-    pack_i = 0
-    pack = []
-    all_packs = []
-    for elem in json_in:
-      pack.append(elem)
-      pack_i += 1
-      if pack_i == 100:
-        all_packs.append(pack)
-        pack = []
-        pack_i = 0
-    if pack:
-      all_packs.append(pack)
+    all_packs = split_packets(json_in, 10000)
 
     with DbSession() as session:
 
@@ -426,7 +442,6 @@ class FinClass(WorkerInterface):
         session_retry(session, self.insert_applicability,
                       functools.partial(actuator, pack=pack), self.logger)
 
-    with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
       query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
       sapp_count = query.one()[0]
