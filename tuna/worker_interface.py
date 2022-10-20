@@ -214,11 +214,11 @@ class WorkerInterface(Process):
   def get_job_ids(self, job_rows):
     """find job table in query results and return ids"""
     for tble in job_rows:
-      if tble.isinstance(list):
-        if tble[0].isinstance(self.dbt.job_table):
+      if isinstance(tble, list):
+        if isinstance(tble[0], self.dbt.job_table):
           ids = (job.id for job in tble)
           return ids
-      elif tble.isinstance(self.dbt.job_table):
+      elif isinstance(tble, self.dbt.job_table):
         ids = (job.id for job in job_rows)
         return ids
 
