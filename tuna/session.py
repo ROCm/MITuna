@@ -31,13 +31,15 @@ from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
+from session_mixin import SessionMixin
 
 LOGGER = setup_logger('session')
 
 
-class Session(BASE):
+class Session(BASE, SessionMixin):
   """Session table to keep track of tunning sesions"""
-  # pylint: disable=too-many-instance-attributes
+  #pylint: disable=attribute-defined-outside-init
+  #pylint: disable=too-many-instance-attributes
 
   __tablename__ = "session"
   __table_args__ = (UniqueConstraint("arch",
@@ -50,15 +52,8 @@ class Session(BASE):
                                      "solver_id",
                                      name="uq_idx"),)
 
-  arch = Column(String(length=20), nullable=False, server_default="")
-  num_cu = Column(Integer, nullable=False)
   rocm_v = Column(String(length=64), nullable=False)
   miopen_v = Column(String(length=64), nullable=False)
-  reason = Column(String(length=60), nullable=False)
-  ticket = Column(String(length=64), nullable=False, server_default="N/A")
-  docker = Column(String(length=64),
-                  nullable=False,
-                  server_default="miopentuna")
   solver_id = Column(Integer,
                      ForeignKey("solver.id",
                                 onupdate="CASCADE",
