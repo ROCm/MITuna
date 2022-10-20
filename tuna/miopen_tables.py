@@ -331,6 +331,8 @@ class JobEnum(enum.Enum):
   not_applicable = 20
   aborted = 21
   not_tunable = 22
+  compiled_pend = 23
+  evaluated_pend = 24
 
 
 class FinStep(enum.Enum):

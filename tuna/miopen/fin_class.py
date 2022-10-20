@@ -79,6 +79,7 @@ class FinClass(WorkerInterface):
     self.all_configs = []
     self.fin_list = []
     self.multiproc = False
+    self.pending = False
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -576,8 +577,9 @@ class FinClass(WorkerInterface):
           self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
                                         fdb_entry.kernel_group).delete()
     else:
-      # Insert the above entry
-      session.add(fdb_entry)
+      # Bundle Insert for later
+      self.pending = True
+      self.result_queue.put((self.job, fdb_entry))
     return fdb_entry
 
   def compose_fdb_entry(self, session, fin_json, fdb_obj):
@@ -606,7 +608,9 @@ class FinClass(WorkerInterface):
       kernel_obj = self.dbt.kernel_cache()
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.kernel_group = fdb_entry.kernel_group
-      session.add(kernel_obj)
+      # Bundle Insert for later
+      self.pending = True
+      self.result_queue.put((self.job, kernel_obj))
     return True
 
   def populate_kernels(self, kern_obj, kernel_obj):
@@ -675,6 +679,34 @@ class FinClass(WorkerInterface):
       }]
 
     return status
+
+  def add_sql_objs(self, session, obj_list):
+    """add sql objects to the table"""
+    for sql_obj in obj_list:
+      session.add(sql_obj)
+    session.commit()
+    return True
+
+  def result_queue_commit(self, session, state):
+    """commit the result queue and set job state"""
+    job_list = []
+    obj_list = []
+    while not self.result_queue.empty():
+      job, sql_obj = self.result_queue.get(True, 1)
+      job_list.append(job)
+      obj_list.append(sql_obj)
+
+    status = session_retry(session, self.add_sql_objs,
+                           lambda x: x(session, obj_list), self.logger)
+    if not status:
+      return False
+
+    #set job states after successful commit
+    for job in job_list:
+      self.job = job
+      self.set_job_state(state)
+
+    return True
 
   def run_fin_cmd(self):
     """Run a fin command after generating the JSON"""

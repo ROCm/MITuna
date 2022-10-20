@@ -254,6 +254,10 @@ class FinEvaluator(FinClass):
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
+    self.pending = False
+    if self.gpu_id == 0:
+      with DbSession() as session:
+        self.result_queue_commit(session, 'evaluated')
 
     # pylint: disable=duplicate-code
     try:
@@ -264,6 +268,10 @@ class FinEvaluator(FinClass):
     # pylint: enable=duplicate-code
 
     if not self.get_job("compiled", "eval_start", True):
+      if self.gpu_id == 0 and self.num_procs.value > 1:
+        #wait to commit results from other processes
+        sleep(30)
+        return True
       return False
 
     orig_state = 'compiled'
@@ -304,6 +312,9 @@ class FinEvaluator(FinClass):
         self.set_job_state(orig_state,
                            increment_retries=True,
                            result=result_str)
+    elif self.pending:
+      self.set_job_state('evaluated_pend', result=result_str)
+      self.clean_cache_table()
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()

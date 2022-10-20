@@ -64,8 +64,9 @@ class WorkerInterface(Process):
 
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
-        'reset_interval', 'job_queue', 'queue_lock', 'label', 'fetch_state',
-        'docker_name', 'end_jobs', 'dynamic_solvers_only', 'session_id'
+        'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
+        'result_queue_lock', 'label', 'fetch_state', 'docker_name', 'end_jobs',
+        'dynamic_solvers_only', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
@@ -77,7 +78,9 @@ class WorkerInterface(Process):
     self.barred = None
     self.bar_lock = Lock()
     self.job_queue = None
-    self.queue_lock = Lock()
+    self.job_queue_lock = Lock()
+    self.result_queue = None
+    self.result_queue_lock = Lock()
     self.end_jobs = None
     #job detail vars
     self.envmt = []
@@ -224,7 +227,7 @@ class WorkerInterface(Process):
     """Interface function to get new job for builder/evaluator"""
     for idx in range(NUM_SQL_RETRIES):
       try:
-        with self.queue_lock:
+        with self.job_queue_lock:
           if imply_end and self.end_jobs.value > 0:
             self.logger.warning('No %s jobs found, skip query', find_state)
             return False
@@ -261,7 +264,7 @@ class WorkerInterface(Process):
 
               self.job_queue_push(session, ids)
 
-          #also in queue_lock
+          #also in job_queue_lock
           self.job_queue_pop()
 
         return True
@@ -283,42 +286,28 @@ class WorkerInterface(Process):
     return False
 
   # JD: This should take a session obj as an input to remove the creation of an extraneous session
-  def set_job_state(self, state, increment_retries=False, result=''):
+  def set_job_state(self, state, increment_retries=False, result=None):
     """Interface function to update job state for builder/evaluator"""
     self.logger.info('Setting job id %s state to %s', self.job.id, state)
     for idx in range(NUM_SQL_RETRIES):
       with DbSession() as session:
         try:
-          if state in ["running", "compiling", "evaluating"]:
-            session.query(self.dbt.job_table).filter(
-                self.dbt.job_table.id == self.job.id).update({
-                    self.dbt.job_table.state: state,
-                    self.dbt.job_table.result: result
-                })
-          else:
-            if increment_retries:
-              session.query(self.dbt.job_table).filter(
-                  self.dbt.job_table.id == self.job.id).update({
-                      self.dbt.job_table.state:
-                          state,
-                      self.dbt.job_table.retries:
-                          self.dbt.job_table.retries + 1,
-                      self.dbt.job_table.result:
-                          result
-                  })
-            else:
-              # JD: When would this happen ?
-              # also this is a side-effect, not cool
-              cache = '~/.cache/miopen_'
-              blurr = ''.join(
-                  random.choice(string.ascii_lowercase) for i in range(10))
-              cache_loc = cache + blurr
-              session.query(self.dbt.job_table).filter(
-                  self.dbt.job_table.id == self.job.id).update({
-                      self.dbt.job_table.state: state,
-                      self.dbt.job_table.cache_loc: cache_loc,
-                      self.dbt.job_table.result: result
-                  })
+          #refresh job data
+          self.job = session.query(self.dbt.job_table)\
+              .filter(self.dbt.job_table.id == self.job.id).one()
+          self.job.state = state
+          if result:
+            self.job.result = result
+          if increment_retries:
+            self.job.retries += 1
+
+          if '_start' in state:
+            cache = '~/.cache/miopen_'
+            blurr = ''.join(
+                random.choice(string.ascii_lowercase) for i in range(10))
+            cache_loc = cache + blurr
+            self.job.cache_loc = cache_loc
+
           session.commit()
           return True
         except OperationalError as error:
@@ -487,10 +476,17 @@ class WorkerInterface(Process):
         self.logger.info("proc %s step %s", self.gpu_id, ret)
         if not ret:
           self.logger.warning('No more steps, quiting...')
+          with self.bar_lock:
+            self.num_procs.value -= 1
           return True
     except KeyboardInterrupt as err:
       self.logger.error('%s', err)
       self.reset_job_state()
+      with self.bar_lock:
+        self.num_procs.value -= 1
       return False
+
+    with self.bar_lock:
+      self.num_procs.value -= 1
 
     return True
