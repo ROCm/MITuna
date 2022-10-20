@@ -216,13 +216,13 @@ class WorkerInterface(Process):
     for tble in job_rows:
       if isinstance(tble, list):
         if isinstance(tble[0], self.dbt.job_table):
-          ids = (job.id for job in tble)
+          ids = [job.id for job in tble]
           return ids
       elif isinstance(tble, self.dbt.job_table):
-        ids = (job.id for job in job_rows)
+        ids = [job.id for job in job_rows]
         return ids
 
-    ids = ()
+    ids = []
     return ids
 
   #pylint: disable=too-many-branches
