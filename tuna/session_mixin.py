@@ -29,7 +29,7 @@ from sqlalchemy import Column, Integer, String
 
 
 class SessionMixin():
-  """Session table to keep track of tunning sesions"""
+  """Session Mixin to provide interface for the session table"""
   #pylint: disable=too-few-public-methods
 
   arch = Column(String(length=20), nullable=False, server_default="")
