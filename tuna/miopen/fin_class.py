@@ -429,7 +429,7 @@ class FinClass(WorkerInterface):
     session.commit()
 
     #bulk inserts
-    with self.queue_lock:
+    with self.job_queue_lock:
       self.logger.info('Commit bulk inserts, please wait')
       for cfg_id, solver_id in inserts:
         new_entry = self.dbt.solver_app(solver=solver_id,
