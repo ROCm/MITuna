@@ -518,7 +518,7 @@ class BNGolden(BASE, GoldenMixin):
   kernel_group = Column(Integer, nullable=True)
 
 
-class BenchmarkTable(BASE, GoldenMixin):
+class BenchmarkTable(BASE):
   """benchmark table for framework and model parameters"""
   __tablename__ = "benchmark_table"
   __table_args__ = (UniqueConstraint("framework",
@@ -535,7 +535,7 @@ class BenchmarkTable(BASE, GoldenMixin):
   driver_cmd = Column(String(length=128), nullable=False)
 
 
-class ConvBenchPerfTable(BASE, GoldenMixin):
+class ConvBenchPerfTable(BASE):
   """benchmark table for performance parameters"""
   __tablename__ = "conv_benchmark_perf_table"
   __table_args__ = (UniqueConstraint("solver",
