@@ -31,7 +31,7 @@ from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
-from session_mixin import SessionMixin
+from tuna.session_mixin import SessionMixin
 
 LOGGER = setup_logger('session')
 
