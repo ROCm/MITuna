@@ -151,13 +151,16 @@ class WorkerInterface(Process):
 
   def compose_work_query(self, session, job_query):
     """default job description, return query must include self.dbt.job_table"""
+    # pylint: disable=unused-argument
     return job_query
 
   def compose_job_query(self, find_state, session):
     """Helper function to compose query"""
+    # pylint: disable=comparison-with-callable
     query = session.query(self.dbt.job_table)\
                           .filter(self.dbt.job_table.session == self.dbt.session.id)\
                           .filter(self.dbt.job_table.valid == 1)
+    # pylint: enable=comparison-with-callable
 
     if self.label:
       query = query.filter(self.dbt.job_table.reason == self.label)
@@ -196,7 +199,7 @@ class WorkerInterface(Process):
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                      self.job.reason)
 
-  def check_jobs_found(job_rows, find_state, imply_end):
+  def check_jobs_found(self, job_rows, find_state, imply_end):
     """check for end of jobs"""
     if not job_rows:
       # we are done
@@ -211,11 +214,11 @@ class WorkerInterface(Process):
   def get_job_ids(self, job_rows):
     """find job table in query results and return ids"""
     for tble in job_rows:
-      if type(tble) == list:
-        if type(tble[0]) == type(self.dbt.job_table):
+      if tble.isinstance(list):
+        if tble[0].isinstance(self.dbt.job_table):
           ids = (job.id for job in tble)
           return ids
-      elif type(tble) == type(self.dbt.job_table):
+      elif tble.isinstance(self.dbt.job_table):
         ids = (job.id for job in job_rows)
         return ids
 
