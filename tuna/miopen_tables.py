@@ -546,7 +546,11 @@ class ConvBenchPerfTable(BASE):
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
   benchmark = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
-  solver = Column(String(length=128), nullable=True, server_default="")
+  solver = Column(Integer,
+                     ForeignKey("solver.id",
+                                onupdate="CASCADE",
+                                ondelete="CASCADE"),
+                     nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
   rocm_v = Column(Integer, nullable=False)
   miopen_v = Column(Integer, nullable=False)
