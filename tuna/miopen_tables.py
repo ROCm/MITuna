@@ -360,7 +360,6 @@ class JobMixin():
   retries = Column(Integer, nullable=False, server_default="0")
   result = Column(Text, nullable=True)
 
-
   compile_start = Column(DateTime,
                          nullable=False,
                          server_default=sqla_func.now())

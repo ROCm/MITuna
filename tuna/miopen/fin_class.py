@@ -62,7 +62,8 @@ class FinClass(WorkerInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
-    allowed_keys = set(['fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type'])
+    allowed_keys = set(
+        ['fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type'])
     self.__dict__.update((key, None) for key in allowed_keys)
 
     self.supported_fin_steps = ["get_solvers", "applicability"]
@@ -123,21 +124,36 @@ class FinClass(WorkerInterface):
 
     return query
 
-  def check_jobs_found(self, job_cfgs, find_state, imply_end):
-    if not job_cfgs:
+  def check_jobs_found(self, job_rows, find_state, imply_end):
+    """check for end of jobs"""
+    if not job_rows:
       # we are done
-      self.logger.warning(
-          'No %s jobs found, fin_step: %s, session %s', find_state,
-          self.fin_steps, self.session_id)
+      self.logger.warning('No %s jobs found, fin_step: %s, session %s',
+                          find_state, self.fin_steps, self.session_id)
       if imply_end:
         self.logger.warning("set end")
         self.end_jobs.value = 1
       return False
 
+  def job_queue_push(self, session, ids):
+    """load job_queue with info for job ids"""
+    job_rows = session.query(self.dbt.job_table, self.dbt.config_table)\
+      .filter(self.dbt.config_table.id == self.dbt.job_table.config)\
+      .filter(self.dbt.job_table.id.in_(ids)).all()
+
+    if len(ids) != len(job_rows):
+      raise Exception(
+          f'Failed to load job queue. #ids: {len(ids)} - #job_rows: {len(job_rows)}'
+      )
+    for job, config in job_rows:
+      self.job_queue.put((job, config))
+      self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
+
   def job_queue_pop(self):
+    """load job & config from top of job queue"""
     self.job, self.config = self.job_queue.get(True, 1)
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
-                      self.job.reason)
+                     self.job.reason)
 
   def compose_fincmd(self):
     """Helper function to compose fin docker cmd"""

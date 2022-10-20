@@ -64,9 +64,8 @@ class WorkerInterface(Process):
 
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
-        'reset_interval', 'job_queue', 'queue_lock', 'label',
-        'fetch_state', 'docker_name', 'end_jobs',
-        'dynamic_solvers_only', 'session_id'
+        'reset_interval', 'job_queue', 'queue_lock', 'label', 'fetch_state',
+        'docker_name', 'end_jobs', 'dynamic_solvers_only', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
@@ -148,7 +147,7 @@ class WorkerInterface(Process):
     self.last_reset = datetime.now()
 
   def compose_work_query(self, session, job_query):
-    """default job description"""
+    """default job description, return query must include self.dbt.job_table"""
     return job_query
 
   def compose_job_query(self, find_state, session):
@@ -175,36 +174,31 @@ class WorkerInterface(Process):
     with self.bar_lock:
       self.end_jobs.value = 0
 
-  def job_queue_load(self, session, ids):
+  def job_queue_push(self, session, ids):
     """load job_queue with info for job ids"""
-    # pylint: disable=comparison-with-callable
-    job_cfgs = session.query(self.dbt.job_table, self.dbt.config_table)\
-      .filter(self.dbt.job_table.valid == 1)\
-      .filter(self.dbt.job_table.session == self.dbt.session.id)\
-      .filter(self.dbt.config_table.id == self.dbt.job_table.config)\
+    job_rows = session.query(self.dbt.job_table)\
       .filter(self.dbt.job_table.id.in_(ids)).all()
-    # pylint: enable=comparison-with-callable
 
-    if len(ids) != len(job_cfgs):
+    if len(ids) != len(job_rows):
       raise Exception(
-          f'Failed to load job queue. #ids: {len(ids)} - #job_cgfs: {len(job_cfgs)}'
+          f'Failed to load job queue. #ids: {len(ids)} - #job_rows: {len(job_rows)}'
       )
-    for job, config in job_cfgs:
-      self.job_queue.put((job, config))
+    for job in job_rows:
+      self.job_queue.put(job)
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
   def job_queue_pop(self):
+    """load job from top of job queue"""
     self.job = self.job_queue.get(True, 1)
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
-                      self.job.reason)
+                     self.job.reason)
 
-  def check_jobs_found(job_cfgs, find_state, imply_end):
+  def check_jobs_found(job_rows, find_state, imply_end):
     """check for end of jobs"""
-    if not job_cfgs:
+    if not job_rows:
       # we are done
-      self.logger.warning(
-          'No %s jobs found, session %s', find_state,
-          self.session_id)
+      self.logger.warning('No %s jobs found, session %s', find_state,
+                          self.session_id)
       if imply_end:
         self.logger.warning("set end")
         self.end_jobs.value = 1
@@ -214,15 +208,15 @@ class WorkerInterface(Process):
   def get_job_ids(self, job_rows):
     """find job table in query results and return ids"""
     for tble in job_rows:
-      if type(tble) == list):
-        if type(tble[0]) == type(self.dbt.job_table)
-          ids = tuple((str(job.id) for job in tble))
-          return ids;
-      elif type(tble) == type(self.dbt.job_table)
-        ids = tuple((str(job.id) for job in job_rows))
-        return ids;
+      if type(tble) == list:
+        if type(tble[0]) == type(self.dbt.job_table):
+          ids = (job.id for job in tble)
+          return ids
+      elif type(tble) == type(self.dbt.job_table):
+        ids = (job.id for job in job_rows)
+        return ids
 
-    ids = []
+    ids = ()
     return ids
 
   #pylint: disable=too-many-branches
@@ -235,7 +229,6 @@ class WorkerInterface(Process):
             self.logger.warning('No %s jobs found, skip query', find_state)
             return False
           if self.job_queue.empty():
-            ids = ()
             with DbSession() as session:
               query = self.compose_job_query(find_state, session)
               job_rows = query.all()
@@ -266,7 +259,7 @@ class WorkerInterface(Process):
                         synchronize_session='fetch')
               session.commit()
 
-              self.job_queue_load(session, ids)
+              self.job_queue_push(session, ids)
 
           #also in queue_lock
           self.job_queue_pop()
@@ -451,7 +444,7 @@ class WorkerInterface(Process):
 
     while not self.job_queue.empty():
       try:
-        self.job, self.config = self.job_queue.get(True, 1)
+        self.job_queue_pop()
         if "new" in self.fetch_state:
           self.set_job_state("new")
         elif "compiled" in self.fetch_state:
