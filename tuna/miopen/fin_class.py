@@ -135,6 +135,7 @@ class FinClass(WorkerInterface):
         self.logger.warning("set end")
         self.end_jobs.value = 1
       return False
+    return True
 
   def job_queue_push(self, session, ids):
     """load job_queue with info for job ids"""

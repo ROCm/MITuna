@@ -213,16 +213,13 @@ class WorkerInterface(Process):
 
   def get_job_ids(self, job_rows):
     """find job table in query results and return ids"""
-    for tble in job_rows:
-      if isinstance(tble, list):
-        if isinstance(tble[0], self.dbt.job_table):
-          ids = [job.id for job in tble]
-          return ids
-      elif isinstance(tble, self.dbt.job_table):
-        ids = [job.id for job in job_rows]
-        return ids
+    job_i = 0
+    for i, tble in enumerate(job_rows[0]):
+      if isinstance(tble, self.dbt.job_table):
+        job_i = i
+        break
 
-    ids = []
+    ids = [row[job_i].id for row in job_rows]
     return ids
 
   #pylint: disable=too-many-branches
@@ -236,8 +233,8 @@ class WorkerInterface(Process):
             return False
           if self.job_queue.empty():
             with DbSession() as session:
-              query = self.compose_job_query(find_state, session)
-              job_rows = query.all()
+              job_query = self.compose_job_query(find_state, session)
+              job_rows = job_query.all()
 
               if not self.check_jobs_found(job_rows, find_state, imply_end):
                 return False
@@ -312,6 +309,7 @@ class WorkerInterface(Process):
             self.job.cache_loc = cache_loc
 
           session.commit()
+          session.refresh(self.job)
           return True
         except OperationalError as error:
           self.logger.warning('%s, Db contention, attempt %s, sleeping ...',
