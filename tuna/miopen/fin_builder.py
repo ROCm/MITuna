@@ -87,6 +87,13 @@ class FinBuilder(FinClass):
 
     return status
 
+  def reset_job_state(self):
+    """finish committing result queue"""
+    super().reset_job_state()
+    if self.gpu_id == 0:
+      with DbSession() as session:
+        self.result_queue_commit(session, 'compiled')
+
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     self.pending = False
@@ -95,11 +102,13 @@ class FinBuilder(FinClass):
         self.result_queue_commit(session, 'compiled')
 
     # pylint: disable=duplicate-code
-    try:
-      self.check_env()
-    except ValueError as verr:
-      self.logger.error(verr)
-      return False
+    if self.first_pass:
+      self.first_pass = False
+      try:
+        self.check_env()
+      except ValueError as verr:
+        self.logger.error(verr)
+        return False
     # pylint: enable=duplicate-code
 
     if not self.get_job("new", "compile_start", True):

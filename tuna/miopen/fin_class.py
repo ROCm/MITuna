@@ -80,6 +80,7 @@ class FinClass(WorkerInterface):
     self.fin_list = []
     self.multiproc = False
     self.pending = False
+    self.first_pass = True
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -692,10 +693,11 @@ class FinClass(WorkerInterface):
     """commit the result queue and set job state"""
     job_list = []
     obj_list = []
-    while not self.result_queue.empty():
-      job, sql_obj = self.result_queue.get(True, 1)
-      job_list.append(job)
-      obj_list.append(sql_obj)
+    with self.result_queue_lock:
+      while not self.result_queue.empty():
+        job, sql_obj = self.result_queue.get(True, 1)
+        job_list.append(job)
+        obj_list.append(sql_obj)
 
     status = session_retry(session, self.add_sql_objs,
                            lambda x: x(session, obj_list), self.logger)

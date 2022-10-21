@@ -425,7 +425,9 @@ class WorkerInterface(Process):
 
   def reset_job_state(self):
     """Helper function to reset job state during signal interrupt"""
-    if self.job and self.job.state != 'compiled' and self.job.state != 'evaluated':
+    #also filter pending states eg compiled_pend
+    if self.job and self.job.state in ("compile_start", "compiling",
+                                       "eval_start", "evaluating"):
       self.logger.warning('resetting job state to %s', self.fetch_state[0])
       if "new" in self.fetch_state:
         self.set_job_state("new")

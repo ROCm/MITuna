@@ -251,6 +251,13 @@ class FinEvaluator(FinClass):
         self.logger.warning('FinEval: Unable to clean %s: %s',
                             self.dbt.fin_cache_table.__tablename__, err)
 
+  def reset_job_state(self):
+    """finish committing result queue"""
+    super().reset_job_state()
+    if self.gpu_id == 0:
+      with DbSession() as session:
+        self.result_queue_commit(session, 'evaluated')
+
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
@@ -260,11 +267,13 @@ class FinEvaluator(FinClass):
         self.result_queue_commit(session, 'evaluated')
 
     # pylint: disable=duplicate-code
-    try:
-      self.check_env()
-    except ValueError as verr:
-      self.logger.error(verr)
-      return False
+    if self.first_pass:
+      self.first_pass = False
+      try:
+        self.check_env()
+      except ValueError as verr:
+        self.logger.error(verr)
+        return False
     # pylint: enable=duplicate-code
 
     if not self.get_job("compiled", "eval_start", True):
