@@ -24,34 +24,15 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""logger file"""
-import logging
-import os
-from tuna.metadata import TUNA_LOG_DIR
+"""Module that encapsulates different liraries supported by Tuna"""
+from enum import Enum
 
 
-def setup_logger(logger_name='Tuna',
-                 add_streamhandler=True,
-                 add_filehandler=False):
-  """std setup for tuna logger"""
-  log_level = os.environ.get('TUNA_LOGLEVEL', 'INFO').upper()
-  logging.basicConfig(level=log_level)
-  logger = logging.getLogger(logger_name)
-  log_file = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
-  formatter = logging.Formatter(
-      '%(asctime)s - %(name)s - %(levelname)s -  [%(filename)s:%(lineno)d] - %(message)s'
-  )
-  logger.propagate = False
-  if add_filehandler:
-    file_handler = logging.FileHandler(log_file, mode='a')
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
-    logger.addHandler(file_handler)
-  if add_streamhandler:
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    stream_handler.setLevel(logging.INFO)
-    logger.addHandler(stream_handler)
+#pylint: disable=too-few-public-methods
+class Library(Enum):
+  """Enumerate supported libraries"""
+  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
+  MIOPEN = 'miopen'
 
-  logger.setLevel(log_level.upper() if log_level else logging.DEBUG)
-  return logger
+  def __str__(self):
+    return self.value

@@ -31,7 +31,7 @@ from tuna.utils.logger import setup_logger
 from tuna.driver_base import DriverBase
 from tuna.metadata import CONV_CONFIG_COLS
 from tuna.helper import get_db_id
-from tuna.miopen_tables import ConvolutionConfig
+from tuna.miopen.miopen_tables import ConvolutionConfig
 from tuna.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PREC_TO_CMD
 from tuna.metadata import CONV_3D_DEFAULTS, TENSOR_COLS, TABLE_COLS_CONV_MAP, TENSOR_PRECISION
 from tuna.metadata import DIRECTION, DIR_MAP, CONV_SKIP_ARGS, INVERS_DIR_MAP
