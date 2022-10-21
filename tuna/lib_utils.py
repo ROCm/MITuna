@@ -24,51 +24,17 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief Script to launch tuning jobs, or execute commands on available machines"""
-import argparse
-import sys
-from tuna.utils.logger import setup_logger
+"""Factory method to get library"""
 from tuna.libraries import Library
-from tuna.lib_utils import get_library
-
-# Setup logging
-LOGGER = setup_logger('go_fish')
+from tuna.miopen.miopen_lib import MIOpen
 
 
-def parse_args():
-  """Function to parse arguments"""
-  parser = argparse.ArgumentParser()
+def get_library(args):
+  """Factory method to get lib based on args"""
+  print(args.keys)
+  if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
+    library = MIOpen()
+  else:
+    raise ValueError("Not implemented")
 
-  parser.add_argument('lib',
-                      nargs='?',
-                      default=Library.MIOPEN,
-                      type=Library,
-                      help="Specify library to run",
-                      choices=Library)
-
-  args, _ = parser.parse_known_args()
-  return vars(args)
-
-
-def main():
-  """Main function to start Tuna"""
-  LOGGER.info(sys.argv)
-  args = parse_args()
-  library = get_library(args)
-
-  try:
-
-    #returns a list of workers/processes it started
-    worker_lst = library.run()
-    if worker_lst is None:
-      return
-
-    for worker in worker_lst:
-      worker.join()
-      LOGGER.warning('Process finished')
-  except KeyboardInterrupt:
-    LOGGER.warning('Interrupt signal caught')
-
-
-if __name__ == '__main__':
-  main()
+  return library
