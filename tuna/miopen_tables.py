@@ -531,14 +531,16 @@ class BenchmarkTable(BASE):
   framework = Column(String(length=128), nullable=False)
   model = Column(String(length=128), nullable=False)
   batchsize = Column(Integer, nullable=False, server_default="32")
-  gpu_number = Column(Integer, nullable=True, server_default="1")  #nullable?
+  gpu_number = Column(Integer, nullable=True, server_default="1")
   driver_cmd = Column(String(length=128), nullable=False)
 
 
 class ConvBenchPerfTable(BASE):
   """benchmark table for performance parameters"""
   __tablename__ = "conv_benchmark_perf_table"
-  __table_args__ = (UniqueConstraint("solver",
+  __table_args__ = (UniqueConstraint("config",
+                                     "benchmark",
+                                     "solver",
                                      "rocm_v",
                                      "miopen_v",
                                      name="uq_idx"),)
@@ -552,8 +554,8 @@ class ConvBenchPerfTable(BASE):
                              ondelete="CASCADE"),
                   nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
-  rocm_v = Column(Integer, nullable=False)
-  miopen_v = Column(Integer, nullable=False)
+  rocm_v = Column(String(length=64), nullable=False)
+  miopen_v = Column(String(length=64), nullable=False)
 
 
 def add_conv_tables(miopen_tables):
