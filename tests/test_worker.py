@@ -127,28 +127,28 @@ def multi_queue_test(w):
   # a separate block was necessary to force commit
   with DbCursor() as cur:
     cur.execute(
-        "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest_worker' LIMIT {}"
-        .format(w.claim_num + 1))
+        "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest_worker' and session={} LIMIT {}"
+        .format(w.session_id, w.claim_num + 1))
   job = w.get_job('new', 'compile_start', True)
   assert job == True
   res = None
   with DbCursor() as cur:
     cur.execute(
-        "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+        f"SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
     )
     res = cur.fetchall()
   assert (len(res) == w.claim_num)
 
   with DbCursor() as cur:
     cur.execute(
-        "UPDATE conv_job SET state='compiling' WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+        f"UPDATE conv_job SET state='compiling' WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
     )
   for i in range(w.claim_num - 1):
     job = w.get_job('new', 'compile_start', True)
     with DbCursor() as cur:
       assert job == True
       cur.execute(
-          "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+          f"SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
       )
       res = cur.fetchall()
       assert (len(res) == 0)
@@ -157,11 +157,11 @@ def multi_queue_test(w):
   assert job == True
   with DbCursor() as cur:
     cur.execute(
-        "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+        f"SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
     )
     res = cur.fetchall()
     assert (len(res) == 1)
-    cur.execute("UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker'")
+    cur.execute(f"UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker' and session={w.session_id}")
 
 
 def test_worker():

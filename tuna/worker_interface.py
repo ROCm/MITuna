@@ -213,13 +213,16 @@ class WorkerInterface(Process):
 
   def get_job_ids(self, job_rows):
     """find job table in query results and return ids"""
-    job_i = 0
-    for i, tble in enumerate(job_rows[0]):
-      if isinstance(tble, self.dbt.job_table):
-        job_i = i
-        break
+    if isinstance(job_rows[0], self.dbt.job_table):
+      ids = [row.id for row in job_rows]
+    else:
+      job_i = 0
+      for i, tble in enumerate(job_rows[0]):
+        if isinstance(tble, self.dbt.job_table):
+          job_i = i
+          break
+      ids = [row[job_i].id for row in job_rows]
 
-    ids = [row[job_i].id for row in job_rows]
     return ids
 
   #pylint: disable=too-many-branches
