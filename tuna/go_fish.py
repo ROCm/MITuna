@@ -518,7 +518,7 @@ def compose_worker_list(res, args):
         num_procs = int(env['slurm_cpus'])
       else:
         # JD: This sould be the responsibility of the machine class
-        num_procs = int(machine.get_num_cpus())
+        num_procs = int(machine.get_num_cpus() * .6)
       worker_ids = range(num_procs)
 
     if len(worker_ids) == 0:

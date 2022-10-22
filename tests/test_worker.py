@@ -161,7 +161,9 @@ def multi_queue_test(w):
     )
     res = cur.fetchall()
     assert (len(res) == 1)
-    cur.execute(f"UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker' and session={w.session_id}")
+    cur.execute(
+        f"UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker' and session={w.session_id}"
+    )
 
 
 def test_worker():

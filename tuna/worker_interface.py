@@ -149,17 +149,21 @@ class WorkerInterface(Process):
     self.machine.restart_server()
     self.last_reset = datetime.now()
 
-  def compose_work_query(self, session, job_query):
-    """default job description, return query must include self.dbt.job_table"""
-    # pylint: disable=unused-argument
-    return job_query
+  def base_job_query(self, session):
+    """select tables for job query, return query must include self.dbt.job_table"""
+    query = session.query(self.dbt.job_table)
+    return query
+
+  def compose_work_query(self, query):
+    """default job description"""
+    return query
 
   def compose_job_query(self, find_state, session):
     """Helper function to compose query"""
     # pylint: disable=comparison-with-callable
-    query = session.query(self.dbt.job_table)\
-                          .filter(self.dbt.job_table.session == self.dbt.session.id)\
-                          .filter(self.dbt.job_table.valid == 1)
+    query = self.base_job_query(session)\
+                .filter(self.dbt.job_table.session == self.dbt.session.id)\
+                .filter(self.dbt.job_table.valid == 1)
     # pylint: enable=comparison-with-callable
 
     if self.label:
@@ -168,7 +172,7 @@ class WorkerInterface(Process):
     query = query.filter(self.dbt.job_table.retries < MAX_JOB_RETRIES)\
       .filter(self.dbt.job_table.state == find_state)
 
-    query = self.compose_work_query(session, query)
+    query = self.compose_work_query(query)
 
     query = query.order_by(self.dbt.job_table.retries.asc()).limit(
         self.claim_num).with_for_update()
@@ -179,25 +183,6 @@ class WorkerInterface(Process):
     """resets end queue flag"""
     with self.bar_lock:
       self.end_jobs.value = 0
-
-  def job_queue_push(self, session, ids):
-    """load job_queue with info for job ids"""
-    job_rows = session.query(self.dbt.job_table)\
-      .filter(self.dbt.job_table.id.in_(ids)).all()
-
-    if len(ids) != len(job_rows):
-      raise Exception(
-          f'Failed to load job queue. #ids: {len(ids)} - #job_rows: {len(job_rows)}'
-      )
-    for job in job_rows:
-      self.job_queue.put(job)
-      self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
-
-  def job_queue_pop(self):
-    """load job from top of job queue"""
-    self.job = self.job_queue.get(True, 1)
-    self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
-                     self.job.reason)
 
   def check_jobs_found(self, job_rows, find_state, imply_end):
     """check for end of jobs"""
@@ -211,19 +196,47 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_ids(self, job_rows):
-    """find job table in query results and return ids"""
+  def get_job_table(self, job_tuple):
+    """find job table in a job tuple"""
+    for i, tble in enumerate(job_tuple):
+      if isinstance(tble, self.dbt.job_table):
+        job_i = i
+        break
+    job_table = job_tuple[job_i]
+    return job_table
+
+  def get_job_tables(self, job_rows):
+    """find job tables in query results"""
     if isinstance(job_rows[0], self.dbt.job_table):
-      ids = [row.id for row in job_rows]
+      job_tables = [row for row in job_rows]
     else:
       job_i = 0
       for i, tble in enumerate(job_rows[0]):
         if isinstance(tble, self.dbt.job_table):
           job_i = i
           break
-      ids = [row[job_i].id for row in job_rows]
+      job_tables = [row[job_i] for row in job_rows]
 
-    return ids
+    return job_tables
+
+  def refresh_query_objects(self, session, rows):
+    """refresh objects in query rows"""
+    for obj_tuple in rows:
+      for entry in obj_tuple:
+        session.refresh(entry)
+
+  def job_queue_push(self, job_rows):
+    """load job_queue with info for job ids"""
+    for job_tuple in job_rows:
+      self.job_queue.put(job_tuple)
+      job = self.get_job_table(job_tuple)
+      self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
+
+  def job_queue_pop(self):
+    """load job from top of job queue"""
+    self.job = self.job_queue.get(True, 1)
+    self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
+                     self.job.reason)
 
   #pylint: disable=too-many-branches
   def get_job(self, find_state, set_state, imply_end):
@@ -242,30 +255,21 @@ class WorkerInterface(Process):
               if not self.check_jobs_found(job_rows, find_state, imply_end):
                 return False
 
-              ids = self.get_job_ids(job_rows)
+              job_tables = self.get_job_tables(job_rows)
+              ids = [row.id for row in job_tables]
               self.logger.info("%s jobs %s", find_state, ids)
-              if set_state == "eval_start":
-                session.query(self.dbt.job_table).filter(
-                    self.dbt.job_table.id.in_(ids)).update(
-                        {
-                            self.dbt.job_table.state: set_state,
-                            self.dbt.job_table.eval_mid: self.machine.id,
-                            self.dbt.job_table.gpu_id: self.gpu_id
-                        },
-                        synchronize_session='fetch')
-              else:
+              for job in job_tables:
+                job.state = set_state
                 #note for a compile job gpu_id is an index 0 tuna process number, not a gpu
-                session.query(self.dbt.job_table).filter(
-                    self.dbt.job_table.id.in_(ids)).update(
-                        {
-                            self.dbt.job_table.state: set_state,
-                            self.dbt.job_table.machine_id: self.machine.id,
-                            self.dbt.job_table.gpu_id: self.gpu_id
-                        },
-                        synchronize_session='fetch')
-              session.commit()
+                job.gpu_id = self.gpu_id
+                if set_state == "eval_start":
+                  job.eval_mid = self.machine.id
+                else:
+                  job.machine_id = self.machine.id
 
-              self.job_queue_push(session, ids)
+              session.commit()
+              self.refresh_query_objects(session, job_rows)
+              self.job_queue_push(job_rows)
 
           #also in job_queue_lock
           self.job_queue_pop()
@@ -429,8 +433,8 @@ class WorkerInterface(Process):
   def reset_job_state(self):
     """Helper function to reset job state during signal interrupt"""
     #also filter pending states eg compiled_pend
-    if self.job and self.job.state in ("compile_start", "compiling",
-                                       "eval_start", "evaluating"):
+    if self.job and self.job.state.name in ("compile_start", "compiling",
+                                            "eval_start", "evaluating"):
       self.logger.warning('resetting job state to %s', self.fetch_state[0])
       if "new" in self.fetch_state:
         self.set_job_state("new")

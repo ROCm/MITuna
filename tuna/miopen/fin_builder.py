@@ -28,7 +28,6 @@
 jobs in compile mode"""
 import json
 
-from time import sleep
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 
 from tuna.miopen.fin_class import FinClass
@@ -90,16 +89,19 @@ class FinBuilder(FinClass):
   def reset_job_state(self):
     """finish committing result queue"""
     super().reset_job_state()
-    if self.gpu_id == 0:
+    if self.result_queue_lock.acquire(block=False):
       with DbSession() as session:
         self.result_queue_commit(session, 'compiled')
+      self.result_queue_lock.release()
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     self.pending = False
-    if self.gpu_id == 0:
+
+    if self.result_queue_lock.acquire(block=False):
       with DbSession() as session:
         self.result_queue_commit(session, 'compiled')
+      self.result_queue_lock.release()
 
     # pylint: disable=duplicate-code
     if self.first_pass:
@@ -112,10 +114,6 @@ class FinBuilder(FinClass):
     # pylint: enable=duplicate-code
 
     if not self.get_job("new", "compile_start", True):
-      if self.gpu_id == 0 and self.num_procs.value > 1:
-        #wait to commit results from other processes
-        sleep(30)
-        return True
       return False
 
     # JD: while fin can exec multiple jobs at a time, that makes error detection difficult

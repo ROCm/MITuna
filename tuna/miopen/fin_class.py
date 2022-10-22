@@ -110,19 +110,21 @@ class FinClass(WorkerInterface):
     self.dbt = DBTables(session_id=self.session_id,
                         config_type=self.config_type)
 
-  def compose_work_query(self, session, job_query):
-    """query for fin command and config"""
-    job_ids = [job.id for job in job_query.all()]
-    query = session.query(self.dbt.job_table, self.dbt.config_table)\
-        .filter(self.dbt.config_table.valid == 1)\
-        .filter(self.dbt.job_table.id.in_(job_ids))\
-        .filter(self.dbt.job_table.config == self.dbt.config_table.id)
+  def base_job_query(self, session):
+    """select tables for job query"""
+    query = session.query(self.dbt.job_table, self.dbt.config_table)
+    return query
 
+  def compose_work_query(self, query):
+    """query for fin command and config"""
     if self.fin_steps:
       query = query.filter(
           self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
     else:
       query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
+
+    query = query.filter(self.dbt.config_table.valid == 1)\
+                 .filter(self.dbt.job_table.config == self.dbt.config_table.id)
 
     return query
 
@@ -137,20 +139,6 @@ class FinClass(WorkerInterface):
         self.end_jobs.value = 1
       return False
     return True
-
-  def job_queue_push(self, session, ids):
-    """load job_queue with info for job ids"""
-    job_rows = session.query(self.dbt.job_table, self.dbt.config_table)\
-      .filter(self.dbt.config_table.id == self.dbt.job_table.config)\
-      .filter(self.dbt.job_table.id.in_(ids)).all()
-
-    if len(ids) != len(job_rows):
-      raise Exception(
-          f'Failed to load job queue. #ids: {len(ids)} - #job_rows: {len(job_rows)}'
-      )
-    for job, config in job_rows:
-      self.job_queue.put((job, config))
-      self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
   def job_queue_pop(self):
     """load job & config from top of job queue"""
@@ -684,6 +672,7 @@ class FinClass(WorkerInterface):
 
   def add_sql_objs(self, session, obj_list):
     """add sql objects to the table"""
+    self.logger.info("adding pending #objects: %s", len(obj_list))
     for sql_obj in obj_list:
       session.add(sql_obj)
     session.commit()
@@ -691,22 +680,27 @@ class FinClass(WorkerInterface):
 
   def result_queue_commit(self, session, state):
     """commit the result queue and set job state"""
-    job_list = []
-    obj_list = []
-    with self.result_queue_lock:
-      while not self.result_queue.empty():
-        job, sql_obj = self.result_queue.get(True, 1)
-        job_list.append(job)
-        obj_list.append(sql_obj)
+    for_commit = {}
+    while not self.result_queue.empty():
+      job, sql_obj = self.result_queue.get(True, 1)
+      if job.id not in for_commit:
+        for_commit[job.id] = {"job": job, "obj": [sql_obj]}
+      else:
+        for_commit[job.id]['obj'].append(sql_obj)
 
-    status = session_retry(session, self.add_sql_objs,
-                           lambda x: x(session, obj_list), self.logger)
-    if not status:
-      return False
+    for job_id, job_dict in for_commit.items():
+      obj_list = job_dict['obj']
+      self.job = job_dict['job']
 
-    #set job states after successful commit
-    for job in job_list:
-      self.job = job
+      self.logger.info("commit pending job %s, #objects: %s", job_id,
+                       len(obj_list))
+      status = session_retry(session, self.add_sql_objs,
+                             lambda x: x(session, obj_list), self.logger)
+      if not status:
+        self.logger.error("Failed commit pending job %s", job_id)
+        continue
+
+      #set job states after successful commit
       self.set_job_state(state)
 
     return True
