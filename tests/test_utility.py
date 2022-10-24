@@ -35,6 +35,7 @@ from tuna.utils.utility import get_mmi_env_vars
 
 LOGGER = setup_logger('utility')
 
+
 def test_utility():
   test_arch2targetid
   test_check_qts
@@ -72,11 +73,11 @@ def test_check_qts():
   print(retvalue)
   assert (retvalue == False)
 
-  retvalue = check_qts('92.168.65.100')
+  retvalue = check_qts('192.0.2.0')
   print(retvalue)
   assert (retvalue == False)
 
-  retvalue = check_qts('192.168.1.74', False)
+  retvalue = check_qts('198.51.100.0', False)
   print(bool(retvalue))
   assert (retvalue == True)
 
@@ -84,15 +85,15 @@ def test_check_qts():
 def test_get_env_vars():
   env_vars = get_env_vars()
 
-  assert 'root' == (env_vars['user_name'])
-  assert 'root1234' == (env_vars['user_password'])
-  assert 'ginger.amd.com' == (env_vars['db_hostname'])
-  assert 'sujatha' == (env_vars['db_name'])
+  assert 'xyz_123' == (env_vars['user_name'])
+  assert 'xyz1234' == (env_vars['user_password'])
+  assert 'xyz.test.com' == (env_vars['db_hostname'])
+  assert 'testdb' == (env_vars['db_name'])
 
 
 def test_get_mmi_env_vars():
   env_vars = get_mmi_env_vars()
 
-  assert '10.216.64.100' == env_vars['gateway_ip']
-  assert '8004' == env_vars['gateway_port']
-  assert 'fpadmin' == env_vars['gateway_user']
+  assert '10.100.00.000' == env_vars['gateway_ip']
+  assert '1234' == env_vars['gateway_port']
+  assert 'xyz' == env_vars['gateway_user']
