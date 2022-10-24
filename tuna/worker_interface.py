@@ -93,6 +93,7 @@ class WorkerInterface(Process):
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
+    #initialize tables
     self.set_db_tables()
 
     #add cache directories
