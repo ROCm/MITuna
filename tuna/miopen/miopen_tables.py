@@ -438,6 +438,7 @@ class ConvSolverApplicability(BASE, SolverApplicabilityMixin):
                   nullable=False,
                   index=True)
   app_idx = Index('app_idx', 'config', 'solver', 'session')
+  sess_cfg = Index('sess_cfg', 'session', 'config')
 
 
 class BNSolverApplicability(BASE, SolverApplicabilityMixin):
