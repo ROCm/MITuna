@@ -199,13 +199,15 @@ class WorkerInterface(Process):
 
   def get_job_table(self, job_tuple):
     """find job table in a job tuple"""
-    if isinstance(job_tuple, self.dbt.job_table):
+    try:
+      for i, tble in enumerate(job_tuple):
+        if isinstance(tble, self.dbt.job_table):
+          job_i = i
+          break
+      job_table = job_tuple[job_i]
+    except TypeError:
       job_table = job_tuple
-    for i, tble in enumerate(job_tuple):
-      if isinstance(tble, self.dbt.job_table):
-        job_i = i
-        break
-    job_table = job_tuple[job_i]
+
     return job_table
 
   def get_job_tables(self, job_rows):
@@ -225,8 +227,11 @@ class WorkerInterface(Process):
   def refresh_query_objects(self, session, rows):
     """refresh objects in query rows"""
     for obj_tuple in rows:
-      for entry in obj_tuple:
-        session.refresh(entry)
+      try:
+        for entry in obj_tuple:
+          session.refresh(entry)
+      except TypeError:
+        session.refresh(obj_tuple)
 
   def job_queue_push(self, job_rows):
     """load job_queue with info for job ids"""
