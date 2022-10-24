@@ -33,7 +33,7 @@ import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen_tables import Solver
+from tuna.miopen.miopen_tables import Solver
 from tuna.utils.logger import setup_logger
 from tuna.metadata import NUM_SQL_RETRIES
 

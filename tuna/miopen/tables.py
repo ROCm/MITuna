@@ -26,12 +26,12 @@
 ###############################################################################
 """Module that encapsulates the DB representation based on configuration type"""
 from tuna.find_db import ConvolutionFindDB, BNFindDB
-from tuna.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
-from tuna.miopen_tables import ConvJobCache, Solver
-from tuna.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
-from tuna.miopen_tables import ConvSolverApplicability, BNSolverApplicability
-from tuna.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
-from tuna.miopen_tables import TensorTable, ConvolutionGolden
+from tuna.miopen.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
+from tuna.miopen.miopen_tables import ConvJobCache, Solver
+from tuna.miopen.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
+from tuna.miopen.miopen_tables import ConvSolverApplicability, BNSolverApplicability
+from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
+from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.session import Session

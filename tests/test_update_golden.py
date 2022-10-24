@@ -29,7 +29,7 @@ from tuna.update_golden import merge_golden_entries, get_fdb_query
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
-from tuna.miopen_tables import ConvolutionGolden
+from tuna.miopen.miopen_tables import ConvolutionGolden
 from tuna.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs
 

@@ -36,7 +36,7 @@ from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.db_tables import connect_db
-from tuna.miopen_tables import Solver
+from tuna.miopen.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
 from tuna.miopen.tables import MIOpenDBTables

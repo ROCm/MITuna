@@ -26,7 +26,7 @@
 
 from multiprocessing import Value
 
-from tuna.go_fish import compose_f_vals, get_kwargs
+from tuna.utils.utility import compose_f_vals, get_kwargs
 from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
 from tuna.machine import Machine

@@ -29,7 +29,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
-from tuna.miopen_tables import TensorTable
+from tuna.miopen.miopen_tables import TensorTable
 from tuna.metadata import TENSOR_PRECISION
 from tuna.parsing import parse_line
 

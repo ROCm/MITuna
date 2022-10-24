@@ -36,7 +36,7 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.worker_interface import WorkerInterface
-from tuna.go_fish import load_machines, compose_worker_list
+from tuna.utils.miopen_utility import load_machines
 from tuna.fin_class import FinClass
 from tuna.machine import Machine
 from utils import get_worker_args, add_test_session
@@ -48,6 +48,7 @@ from tuna.miopen.tables import MIOpenDBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
+from miopen.miopen_lib import MIOpen
 
 
 def add_job(w):
@@ -73,7 +74,8 @@ def add_job(w):
   args.update_applicability = True
   args.label = 'tuna_pytest_worker'
   args.session_id = w.session_id
-  worker_lst = compose_worker_list(machine_lst, args)
+  miopen = MIOpen()
+  worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
 
