@@ -165,7 +165,7 @@ def get_fdb_entry(session, dbt, config, solver, ocl):
 def insert_perf_db(dbt, perf_rows, perf_cols, cvrt):
   """insert sqlite perf_db table into mysql perf_db"""
   insert_ids = []
-  solver_id_map, _ = get_solver_ids()
+  solver_id_map = get_solver_ids()
   with DbSession() as session:
     for row in perf_rows:
       entry = dict(zip(perf_cols, row))
@@ -207,7 +207,7 @@ def record_fdb(dbt, args):
   counts = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
-  solver_id_map, _ = get_solver_ids()
+  solver_id_map = get_solver_ids()
   with open(os.path.expanduser(args.target_file), "r") as infile:  # pylint: disable=unspecified-encoding
     with DbSession() as session:
       num_line = 0

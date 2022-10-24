@@ -35,9 +35,9 @@ from tuna.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.miopen_tables import FinStep
 from tuna.metadata import MIOPEN_ALG_LIST
-from tuna.fin_class import FinClass
-from tuna.fin_builder import FinBuilder
-from tuna.fin_eval import FinEvaluator
+from tuna.miopen.fin_class import FinClass
+from tuna.miopen.fin_builder import FinBuilder
+from tuna.miopen.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.session import Session
 from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs

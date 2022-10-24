@@ -33,7 +33,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.fin_eval import FinEvaluator
+from tuna.miopen.fin_eval import FinEvaluator
 from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables import DBTables
