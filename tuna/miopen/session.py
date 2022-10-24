@@ -52,7 +52,6 @@ class Session(BASE, SessionMixin):
                                      "solver_id",
                                      name="uq_idx"),)
 
-  rocm_v = Column(String(length=64), nullable=False)
   miopen_v = Column(String(length=64), nullable=False)
   solver_id = Column(Integer,
                      ForeignKey("solver.id",

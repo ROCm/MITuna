@@ -39,7 +39,7 @@ from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
 from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.config_type import ConfigType
-from tuna.session import Session
+from tuna.miopen.session import Session
 from tuna.metadata import DIR_MAP
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]

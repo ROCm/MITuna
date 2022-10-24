@@ -34,6 +34,7 @@ class SessionMixin():
 
   arch = Column(String(length=20), nullable=False, server_default="")
   num_cu = Column(Integer, nullable=False)
+  rocm_v = Column(String(length=64), nullable=False)
   reason = Column(String(length=60), nullable=False)
   ticket = Column(String(length=64), nullable=False, server_default="N/A")
   docker = Column(String(length=64),

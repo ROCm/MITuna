@@ -29,7 +29,7 @@ from tuna.miopen.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorT
 from multiprocessing import Value, Lock, Queue
 from tuna.metadata import LOG_TIMEOUT
 from tuna.tables import DBTables, ConfigType
-from tuna.session import Session
+from tuna.miopen.session import Session
 
 
 def test_fin_utils():
