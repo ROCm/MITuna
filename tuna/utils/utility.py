@@ -27,8 +27,10 @@
 """Utility module for helper functions"""
 
 import os
+from multiprocessing import Value, Lock, Queue as mpQueue
 from tuna.utils.logger import setup_logger
 from tuna.sql import DbCursor
+from tuna.config_type import ConfigType
 
 LOGGER = setup_logger('utility')
 
@@ -45,24 +47,6 @@ def arch2targetid(arch):
   else:
     targetid = f'{arch}:sram-ecc+:xnack-'
   return targetid
-
-
-def get_filter_time(time_arr):
-  """Get filter time"""
-  rmid = len(time_arr) // 3
-  warm_times = time_arr[rmid:]
-  warm_mean = sum(warm_times) / len(warm_times)
-
-  variance = sum(
-      (pow(x_var - warm_mean, 2) for x_var in warm_times)) / len(warm_times)
-  std_dev = pow(variance, 1 / 2)
-  filter_warm = []
-  for time in warm_times:
-    if abs(time - warm_mean) <= std_dev:
-      filter_warm.append(time)
-  filter_mean = sum(filter_warm) / len(filter_warm)
-
-  return filter_mean
 
 
 def check_qts(hostname, logger=LOGGER):
@@ -143,3 +127,74 @@ class DotDict(dict):
   __getattr__ = dict.get
   __setattr__ = dict.__setitem__
   __delattr__ = dict.__delitem__
+
+
+def compose_f_vals(args, machine):
+  """! Compose dict for WorkerInterface constructor
+    @param args The command line arguments
+    @param machine Machine instance
+  """
+  f_vals = {}
+  f_vals["barred"] = Value('i', 0)
+  f_vals["bar_lock"] = Lock()
+  f_vals["queue_lock"] = Lock()
+  #multiprocess queue for jobs, shared on machine
+  f_vals["job_queue"] = mpQueue()
+  f_vals["machine"] = machine
+  f_vals["envmt"] = get_envmt(args)
+  f_vals["b_first"] = True
+  f_vals["end_jobs"] = Value('i', 0)
+
+  return f_vals
+
+
+def get_envmt(args):
+  """! Function to construct environment var
+     @param args The command line arguments
+  """
+  envmt = ["MIOPEN_LOG_LEVEL=4"]
+
+  envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
+  envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
+
+  if args.find_mode:
+    envmt.append(f"MIOPEN_FIND_MODE={args.find_mode}")
+
+  if args.blacklist:
+    bk_str = ", ".join([f"{arg}=0" for arg in args.blacklist])
+    for bk_var in bk_str.split(','):
+      envmt.append(bk_var)
+
+  return envmt
+
+
+def get_kwargs(gpu_idx, f_vals, args):
+  """! Helper function to set up kwargs for worker instances
+    @param gpu_idx Unique ID of the GPU
+    @param f_vals Dict containing runtime information
+    @param args The command line arguments
+  """
+  envmt = f_vals["envmt"].copy()
+  if args.config_type is None:
+    args.config_type = ConfigType.convolution
+
+  kwargs = {
+      'machine': f_vals["machine"],
+      'gpu_id': gpu_idx,
+      'num_procs': f_vals["num_procs"],
+      'barred': f_vals["barred"],
+      'bar_lock': f_vals["bar_lock"],
+      'envmt': envmt,
+      'reset_interval': args.reset_interval,
+      'fin_steps': args.fin_steps,
+      'dynamic_solvers_only': args.dynamic_solvers_only,
+      'job_queue': f_vals["job_queue"],
+      'queue_lock': f_vals["queue_lock"],
+      'label': args.label,
+      'docker_name': args.docker_name,
+      'end_jobs': f_vals['end_jobs'],
+      'config_type': args.config_type,
+      'session_id': args.session_id
+  }
+
+  return kwargs

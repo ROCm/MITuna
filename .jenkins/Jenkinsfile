@@ -25,7 +25,7 @@ def finApplicability(){
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_PASSWORD = "${db_password}"
         env.TUNA_DB_USER_NAME ="${db_user}"
-        sh "./tuna/go_fish.py --update_applicability"
+        sh "./tuna/go_fish.py miopen --update_applicability"
         def num_sapp = runsql("SELECT count(*) from solver_applicability;")
         println "Count(*) solver_applicability table: ${num_sapp}"
         if (num_sapp.toInteger() == 0){
@@ -44,7 +44,7 @@ def finSolvers(){
             env.TUNA_DB_NAME="${db_name}"
             env.TUNA_DB_USER_PASSWORD = "${db_password}"
             env.TUNA_DB_USER_NAME ="${db_user}"
-            sh "./tuna/go_fish.py --update_solvers"
+            sh "./tuna/go_fish.py miopen --update_solvers"
             def num_solvers = runsql("SELECT count(*) from solver;")
             println "Number of solvers: ${num_solvers}"
             if (num_solvers.toInteger() == 0){
@@ -87,8 +87,8 @@ def finFindCompile()
   // sh "echo Total number of CPUs available: ${num_cpus}"
 
   // Run the jobs on the cluster
-  // sh "srun -p ${slurm_partition} -n ${num_cpus} -l bash -c 'docker run --network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e SLURM_PROCID=\$SLURM_PROCID ${tuna_docker_name} /tuna/tuna/go_fish.py --proc_id \$SLURM_PROCID --fin_steps miopen_find_compile -l ${job_reason} '"
-  sh "srun --no-kill -p ${slurm_partition} -N ${num_all_nodes} -l bash -c 'docker run --network host -e TUNA_LOGLEVEL=${tuna_loglevel} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --fin_steps miopen_find_compile -l ${job_reason} '"
+  // sh "srun -p ${slurm_partition} -n ${num_cpus} -l bash -c 'docker run --network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e SLURM_PROCID=\$SLURM_PROCID ${tuna_docker_name} /tuna/tuna/go_fish.py miopen --proc_id \$SLURM_PROCID --fin_steps miopen_find_compile -l ${job_reason} '"
+  sh "srun --no-kill -p ${slurm_partition} -N ${num_all_nodes} -l bash -c 'docker run --network host -e TUNA_LOGLEVEL=${tuna_loglevel} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen --fin_steps miopen_find_compile -l ${job_reason} '"
 }
 
 def finFindEval(arch)
@@ -106,7 +106,7 @@ def finFindEval(arch)
   // the sinfo command does not respect the idle state despite the -t switch
   // def num_nodes = sh(script: "sinfo -h -t idle -p ${arch} -o '%D' ", returnStdout: true).trim()
   
-  sh "srun --no-kill -p ${arch} -N ${num_nodes} -l bash -c 'docker run --network host -e TUNA_LOGLEVEL=${tuna_loglevel} ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py --fin_steps miopen_find_eval -l ${job_reason} '"
+  sh "srun --no-kill -p ${arch} -N ${num_nodes} -l bash -c 'docker run --network host -e TUNA_LOGLEVEL=${tuna_loglevel} ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen --fin_steps miopen_find_eval -l ${job_reason} '"
 }
 
 def exportDb(arch, num_cu)
