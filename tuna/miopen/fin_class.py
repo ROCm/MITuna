@@ -586,6 +586,11 @@ class FinClass(WorkerInterface):
     if 'time' in fdb_obj:
       fdb_entry.kernel_time = fdb_obj['time']
 
+    committed = self.result_queue_drain()
+    if not committed:
+      #wait until other process commits
+      with self.result_queue_lock:
+        self.pending = False
     fdb_entry, _ = self.get_fdb_entry(session, solver)
     fdb_entry.kernel_group = fdb_entry.id
 
@@ -704,6 +709,11 @@ class FinClass(WorkerInterface):
       self.set_job_state(state)
 
     return True
+
+  def reset_job_state(self):
+    """finish committing result queue"""
+    super().reset_job_state()
+    self.result_queue_drain()
 
   def run_fin_cmd(self):
     """Run a fin command after generating the JSON"""

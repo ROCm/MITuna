@@ -86,22 +86,19 @@ class FinBuilder(FinClass):
 
     return status
 
-  def reset_job_state(self):
-    """finish committing result queue"""
-    super().reset_job_state()
+  def result_queue_drain(self):
+    """check for lock and commit the result queue"""
     if self.result_queue_lock.acquire(block=False):
       with DbSession() as session:
         self.result_queue_commit(session, 'compiled')
       self.result_queue_lock.release()
+      return True
+    return False
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     self.pending = False
-
-    if self.result_queue_lock.acquire(block=False):
-      with DbSession() as session:
-        self.result_queue_commit(session, 'compiled')
-      self.result_queue_lock.release()
+    self.result_queue_drain()
 
     # pylint: disable=duplicate-code
     if self.first_pass:
