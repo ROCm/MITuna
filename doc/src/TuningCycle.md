@@ -63,7 +63,7 @@ The solver table contains MIOpen solvers and solver characteristics.
 This should be updated when an MIOpen version modifies solvers.
 
 ```
-./go_fish.py --update_solvers
+./go_fish.py miopen --update_solvers
 ```
 
 **Add Tuning Session (3)**
@@ -76,7 +76,7 @@ and will populate the table with the version and architecture information.
 
 [Use backend=HIPNOGPU docker]
 ```
-./go_fish.py --init_session -l reason
+./go_fish.py miopen --init_session -l reason
 --init_session - create a session entry
 -l             - reference text description
 ```
@@ -87,7 +87,7 @@ solver_applicability table with applicable solvers for each configuration for th
 
 [Use backend=HIPNOGPU docker]
 ```
-./go_fish.py --update_applicability --session_id 1
+./go_fish.py miopen --update_applicability --session_id 1
 --session_id - tuning session id
 ```
 
@@ -115,7 +115,7 @@ supply the session id along with the compile fin_step matching the one in the jo
 
 [Use backend=HIPNOGPU docker]
 ```
-./go_fish.py --session_id 1 --fin_steps miopen_perf_compile
+./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile
 --session_id    - tuning session id 
 --fin_steps     - execute this operation
 ```
@@ -127,7 +127,7 @@ This command is similar to the previous.
 
 [Use backend=HIP docker]
 ```
-./go_fish.py --session_id 1 --fin_steps miopen_perf_eval
+./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_eval
 --session_id    - tuning session id
 --fin_steps     - execute this operation
 ```
