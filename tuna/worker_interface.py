@@ -390,13 +390,8 @@ class WorkerInterface(Process):
         if fdb_obj[check_str]:
           #returned entry is added to the table
           fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
-          if fdb_obj['reason'] == 'Success':
-            self.compose_kernel_entry(session, fdb_obj, fdb_entry)
-            self.logger.info('Updating find Db(Build) for job_id=%s',
-                             self.job.id)
-          else:
-            # JD: add info about reason to the logs table
-            fdb_entry.valid = False
+          self.compose_kernel_entry(session, fdb_obj, fdb_entry)
+          self.logger.info('Updating find Db(Build) for job_id=%s', self.job.id)
         else:
           self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
                               fin_json['config_tuna_id'], fdb_obj)
