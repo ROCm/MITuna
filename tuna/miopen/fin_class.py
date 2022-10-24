@@ -693,6 +693,7 @@ class FinClass(WorkerInterface):
       else:
         for_commit[job.id]['obj'].append(sql_obj)
 
+    this_job = self.job
     for job_id, job_dict in for_commit.items():
       obj_list = job_dict['obj']
       self.job = job_dict['job']
@@ -708,6 +709,7 @@ class FinClass(WorkerInterface):
       #set job states after successful commit
       self.set_job_state(state)
 
+    self.job = this_job
     return True
 
   def reset_job_state(self):
