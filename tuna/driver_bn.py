@@ -29,7 +29,7 @@ from tuna.driver_base import DriverBase
 from tuna.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS, PREC_TO_CMD
 from tuna.metadata import SUPPORTED_BN_CMDS, TABLE_COLS_BN_MAP, BN_DEFAULTS
 from tuna.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
-from tuna.miopen_tables import BNConfig
+from tuna.miopen.miopen_tables import BNConfig
 from tuna.parsing import get_fd_name, arg_valid
 from tuna.helper import get_db_id
 from tuna.config_type import ConfigType

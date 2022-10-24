@@ -24,34 +24,17 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""logger file"""
-import logging
-import os
-from tuna.metadata import TUNA_LOG_DIR
+"""Factory method to get library"""
+from tuna.libraries import Library
+from tuna.miopen.miopen_lib import MIOpen
 
 
-def setup_logger(logger_name='Tuna',
-                 add_streamhandler=True,
-                 add_filehandler=False):
-  """std setup for tuna logger"""
-  log_level = os.environ.get('TUNA_LOGLEVEL', 'INFO').upper()
-  logging.basicConfig(level=log_level)
-  logger = logging.getLogger(logger_name)
-  log_file = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
-  formatter = logging.Formatter(
-      '%(asctime)s - %(name)s - %(levelname)s -  [%(filename)s:%(lineno)d] - %(message)s'
-  )
-  logger.propagate = False
-  if add_filehandler:
-    file_handler = logging.FileHandler(log_file, mode='a')
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
-    logger.addHandler(file_handler)
-  if add_streamhandler:
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    stream_handler.setLevel(logging.INFO)
-    logger.addHandler(stream_handler)
+def get_library(args):
+  """Factory method to get lib based on args"""
+  print(args.keys)
+  if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
+    library = MIOpen()
+  else:
+    raise ValueError("Not implemented")
 
-  logger.setLevel(log_level.upper() if log_level else logging.DEBUG)
-  return logger
+  return library
