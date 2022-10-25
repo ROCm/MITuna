@@ -139,14 +139,6 @@ def get_mmi_env_vars(env_vars={}):
 
   return env_vars
 
-
-class DotDict(dict):
-  """dot.notation access to dictionary attributes"""
-  __getattr__ = dict.get
-  __setattr__ = dict.__setitem__
-  __delattr__ = dict.__delitem__
-
-
 def compose_f_vals(args, machine):
   """! Compose dict for WorkerInterface constructor
     @param args The command line arguments
