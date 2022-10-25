@@ -41,6 +41,7 @@ from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.config_type import ConfigType
 from tuna.session import Session
 from tuna.metadata import DIR_MAP
+from tuna.miopen.benchmark import Model, Framework
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
@@ -521,7 +522,7 @@ class BNGolden(BASE, GoldenMixin):
 
 class BenchmarkTable(BASE):
   """benchmark table for framework and model parameters"""
-  __tablename__ = "benchmark_table"
+  __tablename__ = "benchmark"
   __table_args__ = (UniqueConstraint("framework",
                                      "model",
                                      "batchsize",
@@ -538,7 +539,7 @@ class BenchmarkTable(BASE):
 
 class ConvBenchPerfTable(BASE):
   """benchmark table for performance parameters"""
-  __tablename__ = "conv_benchmark_perf_table"
+  __tablename__ = "conv_benchmark_perf"
   __table_args__ = (UniqueConstraint("config",
                                      "benchmark",
                                      "solver",
@@ -547,7 +548,7 @@ class ConvBenchPerfTable(BASE):
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-  benchmark = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
+  benchmark = Column(Integer, ForeignKey("benchmark.id"), nullable=False)
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   solver = Column(Integer,
                   ForeignKey("solver.id",
@@ -605,6 +606,8 @@ def get_miopen_tables():
   miopen_tables.append(TensorTable())
   miopen_tables.append(BenchmarkTable())
   miopen_tables.append(ConvBenchPerfTable())
+  miopen_tables.append(Framework())
+  miopen_tables.append(Model())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)
