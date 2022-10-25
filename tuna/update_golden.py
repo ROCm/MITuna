@@ -34,6 +34,7 @@ from tuna.tables import DBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry
 from tuna.miopen.session import Session
+from tuna.utils.utility import split_packets
 
 # Setup logging
 LOGGER = setup_logger('update_golden')
@@ -220,18 +221,7 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
 
 def process_merge_golden(dbt, golden_v, entries, s_copy=False):
   """" retry loop for merging into golden table """
-  num_packs = 0
-  pack_sz = 10000
-  pack = []
-  all_packs = []
-  for elem in entries:
-    pack.append(elem)
-    num_packs += 1
-    if num_packs % pack_sz == 0:
-      all_packs.append(pack)
-      pack = []
-  if pack:
-    all_packs.append(pack)
+  all_packs = split_packets(entries, 10000)
 
   pcnt = 0
   prev_pcnt = 0
