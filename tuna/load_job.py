@@ -122,7 +122,7 @@ def parse_args():
     steps = [x.strip() for x in args.fin_steps.split(',')]
     args.fin_steps = set(steps)
 
-  solver_id_map, _ = get_solver_ids()
+  solver_id_map = get_solver_ids()
   solver_arr = None
   if args.solvers:
     solver_arr = args.solvers.split(',')

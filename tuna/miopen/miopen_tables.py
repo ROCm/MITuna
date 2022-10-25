@@ -438,6 +438,7 @@ class ConvSolverApplicability(BASE, SolverApplicabilityMixin):
                   nullable=False,
                   index=True)
   app_idx = Index('app_idx', 'config', 'solver', 'session')
+  sess_cfg = Index('sess_cfg', 'session', 'config')
 
 
 class BNSolverApplicability(BASE, SolverApplicabilityMixin):
@@ -518,6 +519,46 @@ class BNGolden(BASE, GoldenMixin):
   kernel_group = Column(Integer, nullable=True)
 
 
+class BenchmarkTable(BASE):
+  """benchmark table for framework and model parameters"""
+  __tablename__ = "benchmark_table"
+  __table_args__ = (UniqueConstraint("framework",
+                                     "model",
+                                     "batchsize",
+                                     "gpu_number",
+                                     "driver_cmd",
+                                     name="uq_idx"),)
+
+  framework = Column(String(length=128), nullable=False)
+  model = Column(String(length=128), nullable=False)
+  batchsize = Column(Integer, nullable=False, server_default="32")
+  gpu_number = Column(Integer, nullable=True, server_default="1")
+  driver_cmd = Column(String(length=128), nullable=False)
+
+
+class ConvBenchPerfTable(BASE):
+  """benchmark table for performance parameters"""
+  __tablename__ = "conv_benchmark_perf_table"
+  __table_args__ = (UniqueConstraint("config",
+                                     "benchmark",
+                                     "solver",
+                                     "rocm_v",
+                                     "miopen_v",
+                                     name="uq_idx"),)
+
+  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  benchmark = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
+  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
+  solver = Column(Integer,
+                  ForeignKey("solver.id",
+                             onupdate="CASCADE",
+                             ondelete="CASCADE"),
+                  nullable=False)
+  workspace_sz = Column(BigInteger, nullable=False)
+  rocm_v = Column(String(length=64), nullable=False)
+  miopen_v = Column(String(length=64), nullable=False)
+
+
 def add_conv_tables(miopen_tables):
   """Append Convolution specific MIOpen DB tables"""
   miopen_tables.append(ConvolutionConfig())
@@ -562,6 +603,8 @@ def get_miopen_tables():
   miopen_tables.append(Session())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
+  miopen_tables.append(BenchmarkTable())
+  miopen_tables.append(ConvBenchPerfTable())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)

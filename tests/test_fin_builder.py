@@ -34,8 +34,8 @@ this_path = os.path.dirname(__file__)
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
-from tuna.fin_class import FinClass
 from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.fin_class import FinClass
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
@@ -69,7 +69,7 @@ def add_fin_find_compile_job(session_id, dbt):
   #limit job scope
   args.algo = "miopenConvolutionAlgoGEMM"
   solver_arr = ALG_SLV_MAP[args.algo]
-  solver_id_map, _ = get_solver_ids()
+  solver_id_map = get_solver_ids()
   if solver_arr:
     solver_ids = []
     for solver in solver_arr:
