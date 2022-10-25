@@ -93,11 +93,11 @@ class WorkerInterface(Process):
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
+    #initialize tables
+    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 
-    #initialize tables
-    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
     #add cache directories
     self.envmt.append(
         f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
