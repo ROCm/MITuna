@@ -281,6 +281,7 @@ class ConfigTagMixin():
 
   tag = Column(String(length=128), nullable=False, server_default="no_tag")
   recurrent = Column(TINYINT(1), nullable=False, server_default="0")
+  model = Column(Integer, ForeignKey("model.id"), nullable=False)
 
 
 class ConvolutionConfigTags(BASE, ConfigTagMixin):
