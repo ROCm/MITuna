@@ -282,7 +282,7 @@ class ConfigTagMixin():
   @declared_attr
   def model(self):
     """model FKey"""
-    return Column(Integer, ForeignKey("model.id"), nullable=False)
+    return Column(Integer, ForeignKey("model.id"), nullable=True)
 
   tag = Column(String(length=128), nullable=False, server_default="no_tag")
   recurrent = Column(TINYINT(1), nullable=False, server_default="0")
