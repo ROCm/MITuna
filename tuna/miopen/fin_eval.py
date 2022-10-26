@@ -282,6 +282,8 @@ class FinEvaluator(FinClass):
     # pylint: enable=duplicate-code
 
     if not self.get_job("compiled", "eval_start", True):
+      while not self.result_queue_drain():
+        sleep(1)
       return False
 
     orig_state = 'compiled'
