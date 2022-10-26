@@ -29,6 +29,7 @@ from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, or
 from sqlalchemy import Float, BigInteger, Boolean, Text, Index
 from sqlalchemy.ext.declarative import declared_attr
 
+from tuna.utils.logger import setup_logger
 from tuna.dbBase.base_class import BASE
 
 FDB_SLV_NUM_FIELDS = 5
@@ -69,6 +70,8 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
 
     if self.solver:
       query = query.filter(fdb_obj.solver == self.solver)
+
+    self.logger.info("fdb query %s-%s-%s-%s", session_id, self.config, self.solver, self.opencl)
 
     return query
 
@@ -138,6 +141,8 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
   @orm.reconstructor
   def __init__(self, **kwargs):
     self.logger = kwargs['logger'] if 'logger' in kwargs else None  #pylint: disable=multiple-statements
+    if not self.logger:
+        self.logger = setup_logger('find_db')
     self.fdb_slv_dir = {}
 
 

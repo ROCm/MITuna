@@ -573,7 +573,7 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvolutionKernelCache())
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
-  miopen_tables.append(ConvolutionFindDB)
+  miopen_tables.append(ConvolutionFindDB())
   miopen_tables.append(ConvolutionGolden())
   return miopen_tables
 

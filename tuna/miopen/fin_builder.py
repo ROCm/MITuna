@@ -62,8 +62,7 @@ class FinBuilder(FinClass):
       kernel_obj.job_id = self.job.id
 
       # Bundle Insert for later
-      self.pending = True
-      self.result_queue.put((self.job, kernel_obj))
+      self.pending.append((self.job, kernel_obj))
 
     return True
 
@@ -86,18 +85,22 @@ class FinBuilder(FinClass):
 
     return status
 
+  def close_job(self):
+    """mark a job complete"""
+    self.set_job_state('compiled')
+
   def result_queue_drain(self):
     """check for lock and commit the result queue"""
     if self.result_queue_lock.acquire(block=False):
       with DbSession() as session:
-        self.result_queue_commit(session, 'compiled')
+        self.result_queue_commit(session, self.close_job)
       self.result_queue_lock.release()
       return True
     return False
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
-    self.pending = False
+    self.pending = []
     self.result_queue_drain()
 
     # pylint: disable=duplicate-code
@@ -148,6 +151,8 @@ class FinBuilder(FinClass):
       self.set_job_state('errored', result=result_str)
     elif self.pending:
       self.set_job_state('compiled_pend', result=result_str)
+      for item in self.pending:
+        self.result_queue.put(item)
     else:
       self.set_job_state('compiled', result=result_str)
     return True

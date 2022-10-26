@@ -79,7 +79,7 @@ class FinClass(WorkerInterface):
     self.all_configs = []
     self.fin_list = []
     self.multiproc = False
-    self.pending = False
+    self.pending = []
     self.first_pass = True
 
     self.__dict__.update(
@@ -568,8 +568,7 @@ class FinClass(WorkerInterface):
                                         fdb_entry.kernel_group).delete()
     else:
       # Bundle Insert for later
-      self.pending = True
-      self.result_queue.put((self.job, fdb_entry))
+      self.pending.append((self.job, fdb_entry))
     return fdb_entry
 
   def compose_fdb_entry(self, session, fin_json, fdb_obj):
@@ -586,13 +585,7 @@ class FinClass(WorkerInterface):
     if 'time' in fdb_obj:
       fdb_entry.kernel_time = fdb_obj['time']
 
-    committed = self.result_queue_drain()
-    if not committed:
-      #wait until other process commits
-      with self.result_queue_lock:
-        self.pending = False
-    fdb_entry, _ = self.get_fdb_entry(session, solver)
-    fdb_entry.kernel_group = fdb_entry.id
+    fdb_entry.kernel_group = self.job.id
 
     return fdb_entry
 
@@ -604,8 +597,7 @@ class FinClass(WorkerInterface):
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.kernel_group = fdb_entry.kernel_group
       # Bundle Insert for later
-      self.pending = True
-      self.result_queue.put((self.job, kernel_obj))
+      self.pending.append((self.job, kernel_obj))
     return True
 
   def populate_kernels(self, kern_obj, kernel_obj):
@@ -683,8 +675,8 @@ class FinClass(WorkerInterface):
     session.commit()
     return True
 
-  def result_queue_commit(self, session, state):
-    """commit the result queue and set job state"""
+  def result_queue_commit(self, session, close_job):
+    """commit the result queue and set mark job complete"""
     for_commit = {}
     while not self.result_queue.empty():
       job, sql_obj = self.result_queue.get(True, 1)
@@ -707,7 +699,7 @@ class FinClass(WorkerInterface):
         continue
 
       #set job states after successful commit
-      self.set_job_state(state)
+      close_job()
 
     self.job = this_job
     return True
