@@ -48,16 +48,6 @@ class Framework(BASE):
 
 class ModelEnum(enum.Enum):
   """Represents model enums"""
-  RESNET50 = 'Resnet50'
-  RESNEXT101 = 'Resnext101'
-  VGG16 = 'Vgg16'
-  VGG19 = 'Vgg19'
-  ALEXNEXT = 'Alexnet'
-  GOOGLENEXT = 'Googlenet'
-  INCEPTION3 = 'Inception3'
-  INCEPTION4 = 'Inception4'
-  MASKRCNN = 'Mask-r-cnn'
-  SHUFFLENET = 'Shufflenet'
 
 
 class Model(BASE):
