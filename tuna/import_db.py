@@ -31,7 +31,7 @@ import sqlite3
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg, parse_pdb_filename
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.session import Session
@@ -256,7 +256,7 @@ def main():
   args.arch, args.num_cu = parse_pdb_filename(args.target_file)
   if not args.session_id:
     args.session_id = Session().add_new_session(args, None)
-  dbt = DBTables(session_id=args.session_id)
+  dbt = MIOpenDBTables(session_id=args.session_id)
   if args.target_file.endswith(".db"):
     record_perfdb(dbt, args)
   elif args.target_file.endswith(".fdb.txt"):
