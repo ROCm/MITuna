@@ -535,8 +535,8 @@ class BenchmarkTable(BASE):
                                      "driver_cmd",
                                      name="uq_idx"),)
 
-  framework = Column(String(length=128), nullable=False)
-  model = Column(String(length=128), nullable=False)
+  framework = Column(Integer, ForeignKey("framework.id"), nullable=False)
+  model = Column(Integer, ForeignKey("model.id"), nullable=False)
   batchsize = Column(Integer, nullable=False, server_default="32")
   gpu_number = Column(Integer, nullable=True, server_default="1")
   driver_cmd = Column(String(length=128), nullable=False)

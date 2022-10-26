@@ -22,7 +22,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-  """
   #Model table
   op.create_table(
       'model',
@@ -119,7 +118,6 @@ def upgrade() -> None:
   op.create_unique_constraint(
       "uq_idx", "conv_benchmark_perf",
       ["config", "benchmark", "solver", "rocm_v", "miopen_v"])
-  """
   op.add_column('conv_config_tags',
                 Column('model', Integer, ForeignKey('model.id')))
   op.add_column('bn_config_tags',
