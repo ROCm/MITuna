@@ -27,12 +27,13 @@
 """ Module for defining benchmark and model enums """
 
 import enum
-from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
+from sqlalchemy import Column, UniqueConstraint
 from sqlalchemy import Enum
 from sqlalchemy import Float
 from tuna.dbBase.base_class import BASE
 
 
+#pylint: disable=too-few-public-methods
 class FrameworkEnum(enum.Enum):
   """Represents framework enums"""
   PYTORCH = 'Pytorch'

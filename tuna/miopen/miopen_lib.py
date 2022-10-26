@@ -26,7 +26,6 @@
 ###############################################################################
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
-import argparse
 import sys
 from multiprocessing import Value
 
@@ -217,6 +216,7 @@ class MIOpen(MITunaInterface):
     return args
 
   def clean_args(self):
+    """Helper function to remove inherited args"""
     if 'MIOPEN' in sys.argv:
       sys.argv.remove('MIOPEN')
     if 'miopen' in sys.argv:

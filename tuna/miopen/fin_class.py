@@ -30,9 +30,9 @@ import json
 import os
 import tempfile
 import functools
-import paramiko
 import random
 from time import sleep
+import paramiko
 try:
   import queue
 except ImportError:
@@ -58,6 +58,7 @@ class FinClass(WorkerInterface):
   """Class to provide Tuna support for Fin"""
 
   # pylint: disable=too-many-instance-attributes
+  # pylint: disable=too-many-public-methods
 
   def __init__(self, **kwargs):
     """Constructor"""
