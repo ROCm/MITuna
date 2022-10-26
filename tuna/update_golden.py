@@ -30,7 +30,7 @@ from sqlalchemy.sql.expression import func as sqlfunc
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry
 from tuna.utils.utility import split_packets
@@ -81,7 +81,8 @@ def parse_args():
     if args.base_golden_v is not None:
       parser.error('--base_golden_v must not be set with --overwrite')
   elif args.base_golden_v is None:
-    dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
+    dbt = MIOpenDBTables(session_id=args.session_id,
+                         config_type=args.config_type)
     ver = latest_golden_v(dbt)
     if ver != -1:
       parser.error(
@@ -249,7 +250,7 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
 def main():
   """! Main function"""
   args = parse_args()
-  dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
   gold_db = get_golden_query(dbt, args.golden_v).first()
   if gold_db and not args.overwrite:
