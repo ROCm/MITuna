@@ -607,12 +607,12 @@ def get_miopen_tables():
   miopen_tables = []
   miopen_tables.append(Solver())
   miopen_tables.append(Session())
+  miopen_tables.append(Framework())
+  miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
   miopen_tables.append(BenchmarkTable())
   miopen_tables.append(ConvBenchPerfTable())
-  miopen_tables.append(Framework())
-  miopen_tables.append(Model())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)
