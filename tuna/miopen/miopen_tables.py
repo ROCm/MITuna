@@ -279,9 +279,13 @@ class BNConfig(BASE):
 class ConfigTagMixin():
   """Mixin class for config tags tables"""
 
+  @declared_attr
+  def model(self):
+    """model FKey"""
+    return Column(Integer, ForeignKey("model.id"), nullable=False)
+
   tag = Column(String(length=128), nullable=False, server_default="no_tag")
   recurrent = Column(TINYINT(1), nullable=False, server_default="0")
-  model = Column(Integer, ForeignKey("model.id"), nullable=False)
 
 
 class ConvolutionConfigTags(BASE, ConfigTagMixin):
