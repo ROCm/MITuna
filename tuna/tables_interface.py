@@ -49,4 +49,4 @@ class DBTablesInterface():
 
   def set_tables(self):
     """Set appropriate tables based on config type"""
-    pass
+    return True
