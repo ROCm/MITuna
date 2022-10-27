@@ -151,13 +151,6 @@ RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX
 RUN make -j $(nproc)
 RUN make install
 
-
-# Clone SolverAnalytics
-ARG SOLVER_ANALYTICS_DIR=/root/SolverAnalytics
-RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git $SOLVER_ANALYTICS_DIR
-WORKDIR $SOLVER_ANALYTICS_DIR
-
-
 #SET MIOPEN ENVIRONMENT VARIABLES
 ENV MIOPEN_LOG_LEVEL=6
 ENV PATH=$PREFIX/miopen/bin:$PREFIX/bin:$PATH
@@ -182,3 +175,7 @@ ADD requirements.txt /tuna/
 WORKDIR /tuna
 
 RUN python3 setup.py install
+
+# Install SolverAnalytics
+ARG SOLVER_ANALYTICS_DIR=/tuna/SolverAnalytics/
+RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git $SOLVER_ANALYTICS_DIR
