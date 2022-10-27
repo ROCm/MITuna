@@ -49,6 +49,7 @@ class Framework(BASE):
 
 class ModelEnum(enum.Enum):
   """Represents model enums"""
+  NA = 'N/A'
 
 
 class Model(BASE):
