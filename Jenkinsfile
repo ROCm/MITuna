@@ -126,7 +126,7 @@ pipeline {
         agent{  label utils.rocmnode("tunatest") }
         steps {
           script {
-            solverAnalyticsTest()
+            utils.solverAnalyticsTest()
             }
             }
         }
