@@ -24,33 +24,19 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for defining benchmark and model enums """
-
-import enum
-from sqlalchemy import Column, UniqueConstraint
-from sqlalchemy import Enum, Float, String
-from tuna.dbBase.base_class import BASE
+"""Session table and its associate functionality"""
+from sqlalchemy import Column, Integer, String
 
 
-#pylint: disable=too-few-public-methods
-class FrameworkEnum(enum.Enum):
-  """Represents framework enums"""
-  PYTORCH = 'Pytorch'
-  DEEPBENCH = 'Deepbench'
-  def __str__(self):
-    return self.value
+class SessionMixin():
+  """Session Mixin to provide interface for the session table"""
+  #pylint: disable=too-few-public-methods
 
-
-class Framework(BASE):
-  """Represents framework table"""
-  __tablename__ = "framework"
-  __table_args__ = (UniqueConstraint("framework", name="uq_idx"),)
-  framework = Column(Enum(FrameworkEnum), nullable=False)
-
-
-class Model(BASE):
-  """Represents model table"""
-  __tablename__ = "model"
-  __table_args__ = (UniqueConstraint("model", "version", name="uq_idx"),)
-  model = Column(String(length=128), nullable=False)
-  version = Column(Float, nullable=False)
+  arch = Column(String(length=20), nullable=False, server_default="")
+  num_cu = Column(Integer, nullable=False)
+  rocm_v = Column(String(length=64), nullable=False)
+  reason = Column(String(length=60), nullable=False)
+  ticket = Column(String(length=64), nullable=False, server_default="N/A")
+  docker = Column(String(length=64),
+                  nullable=False,
+                  server_default="miopentuna")

@@ -24,33 +24,27 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for defining benchmark and model enums """
-
-import enum
-from sqlalchemy import Column, UniqueConstraint
-from sqlalchemy import Enum, Float, String
-from tuna.dbBase.base_class import BASE
+"""Module that encapsulates the DB representation for a library"""
 
 
 #pylint: disable=too-few-public-methods
-class FrameworkEnum(enum.Enum):
-  """Represents framework enums"""
-  PYTORCH = 'Pytorch'
-  DEEPBENCH = 'Deepbench'
-  def __str__(self):
-    return self.value
+class DBTablesInterface():
+  """Represents db tables based on ConfigType"""
 
+  def __init__(self, **kwargs):
+    """Constructor"""
+    super().__init__()
+    allowed_keys = set(['session_id'])
+    self.__dict__.update((key, None) for key in allowed_keys)
 
-class Framework(BASE):
-  """Represents framework table"""
-  __tablename__ = "framework"
-  __table_args__ = (UniqueConstraint("framework", name="uq_idx"),)
-  framework = Column(Enum(FrameworkEnum), nullable=False)
+    #for pylint
+    self.job_table = None
+    self.session_id = None
+    self.session = None
 
+    self.__dict__.update(
+        (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-class Model(BASE):
-  """Represents model table"""
-  __tablename__ = "model"
-  __table_args__ = (UniqueConstraint("model", "version", name="uq_idx"),)
-  model = Column(String(length=128), nullable=False)
-  version = Column(Float, nullable=False)
+  def set_tables(self):
+    """Set appropriate tables based on config type"""
+    self.set_tables()

@@ -43,7 +43,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.abort import chk_abort_file
 from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME
 from tuna.metadata import NUM_SQL_RETRIES
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.db_tables import connect_db
 from tuna.config_type import ConfigType
 
@@ -95,8 +95,9 @@ class WorkerInterface(Process):
 
     #initialize tables
     self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
-    self.dbt = DBTables(session_id=self.session_id,
-                        config_type=self.config_type)
+    self.dbt = MIOpenDBTables(session_id=self.session_id,
+                              config_type=self.config_type)
+
     #add cache directories
     self.envmt.append(
         f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
