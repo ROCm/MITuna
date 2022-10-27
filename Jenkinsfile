@@ -122,6 +122,14 @@ pipeline {
             }
             }
         }
+        stage("solver analytics test") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+          script {
+            solverAnalyticsTest()
+            }
+            }
+        }
         stage("cleanup"){
         agent{  label utils.rocmnode("tunatest") }
         steps {
