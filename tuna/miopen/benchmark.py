@@ -38,6 +38,8 @@ class FrameworkEnum(enum.Enum):
   """Represents framework enums"""
   PYTORCH = 'Pytorch'
   DEEPBENCH = 'Deepbench'
+  def __str__(self):
+    return self.value
 
 
 class Framework(BASE):
@@ -49,7 +51,9 @@ class Framework(BASE):
 
 class ModelEnum(enum.Enum):
   """Represents model enums"""
-  NA = 'N/A'
+  NA = 'NA'
+  def __str__(self):
+    return self.value
 
 
 class Model(BASE):

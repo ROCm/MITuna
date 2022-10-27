@@ -36,7 +36,7 @@ from tuna.tables import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.driver_bn import DriverBatchNorm
 from tuna.tables import DBTables
-from tuna.miopen.benchmark import Framework, Model
+from tuna.miopen.benchmark import Framework, Model, FrameworkEnum, ModelEnum
 
 
 LOGGER = setup_logger('import_configs')
@@ -45,16 +45,13 @@ LOGGER = setup_logger('import_configs')
 def parse_args():
   """Parsing arguments"""
   parser = setup_arg_parser(
-      'Import MIOpenDriver commands and MIOpen performance DB entries.',
-      [])
+      'Import MIOpenDriver commands and MIOpen performance DB entries.', [TunaArgs.VERSION])
   parser.add_argument(
       '--framework',
-      type=str,
       dest='framework',
-      default=None,
-      choices=Framework,
-      type=Framework
-      help='Specify framework')
+      type=FrameworkEnum,
+      help='Specify framework',
+      choices=FrameworkEnum)
   parser.add_argument(
       '--update_framework',
       action="store_true",
@@ -62,11 +59,10 @@ def parse_args():
       help='Populate framework table with all framework enums')
   parser.add_argument(
       '--model',
-      type=str,
       dest='model',
       default=None,
-      choices=Model,
-      type=Model
+      choices=ModelEnum,
+      type=ModelEnum,
       help='Specify model')
   parser.add_argument(
       '--update_model',
@@ -91,17 +87,23 @@ def parse_args():
   return args
 
 def import_benchmark(args):
-  if args.framework:
-  if args.model:
+  models = []
+  with DbSession() as session:
+    try:
+      models = session.query(Model).all()
+    except LookupError as err:
+      print(err)
+    for model in models:
+      print(model.model, model.version)
+
+  #if args.framework:
+  #if args.model:
   
 
 def main():
   """Main function"""
   args = parse_args()
-
-  LOGGER.info('New configs added: %u', counts['cnt_configs'])
-  if args.tag or args.tag_only:
-    LOGGER.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
+  import_benchmark(args)
 
 
 if __name__ == '__main__':
