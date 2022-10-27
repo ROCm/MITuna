@@ -282,7 +282,7 @@ class ConfigTagMixin():
   @declared_attr
   def model(self):
     """model FKey"""
-    return Column(Integer, ForeignKey("model.id"), nullable=False)
+    return Column(Integer, ForeignKey("model.id"), nullable=True)
 
   tag = Column(String(length=128), nullable=False, server_default="no_tag")
   recurrent = Column(TINYINT(1), nullable=False, server_default="0")
@@ -535,8 +535,8 @@ class BenchmarkTable(BASE):
                                      "driver_cmd",
                                      name="uq_idx"),)
 
-  framework = Column(String(length=128), nullable=False)
-  model = Column(String(length=128), nullable=False)
+  framework = Column(Integer, ForeignKey("framework.id"), nullable=False)
+  model = Column(Integer, ForeignKey("model.id"), nullable=False)
   batchsize = Column(Integer, nullable=False, server_default="32")
   gpu_number = Column(Integer, nullable=True, server_default="1")
   driver_cmd = Column(String(length=128), nullable=False)
@@ -607,14 +607,14 @@ def get_miopen_tables():
   miopen_tables = []
   miopen_tables.append(Solver())
   miopen_tables.append(Session())
+  miopen_tables.append(Framework())
+  miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
   miopen_tables.append(BenchmarkTable())
-  miopen_tables.append(ConvBenchPerfTable())
-  miopen_tables.append(Framework())
-  miopen_tables.append(Model())
 
   miopen_tables = add_conv_tables(miopen_tables)
+  miopen_tables.append(ConvBenchPerfTable())
   miopen_tables = add_fusion_tables(miopen_tables)
   miopen_tables = add_bn_tables(miopen_tables)
 

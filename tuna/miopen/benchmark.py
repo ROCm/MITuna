@@ -27,12 +27,13 @@
 """ Module for defining benchmark and model enums """
 
 import enum
-from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
+from sqlalchemy import Column, UniqueConstraint
 from sqlalchemy import Enum
 from sqlalchemy import Float
 from tuna.dbBase.base_class import BASE
 
 
+#pylint: disable=too-few-public-methods
 class FrameworkEnum(enum.Enum):
   """Represents framework enums"""
   PYTORCH = 'Pytorch'
@@ -48,16 +49,7 @@ class Framework(BASE):
 
 class ModelEnum(enum.Enum):
   """Represents model enums"""
-  RESNET50 = 'Resnet50'
-  RESNEXT101 = 'Resnext101'
-  VGG16 = 'Vgg16'
-  VGG19 = 'Vgg19'
-  ALEXNEXT = 'Alexnet'
-  GOOGLENEXT = 'Googlenet'
-  INCEPTION3 = 'Inception3'
-  INCEPTION4 = 'Inception4'
-  MASKRCNN = 'Mask-r-cnn'
-  SHUFFLENET = 'Shufflenet'
+  NA = 'N/A'
 
 
 class Model(BASE):
