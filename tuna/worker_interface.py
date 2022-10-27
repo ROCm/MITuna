@@ -199,23 +199,23 @@ class WorkerInterface(Process):
 
   def get_job_from_tuple(self, job_tuple):
     """find job table in a job tuple"""
-    if isinstance(job_tuple, self.dbt.job_table):
+    if isinstance(job_tuple, self.dbt.job_table):  #pylint: disable=W1116
       return job_tuple
-    else:
-      for tble in job_tuple:
-        if isinstance(tble, self.dbt.job_table):
-          return tble
+
+    for tble in job_tuple:
+      if isinstance(tble, self.dbt.job_table):  #pylint: disable=W1116
+        return tble
 
     return None
 
   def get_job_tables(self, job_rows):
     """find job tables in query results"""
-    if isinstance(job_rows[0], self.dbt.job_table):
+    if isinstance(job_rows[0], self.dbt.job_table):  #pylint: disable=W1116
       job_tables = job_rows
     else:
       job_i = 0
       for i, tble in enumerate(job_rows[0]):
-        if isinstance(tble, self.dbt.job_table):
+        if isinstance(tble, self.dbt.job_table):  #pylint: disable=W1116
           job_i = i
           break
       job_tables = [row[job_i] for row in job_rows]
