@@ -108,7 +108,7 @@ class FinClass(WorkerInterface):
   def set_db_tables(self):
     """Initialize tables"""
     self.dbt = MIOpenDBTables(session_id=self.session_id,
-                        config_type=self.config_type)
+                              config_type=self.config_type)
 
   def base_job_query(self, session):
     """select tables for job query"""
