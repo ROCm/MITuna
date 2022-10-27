@@ -11,7 +11,7 @@ from sqlalchemy.sql import func as sqla_func
 from sqlalchemy import Column, Integer, DateTime, text, ForeignKey, String
 from tuna.miopen.benchmark import ModelEnum, FrameworkEnum
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
-from sqlalchemy import Float, BigInteger
+from sqlalchemy import Float, BigInteger, String
 from sqlalchemy import Enum
 
 # revision identifiers, used by Alembic.
@@ -36,7 +36,7 @@ def upgrade() -> None:
           nullable=False,
           server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')),
       sa.Column('valid', TINYINT(1), nullable=False, server_default="1"),
-      sa.Column('model', Enum(ModelEnum), nullable=False),
+      sa.Column('model', String(length=128), nullable=False),
       sa.Column('version', Float, nullable=False),
   )
   op.create_unique_constraint("uq_idx", "model", ["model", "version"])
