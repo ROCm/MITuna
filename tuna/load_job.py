@@ -39,7 +39,7 @@ from tuna.db_tables import connect_db
 from tuna.miopen.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 
 LOGGER = setup_logger('load_jobs')
 
@@ -248,7 +248,7 @@ def main():
   args = parse_args()
   connect_db()
 
-  dbt = DBTables(session_id=None, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
   if args.tag:
     try:
       test_tag_name(args.tag, dbt)

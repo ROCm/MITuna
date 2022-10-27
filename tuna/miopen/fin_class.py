@@ -44,6 +44,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.metadata import FIN_CACHE
 from tuna.metadata import INVERS_DIR_MAP
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.fin_utils import compose_config_obj
 from tuna.miopen.fin_utils import get_fin_slv_status
 from tuna.config_type import ConfigType
@@ -82,6 +83,9 @@ class FinClass(WorkerInterface):
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
+
+    self.dbt = MIOpenDBTables(session_id=self.session_id,
+                              config_type=self.config_type)
 
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""

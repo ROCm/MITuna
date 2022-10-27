@@ -28,9 +28,9 @@ from multiprocessing import Value
 
 from tuna.utils.utility import compose_f_vals, get_kwargs
 from tuna.worker_interface import WorkerInterface
-from tuna.session import Session
+from tuna.miopen.session import Session
 from tuna.machine import Machine
-from tuna.tables import ConfigType
+from tuna.config_type import ConfigType
 
 # TODO: This is a copy and is unacceptable
 sqlite_config_cols = [
