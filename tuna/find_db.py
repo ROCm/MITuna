@@ -141,9 +141,8 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs['logger'] if 'logger' in kwargs else None  #pylint: disable=multiple-statements
-    if not self.logger:
-      self.logger = setup_logger('find_db')
+    self.logger = kwargs['logger'] if 'logger' in kwargs else setup_logger(
+        'find_db')
     self.fdb_slv_dir = {}
 
 

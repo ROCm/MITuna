@@ -27,6 +27,7 @@
 """Builder class implements the worker interface. The purpose of this class is to run fin
 jobs in compile mode"""
 from time import sleep
+import random
 import json
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
@@ -116,7 +117,7 @@ class FinBuilder(FinClass):
 
     if not self.get_job("new", "compile_start", True):
       while not self.result_queue_drain():
-        sleep(1)
+        sleep(random.randint(1, 10))
       return False
 
     # JD: while fin can exec multiple jobs at a time, that makes error detection difficult

@@ -27,6 +27,7 @@
 """Fin Evaluator class implements the worker interface. The purpose of this class
 is to run fin commands in benchmarking mode"""
 from time import sleep
+import random
 import functools
 import json
 
@@ -283,7 +284,7 @@ class FinEvaluator(FinClass):
 
     if not self.get_job("compiled", "eval_start", True):
       while not self.result_queue_drain():
-        sleep(1)
+        sleep(random.randint(1, 10))
       return False
 
     orig_state = 'compiled'

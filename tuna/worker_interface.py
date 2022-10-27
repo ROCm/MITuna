@@ -197,18 +197,16 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_table(self, job_tuple):
+  def get_job_from_tuple(self, job_tuple):
     """find job table in a job tuple"""
-    try:
-      for i, tble in enumerate(job_tuple):
+    if isinstance(job_tuple, self.dbt.job_table):
+      return job_tuple
+    else:
+      for tble in job_tuple:
         if isinstance(tble, self.dbt.job_table):
-          job_i = i
-          break
-      job_table = job_tuple[job_i]
-    except TypeError:
-      job_table = job_tuple
+          return tble
 
-    return job_table
+    return None
 
   def get_job_tables(self, job_rows):
     """find job tables in query results"""
@@ -237,7 +235,7 @@ class WorkerInterface(Process):
     """load job_queue with info for job ids"""
     for job_tuple in job_rows:
       self.job_queue.put(job_tuple)
-      job = self.get_job_table(job_tuple)
+      job = self.get_job_from_tuple(job_tuple)
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
   def job_queue_pop(self):
@@ -257,8 +255,7 @@ class WorkerInterface(Process):
             return False
           if self.job_queue.empty():
             with DbSession() as session:
-              job_query = self.compose_job_query(find_state, session)
-              job_rows = job_query.all()
+              job_rows = self.compose_job_query(find_state, session).all()
 
               if not self.check_jobs_found(job_rows, find_state, imply_end):
                 return False
