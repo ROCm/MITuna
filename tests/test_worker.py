@@ -35,14 +35,12 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.worker_interface import WorkerInterface
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.fin_class import FinClass
 from tuna.machine import Machine
-from utils import get_worker_args, add_test_session
 from tuna.sql import DbCursor
 from tuna.config_type import ConfigType
-from utils import add_test_session
+from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.db_tables import connect_db
@@ -201,7 +199,8 @@ def test_worker():
       'session_id': session_id
   }
 
-  w = WorkerInterface(**keys)
+  #worker is an interface and has no sql tables, using fin
+  w = FinClass(**keys)
 
   add_job(w)
   get_job(w)
