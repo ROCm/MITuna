@@ -28,8 +28,8 @@ import tuna.miopen.fin_utils as fu
 from tuna.miopen.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorTable
 from multiprocessing import Value, Lock, Queue
 from tuna.metadata import LOG_TIMEOUT
+from tuna.miopen.session import Session
 from tuna.miopen.tables import MIOpenDBTables, ConfigType
-from tuna.session import Session
 
 
 def test_fin_utils():

@@ -33,8 +33,8 @@ from tuna.utils.logger import setup_logger
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry
+from tuna.miopen.session import Session
 from tuna.utils.utility import split_packets
-from tuna.session import Session
 
 # Setup logging
 LOGGER = setup_logger('update_golden')

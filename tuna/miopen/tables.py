@@ -34,7 +34,7 @@ from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, Convolutio
 from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.session import Session
+from tuna.miopen.session import Session
 from tuna.tables_interface import DBTablesInterface
 
 

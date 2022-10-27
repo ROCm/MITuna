@@ -34,7 +34,7 @@ from tuna.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg, parse_pd
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.session import Session
+from tuna.miopen.session import Session
 from tuna.config_type import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.import_configs import insert_config
