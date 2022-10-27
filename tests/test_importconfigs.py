@@ -34,7 +34,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.import_configs import import_cfgs
 from tuna.sql import DbCursor
-from tuna.tables import DBTables, ConfigType
+from tuna.miopen.tables import MIOpenDBTables, ConfigType
 from utils import CfgImportArgs
 
 
@@ -44,7 +44,7 @@ def test_importconfigs():
 
 
 def test_import_conv():
-  dbt = DBTables(config_type=ConfigType.convolution)
+  dbt = MIOpenDBTables(config_type=ConfigType.convolution)
   res = None
   clean_tags = "TRUNCATE table conv_config_tags;"
   find_tags = "SELECT count(*) FROM conv_config_tags WHERE tag='conv_config_test';"
@@ -80,7 +80,7 @@ def test_import_conv():
 
 
 def test_import_batch_norm():
-  dbt = DBTables(config_type=ConfigType.batch_norm)
+  dbt = MIOpenDBTables(config_type=ConfigType.batch_norm)
   res = None
   clean_tags = "TRUNCATE table bn_config_tags;"
   find_tags = "SELECT count(*) FROM bn_config_tags WHERE tag='bn_config_test';"

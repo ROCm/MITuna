@@ -41,10 +41,10 @@ from tuna.miopen.fin_class import FinClass
 from tuna.machine import Machine
 from utils import get_worker_args, add_test_session
 from tuna.sql import DbCursor
-from tuna.tables import ConfigType
+from tuna.config_type import ConfigType
 from utils import add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
@@ -58,7 +58,7 @@ def add_job(w):
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = DBTables(session_id=w.session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=w.session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
   args = GoFishArgs()

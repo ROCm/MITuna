@@ -43,7 +43,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.abort import chk_abort_file
 from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME
 from tuna.metadata import NUM_SQL_RETRIES
-from tuna.tables import DBTables
+from tuna.tables_interface import DBTablesInterface
 from tuna.db_tables import connect_db
 
 MAX_JOB_RETRIES = 10
@@ -143,7 +143,7 @@ class WorkerInterface(Process):
 
   def set_db_tables(self):
     """Initialize tables"""
-    self.dbt = DBTables(session_id=self.session_id)
+    self.dbt = DBTablesInterface(session_id=self.session_id)
 
   def reset_machine(self):
     """Function to reset machhine"""

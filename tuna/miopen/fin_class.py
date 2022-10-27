@@ -44,10 +44,10 @@ from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.metadata import FIN_CACHE
 from tuna.metadata import INVERS_DIR_MAP
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.fin_utils import compose_config_obj
 from tuna.miopen.fin_utils import get_fin_slv_status
 from tuna.config_type import ConfigType
-from tuna.tables import DBTables
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.utility import split_packets
@@ -107,7 +107,7 @@ class FinClass(WorkerInterface):
 
   def set_db_tables(self):
     """Initialize tables"""
-    self.dbt = DBTables(session_id=self.session_id,
+    self.dbt = MIOpenDBTables(session_id=self.session_id,
                         config_type=self.config_type)
 
   def base_job_query(self, session):
