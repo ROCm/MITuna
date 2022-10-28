@@ -47,7 +47,11 @@ def parse_args():
                       dest='add_model',
                       type=ModelEnum,
                       choices=ModelEnum,
-                      help='Populate  table with new model')
+                      help='Populate table with new model and version')
+  parser.add_argument('--print_models',
+                      dest='print_models',
+                      action='store_true',
+                      help='Print models from table')
   parser.add_argument('--version',
                       dest='version',
                       type=str,
@@ -105,6 +109,8 @@ def update_frameworks():
 def main():
   """Main function"""
   args = parse_args()
+  if args.print_models:
+    print_models()
   if args.add_model:
     add_model(args)
   if args.update_framework:
