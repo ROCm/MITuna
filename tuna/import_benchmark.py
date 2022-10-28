@@ -24,88 +24,97 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for tagging and importing configs """
-import os
+""" Module adding frameworks/models/benchmarks"""
 from sqlalchemy.exc import IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
-from tuna.db_tables import connect_db, ENGINE
-from tuna.tables import ConfigType
-from tuna.driver_conv import DriverConvolution
-from tuna.driver_bn import DriverBatchNorm
-from tuna.tables import DBTables
-from tuna.miopen.benchmark import Framework, Model, FrameworkEnum, ModelEnum
+from tuna.miopen.benchmark import Framework, Model, FrameworkEnum
 
-
-LOGGER = setup_logger('import_configs')
+LOGGER = setup_logger('import_benchmarks')
 
 
 def parse_args():
   """Parsing arguments"""
-  parser = setup_arg_parser(
-      'Import MIOpenDriver commands and MIOpen performance DB entries.', [TunaArgs.VERSION])
-  parser.add_argument(
-      '--framework',
-      dest='framework',
-      type=FrameworkEnum,
-      help='Specify framework',
-      choices=FrameworkEnum)
-  parser.add_argument(
-      '--update_framework',
-      action="store_true",
-      dest='update_framework',
-      help='Populate framework table with all framework enums')
-  parser.add_argument(
-      '--model',
-      dest='model',
-      default=None,
-      choices=ModelEnum,
-      type=ModelEnum,
-      help='Specify model')
-  parser.add_argument(
-      '--update_model',
-      action="store_true",
-      dest='update_model',
-      help='Populate model table with all model enums')
+  parser = setup_arg_parser('Import benchmark performance related items',
+                            [TunaArgs.VERSION])
+  parser.add_argument('--update_framework',
+                      action="store_true",
+                      dest='update_framework',
+                      help='Populate framework table with all framework enums')
+  parser.add_argument('--show_model',
+                      action="store_true",
+                      dest='show_model',
+                      help='Display models available in the tuning DB.')
+  parser.add_argument('--add_model',
+                      type=str,
+                      dest='add_model',
+                      help='Populate model table with new entry')
   parser.add_argument('--version',
                       dest='version',
                       type=str,
                       default=None,
                       required=False,
                       help='Specify model version')
-  parser.add_argument('-f',
-                      '--file_name',
-                      type=str,
-                      dest='file_name',
-                      help='File to import')
 
   args = parser.parse_args()
-  if args.model and not args.version:
+  if args.add_model and not args.version:
     parser.error('Version needs to be specified with model')
   return args
 
-def import_benchmark(args):
-  models = []
-  with DbSession() as session:
-    try:
-      models = session.query(Model).all()
-    except LookupError as err:
-      print(err)
-    for model in models:
-      print(model.model, model.version)
 
-  #if args.framework:
-  #if args.model:
-  
+def print_models():
+  """Display models from the db table"""
+  with DbSession() as session:
+    models = session.query(Model).all()
+    for model in models:
+      LOGGER.info('model %s version %s ', model.model, model.version)
+  return True
+
+
+def add_model(args):
+  """Add new model and version to the db table"""
+  with DbSession() as session:
+    new_model = Model(model=args.add_model, version=args.version)
+    try:
+      session.add(new_model)
+      session.commit()
+      LOGGER.info('Added model %s with version %s ', args.add_model,
+                  str(args.version))
+    except IntegrityError as err:
+      LOGGER.error(err)
+      return False
+
+  return True
+
+
+def update_frameworks():
+  """Bring DB table up to speed with enums defined in FrameworkEnum"""
+  with DbSession() as session:
+    for elem in FrameworkEnum:
+      try:
+        new_fmk = Framework(framework=elem)
+        session.add(new_fmk)
+        session.commit()
+        LOGGER.info('Added new framework %s', elem)
+      except IntegrityError as ierr:
+        LOGGER.warning(ierr)
+        continue
+
+  return True
+
 
 def main():
   """Main function"""
   args = parse_args()
-  import_benchmark(args)
+  if args.show_model:
+    print_models()
+  if args.add_model:
+    add_model(args)
+  if args.update_framework:
+    update_frameworks()
 
 
 if __name__ == '__main__':
   main()
-
