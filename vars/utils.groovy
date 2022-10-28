@@ -327,17 +327,17 @@ def solverAnalyticsTest(){
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.PYTHONPATH = env.WORKSPACE
+        env.PYTHONPATH = "${env.WORKSPACE}/tuna:${env.PYTHONPATH}"
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/clean_finddb_test.py"
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/cli_test.py"
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/generate_analytics_test.py"
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/gen_finddb_test.py"
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/utils_tests/df_tools_test.py"
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/utils_tests/fdb_key_utils_test.py"
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/utils_tests/helpers_test.py"
-        sh "python3 ${env.WORKSPACE}/tuna/SolverAnalytics/tests/utils_tests/logging_test.py"
+        sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/cli_test.py"
+        sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
+        sh "python3 ./SolverAnalytics/tests/gen_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_tests/df_tools_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_tests/fdb_key_utils_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_tests/helpers_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_tests/logging_test.py"
     }
 }
 
@@ -815,8 +815,4 @@ def doxygen() {
           }
     }
 }
-
-
-
-
 
