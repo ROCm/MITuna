@@ -183,5 +183,7 @@ RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/S
 WORKDIR $SOLVER_ANALYTICS_DIR
 RUN pip3 install --default-timeout=100000 -r requirements.txt
 
+ADD SolverAnalytics /tuna/SovlerAnalytics
+
 # reset WORKDIR to /tuna
 WORKDIR /tuna
