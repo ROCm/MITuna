@@ -330,6 +330,7 @@ def solverAnalyticsTest(){
         env.PYTHONPATH = "${env.WORKSPACE}/tuna:${env.PYTHONPATH}"
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
+        sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
         sh "ls"
         sh "pip3 install -r ./SolverAnalytics/requirements.txt"
