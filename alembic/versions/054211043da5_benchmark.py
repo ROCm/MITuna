@@ -36,7 +36,7 @@ def upgrade() -> None:
           nullable=False,
           server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')),
       sa.Column('valid', TINYINT(1), nullable=False, server_default="1"),
-      sa.Column('model', String(length=128), nullable=False),
+      sa.Column('model', Enum(ModelEnum), nullable=False),
       sa.Column('version', Float, nullable=False),
   )
   op.create_unique_constraint("uq_idx", "model", ["model", "version"])

@@ -28,7 +28,7 @@
 
 import enum
 from sqlalchemy import Column, UniqueConstraint
-from sqlalchemy import Enum, Float, String
+from sqlalchemy import Enum, Float
 from tuna.dbBase.base_class import BASE
 
 
@@ -46,9 +46,23 @@ class Framework(BASE):
   framework = Column(Enum(FrameworkEnum), nullable=False)
 
 
+class ModelEnum(enum.Enum):
+  """Represents model enums"""
+  RESNET50 = 'Resnet50'
+  RESNEXT101 = 'Resnext101'
+  VGG16 = 'Vgg16'
+  VGG19 = 'Vgg19'
+  ALEXNEXT = 'Alexnet'
+  GOOGLENEXT = 'Googlenet'
+  INCEPTION3 = 'Inception3'
+  INCEPTION4 = 'Inception4'
+  MASKRCNN = 'Mask-r-cnn'
+  SHUFFLENET = 'Shufflenet'
+
+
 class Model(BASE):
   """Represents model table"""
   __tablename__ = "model"
   __table_args__ = (UniqueConstraint("model", "version", name="uq_idx"),)
-  model = Column(String(length=128), nullable=False)
+  model = Column(Enum(ModelEnum), nullable=False)
   version = Column(Float, nullable=False)
