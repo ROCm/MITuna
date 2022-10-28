@@ -332,7 +332,7 @@ def solverAnalyticsTest(){
 
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
-        sh "ls"
+        sh "export PYTHONPATH=pwd"
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
