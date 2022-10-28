@@ -328,8 +328,9 @@ def solverAnalyticsTest(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH = "${env.WORKSPACE}/tuna:${env.PYTHONPATH}"
-        env.PATH = "${env.WORKSPACE}/tuna/SolverAnalytics:${env.PATH}"
+        env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
+        sh "pwd"
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
