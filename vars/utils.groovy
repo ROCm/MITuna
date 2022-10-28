@@ -331,6 +331,7 @@ def solverAnalyticsTest(){
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
         sh "pwd"
+        sh "ls"
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
