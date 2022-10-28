@@ -177,13 +177,11 @@ WORKDIR /tuna
 RUN python3 setup.py install
 
 # Install SolverAnalytics (github.com/ROCmSoftwarePlatform/SolverAnalytics#installation)
-ARG SOLVER_ANALYTICS_DIR=/tuna/SolverAnalytics/
+WORKDIR /tuna
+RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git
+RUN pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt
 
-RUN mkdir SOLVER_ANALYTICS_DIR
-RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git $SOLVER_ANALYTICS_DIR
-RUN pip3 install --default-timeout=100000 -r ${SOLVER_ANALYTICS_DIR}/requirements.txt
-
-ADD SolverAnalytics SOLVER_ANALYTICS_DIR
+ADD SolverAnalytics /tuna/SolverAnalytics
 
 # reset WORKDIR to /tuna
 WORKDIR /tuna
