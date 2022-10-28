@@ -181,7 +181,7 @@ WORKDIR /tuna
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git
 RUN pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt
 
-ADD SolverAnalytics /tuna/SolverAnalytics
+ADD SolverAnalytics/* /tuna/SolverAnalytics/
 
 # reset WORKDIR to /tuna
 WORKDIR /tuna
