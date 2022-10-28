@@ -30,7 +30,7 @@ from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
-from tuna.miopen.benchmark import Framework, Model, FrameworkEnum
+from tuna.miopen.benchmark import Framework, Model, FrameworkEnum, ModelEnum
 
 LOGGER = setup_logger('import_benchmarks')
 
@@ -43,14 +43,11 @@ def parse_args():
                       action="store_true",
                       dest='update_framework',
                       help='Populate framework table with all framework enums')
-  parser.add_argument('--show_model',
-                      action="store_true",
-                      dest='show_model',
-                      help='Display models available in the tuning DB.')
   parser.add_argument('--add_model',
-                      type=str,
                       dest='add_model',
-                      help='Populate model table with new entry')
+                      type=ModelEnum,
+                      choices=ModelEnum,
+                      help='Populate  table with new model')
   parser.add_argument('--version',
                       dest='version',
                       type=str,
@@ -108,8 +105,6 @@ def update_frameworks():
 def main():
   """Main function"""
   args = parse_args()
-  if args.show_model:
-    print_models()
   if args.add_model:
     add_model(args)
   if args.update_framework:
