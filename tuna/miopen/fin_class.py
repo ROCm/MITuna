@@ -118,8 +118,7 @@ class FinClass(WorkerInterface):
   def compose_work_query(self, query):
     """query for fin command and config"""
     if self.fin_steps:
-      query = query.filter(
-          self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
+      query = query.filter(self.dbt.job_table.fin_step == self.fin_steps[0])
     else:
       query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
 
