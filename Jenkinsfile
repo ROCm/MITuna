@@ -25,10 +25,10 @@ pipeline {
         TUNA_ROCM_VERSION = '4.5'
 
         solver_analytics_db_name = "${SOLVER_ANALYTICS_DB_NAME}"
-        solver_analytics_rocm_version = "${SOLVER_ANALYTICS_ROCM_VERSION}"
+        solver_analytics_db_hostname = "${SOLVER_ANALYTICS_DB_HOSTNAME}"
         solver_analytics_db_user_name = "${SOLVER_ANALYTICS_DB_USER_NAME}"
         solver_analytics_db_user_password = "${SOLVER_ANALYTICS_DB_USER_PASSWORD}"
-        solver_analytics_hostname = "${SOLVER_ANALYTICS_HOSTNAME}"
+        solver_analytics_rocm_version = "${SOLVER_ANALYTICS_ROCM_VERSION}"
         solver_analytics_gateway_ip = "${SOLVER_ANALYTICS_GATEWAY_IP}" 
         solver_analytics_gateway_port = "${SOLVER_ANALYTICS_GATEWAY_PORT}"
         solver_analytics_gateway_user = "${SOLVER_ANALYTICS_GATEWAY_USER}"
