@@ -331,6 +331,8 @@ class JobEnum(enum.Enum):
   not_applicable = 20
   aborted = 21
   not_tunable = 22
+  compiled_pend = 23
+  evaluated_pend = 24
 
 
 class FinStep(enum.Enum):
@@ -355,22 +357,25 @@ class JobMixin():
     """session key"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
+  reason = Column(String(length=60), nullable=False, server_default="")
   state = Column(Enum(JobEnum), nullable=False, server_default="new")
+  retries = Column(Integer, nullable=False, server_default="0")
+  result = Column(Text, nullable=True)
+
   compile_start = Column(DateTime,
                          nullable=False,
                          server_default=sqla_func.now())
   compile_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_start = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  result = Column(Text, nullable=True)
-  reason = Column(String(length=60), nullable=False, server_default="")
+
+  gpu_id = Column(Integer, nullable=False, server_default="-1")
+  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   machine_id = Column(Integer, nullable=False, server_default="-1")
   eval_mid = Column(Integer, server_default="-1")
   cache_loc = Column(Text)
-  gpu_id = Column(Integer, nullable=False, server_default="-1")
-  retries = Column(Integer, nullable=False, server_default="0")
+
   solver = Column(String(length=128), nullable=True, server_default="")
-  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   fin_step = Column(mysql.MSSet(*(list(k for k in FinStep.__members__))),
                     nullable=False,
                     server_default="not_fin")
@@ -568,7 +573,7 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvolutionKernelCache())
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
-  miopen_tables.append(ConvolutionFindDB)
+  miopen_tables.append(ConvolutionFindDB())
   miopen_tables.append(ConvolutionGolden())
   return miopen_tables
 
