@@ -330,17 +330,12 @@ def solverAnalyticsTest(){
         env.PYTHONPATH = env.WORKSPACE
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
-        sh "export PYTHONPATH=pwd"
-        sh "ls"
-        sh "ls tuna/"
-        sh "ls SolverAnalytics"
         sh "touch __init__.py"
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
-        sh "python3 ./SolverAnalytics/tests/gen_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/utils_tests/df_tools_test.py"
         sh "python3 ./SolverAnalytics/tests/utils_tests/fdb_key_utils_test.py"
         sh "python3 ./SolverAnalytics/tests/utils_tests/helpers_test.py"
