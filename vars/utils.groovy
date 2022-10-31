@@ -320,13 +320,15 @@ def solverAnalyticsTest(){
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         checkout scm
-        env.TUNA_DB_HOSTNAME = "${hostname_for_solver_analytics}"
-        env.TUNA_DB_NAME = "${tuna_db_for_solver_analytics}"
-        env.TUNA_DB_USER_NAME = "${db_user}"
-        env.TUNA_DB_PASSWORD = "${db_password}"
-        env.gateway_ip = "${gateway_ip}"
-        env.gateway_port = "${gateway_port}"
-        env.gateway_user = "${gateway_user}"
+        env.TUNA_DB_NAME = "${solver_analytics_db_name}"
+        env.TUNA_ROCM_VERSION = "${solver_analytics_rocm_version}"
+        env.TUNA_DB_USER_NAME = "${solver_analytics_user_name}"
+        env.TUNA_DB_USER_PASSWORD = "${solver_analytics_user_password}"
+        env.TUNA_DB_HOSTNAME = "${solver_analytics_hostname}"
+        env.TUNA_DB_PASSWORD = "${solver_analytics_user_password}"
+        env.gateway_ip = "${solver_analytics_gateway_ip}"
+        env.gateway_port = "${solver_analytics_gateway_port}"
+        env.gateway_user = "${solver_analytics_gateway_user}"
         env.PYTHONPATH = env.WORKSPACE
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
