@@ -25,14 +25,6 @@ pipeline {
         TUNA_ROCM_VERSION = '4.5'
     } 
     stages {
-        stage("solver analytics test") {
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-          script {
-            utils.solverAnalyticsTest()
-            }
-            }
-        }
         stage("code Format") {
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -127,6 +119,14 @@ pipeline {
         steps{
             script {
             utils.perfEval_gfx908()
+            }
+            }
+        }
+        stage("solver analytics test") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+          script {
+            utils.solverAnalyticsTest()
             }
             }
         }

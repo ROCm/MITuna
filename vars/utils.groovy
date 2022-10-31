@@ -333,14 +333,8 @@ def solverAnalyticsTest(){
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
         sh "touch __init__.py"
-        sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
-        sh "python3 ./SolverAnalytics/tests/cli_test.py"
-        sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
-        sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/df_tools_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/fdb_key_utils_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/helpers_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/logging_test.py"
+        sh "python3 ./SolverAnalytics/tests/*_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/*_test.py"
     }
 }
 
