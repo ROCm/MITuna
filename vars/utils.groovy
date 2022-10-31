@@ -327,13 +327,16 @@ def solverAnalyticsTest(){
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.PYTHONPATH = "${env.WORKSPACE}/tuna:${env.PYTHONPATH}"
+        env.PYTHONPATH = env.WORKSPACE
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
         sh "export PYTHONPATH=pwd"
         sh "ls"
+        sh "ls tuna/"
+        sh "ls tuna/tuna/"
+        sh "ls SolverAnalytics"
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
