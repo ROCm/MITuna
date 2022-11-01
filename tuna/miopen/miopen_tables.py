@@ -39,7 +39,7 @@ from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
 from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.config_type import ConfigType
-from tuna.session import Session
+from tuna.miopen.session import Session
 from tuna.metadata import DIR_MAP
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
@@ -199,7 +199,7 @@ class ConvolutionConfig(BASE):
   dilation_w = Column(Integer, nullable=False, server_default="1")
   dilation_d = Column(Integer, nullable=False, server_default="1")
   group_count = Column(Integer, nullable=False, server_default="1")
-  conv_mode = Column(String(length=40), nullable=False, server_default="conv")
+  mode = Column(String(length=40), nullable=False, server_default="conv")
   pad_mode = Column(String(length=40), nullable=False, server_default="default")
   trans_output_pad_h = Column(Integer, nullable=False, server_default="0")
   trans_output_pad_w = Column(Integer, nullable=False, server_default="0")
@@ -217,6 +217,7 @@ class ConvolutionConfig(BASE):
                           lazy="joined")
   out_layout = Column(String(60), nullable=False, server_default="NCHW")
   md5 = Column(String(length=40), nullable=False, unique=True)
+  driver = Column(String(length=512), nullable=False, server_default="")
 
 
 class FusionConfig(BASE):
@@ -266,11 +267,12 @@ class BNConfig(BASE):
                          backref="bn_input_tensor",
                          foreign_keys=[input_tensor],
                          lazy="joined")
-  out_layout = Column(String(60), nullable=False, server_default="NCHW")
+  in_layout = Column(String(60), nullable=False, server_default="NCHW")
+  driver = Column(String(length=512), nullable=False, server_default="")
 
   def get_direction(self):
     """synthesize direction"""
-    return DIR_MAP[str(self.forw + 4 * self.back)]
+    return DIR_MAP[(self.forw + 4 * self.back)]
 
 
 class ConfigTagMixin():
@@ -329,6 +331,8 @@ class JobEnum(enum.Enum):
   not_applicable = 20
   aborted = 21
   not_tunable = 22
+  compiled_pend = 23
+  evaluated_pend = 24
 
 
 class FinStep(enum.Enum):
@@ -353,22 +357,25 @@ class JobMixin():
     """session key"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
+  reason = Column(String(length=60), nullable=False, server_default="")
   state = Column(Enum(JobEnum), nullable=False, server_default="new")
+  retries = Column(Integer, nullable=False, server_default="0")
+  result = Column(Text, nullable=True)
+
   compile_start = Column(DateTime,
                          nullable=False,
                          server_default=sqla_func.now())
   compile_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_start = Column(DateTime, nullable=False, server_default=sqla_func.now())
   eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  result = Column(Text, nullable=True)
-  reason = Column(String(length=60), nullable=False, server_default="")
+
+  gpu_id = Column(Integer, nullable=False, server_default="-1")
+  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   machine_id = Column(Integer, nullable=False, server_default="-1")
   eval_mid = Column(Integer, server_default="-1")
   cache_loc = Column(Text)
-  gpu_id = Column(Integer, nullable=False, server_default="-1")
-  retries = Column(Integer, nullable=False, server_default="0")
+
   solver = Column(String(length=128), nullable=True, server_default="")
-  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   fin_step = Column(mysql.MSSet(*(list(k for k in FinStep.__members__))),
                     nullable=False,
                     server_default="not_fin")
@@ -436,6 +443,7 @@ class ConvSolverApplicability(BASE, SolverApplicabilityMixin):
                   nullable=False,
                   index=True)
   app_idx = Index('app_idx', 'config', 'solver', 'session')
+  sess_cfg = Index('sess_cfg', 'session', 'config')
 
 
 class BNSolverApplicability(BASE, SolverApplicabilityMixin):
@@ -516,6 +524,46 @@ class BNGolden(BASE, GoldenMixin):
   kernel_group = Column(Integer, nullable=True)
 
 
+class BenchmarkTable(BASE):
+  """benchmark table for framework and model parameters"""
+  __tablename__ = "benchmark_table"
+  __table_args__ = (UniqueConstraint("framework",
+                                     "model",
+                                     "batchsize",
+                                     "gpu_number",
+                                     "driver_cmd",
+                                     name="uq_idx"),)
+
+  framework = Column(String(length=128), nullable=False)
+  model = Column(String(length=128), nullable=False)
+  batchsize = Column(Integer, nullable=False, server_default="32")
+  gpu_number = Column(Integer, nullable=True, server_default="1")
+  driver_cmd = Column(String(length=128), nullable=False)
+
+
+class ConvBenchPerfTable(BASE):
+  """benchmark table for performance parameters"""
+  __tablename__ = "conv_benchmark_perf_table"
+  __table_args__ = (UniqueConstraint("config",
+                                     "benchmark",
+                                     "solver",
+                                     "rocm_v",
+                                     "miopen_v",
+                                     name="uq_idx"),)
+
+  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  benchmark = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
+  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
+  solver = Column(Integer,
+                  ForeignKey("solver.id",
+                             onupdate="CASCADE",
+                             ondelete="CASCADE"),
+                  nullable=False)
+  workspace_sz = Column(BigInteger, nullable=False)
+  rocm_v = Column(String(length=64), nullable=False)
+  miopen_v = Column(String(length=64), nullable=False)
+
+
 def add_conv_tables(miopen_tables):
   """Append Convolution specific MIOpen DB tables"""
   miopen_tables.append(ConvolutionConfig())
@@ -525,7 +573,7 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvolutionKernelCache())
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
-  miopen_tables.append(ConvolutionFindDB)
+  miopen_tables.append(ConvolutionFindDB())
   miopen_tables.append(ConvolutionGolden())
   return miopen_tables
 
@@ -560,6 +608,8 @@ def get_miopen_tables():
   miopen_tables.append(Session())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
+  miopen_tables.append(BenchmarkTable())
+  miopen_tables.append(ConvBenchPerfTable())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)

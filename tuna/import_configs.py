@@ -32,10 +32,10 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.db_tables import connect_db, ENGINE
-from tuna.tables import ConfigType
+from tuna.miopen.tables import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.driver_bn import DriverBatchNorm
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 
 LOGGER = setup_logger('import_configs')
 
@@ -157,6 +157,7 @@ def insert_config(driver, counts, dbt, args):
         session.refresh(new_cf)
       except IntegrityError as err:
         LOGGER.warning("Err occurred: %s", err)
+        session.rollback()
     else:
       try:
         if args.mark_recurrent or args.tag:
@@ -168,6 +169,7 @@ def insert_config(driver, counts, dbt, args):
           counts['cnt_tagged_configs'].add(new_cf.id)
       except IntegrityError as err:
         LOGGER.warning("Err occurred: %s", err)
+        session.rollback()
     if args.mark_recurrent or args.tag:
       _ = tag_config_v2(driver, counts, dbt, args, new_cf)
 
@@ -227,7 +229,7 @@ def main():
   args = parse_args()
   counts = {}
 
-  dbt = DBTables(session_id=None, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
 
   counts = import_cfgs(args, dbt)
 

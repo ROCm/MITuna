@@ -26,17 +26,19 @@
 ###############################################################################
 """Builder class implements the worker interface. The purpose of this class is to run fin
 jobs in compile mode"""
+from time import sleep
+import random
 import json
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 
-from tuna.worker_interface import WorkerInterface
+from tuna.miopen.fin_class import FinClass
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.fin_utils import fin_job
-from tuna.fin_utils import get_fin_slv_status, get_fin_result
+from tuna.miopen.fin_utils import fin_job
+from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
 
 
-class FinBuilder(WorkerInterface):
+class FinBuilder(FinClass):
   """ The Builder class implementes the worker class. Its purpose is to compile jobs. It picks up
   new jobs and when completed, sets the state to compiled. """
 
@@ -61,8 +63,8 @@ class FinBuilder(WorkerInterface):
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
-      session.add(kernel_obj)
-    session.commit()
+      # Bundle Insert for later
+      self.pending.append((self.job, kernel_obj))
 
     return True
 
@@ -85,18 +87,37 @@ class FinBuilder(WorkerInterface):
 
     return status
 
+  def close_job(self):
+    """mark a job complete"""
+    self.set_job_state('compiled')
+
+  def result_queue_drain(self):
+    """check for lock and commit the result queue"""
+    if self.result_queue_lock.acquire(block=False):
+      with DbSession() as session:
+        self.result_queue_commit(session, self.close_job)
+      self.result_queue_lock.release()
+      return True
+    return False
+
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+    self.pending = []
+    self.result_queue_drain()
 
     # pylint: disable=duplicate-code
-    try:
-      self.check_env()
-    except ValueError as verr:
-      self.logger.error(verr)
-      return False
+    if self.first_pass:
+      self.first_pass = False
+      try:
+        self.check_env()
+      except ValueError as verr:
+        self.logger.error(verr)
+        return False
     # pylint: enable=duplicate-code
 
     if not self.get_job("new", "compile_start", True):
+      while not self.result_queue_drain():
+        sleep(random.randint(1, 10))
       return False
 
     # JD: while fin can exec multiple jobs at a time, that makes error detection difficult
@@ -132,6 +153,10 @@ class FinBuilder(WorkerInterface):
 
     if failed_job:
       self.set_job_state('errored', result=result_str)
+    elif self.pending:
+      self.set_job_state('compiled_pend', result=result_str)
+      for item in self.pending:
+        self.result_queue.put(item)
     else:
       self.set_job_state('compiled', result=result_str)
     return True

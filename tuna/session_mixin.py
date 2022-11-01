@@ -24,32 +24,19 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for Flask functionality"""
-
-from sqlalchemy import create_engine
-from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
-
-LOGGER = setup_logger('flask')
-ENV_VARS = get_env_vars()
-ENGINE = create_engine(
-    f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
-    f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+"""Session table and its associate functionality"""
+from sqlalchemy import Column, Integer, String
 
 
-def get_driver_cmds(filters, grafana_req=None):
-  """Return driver cmds from req"""
-  driver_cmds = []
-  if filters is None:
-    driver_cmds = grafana_req[1].split(";")
-  else:
-    if ';' in filters['cmd']:
-      driver_cmds = filters['cmd'].split(";")
-    else:
-      driver_cmds.append(filters['cmd'])
+class SessionMixin():
+  """Session Mixin to provide interface for the session table"""
+  #pylint: disable=too-few-public-methods
 
-  if driver_cmds[-1] == '':
-    driver_cmds.pop()
-  LOGGER.info('driver_cmds: %s', driver_cmds)
-
-  return driver_cmds
+  arch = Column(String(length=20), nullable=False, server_default="")
+  num_cu = Column(Integer, nullable=False)
+  rocm_v = Column(String(length=64), nullable=False)
+  reason = Column(String(length=60), nullable=False)
+  ticket = Column(String(length=64), nullable=False, server_default="N/A")
+  docker = Column(String(length=64),
+                  nullable=False,
+                  server_default="miopentuna")

@@ -26,20 +26,21 @@
 ###############################################################################
 """Module that encapsulates the DB representation based on configuration type"""
 from tuna.find_db import ConvolutionFindDB, BNFindDB
-from tuna.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
-from tuna.miopen_tables import ConvJobCache, Solver
-from tuna.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
-from tuna.miopen_tables import ConvSolverApplicability, BNSolverApplicability
-from tuna.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
-from tuna.miopen_tables import TensorTable, ConvolutionGolden
+from tuna.miopen.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
+from tuna.miopen.miopen_tables import ConvJobCache, Solver
+from tuna.miopen.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
+from tuna.miopen.miopen_tables import ConvSolverApplicability, BNSolverApplicability
+from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
+from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.session import Session
+from tuna.miopen.session import Session
+from tuna.tables_interface import DBTablesInterface
 
 
 #pylint: disable=too-many-instance-attributes
 #pylint: disable=too-few-public-methods
-class DBTables():
+class MIOpenDBTables(DBTablesInterface):
   """Represents db tables based on ConfigType"""
 
   def __init__(self, **kwargs):
@@ -49,7 +50,6 @@ class DBTables():
     self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
-    self.job_table = None
     self.config_table = None
     self.config_tags_table = None
     self.find_db_table = None
@@ -60,10 +60,7 @@ class DBTables():
     self.kernel_cache = None
     self.tensor_table = TensorTable
     self.golden_table = None
-
     self.config_type = None
-    self.session_id = None
-    self.session = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)

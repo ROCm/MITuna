@@ -24,32 +24,17 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for Flask functionality"""
-
-from sqlalchemy import create_engine
-from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
-
-LOGGER = setup_logger('flask')
-ENV_VARS = get_env_vars()
-ENGINE = create_engine(
-    f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
-    f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+"""Factory method to get library"""
+from tuna.libraries import Library
+from tuna.miopen.miopen_lib import MIOpen
 
 
-def get_driver_cmds(filters, grafana_req=None):
-  """Return driver cmds from req"""
-  driver_cmds = []
-  if filters is None:
-    driver_cmds = grafana_req[1].split(";")
+def get_library(args):
+  """Factory method to get lib based on args"""
+  print(args.keys)
+  if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
+    library = MIOpen()
   else:
-    if ';' in filters['cmd']:
-      driver_cmds = filters['cmd'].split(";")
-    else:
-      driver_cmds.append(filters['cmd'])
+    raise ValueError("Not implemented")
 
-  if driver_cmds[-1] == '':
-    driver_cmds.pop()
-  LOGGER.info('driver_cmds: %s', driver_cmds)
-
-  return driver_cmds
+  return library

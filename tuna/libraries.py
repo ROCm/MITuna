@@ -24,32 +24,15 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for Flask functionality"""
-
-from sqlalchemy import create_engine
-from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
-
-LOGGER = setup_logger('flask')
-ENV_VARS = get_env_vars()
-ENGINE = create_engine(
-    f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
-    f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+"""Module that encapsulates different liraries supported by Tuna"""
+from enum import Enum
 
 
-def get_driver_cmds(filters, grafana_req=None):
-  """Return driver cmds from req"""
-  driver_cmds = []
-  if filters is None:
-    driver_cmds = grafana_req[1].split(";")
-  else:
-    if ';' in filters['cmd']:
-      driver_cmds = filters['cmd'].split(";")
-    else:
-      driver_cmds.append(filters['cmd'])
+#pylint: disable=too-few-public-methods
+class Library(Enum):
+  """Enumerate supported libraries"""
+  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
+  MIOPEN = 'miopen'
 
-  if driver_cmds[-1] == '':
-    driver_cmds.pop()
-  LOGGER.info('driver_cmds: %s', driver_cmds)
-
-  return driver_cmds
+  def __str__(self):
+    return self.value

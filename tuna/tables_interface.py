@@ -24,32 +24,29 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for Flask functionality"""
+"""Module that encapsulates the DB representation for a library"""
 
-from sqlalchemy import create_engine
-from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
-
-LOGGER = setup_logger('flask')
-ENV_VARS = get_env_vars()
-ENGINE = create_engine(
-    f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
-    f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+from tuna.miopen.miopen_tables import JobMixin
 
 
-def get_driver_cmds(filters, grafana_req=None):
-  """Return driver cmds from req"""
-  driver_cmds = []
-  if filters is None:
-    driver_cmds = grafana_req[1].split(";")
-  else:
-    if ';' in filters['cmd']:
-      driver_cmds = filters['cmd'].split(";")
-    else:
-      driver_cmds.append(filters['cmd'])
+#pylint: disable=too-few-public-methods
+class DBTablesInterface():
+  """Represents db tables based on ConfigType"""
 
-  if driver_cmds[-1] == '':
-    driver_cmds.pop()
-  LOGGER.info('driver_cmds: %s', driver_cmds)
+  def __init__(self, **kwargs):
+    """Constructor"""
+    super().__init__()
+    allowed_keys = set(['session_id'])
+    self.__dict__.update((key, None) for key in allowed_keys)
 
-  return driver_cmds
+    #for pylint
+    self.job_table = JobMixin
+    self.session_id = None
+    self.session = None
+
+    self.__dict__.update(
+        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+
+  def set_tables(self):
+    """Set appropriate tables based on config type"""
+    return True

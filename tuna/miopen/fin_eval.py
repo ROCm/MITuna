@@ -27,21 +27,22 @@
 """Fin Evaluator class implements the worker interface. The purpose of this class
 is to run fin commands in benchmarking mode"""
 from time import sleep
+import random
 import functools
 import json
 
 from sqlalchemy.exc import OperationalError
 
-from tuna.worker_interface import WorkerInterface
-from tuna.fin_utils import fin_job
-from tuna.fin_utils import get_fin_slv_status, get_fin_result
+from tuna.miopen.fin_class import FinClass
+from tuna.miopen.fin_utils import fin_job
+from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry
 
 MAX_ERRORED_JOB_RETRIES = 3
 
 
-class FinEvaluator(WorkerInterface):
+class FinEvaluator(FinClass):
   """ The Evaluator class implements the worker class. Its purpose is to run benchmarking jobs
   and when completed sets the state of the job to evaluated. """
 
@@ -251,19 +252,39 @@ class FinEvaluator(WorkerInterface):
         self.logger.warning('FinEval: Unable to clean %s: %s',
                             self.dbt.fin_cache_table.__tablename__, err)
 
+  def close_job(self):
+    """mark a job complete"""
+    self.set_job_state('evaluated')
+    self.clean_cache_table()
+
+  def result_queue_drain(self):
+    """check for lock and commit the result queue"""
+    if self.result_queue_lock.acquire(block=False):
+      with DbSession() as session:
+        self.result_queue_commit(session, self.close_job)
+      self.result_queue_lock.release()
+      return True
+    return False
+
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
+    self.pending = []
+    self.result_queue_drain()
 
     # pylint: disable=duplicate-code
-    try:
-      self.check_env()
-    except ValueError as verr:
-      self.logger.error(verr)
-      return False
+    if self.first_pass:
+      self.first_pass = False
+      try:
+        self.check_env()
+      except ValueError as verr:
+        self.logger.error(verr)
+        return False
     # pylint: enable=duplicate-code
 
     if not self.get_job("compiled", "eval_start", True):
+      while not self.result_queue_drain():
+        sleep(random.randint(1, 10))
       return False
 
     orig_state = 'compiled'
@@ -304,6 +325,10 @@ class FinEvaluator(WorkerInterface):
         self.set_job_state(orig_state,
                            increment_retries=True,
                            result=result_str)
+    elif self.pending:
+      self.set_job_state('evaluated_pend', result=result_str)
+      for item in self.pending:
+        self.result_queue.put(item)
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()

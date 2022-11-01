@@ -40,7 +40,7 @@ from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, CONV_CONFIG_COLS, TENSOR_PREC
 from tuna.metadata import BN_DEFAULTS, BN_CONFIG_COLS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.metadata import NUM_SQL_RETRIES
-from tuna.miopen_tables import TensorTable, Session
+from tuna.miopen.miopen_tables import TensorTable, Session
 from tuna.config_type import ConfigType
 
 LOGGER = setup_logger('helper')
@@ -70,7 +70,7 @@ def get_qts_machine_data(mid, mhost, slogger):
 
 def print_solvers():
   """Pretty print solvers list"""
-  slv_dict, _ = get_solver_ids()
+  slv_dict = get_solver_ids()
   for name, sid in slv_dict.items():
     print(f"{sid:>4} - {name}")
 

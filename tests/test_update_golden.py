@@ -26,10 +26,10 @@
 
 import sys
 from tuna.update_golden import merge_golden_entries, get_fdb_query
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
-from tuna.miopen_tables import ConvolutionGolden
+from tuna.miopen.miopen_tables import ConvolutionGolden
 from tuna.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs
 
@@ -66,7 +66,7 @@ def test_update_golden():
   args.session_id = session_id
   args.config_type = ConfigType.convolution
   args.golden_v = 1
-  dbt = DBTables(session_id=args.session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
   entries = get_fdb_query(dbt).all()
   assert entries
 

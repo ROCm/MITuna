@@ -24,12 +24,12 @@
 # SOFTWARE.
 #
 ###############################################################################
-import tuna.fin_utils as fu
-from tuna.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorTable
+import tuna.miopen.fin_utils as fu
+from tuna.miopen.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorTable
 from multiprocessing import Value, Lock, Queue
 from tuna.metadata import LOG_TIMEOUT
-from tuna.tables import DBTables, ConfigType
-from tuna.session import Session
+from tuna.miopen.session import Session
+from tuna.miopen.tables import MIOpenDBTables, ConfigType
 
 
 def test_fin_utils():
@@ -38,7 +38,7 @@ def test_fin_utils():
   my_job.id = 1
   my_job.valid = 1
   my_job.config = 1
-  dbt = DBTables(session=1, config_type=ConfigType.convolution)
+  dbt = MIOpenDBTables(session=1, config_type=ConfigType.convolution)
   dbt.session = Session()
   dbt.session.id = 1
   dbt.session.arch = 'gfx908'
@@ -59,7 +59,7 @@ def test_fin_utils():
   conv_config.dilation_w = 1
   conv_config.dilation_d = 1
   conv_config.group_count = 1
-  conv_config.conv_mode = 'conv'
+  conv_config.mode = 'conv'
   conv_config.pad_mode = 'default'
   conv_config.trans_output_pad_h = 0
   conv_config.trans_output_pad_w = 0
@@ -126,7 +126,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,
@@ -168,7 +168,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,
@@ -204,7 +204,7 @@ def test_fin_utils():
   conv_config.dilation_w = 1
   conv_config.dilation_d = 1
   conv_config.group_count = 1
-  conv_config.conv_mode = 'conv'
+  conv_config.mode = 'conv'
   conv_config.pad_mode = 'default'
   conv_config.trans_output_pad_h = 0
   conv_config.trans_output_pad_w = 0
@@ -271,7 +271,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,
@@ -313,7 +313,7 @@ def test_fin_utils():
       'dilation_w': 1,
       'dilation_d': 1,
       'group_count': 1,
-      'conv_mode': 'conv',
+      'mode': 'conv',
       'pad_mode': 'default',
       'trans_output_pad_h': 0,
       'trans_output_pad_w': 0,

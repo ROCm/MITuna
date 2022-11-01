@@ -34,15 +34,15 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.fin_builder import FinBuilder
+from tuna.miopen.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
-from tuna.tables import ConfigType
+from tuna.config_type import ConfigType
 from utils import CfgImportArgs, LdJobArgs
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.import_configs import import_cfgs
 from tuna.db_tables import connect_db
-from tuna.miopen_tables import ConvolutionJob
+from tuna.miopen.miopen_tables import ConvolutionJob
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import add_test_session
 from tuna.dbBase.sql_alchemy import DbSession
@@ -56,7 +56,7 @@ def test_abort():
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
   #load jobs
@@ -78,7 +78,7 @@ def test_abort():
   num_jobs = len(job_list)
 
   connect_db()
-  dbt = DBTables(session_id=session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
   if args.tag:
     try:
       tag_name_test(args.tag, dbt)
@@ -124,7 +124,7 @@ def test_abort():
 
   #checking that no job where actually run due to abort_file_arch being present
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
+    get_jobs = f"SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new' and session={session_id};"
     cur.execute(get_jobs)
     res = cur.fetchall()
     print(res)
@@ -138,7 +138,7 @@ def test_abort():
 
   #checking that no job where actually run due to abort_file_mid being present
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
+    get_jobs = f"SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new' and session={session_id};"
     cur.execute(get_jobs)
     res = cur.fetchall()
     print(res)

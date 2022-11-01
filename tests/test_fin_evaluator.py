@@ -33,12 +33,12 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.fin_eval import FinEvaluator
+from tuna.miopen.fin_eval import FinEvaluator
 from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from dummy_machine import DummyMachine
-from tuna.tables import ConfigType
+from tuna.config_type import ConfigType
 from utils import CfgImportArgs
 
 
@@ -51,7 +51,7 @@ def test_fin_evaluator():
 
   args = CfgImportArgs()
   config_type = ConfigType.convolution
-  dbt = DBTables(config_type=args.config_type)
+  dbt = MIOpenDBTables(config_type=args.config_type)
   with DbSession() as session:
     dbt.session_id = session.query(dbt.job_table.session).filter(dbt.job_table.state=='compiled')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').first().session

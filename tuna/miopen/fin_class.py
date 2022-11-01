@@ -31,18 +31,28 @@ import os
 import tempfile
 import functools
 import paramiko
+import random
+from time import sleep
+try:
+  import queue
+except ImportError:
+  import Queue as queue
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 
 from tuna.worker_interface import WorkerInterface
-from tuna.db_tables import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.metadata import FIN_CACHE
 from tuna.metadata import INVERS_DIR_MAP
-from tuna.fin_utils import compose_config_obj
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.fin_utils import compose_config_obj
+from tuna.miopen.fin_utils import get_fin_slv_status
 from tuna.config_type import ConfigType
-from tuna.utils.db_utility import get_solver_ids, session_retry
+from tuna.utils.db_utility import session_retry
+from tuna.utils.db_utility import get_solver_ids, get_id_solvers
+from tuna.utils.utility import split_packets
+
+MAX_JOB_RETRIES = 10
 
 
 class FinClass(WorkerInterface):
@@ -52,38 +62,33 @@ class FinClass(WorkerInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
-    super().__init__(**kwargs)
-    allowed_keys = set([
-        'fin_steps', 'local_file', 'fin_outfile', 'fin_infile', 'machine',
-        'docker_name', 'version', 'config_type', 'label', 'session_id'
-    ])
+    allowed_keys = set(
+        ['fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type'])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    connect_db()
-    self.all_configs = []
-    self.jobid_to_config = {}
-    self.fin_list = []
-    self.arch_list = []
     self.supported_fin_steps = ["get_solvers", "applicability"]
+    self.fin_steps = []
     _, self.local_file = tempfile.mkstemp()
     self.fin_infile = self.local_file.split("/tmp/", 1)[1] + ".json"
     _, self.local_output = tempfile.mkstemp()
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
-    self.fin_steps = []
-    self.machine = None
-    self.docker_name = None
-    self.cnx = None
-    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
-    self.label = None
-    self.session_id = None
 
+    self.solver_id_map = get_solver_ids()
+    _, self.id_solver_map = get_id_solvers(
+    )  #hyphenated names used by miopen::solver.ToString()
+    self.all_configs = []
+    self.fin_list = []
     self.multiproc = False
+    self.pending = []
+    self.first_pass = True
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-    self.dbt = DBTables(session_id=self.session_id,
-                        config_type=self.config_type)
+    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
+
+    #call to set_db_tables in super must come after config_type is set
+    super().__init__(**kwargs)
 
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
@@ -99,6 +104,47 @@ class FinClass(WorkerInterface):
       return True
 
     return False
+
+  def set_db_tables(self):
+    """Initialize tables"""
+    self.dbt = MIOpenDBTables(session_id=self.session_id,
+                              config_type=self.config_type)
+
+  def base_job_query(self, session):
+    """select tables for job query"""
+    query = session.query(self.dbt.job_table, self.dbt.config_table)
+    return query
+
+  def compose_work_query(self, query):
+    """query for fin command and config"""
+    if self.fin_steps:
+      query = query.filter(
+          self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
+    else:
+      query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
+
+    query = query.filter(self.dbt.config_table.valid == 1)\
+                 .filter(self.dbt.job_table.config == self.dbt.config_table.id)
+
+    return query
+
+  def check_jobs_found(self, job_rows, find_state, imply_end):
+    """check for end of jobs"""
+    if not job_rows:
+      # we are done
+      self.logger.warning('No %s jobs found, fin_step: %s, session %s',
+                          find_state, self.fin_steps, self.session_id)
+      if imply_end:
+        self.logger.warning("set end")
+        self.end_jobs.value = 1
+      return False
+    return True
+
+  def job_queue_pop(self):
+    """load job & config from top of job queue"""
+    self.job, self.config = self.job_queue.get(True, 1)
+    self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
+                     self.job.reason)
 
   def compose_fincmd(self):
     """Helper function to compose fin docker cmd"""
@@ -200,49 +246,55 @@ class FinClass(WorkerInterface):
 
   def set_all_configs(self, idx=0, num_blk=1):
     """Gathering all configs from Tuna DB to set up fin input file"""
-    with DbSession() as session:
-      query = session.query(
-          self.dbt.config_table).filter(self.dbt.config_table.valid == 1)
+    if idx == 0:
+      with DbSession() as session:
+        query = session.query(self.dbt.config_table)\
+                          .filter(self.dbt.config_table.valid == 1)
 
-      if self.label:
-        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
-            .filter(self.dbt.config_tags_table.tag == self.label)
+        if self.label:
+          query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
+              .filter(self.dbt.config_tags_table.tag == self.label)
 
-      #order by id for splitting configs into blocks
-      query = query.order_by(self.dbt.config_table.id)
-      rows = query.all()
+        #order by id for splitting configs into blocks
+        query = query.order_by(self.dbt.config_table.id)
+        rows = query.all()
 
-      block_size = len(rows) // num_blk  #size of the config block
-      extra = len(rows) % num_blk  #leftover configs, don't divide evenly
-      start = idx * block_size  #start of a process block
-      end = (idx + 1) * block_size
-      #distributing leftover configs to processes
-      if idx < extra:
-        start += idx
-        end += 1 + idx
-      else:
-        start += extra
-        end += extra
+        master_cfg_list = []
+        for row in rows:
+          r_dict = compose_config_obj(row, self.config_type)
+          if self.config_type == ConfigType.batch_norm:
+            r_dict['direction'] = row.get_direction()
+          master_cfg_list.append(r_dict)
 
-      self.logger.info("cfg workdiv: proc %s, start %s, end %s", self.gpu_id,
-                       start, end)
+        block_size = len(rows) // num_blk  #size of the config block
+        extra = len(rows) % num_blk  #leftover configs, don't divide evenly
+        self.logger.info(
+            "cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk,
+            block_size, extra)
+        for i in range(num_blk):
+          start = i * block_size  #start of a process block
+          end = (i + 1) * block_size
+          #distributing leftover configs to processes
+          if i < extra:
+            start += i
+            end += 1 + i
+          else:
+            start += extra
+            end += extra
 
-      if start >= len(rows):
-        return False
+          if start >= len(rows):
+            break
 
-      #copy the configs for this process
-      if end >= len(rows):
-        subarr = rows[start:]
-      else:
-        subarr = rows[start:end]
+          self.logger.info("cfg workdiv: start %s, end %s", start, end)
 
-      for row in subarr:
-        r_dict = compose_config_obj(row, self.config_type)
-        if self.config_type == ConfigType.batch_norm:
-          r_dict['direction'] = row.get_direction()
-        self.all_configs.append(r_dict)
+          self.job_queue.put(master_cfg_list[start:end])
+    try:
+      self.all_configs = self.job_queue.get(True, 30)
+    except queue.Empty:
+      self.logger.warning('No jobs found for process %s...', idx)
+      self.all_configs = []
 
-    if self.all_configs is None:
+    if not self.all_configs:
       return False
 
     return True
@@ -326,41 +378,57 @@ class FinClass(WorkerInterface):
 
   def insert_applicability(self, session, json_in):
     """write applicability to sql"""
-    _, solver_id_map_h = get_solver_ids()
+    inserts = []
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
-        #remove old applicability
+        cfg_id = elem["input"]["config_tuna_id"]
         # pylint: disable=comparison-with-callable
         app_query = session.query(self.dbt.solver_app)\
           .filter(self.dbt.solver_app.session == self.session_id)\
-          .filter(self.dbt.solver_app.config == elem["input"]["config_tuna_id"])
+          .filter(self.dbt.solver_app.config == cfg_id)
         # pylint: enable=comparison-with-callable
-        app_query.update({self.dbt.solver_app.applicable: 0},
-                         synchronize_session='fetch')
+
         if not elem["applicable_solvers"]:
-          self.logger.warning("No applicable solvers for %s",
-                              elem["input"]["config_tuna_id"])
+          self.logger.warning("No applicable solvers for %s", cfg_id)
+
+        app_slv_ids = []
         for solver in elem["applicable_solvers"]:
           try:
-            solver_id = solver_id_map_h[solver]
-            obj = app_query.filter(
-                self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
-            if obj:
-              obj.applicable = 1
-            else:
-              new_entry = self.dbt.solver_app(
-                  solver=solver_id,
-                  config=elem["input"]["config_tuna_id"],
-                  session=self.session_id,
-                  applicable=1)
-              session.add(new_entry)
+            solver_id = self.solver_id_map[solver]
+            app_slv_ids.append(solver_id)
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
             return False
 
-    self.logger.info('Commit bulk transaction, please wait')
+        #remove old applicability
+        not_app_query = app_query.filter(
+            self.dbt.solver_app.solver.notin_(app_slv_ids))
+        not_app_query.update({self.dbt.solver_app.applicable: 0},
+                             synchronize_session='fetch')
+
+        for solver_id in app_slv_ids:
+          obj = app_query.filter(
+              self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
+          if obj:
+            obj.applicable = 1
+          else:
+            inserts.append((cfg_id, solver_id))
+
+    #commit updates
     session.commit()
+
+    #bulk inserts
+    with self.job_queue_lock:
+      self.logger.info('Commit bulk inserts, please wait')
+      for cfg_id, solver_id in inserts:
+        new_entry = self.dbt.solver_app(solver=solver_id,
+                                        config=cfg_id,
+                                        session=self.session_id,
+                                        applicable=1)
+        session.add(new_entry)
+      session.commit()
+
     return True
 
   def parse_applicability(self, json_in):
@@ -370,19 +438,7 @@ class FinClass(WorkerInterface):
       self.logger.error("JSON file returned from Fin is empty")
       return False
 
-    #break down commits into smaller packets
-    pack_i = 0
-    pack = []
-    all_packs = []
-    for elem in json_in:
-      pack.append(elem)
-      pack_i += 1
-      if pack_i == 100:
-        all_packs.append(pack)
-        pack = []
-        pack_i = 0
-    if pack:
-      all_packs.append(pack)
+    all_packs = split_packets(json_in, 10000)
 
     with DbSession() as session:
 
@@ -393,7 +449,6 @@ class FinClass(WorkerInterface):
         session_retry(session, self.insert_applicability,
                       functools.partial(actuator, pack=pack), self.logger)
 
-    with DbSession() as session:
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
       query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
       sapp_count = query.one()[0]
@@ -488,6 +543,211 @@ class FinClass(WorkerInterface):
       self.logger.info("Current invalid solvers: %s", solver_ids_invalid)
 
     return True
+
+  def get_fdb_entry(self, session, solver):
+    """ Get FindDb entry from db """
+    fdb_entry = self.dbt.find_db_table()
+    fdb_entry.config = self.config.id
+    fdb_entry.solver = solver
+    fdb_entry.session = self.dbt.session.id
+    fdb_entry.opencl = False
+    fdb_entry.logger = self.logger
+    fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
+                                    self.dbt.session.id)
+    obj = fdb_query.first()
+    return obj, fdb_entry
+
+  def update_fdb_entry(self, session, solver):
+    """ Add a new entry to fdb if there isnt one already """
+    obj, fdb_entry = self.get_fdb_entry(session, solver)
+    if obj:  # existing entry in db
+      # This can be removed if we implement the delete orphan cascade
+      fdb_entry = obj
+      session.query(
+          self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
+                                        fdb_entry.kernel_group).delete()
+    else:
+      # Bundle Insert for later
+      self.pending.append((self.job, fdb_entry))
+    return fdb_entry
+
+  def compose_fdb_entry(self, session, fin_json, fdb_obj):
+    """Compose a FindDB table entry from fin_output"""
+    solver = self.solver_id_map[fdb_obj['solver_name']]
+    fdb_entry = self.update_fdb_entry(session, solver)
+    fdb_entry.fdb_key = fin_json['db_key']
+    fdb_entry.alg_lib = fdb_obj['algorithm']
+    fdb_entry.params = fdb_obj['params']
+    fdb_entry.workspace_sz = fdb_obj['workspace']
+    fdb_entry.valid = True
+
+    fdb_entry.kernel_time = -1
+    if 'time' in fdb_obj:
+      fdb_entry.kernel_time = fdb_obj['time']
+
+    fdb_entry.kernel_group = self.job.id
+
+    return fdb_entry
+
+  def compose_kernel_entry(self, session, fdb_obj, fdb_entry):
+    """Compose a new Kernel Cache entry from fin input"""
+    # Now we have the ID, lets add the binary cache objects
+    for kern_obj in fdb_obj['kernel_objects']:
+      kernel_obj = self.dbt.kernel_cache()
+      self.populate_kernels(kern_obj, kernel_obj)
+      kernel_obj.kernel_group = fdb_entry.kernel_group
+      # Bundle Insert for later
+      self.pending.append((self.job, kernel_obj))
+    return True
+
+  def populate_kernels(self, kern_obj, kernel_obj):
+    """populate kernel object"""
+    kernel_obj.kernel_name = kern_obj['kernel_file']
+    kernel_obj.kernel_args = kern_obj['comp_options']
+    kernel_obj.kernel_blob = bytes(kern_obj['blob'], 'utf-8')
+    kernel_obj.kernel_hash = kern_obj['md5_sum']
+    kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
+    return kernel_obj
+
+  def update_fdb_w_kernels(self,
+                           session,
+                           fin_json,
+                           result_str='miopen_find_compile_result',
+                           check_str='find_compiled'):
+    """update find db + kernels from json results"""
+    status = []
+    if fin_json[result_str]:
+      for fdb_obj in fin_json[result_str]:
+        slv_stat = get_fin_slv_status(fdb_obj, check_str)
+        status.append(slv_stat)
+
+        if fdb_obj[check_str]:
+          #returned entry is added to the table
+          fdb_entry = self.compose_fdb_entry(session, fin_json, fdb_obj)
+          if fdb_obj['reason'] == 'Success':
+            self.compose_kernel_entry(session, fdb_obj, fdb_entry)
+            self.logger.info('Updating find Db(Build) for job_id=%s',
+                             self.job.id)
+          else:
+            # JD: add info about reason to the logs table
+            fdb_entry.valid = False
+        else:
+          self.logger.warning("Failed find_db compile, cfg_id: %s, obj: %s",
+                              fin_json['config_tuna_id'], fdb_obj)
+    else:
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Find Compile: No results'
+      }]
+
+    session.commit()
+
+    return status
+
+  def process_fdb_w_kernels(self,
+                            session,
+                            fin_json,
+                            result_str='miopen_find_compile_result',
+                            check_str='find_compiled'):
+    """initiate find db update"""
+
+    callback = self.update_fdb_w_kernels
+    status = session_retry(
+        session, callback,
+        lambda x: x(session, fin_json, result_str, check_str), self.logger)
+
+    if not status:
+      self.logger.warning('Fin: Unable to update Database')
+      status = [{
+          'solver': 'all',
+          'success': False,
+          'result': 'Fin: Unable to update Database'
+      }]
+
+    return status
+
+  def add_sql_objs(self, session, obj_list):
+    """add sql objects to the table"""
+    self.logger.info("adding pending #objects: %s", len(obj_list))
+    for sql_obj in obj_list:
+      session.add(sql_obj)
+    session.commit()
+    return True
+
+  def result_queue_commit(self, session, close_job):
+    """commit the result queue and set mark job complete"""
+    for_commit = {}
+    while not self.result_queue.empty():
+      job, sql_obj = self.result_queue.get(True, 1)
+      if job.id not in for_commit:
+        for_commit[job.id] = {"job": job, "obj": [sql_obj]}
+      else:
+        for_commit[job.id]['obj'].append(sql_obj)
+
+    this_job = self.job
+    for job_id, job_dict in for_commit.items():
+      obj_list = job_dict['obj']
+      self.job = job_dict['job']
+
+      self.logger.info("commit pending job %s, #objects: %s", job_id,
+                       len(obj_list))
+      status = session_retry(session, self.add_sql_objs,
+                             lambda x: x(session, obj_list), self.logger)
+      if not status:
+        self.logger.error("Failed commit pending job %s", job_id)
+        continue
+
+      #set job states after successful commit
+      close_job()
+
+    self.job = this_job
+    return True
+
+  def reset_job_state(self):
+    """finish committing result queue"""
+    super().reset_job_state()
+    self.result_queue_drain()
+
+  def run_fin_cmd(self):
+    """Run a fin command after generating the JSON"""
+    fin_output = self.machine.make_temp_file()
+    cmd = []
+
+    env_str = " ".join(self.envmt)
+    cmd.append(env_str)
+    cmd.extend(
+        ['/opt/rocm/bin/fin', '-i',
+         self.get_fin_input(), '-o', fin_output])  # pylint: disable=no-member
+
+    for i in range(MAX_JOB_RETRIES):
+      ret_code, _, err = self.exec_docker_cmd(cmd)
+
+      if ret_code != 0:
+        self.logger.error('Error executing command: %s', ' '.join(cmd))
+        if err:
+          err_str = err.read()
+          self.logger.error('%s : %s', ret_code, err_str)
+          if "disk I/O error" in err_str:
+            self.logger.error('fin retry : %u', i)
+            sleep(random.randint(1, 10))
+          else:
+            break
+        else:
+          self.logger.error('err code : %s', ret_code)
+          break
+      else:
+        break
+
+    if ret_code != 0:
+      return None
+
+    # load the output json file and strip the env
+    fin_json = json.loads(self.machine.read_file(fin_output))[1:]
+    assert len(fin_json) == 1
+    # JD: if we implement multiple jobs per fin launch, this would be a loop
+    fin_json = fin_json[0]
+    return fin_json
 
   def step(self):
     """Inner loop for Process run defined in worker_interface"""
