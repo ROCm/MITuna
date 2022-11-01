@@ -26,6 +26,8 @@
 ###############################################################################
 """Module that encapsulates the DB representation for a library"""
 
+from tuna.miopen.miopen_tables import JobMixin
+
 
 #pylint: disable=too-few-public-methods
 class DBTablesInterface():
@@ -38,7 +40,7 @@ class DBTablesInterface():
     self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
-    self.job_table = None
+    self.job_table = JobMixin
     self.session_id = None
     self.session = None
 
@@ -47,4 +49,4 @@ class DBTablesInterface():
 
   def set_tables(self):
     """Set appropriate tables based on config type"""
-    self.set_tables()
+    return True
