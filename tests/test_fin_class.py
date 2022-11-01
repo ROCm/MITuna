@@ -69,12 +69,12 @@ def test_set_all_configs():
   bn_file = "{0}/../utils/test_files/bn_configs_rows.txt".format(this_path)
   db = json.load(open(bn_file))
   #no db connection, set_all_configs returns False
-  assert (fin_worker.create_dumplist() == False)
+  assert (fin_worker.__create_dumplist() == False)
   for row in db['bn_configs']:
     fin_worker.all_configs.append(row)
-  assert (fin_worker.compose_fin_list())
+  assert (fin_worker.__compose_fin_list())
   _, filename = tempfile.mkstemp()
-  assert (fin_worker.dump_json(filename))
+  assert (fin_worker.__dump_json(filename))
   assert (exists(filename))
   fin_input = json.load(open(filename))
   sample1 = fin_input[0]
