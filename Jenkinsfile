@@ -132,7 +132,7 @@ pipeline {
             }
         }
         stage("solver analytics test") {
-        agent{  label utils.rocmnode("tunatest") }
+        agent{  label "mysqldb" }
         steps {
           script {
             utils.solverAnalyticsTest()
