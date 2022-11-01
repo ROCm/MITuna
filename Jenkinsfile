@@ -24,7 +24,7 @@ pipeline {
         port = "${port}"
         TUNA_ROCM_VERSION = '4.5'
 
-        solver_analytics_db_name = "${SOLVER_ANALYTICS_DB_NAME}"
+        solver_analytics_db_name = "${SOLVER_ANALYTICS_DB_NAME}_${branch}_${BUILD_ID}"
         solver_analytics_db_hostname = "${SOLVER_ANALYTICS_DB_HOSTNAME}"
         solver_analytics_db_user_name = "${SOLVER_ANALYTICS_DB_USER_NAME}"
         solver_analytics_db_user_password = "${SOLVER_ANALYTICS_DB_USER_PASSWORD}"
@@ -57,14 +57,6 @@ pipeline {
             utils.finSolvers()
             }
             } 
-        }
-        stage("solver analytics test") {
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-          script {
-            utils.solverAnalyticsTest()
-            }
-            }
         }
         stage("fin applicability"){
         //init_session called here
@@ -136,6 +128,14 @@ pipeline {
         steps{
             script {
             utils.perfEval_gfx908()
+            }
+            }
+        }
+        stage("solver analytics test") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+          script {
+            utils.solverAnalyticsTest()
             }
             }
         }

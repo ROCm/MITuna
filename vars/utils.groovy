@@ -330,10 +330,11 @@ def solverAnalyticsTest(){
         env.gateway_user = "${solver_analytics_gateway_user}"
         env.PYTHONPATH = env.WORKSPACE
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
-
+        
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
         sh "touch __init__.py"
+        sh "python3 ./tuna/update_golden.py --session_id 1 --golden_v 1 -o"
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
