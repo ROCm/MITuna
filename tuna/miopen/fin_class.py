@@ -140,6 +140,7 @@ class FinClass(WorkerInterface):
         self.end_jobs.value = 1
       return False
     return True
+
   #pylint: enable=R0801
 
   def job_queue_pop(self):
@@ -612,10 +613,10 @@ class FinClass(WorkerInterface):
     return kernel_obj
 
   def __update_fdb_w_kernels(self,
-                           session,
-                           fin_json,
-                           result_str='miopen_find_compile_result',
-                           check_str='find_compiled'):
+                             session,
+                             fin_json,
+                             result_str='miopen_find_compile_result',
+                             check_str='find_compiled'):
     """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:
@@ -699,7 +700,8 @@ class FinClass(WorkerInterface):
         return func(session, obj_list)
 
       status = session_retry(session, self.__add_sql_objs,
-                             functools.partial(actuator, obj_list=obj_list), self.logger)
+                             functools.partial(actuator, obj_list=obj_list),
+                             self.logger)
 
       if not status:
         self.logger.error("Failed commit pending job %s", job_id)
