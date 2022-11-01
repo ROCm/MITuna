@@ -257,30 +257,14 @@ class FinEvaluator(FinClass):
     self.set_job_state('evaluated')
     self.clean_cache_table()
 
-  def result_queue_drain(self):
-    """check for lock and commit the result queue"""
-    if self.result_queue_lock.acquire(block=False):
-      with DbSession() as session:
-        self.result_queue_commit(session, self.close_job)
-      self.result_queue_lock.release()
-      return True
-    return False
-
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
     self.pending = []
     self.result_queue_drain()
 
-    # pylint: disable=duplicate-code
-    if self.first_pass:
-      self.first_pass = False
-      try:
-        self.check_env()
-      except ValueError as verr:
-        self.logger.error(verr)
-        return False
-    # pylint: enable=duplicate-code
+    if not self.init_check_env():
+      return False
 
     if not self.get_job("compiled", "eval_start", True):
       while not self.result_queue_drain():
@@ -290,12 +274,7 @@ class FinEvaluator(FinClass):
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
-    try:
-      fin_json = self.run_fin_cmd()
-    except AssertionError as err:
-      self.set_job_state('errored')
-      self.logger.warning('Unable to launch job %s : %s', self.job.id, err)
-      return True
+    fin_json = self.run_fin_cmd()
 
     failed_job = True
     result_str = ''

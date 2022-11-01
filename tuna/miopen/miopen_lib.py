@@ -216,6 +216,7 @@ class MIOpen(MITunaInterface):
     return args
 
   def clean_args(self):
+    """clean arguments"""
     if 'MIOPEN' in sys.argv:
       sys.argv.remove('MIOPEN')
     if 'miopen' in sys.argv:
