@@ -63,8 +63,8 @@ class FinClass(WorkerInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
-    super().__init__(**kwargs)
-    allowed_keys = set(['fin_steps', 'local_file', 'fin_infile', 'fin_outfile'])
+    allowed_keys = set(
+        ['fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type'])
     self.__dict__.update((key, None) for key in allowed_keys)
 
     self.supported_fin_steps = ["get_solvers", "applicability"]
@@ -80,12 +80,16 @@ class FinClass(WorkerInterface):
     self.all_configs = []
     self.fin_list = []
     self.multiproc = False
+    self.pending = []
+    self.first_pass = True
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-    self.dbt = MIOpenDBTables(session_id=self.session_id,
-                              config_type=self.config_type)
+    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
+
+    #call to set_db_tables in super must come after config_type is set
+    super().__init__(**kwargs)
 
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
@@ -101,6 +105,47 @@ class FinClass(WorkerInterface):
       return True
 
     return False
+
+  def set_db_tables(self):
+    """Initialize tables"""
+    self.dbt = MIOpenDBTables(session_id=self.session_id,
+                              config_type=self.config_type)
+
+  def base_job_query(self, session):
+    """select tables for job query"""
+    query = session.query(self.dbt.job_table, self.dbt.config_table)
+    return query
+
+  def compose_work_query(self, query):
+    """query for fin command and config"""
+    if self.fin_steps:
+      query = query.filter(
+          self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
+    else:
+      query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
+
+    query = query.filter(self.dbt.config_table.valid == 1)\
+                 .filter(self.dbt.job_table.config == self.dbt.config_table.id)
+
+    return query
+
+  def check_jobs_found(self, job_rows, find_state, imply_end):
+    """check for end of jobs"""
+    if not job_rows:
+      # we are done
+      self.logger.warning('No %s jobs found, fin_step: %s, session %s',
+                          find_state, self.fin_steps, self.session_id)
+      if imply_end:
+        self.logger.warning("set end")
+        self.end_jobs.value = 1
+      return False
+    return True
+
+  def job_queue_pop(self):
+    """load job & config from top of job queue"""
+    self.job, self.config = self.job_queue.get(True, 1)
+    self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
+                     self.job.reason)
 
   def compose_fincmd(self):
     """Helper function to compose fin docker cmd"""
@@ -375,7 +420,7 @@ class FinClass(WorkerInterface):
     session.commit()
 
     #bulk inserts
-    with self.queue_lock:
+    with self.job_queue_lock:
       self.logger.info('Commit bulk inserts, please wait')
       for cfg_id, solver_id in inserts:
         new_entry = self.dbt.solver_app(solver=solver_id,
@@ -523,8 +568,8 @@ class FinClass(WorkerInterface):
           self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
                                         fdb_entry.kernel_group).delete()
     else:
-      # Insert the above entry
-      session.add(fdb_entry)
+      # Bundle Insert for later
+      self.pending.append((self.job, fdb_entry))
     return fdb_entry
 
   def compose_fdb_entry(self, session, fin_json, fdb_obj):
@@ -541,8 +586,7 @@ class FinClass(WorkerInterface):
     if 'time' in fdb_obj:
       fdb_entry.kernel_time = fdb_obj['time']
 
-    fdb_entry, _ = self.get_fdb_entry(session, solver)
-    fdb_entry.kernel_group = fdb_entry.id
+    fdb_entry.kernel_group = self.job.id
 
     return fdb_entry
 
@@ -553,7 +597,8 @@ class FinClass(WorkerInterface):
       kernel_obj = self.dbt.kernel_cache()
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.kernel_group = fdb_entry.kernel_group
-      session.add(kernel_obj)
+      # Bundle Insert for later
+      self.pending.append((self.job, kernel_obj))
     return True
 
   def populate_kernels(self, kern_obj, kernel_obj):
@@ -622,6 +667,48 @@ class FinClass(WorkerInterface):
       }]
 
     return status
+
+  def add_sql_objs(self, session, obj_list):
+    """add sql objects to the table"""
+    self.logger.info("adding pending #objects: %s", len(obj_list))
+    for sql_obj in obj_list:
+      session.add(sql_obj)
+    session.commit()
+    return True
+
+  def result_queue_commit(self, session, close_job):
+    """commit the result queue and set mark job complete"""
+    for_commit = {}
+    while not self.result_queue.empty():
+      job, sql_obj = self.result_queue.get(True, 1)
+      if job.id not in for_commit:
+        for_commit[job.id] = {"job": job, "obj": [sql_obj]}
+      else:
+        for_commit[job.id]['obj'].append(sql_obj)
+
+    this_job = self.job
+    for job_id, job_dict in for_commit.items():
+      obj_list = job_dict['obj']
+      self.job = job_dict['job']
+
+      self.logger.info("commit pending job %s, #objects: %s", job_id,
+                       len(obj_list))
+      status = session_retry(session, self.add_sql_objs,
+                             lambda x: x(session, obj_list), self.logger)
+      if not status:
+        self.logger.error("Failed commit pending job %s", job_id)
+        continue
+
+      #set job states after successful commit
+      close_job()
+
+    self.job = this_job
+    return True
+
+  def reset_job_state(self):
+    """finish committing result queue"""
+    super().reset_job_state()
+    self.result_queue_drain()
 
   def run_fin_cmd(self):
     """Run a fin command after generating the JSON"""

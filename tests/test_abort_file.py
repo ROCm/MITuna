@@ -124,7 +124,7 @@ def test_abort():
 
   #checking that no job where actually run due to abort_file_arch being present
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
+    get_jobs = f"SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new' and session={session_id};"
     cur.execute(get_jobs)
     res = cur.fetchall()
     print(res)
@@ -138,7 +138,7 @@ def test_abort():
 
   #checking that no job where actually run due to abort_file_mid being present
   with DbCursor() as cur:
-    get_jobs = "SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new';"
+    get_jobs = f"SELECT count(*) from conv_job where reason='tuna_pytest_abort' and state='new' and session={session_id};"
     cur.execute(get_jobs)
     res = cur.fetchall()
     print(res)
