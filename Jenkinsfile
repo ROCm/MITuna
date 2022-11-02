@@ -132,7 +132,7 @@ pipeline {
             }
         }
         stage("solver analytics test") {
-        agent{  label "mysqldb" }
+        agent{  label "tunatest" }
         steps {
           script {
             utils.solverAnalyticsTest()
