@@ -21,7 +21,6 @@ import sqlalchemy as sa
 
 
 def upgrade() -> None:
-  #op.add_column('conv_job', sa.Column('last_transaction_date', sa.DateTime))
   pass
 
 

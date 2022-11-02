@@ -26,7 +26,6 @@
 ###############################################################################
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
-import argparse
 import sys
 from multiprocessing import Value
 
@@ -217,6 +216,7 @@ class MIOpen(MITunaInterface):
     return args
 
   def clean_args(self):
+    """clean arguments"""
     if 'MIOPEN' in sys.argv:
       sys.argv.remove('MIOPEN')
     if 'miopen' in sys.argv:
@@ -334,7 +334,7 @@ class MIOpen(MITunaInterface):
           num_procs = int(env['slurm_cpus'])
         else:
           # JD: This sould be the responsibility of the machine class
-          num_procs = int(machine.get_num_cpus())
+          num_procs = int(machine.get_num_cpus() * .6)
         worker_ids = range(num_procs)
 
       if len(worker_ids) == 0:

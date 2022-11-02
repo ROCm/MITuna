@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
@@ -24,29 +23,34 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates the DB representation for a library"""
 
-from tuna.miopen.miopen_tables import JobMixin
+import os
+import sys
+
+sys.path.append("../tuna")
+sys.path.append("tuna")
+
+this_path = os.path.dirname(__file__)
+
+from tuna.dbBase.sql_alchemy import DbSession
+from utils import DummyArgs
+from tuna.import_benchmark import add_model, update_frameworks, print_models
+from tuna.miopen.benchmark import Framework, ModelEnum
 
 
-#pylint: disable=too-few-public-methods
-class DBTablesInterface():
-  """Represents db tables based on ConfigType"""
-
-  def __init__(self, **kwargs):
-    """Constructor"""
-    super().__init__()
-    allowed_keys = set(['session_id'])
-    self.__dict__.update((key, None) for key in allowed_keys)
-
-    #for pylint
-    self.job_table = JobMixin
-    self.session_id = None
-    self.session = None
-
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
-
-  def set_tables(self):
-    """Set appropriate tables based on config type"""
-    return True
+def test_import_benchmark():
+  args = DummyArgs
+  models = {
+      ModelEnum.ALEXNET: 1.0,
+      ModelEnum.GOOGLENET: 2.0,
+      ModelEnum.VGG19: 3.0
+  }
+  for key, value in models.items():
+    args.add_model = key.value
+    args.version = value
+    add_model(args)
+  print_models()
+  update_frameworks()
+  with DbSession() as session:
+    frmks = session.query(Framework).all()
+    assert len(frmks) > 0

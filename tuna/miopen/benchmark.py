@@ -24,29 +24,51 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates the DB representation for a library"""
+""" Module for defining benchmark and model enums """
 
-from tuna.miopen.miopen_tables import JobMixin
+import enum
+from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy import Enum, Float
+from tuna.dbBase.base_class import BASE
 
 
 #pylint: disable=too-few-public-methods
-class DBTablesInterface():
-  """Represents db tables based on ConfigType"""
+class FrameworkEnum(enum.Enum):
+  """Represents framework enums"""
+  PYTORCH = 'Pytorch'
+  DEEPBENCH = 'Deepbench'
 
-  def __init__(self, **kwargs):
-    """Constructor"""
-    super().__init__()
-    allowed_keys = set(['session_id'])
-    self.__dict__.update((key, None) for key in allowed_keys)
+  def __str__(self):
+    return self.value
 
-    #for pylint
-    self.job_table = JobMixin
-    self.session_id = None
-    self.session = None
 
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+class Framework(BASE):
+  """Represents framework table"""
+  __tablename__ = "framework"
+  __table_args__ = (UniqueConstraint("framework", name="uq_idx"),)
+  framework = Column(Enum(FrameworkEnum), nullable=False)
 
-  def set_tables(self):
-    """Set appropriate tables based on config type"""
-    return True
+
+class ModelEnum(enum.Enum):
+  """Represents model enums"""
+  RESNET50 = 'Resnet50'
+  RESNEXT101 = 'Resnext101'
+  VGG16 = 'Vgg16'
+  VGG19 = 'Vgg19'
+  ALEXNET = 'Alexnet'
+  GOOGLENET = 'Googlenet'
+  INCEPTION3 = 'Inception3'
+  INCEPTION4 = 'Inception4'
+  MASKRCNN = 'Mask-r-cnn'
+  SHUFFLENET = 'Shufflenet'
+
+  def __str__(self):
+    return self.value
+
+
+class Model(BASE):
+  """Represents model table"""
+  __tablename__ = "model"
+  __table_args__ = (UniqueConstraint("model", "version", name="uq_idx"),)
+  model = Column(Enum(ModelEnum), nullable=False)
+  version = Column(Float, nullable=False)
