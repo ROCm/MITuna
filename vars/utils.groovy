@@ -331,15 +331,6 @@ def solverAnalyticsTest(){
         env.gateway_user = "${gateway_user}"
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
 
-        // populate conv_golden table with dummy entries
-        def num_entries_i = runsql("SELECT count(*) from conv_golden")
-        echo "initial number of entries in conv_golden: ${num_entries_i}"
-
-        sh "python3 ./tuna/update_golden.py --session_id 1 --golden_v 1 -o"
-
-        def num_entries_f = runsql("SELECT count(*) from conv_golden")
-        echo "final number of entries in conv_golden: ${num_entries_i}"
-
         // install SolverAnalytics
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
