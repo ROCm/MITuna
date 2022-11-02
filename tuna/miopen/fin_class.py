@@ -59,6 +59,7 @@ class FinClass(WorkerInterface):
   """Class to provide Tuna support for Fin"""
 
   # pylint: disable=too-many-instance-attributes
+  # pylint: disable=too-many-public-methods
 
   def __init__(self, **kwargs):
     """Constructor"""

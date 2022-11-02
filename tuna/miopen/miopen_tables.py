@@ -41,6 +41,7 @@ from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.config_type import ConfigType
 from tuna.miopen.session import Session
 from tuna.metadata import DIR_MAP
+from tuna.miopen.benchmark import Model, Framework
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
@@ -277,6 +278,11 @@ class BNConfig(BASE):
 
 class ConfigTagMixin():
   """Mixin class for config tags tables"""
+
+  @declared_attr
+  def model(self):
+    """model FKey"""
+    return Column(Integer, ForeignKey("model.id"), nullable=True)
 
   tag = Column(String(length=128), nullable=False, server_default="no_tag")
   recurrent = Column(TINYINT(1), nullable=False, server_default="0")
@@ -526,7 +532,7 @@ class BNGolden(BASE, GoldenMixin):
 
 class BenchmarkTable(BASE):
   """benchmark table for framework and model parameters"""
-  __tablename__ = "benchmark_table"
+  __tablename__ = "benchmark"
   __table_args__ = (UniqueConstraint("framework",
                                      "model",
                                      "batchsize",
@@ -534,8 +540,8 @@ class BenchmarkTable(BASE):
                                      "driver_cmd",
                                      name="uq_idx"),)
 
-  framework = Column(String(length=128), nullable=False)
-  model = Column(String(length=128), nullable=False)
+  framework = Column(Integer, ForeignKey("framework.id"), nullable=False)
+  model = Column(Integer, ForeignKey("model.id"), nullable=False)
   batchsize = Column(Integer, nullable=False, server_default="32")
   gpu_number = Column(Integer, nullable=True, server_default="1")
   driver_cmd = Column(String(length=128), nullable=False)
@@ -543,7 +549,7 @@ class BenchmarkTable(BASE):
 
 class ConvBenchPerfTable(BASE):
   """benchmark table for performance parameters"""
-  __tablename__ = "conv_benchmark_perf_table"
+  __tablename__ = "conv_benchmark_perf"
   __table_args__ = (UniqueConstraint("config",
                                      "benchmark",
                                      "solver",
@@ -552,7 +558,7 @@ class ConvBenchPerfTable(BASE):
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-  benchmark = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
+  benchmark = Column(Integer, ForeignKey("benchmark.id"), nullable=False)
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   solver = Column(Integer,
                   ForeignKey("solver.id",
@@ -606,12 +612,14 @@ def get_miopen_tables():
   miopen_tables = []
   miopen_tables.append(Solver())
   miopen_tables.append(Session())
+  miopen_tables.append(Framework())
+  miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
   miopen_tables.append(BenchmarkTable())
-  miopen_tables.append(ConvBenchPerfTable())
 
   miopen_tables = add_conv_tables(miopen_tables)
+  miopen_tables.append(ConvBenchPerfTable())
   miopen_tables = add_fusion_tables(miopen_tables)
   miopen_tables = add_bn_tables(miopen_tables)
 
