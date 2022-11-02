@@ -349,10 +349,10 @@ def solverAnalyticsTest(){
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
         sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/df_tools_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/fdb_key_utils_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/helpers_test.py"
-        sh "python3 ./SolverAnalytics/tests/utils_tests/logging_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/df_tools_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/fdb_key_utils_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/helpers_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/logging_test.py"
     }
 }
 
