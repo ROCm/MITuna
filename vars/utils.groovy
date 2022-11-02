@@ -324,7 +324,6 @@ def solverAnalyticsTest(){
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
         env.TUNA_DB_PASSWORD="${db_password}"
-        env.TUNA_ROCM_VERSION = "${solver_analytics_rocm_version}"
         env.PYTHONPATH = env.WORKSPACE
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
