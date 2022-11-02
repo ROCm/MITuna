@@ -55,7 +55,7 @@ class FinBuilder(FinClass):
                                         is_temp=True)
     return fin_input
 
-  def compose_job_cache_entrys(self, session, pdb_obj):
+  def compose_job_cache_entrys(self, pdb_obj):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
       kernel_obj = self.dbt.fin_cache_table()
@@ -68,7 +68,7 @@ class FinBuilder(FinClass):
 
     return True
 
-  def process_pdb_compile(self, session, fin_json):
+  def process_pdb_compile(self, fin_json):
     """retrieve perf db compile json results"""
     status = []
     if fin_json['miopen_perf_compile_result']:
@@ -76,7 +76,7 @@ class FinBuilder(FinClass):
         slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
         status.append(slv_stat)
         if pdb_obj['perf_compiled']:
-          self.compose_job_cache_entrys(session, pdb_obj)
+          self.compose_job_cache_entrys(pdb_obj)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
       status = [{
@@ -91,29 +91,13 @@ class FinBuilder(FinClass):
     """mark a job complete"""
     self.set_job_state('compiled')
 
-  def result_queue_drain(self):
-    """check for lock and commit the result queue"""
-    if self.result_queue_lock.acquire(block=False):
-      with DbSession() as session:
-        self.result_queue_commit(session, self.close_job)
-      self.result_queue_lock.release()
-      return True
-    return False
-
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     self.pending = []
     self.result_queue_drain()
 
-    # pylint: disable=duplicate-code
-    if self.first_pass:
-      self.first_pass = False
-      try:
-        self.check_env()
-      except ValueError as verr:
-        self.logger.error(verr)
-        return False
-    # pylint: enable=duplicate-code
+    if not self.init_check_env():
+      return False
 
     if not self.get_job("new", "compile_start", True):
       while not self.result_queue_drain():
@@ -135,7 +119,7 @@ class FinBuilder(FinClass):
             status = self.process_fdb_w_kernels(session, fin_json)
 
           elif 'miopen_perf_compile_result' in fin_json:
-            status = self.process_pdb_compile(session, fin_json)
+            status = self.process_pdb_compile(fin_json)
 
           success, result_str = get_fin_result(status)
           failed_job = not success
