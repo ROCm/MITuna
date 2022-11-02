@@ -320,6 +320,7 @@ def solverAnalyticsTest(){
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         checkout scm
+        // enviornment setup
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
@@ -329,11 +330,21 @@ def solverAnalyticsTest(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
-        
+
+        // populate conv_golden table with dummy entries
+        def num_entries_i = runsql("SELECT count(*) from conv_golden")
+        echo "initial number of entries in conv_golden: ${num_entries_i}"
+
+        sh "python3 ./tuna/update_golden.py --session_id 1 --golden_v 1 -o"
+
+        def num_entries_f = runsql("SELECT count(*) from conv_golden")
+        echo "final number of entries in conv_golden: ${num_entries_i}"
+
+        // install SolverAnalytics
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
-        sh "touch __init__.py"
-        sh "python3 ./tuna/update_golden.py --session_id 1 --golden_v 1 -o"
+
+        // run SolverAnalytics tests
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
