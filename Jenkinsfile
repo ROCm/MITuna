@@ -23,6 +23,7 @@ pipeline {
         pwd = "${pwd}"
         port = "${port}"
         TUNA_ROCM_VERSION = '4.5'
+
     } 
     stages {
         stage("code Format") {
@@ -119,6 +120,14 @@ pipeline {
         steps{
             script {
             utils.perfEval_gfx908()
+            }
+            }
+        }
+        stage("solver analytics test") {
+        agent{  label "tunatest" }
+        steps {
+          script {
+            utils.solverAnalyticsTest()
             }
             }
         }
