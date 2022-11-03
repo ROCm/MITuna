@@ -189,19 +189,6 @@ def handle_op_error(logger, error):
 
 
 #DEPRECATED
-def get_conv_dict(c_dict, fds):
-  """Compose db cols for conv_config table"""
-  for col in CONV_CONFIG_COLS:
-    if col in fds.keys():
-      c_dict[col] = fds[col]
-
-  c_dict['input_tensor'] = get_input_t_id(fds)
-  c_dict['weight_tensor'] = get_weight_t_id(fds)
-
-  return c_dict
-
-
-#DEPRECATED
 def get_bn_dict(c_dict, fds):
   """Compose db cols for BN table"""
   for col in BN_CONFIG_COLS:
