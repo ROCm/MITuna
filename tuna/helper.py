@@ -189,33 +189,6 @@ def handle_op_error(logger, error):
 
 
 #DEPRECATED
-def get_bn_dict(c_dict, fds):
-  """Compose db cols for BN table"""
-  for col in BN_CONFIG_COLS:
-    if col in fds.keys():
-      c_dict[col] = fds[col]
-
-  c_dict['input_tensor'] = get_input_t_id(fds)
-
-  return c_dict
-
-
-#DEPRECATED
-def compose_tensors(fds, args, keep_id=False):
-  """Get tensors needed for DB table based on config type"""
-  c_dict = {}
-  if args.config_type is ConfigType.batch_norm:
-    get_bn_dict(c_dict, fds)
-  else:
-    c_dict = get_conv_dict(c_dict, fds)
-
-  if keep_id:
-    c_dict['id'] = fds['id']
-
-  return c_dict
-
-
-#DEPRECATED
 def insert_tensor(fds, tensor_dict):
   """Insert new row into tensor table and return primary key"""
 
