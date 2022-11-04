@@ -36,7 +36,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.utility import check_qts
-from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, TENSOR_PRECISION
+from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT
 from tuna.metadata import BN_DEFAULTS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.metadata import NUM_SQL_RETRIES
