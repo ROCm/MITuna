@@ -279,11 +279,6 @@ class BNConfig(BASE):
 class ConfigTagMixin():
   """Mixin class for config tags tables"""
 
-  @declared_attr
-  def model(self):
-    """model FKey"""
-    return Column(Integer, ForeignKey("model.id"), nullable=True)
-
   tag = Column(String(length=128), nullable=False, server_default="no_tag")
   recurrent = Column(TINYINT(1), nullable=False, server_default="0")
 
@@ -530,7 +525,7 @@ class BNGolden(BASE, GoldenMixin):
   kernel_group = Column(Integer, nullable=True)
 
 
-class BenchmarkTable(BASE):
+class Benchmark(BASE):
   """benchmark table for framework and model parameters"""
   __tablename__ = "benchmark"
   __table_args__ = (UniqueConstraint("framework",
@@ -538,26 +533,26 @@ class BenchmarkTable(BASE):
                                      "batchsize",
                                      "gpu_number",
                                      "driver_cmd",
+                                     "config",
                                      name="uq_idx"),)
 
   framework = Column(Integer, ForeignKey("framework.id"), nullable=False)
   model = Column(Integer, ForeignKey("model.id"), nullable=False)
   batchsize = Column(Integer, nullable=False, server_default="32")
   gpu_number = Column(Integer, nullable=True, server_default="1")
+  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
   driver_cmd = Column(String(length=128), nullable=False)
 
 
-class ConvBenchPerfTable(BASE):
+class ConvBenchPerf(BASE):
   """benchmark table for performance parameters"""
   __tablename__ = "conv_benchmark_perf"
-  __table_args__ = (UniqueConstraint("config",
-                                     "benchmark",
+  __table_args__ = (UniqueConstraint("benchmark",
                                      "solver",
                                      "rocm_v",
                                      "miopen_v",
                                      name="uq_idx"),)
 
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
   benchmark = Column(Integer, ForeignKey("benchmark.id"), nullable=False)
   kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   solver = Column(Integer,
@@ -616,10 +611,10 @@ def get_miopen_tables():
   miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
-  miopen_tables.append(BenchmarkTable())
+  miopen_tables.append(Benchmark())
 
   miopen_tables = add_conv_tables(miopen_tables)
-  miopen_tables.append(ConvBenchPerfTable())
+  miopen_tables.append(ConvBenchPerf())
   miopen_tables = add_fusion_tables(miopen_tables)
   miopen_tables = add_bn_tables(miopen_tables)
 

@@ -31,7 +31,9 @@ from tuna.miopen.miopen_tables import ConvJobCache, Solver
 from tuna.miopen.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
 from tuna.miopen.miopen_tables import ConvSolverApplicability, BNSolverApplicability
 from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
-from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden
+from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden, Benchmark
+from tuna.miopen.miopen_tables import ConvBenchPerf
+from tuna.miopen.benchmark import Framework, Model
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.session import Session
@@ -70,6 +72,8 @@ class MIOpenDBTables(DBTablesInterface):
     """Set appropriate tables based on config type"""
 
     self.solver_table = Solver
+    self.model = Model
+    self.framework = Framework
 
     if self.session_id is not None:
       with DbSession() as session:
@@ -95,3 +99,5 @@ class MIOpenDBTables(DBTablesInterface):
       self.fin_cache_table = ConvFinJobCache
       self.kernel_cache = ConvolutionKernelCache
       self.golden_table = ConvolutionGolden
+      self.benchmark = Benchmark
+      self.benchmark_perf = ConvBenchPerf
