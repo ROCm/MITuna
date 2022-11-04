@@ -270,3 +270,12 @@ class DriverConvolution(DriverBase):
   def set_cmd(self, data_type):
     """Set cmd based on tensor data type"""
     self.cmd = PREC_TO_CMD[ConfigType.convolution][data_type]
+
+  def __eq__(self, other):
+    if not isinstance(other, DriverConvolution):
+      return NotImplemented
+
+    if self.vars() == other.vars():
+      return True
+
+    return False

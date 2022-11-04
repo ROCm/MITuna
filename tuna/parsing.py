@@ -39,11 +39,10 @@ from tuna.config_type import ConfigType
 LOGGER = setup_logger()
 
 
-def parse_pdb_key(key, version='1.0.0'):
+def parse_pdb_key(key):
   """return network parameters from fdb key string"""
   if key.find('=') != -1:
     raise ValueError(f'Invalid 2D PDB key: {key}')
-  tensors = {}
 
   pattern_3d = '[0-9]x[0-9]x[0-9]'
   group_count = '1'
@@ -60,10 +59,7 @@ def parse_pdb_key(key, version='1.0.0'):
     vals, precision, direction = parse_3d(key, group_count)
     fds = FDS_3D
   else:
-    if version == '1.0.0':
-      vals, precision, direction, tensors = parse_2d_v2(key, group_count)
-    else:
-      vals, precision, direction = parse_2d(key, group_count)
+    vals, precision, direction = parse_2d(key, group_count)
     fds = FDS_2D
 
   vals2 = []
@@ -72,25 +68,26 @@ def parse_pdb_key(key, version='1.0.0'):
       val = int(val)
     vals2.append(val)
 
-  return fds, vals2, precision, INVERS_DIR_MAP[direction], tensors
+  return fds, vals2, precision, INVERS_DIR_MAP[direction]
 
 
-def parse_2d_v2(key, group_count):  #pylint: disable=too-many-locals
+def parse_2d(key, group_count):  #pylint: disable=too-many-locals
   """parse key values for 2d network"""
+  #sample 2D
+  #256-199-335-1x1-512-100-168-2-0x0-2x2-1x1-0-NCHW-FP32-F
   tmp = key.split('-')
   #len(tensor) could be 1 or 3
   #<input tensor><weight tensor><output tensor>
-  tensors = {}
   if len(tmp) == 15:
     #same layout for all tensors
-    tensors['input_tensor'] = tmp[12]
-    tensors['weight_tensor'] = tmp[12]
-    tensors['output_tensor'] = tmp[12]
+    in_layout = tmp[12]
+    fil_layout = tmp[12]
+    out_layout = tmp[12]
   else:
     #when len=17 all 3 tensor are specified
-    tensors['input_tensor'] = tmp[12]
-    tensors['weight_tensor'] = tmp[13]
-    tensors['output_tensor'] = tmp[14]
+    in_layout = tmp[12]
+    fil_layout = tmp[13]
+    out_layout = tmp[14]
 
   direction = tmp[len(tmp) - 1]
   precision = tmp[len(tmp) - 2]
@@ -119,41 +116,7 @@ def parse_2d_v2(key, group_count):  #pylint: disable=too-many-locals
   vals_2d = [
       pad_h, pad_w, out_channels, fil_w, fil_h, dilation_w, dilation_h,
       conv_stride_w, conv_stride_h, in_channels, in_w, in_h, batchsize,
-      group_count
-  ]
-
-  return vals_2d, precision, direction, tensors
-
-
-def parse_2d(key, group_count):  #pylint: disable=too-many-locals
-  """parse key values for 2d network"""
-  tmp = key.split('-')
-  direction = tmp[14]
-  if direction == 'F':
-    in_channels = tmp[0]
-    in_h = tmp[1]
-    in_w = tmp[2]
-    out_channels = tmp[4]
-    # tmp[5], tmp[6]:  outputsize is ignored in db
-  else:
-    out_channels = tmp[0]
-    in_h = tmp[5]
-    in_w = tmp[6]
-    in_channels = tmp[4]
-
-  fil_h, fil_w = tmp[3].split('x')
-  batchsize = tmp[7]
-  pad_h, pad_w = tmp[8].split('x')
-  conv_stride_w, conv_stride_h = tmp[9].split('x')
-  dilation_h, dilation_w = tmp[10].split('x')
-  # unused bias = tmp[11]
-  # unused layout = tmp[12]
-  precision = tmp[13]
-
-  vals_2d = [
-      pad_h, pad_w, out_channels, fil_w, fil_h, dilation_w, dilation_h,
-      conv_stride_w, conv_stride_h, in_channels, in_w, in_h, batchsize,
-      group_count
+      group_count, in_layout, out_layout, fil_layout
   ]
 
   return vals_2d, precision, direction
@@ -164,7 +127,22 @@ def parse_3d(key, group_count):  #pylint: disable=too-many-locals
   #sample 3D
   #256-16-56-56-1x1x1-64-16-56-56-4-0x0x0-1x1x1-1x1x1-0-NCHW-FP32-F=
   tmp = key.split('-')
-  direction = tmp[16]
+  #len(tensor) could be 1 or 3
+  #<input tensor><weight tensor><output tensor>
+  if len(tmp) == 17:
+    #same layout for all tensors
+    in_layout = tmp[14]
+    fil_layout = tmp[14]
+    out_layout = tmp[14]
+  else:
+    #when len=19 all 3 tensor are specified
+    in_layout = tmp[14]
+    fil_layout = tmp[15]
+    out_layout = tmp[16]
+
+  direction = tmp[len(tmp) - 1]
+  precision = tmp[len(tmp) - 2]
+
   if direction == 'F':
     in_channels = tmp[0]
     in_d = tmp[1]
@@ -185,13 +163,11 @@ def parse_3d(key, group_count):  #pylint: disable=too-many-locals
   conv_stride_d, conv_stride_w, conv_stride_h = tmp[11].split('x')
   dilation_d, dilation_h, dilation_w = tmp[12].split('x')
   # unused bias = tmp[13]
-  # unused layout = tmp[14]
-  precision = tmp[15]
 
   vals_3d = [
       pad_d, pad_h, pad_w, out_channels, fil_d, fil_w, fil_h, dilation_d,
       dilation_w, dilation_h, conv_stride_d, conv_stride_w, conv_stride_h,
-      in_channels, in_d, in_w, in_h, batchsize, group_count
+      in_channels, in_d, in_w, in_h, batchsize, group_count, in_layout, out_layout, fil_layout
   ]
 
   return vals_3d, precision, direction
@@ -320,7 +296,7 @@ def parse_fdb_line(cmd):
 def get_fds_from_cmd(cmd):
   """Return dict of db var to value from MIOpenDriver cmd"""
   if cmd.find('=') != -1:
-    f_val, v_val, p_val, direction, _ = parse_pdb_key(cmd.split('=')[0])
+    f_val, v_val, p_val, direction = parse_pdb_key(cmd.split('=')[0])
     fds = dict(zip(f_val, v_val))
     fds['cmd'] = PREC_TO_CMD.get(ConfigType.convolution).get(p_val, None)
     if not fds['cmd']:
