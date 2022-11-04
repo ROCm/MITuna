@@ -40,7 +40,7 @@ from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, TENSOR_PRECISION
 from tuna.metadata import BN_DEFAULTS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.metadata import NUM_SQL_RETRIES
-from tuna.miopen.miopen_tables import TensorTable, Session
+from tuna.miopen.miopen_tables import Session
 
 LOGGER = setup_logger('helper')
 
