@@ -188,64 +188,6 @@ def handle_op_error(logger, error):
 
 
 #DEPRECATED
-def insert_tensor(fds, tensor_dict):
-  """Insert new row into tensor table and return primary key"""
-
-  set_tensor_defaults(fds, tensor_dict)
-
-  ret_id = None
-  with DbSession() as session:
-    try:
-      tid = TensorTable(**tensor_dict)
-      session.add(tid)
-      session.commit()
-      ret_id = tid.id
-    except IntegrityError:
-      session.rollback()
-      ret_id = get_tid(session, tensor_dict)
-
-  return ret_id
-
-
-#DEPRECATED
-def get_tid(session, tensor_dict):
-  """Return tensor id based on dict"""
-
-  query = session.query(TensorTable.id).filter_by(**tensor_dict)
-  ret_id = None
-  try:
-    res = session.execute(query).one()
-    ret_id = res[0]
-  except IntegrityError as err:
-    LOGGER.error("Error occurred: %s \n", err)
-    raise ValueError(
-        'Something went wrong with getting input tensor id from tensor table'
-    ) from err
-  except IndexError as err:
-    raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
-
-  return ret_id
-
-
-#DEPRECATED
-def get_input_t_id(fds):
-  """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
-  i_dict = compose_input_t(fds, {})
-
-  return insert_tensor(fds, i_dict)
-
-
-#DEPRECATED
-def get_weight_t_id(fds):
-  """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
-  w_dict = compose_weight_t(fds, {})
-
-  return insert_tensor(fds, w_dict)
-
-
-#DEPRECATED
 def compose_weight_t(fds, w_dict):
   """Build weight_tensor dict from fds"""
 
