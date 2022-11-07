@@ -167,7 +167,8 @@ def parse_3d(key, group_count):  #pylint: disable=too-many-locals
   vals_3d = [
       pad_d, pad_h, pad_w, out_channels, fil_d, fil_w, fil_h, dilation_d,
       dilation_w, dilation_h, conv_stride_d, conv_stride_w, conv_stride_h,
-      in_channels, in_d, in_w, in_h, batchsize, group_count, in_layout, out_layout, fil_layout
+      in_channels, in_d, in_w, in_h, batchsize, group_count, in_layout,
+      out_layout, fil_layout
   ]
 
   return vals_3d, precision, direction
