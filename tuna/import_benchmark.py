@@ -107,11 +107,10 @@ def parse_args():
   args = parser.parse_args()
   if args.add_model and not args.version:
     parser.error('Version needs to be specified with model')
-  if args.add_benchmark and not (args.model and args.framework and args.gpus
-                                ) and not (args.driver or args.file_name):
-    parser.error(
-        'Model, framework, driver and gpus need to all be specified to add a new benchmark'
-    )
+  if args.add_benchmark and not (args.model and args.framework and args.gpus and
+                                 (args.driver or args.file_name)):
+    parser.error('Model, framework, driver(or filename) and gpus need to all be'
+                 'specified to add a new benchmark')
   return args
 
 
@@ -196,29 +195,29 @@ def add_benchmark(args, dbt):
 
   with DbSession() as session:
     for cmd in commands:
-      if args.config_type == ConfigType.convolution:
-        driver = DriverConvolution(line=cmd)
-        batchsize = driver.batchsize
-      else:
-        driver = DriverBatchNorm(line=cmd)
-        batchsize = driver.batchsize
-      db_obj = driver.get_db_obj(keep_id=True)
-      if db_obj.id is None:
-        LOGGER.error('Config not present in the DB: %s', driver.__str__())
-        LOGGER.error('Please use import_configs.py to import configs')
-      print('DB_ID: {}'.format(db_obj.id))
+      try:
+        if args.config_type == ConfigType.convolution:
+          driver = DriverConvolution(line=cmd)
+        else:
+          driver = DriverBatchNorm(line=cmd)
+        db_obj = driver.get_db_obj(keep_id=True)
+        if db_obj.id is None:
+          LOGGER.error('Config not present in the DB: %s', str(driver))
+          LOGGER.error('Please use import_configs.py to import configs')
 
-      #print(driver.__str__())
-      #print(batchsize)
-      #print(args.gpus)
-      benchmark = dbt.benchmark()
-      benchmark.framework = fid
-      benchmark.model = mid
-      benchmark.config = db_obj.id
-      benchmark.gpu_number = args.gpus
-      benchmark.driver_cmd = driver.__str__()
-      session.add(benchmark)
-    session.commit()
+        benchmark = dbt.benchmark()
+        benchmark.framework = fid
+        benchmark.model = mid
+        benchmark.config = db_obj.id
+        benchmark.gpu_number = args.gpus
+        benchmark.driver_cmd = str(driver)
+        benchmark.batchsize = driver.batchsize
+        session.add(benchmark)
+        session.commit()
+      except (ValueError, IntegrityError) as verr:
+        LOGGER.warning(verr)
+        session.rollback()
+        continue
 
 
 def main():
