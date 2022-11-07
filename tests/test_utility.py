@@ -65,42 +65,28 @@ def test_check_qts():
   hostname = socket.gethostname()
   m = Machine(hostname=hostname, local_machine=True)
   retvalue = check_qts(hostname, logger=LOGGER)
-  print(retvalue)
-  assert (retvalue == False)
-
-  m = Machine(hostname=hostname, local_machine=True)
-  retvalue = check_qts(hostname, logger=LOGGER)
-  print(retvalue)
   assert (retvalue == False)
 
   retvalue = check_qts('192.0.2.0')
-  print(retvalue)
   assert (retvalue == False)
 
   retvalue = check_qts('198.51.100.0')
-  print(bool(retvalue))
   assert (retvalue == False)
 
 
 def test_get_env_vars():
 
-  os.environ['user_name'] = 'xyz_123'
-  os.environ['user_password'] = 'xyz1234'
-  os.environ['db_hostname'] = 'xyz.test.com'
-  os.environ['db_name'] = 'testdb'
+  ENV_VARS = get_env_vars()
 
-  assert 'xyz_123' == (os.environ['user_name'])
-  assert 'xyz1234' == (os.environ['user_password'])
-  assert 'xyz.test.com' == (os.environ['db_hostname'])
-  assert 'testdb' == (os.environ['db_name'])
+  assert 'xyz_123' == (ENV_VARS['user_name'])
+  assert 'xyz1234' == (ENV_VARS['user_password'])
+  assert 'xyz.test.com' == (ENV_VARS['db_hostname'])
+  assert 'testdb' == (ENV_VARS['db_name'])
 
 
 def test_get_mmi_env_vars():
 
-  os.environ['gateway_ip'] = '10.100.00.000'
-  os.environ['gateway_port'] = '1234'
-  os.environ['gateway_user'] = 'xyz'
-
-  assert '10.100.00.000' == os.environ['gateway_ip']
-  assert '1234' == os.environ['gateway_port']
-  assert 'xyz' == os.environ['gateway_user']
+  ENV_VARS = get_mmi_env_vars()
+  assert '10.100.00.000' == (ENV_VARS['gateway_ip'])
+  assert '1234' == (ENV_VARS['gateway_port'])
+  assert 'xyz' == (ENV_VARS['gateway_user'])
