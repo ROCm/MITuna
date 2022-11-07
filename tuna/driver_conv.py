@@ -117,9 +117,9 @@ class DriverConvolution(DriverBase):
     """import config attributes from fdb key line"""
     fds, _, direction = get_fds_from_cmd(line)
     setattr(self, 'direction', DIR_MAP[direction])
-    for k in self.to_dict().keys():
-      if k in fds.keys():
-        setattr(self, k, fds[k])
+    for key in self.to_dict():
+      if key in fds:
+        setattr(self, key, fds[key])
 
     pattern_3d = '[0-9]x[0-9]x[0-9]'
     if search(pattern_3d, line):
@@ -272,13 +272,3 @@ class DriverConvolution(DriverBase):
   def set_cmd(self, data_type):
     """Set cmd based on tensor data type"""
     self.cmd = PREC_TO_CMD[ConfigType.convolution][data_type]
-
-  def __eq__(self, other):
-    if not isinstance(other, DriverConvolution):
-      return NotImplemented
-
-    if tuple(sorted(self.to_dict().items())) == tuple(
-        sorted(other.to_dict().items())):
-      return True
-
-    return False

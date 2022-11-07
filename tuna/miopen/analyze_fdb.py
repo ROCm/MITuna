@@ -38,7 +38,6 @@ from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('analyze_fdb')
 
-
 def parse_args():
   """command line parsing"""
   parser = argparse.ArgumentParser(
@@ -75,7 +74,7 @@ def driver_key(driver):
   """create a key string using driver dict"""
   out_key = []
   drv_dict = sorted(driver.to_dict().items())
-  for key, val in drv_dict:
+  for _, val in drv_dict:
     out_key.append(str(val))
   out_key = '-'.join(out_key)
   return out_key
@@ -101,8 +100,7 @@ def build_cfg_groups(cnx_pdb):
     cfg_id = item['config']
 
     sqlite_cfg = valid_cfg_dims(cfg_db[cfg_id])
-    driver = get_cfg_driver(sqlite_cfg)
-    cfg_drv = driver_key(driver)
+    cfg_drv = driver_key(get_cfg_driver(sqlite_cfg))
     LOGGER.info("pdb ins key %s", cfg_drv)
 
     if cfg_drv not in cfg_group:
@@ -120,14 +118,14 @@ def build_find_groups(fdb_file, only_fastest):
   """organize find db line data"""
   line_count = 0
   find_db = {}
-  with open(fdb_file) as fdb_fp:
+  with open(fdb_file) as fdb_fp:  # pylint: disable=unspecified-encoding
     for line in fdb_fp:
       line_count += 1
       driver = DriverConvolution(line)
       cfg_drv = driver_key(driver)
       LOGGER.info("fdb ins key %s", cfg_drv)
 
-      assert (cfg_drv not in find_db)
+      assert cfg_drv not in find_db
       fdb_dict = parse_fdb_line(line)
       if only_fastest:
         for _, alg_list in fdb_dict.items():
@@ -147,33 +145,26 @@ def build_find_groups(fdb_file, only_fastest):
 
 def compare(fdb_file, pdb_file, outfile, only_fastest):
   """compare find db entries to perf db entries"""
-  cnx_pdb = sqlite3.connect(pdb_file)
-  cfg_group = build_cfg_groups(cnx_pdb)
+  cfg_group = build_cfg_groups(sqlite3.connect(pdb_file))
   find_db = build_find_groups(fdb_file, only_fastest)
 
   err_list = []
   for cfg_drv, fdb_obj in find_db.items():
     if cfg_drv not in cfg_group:
-      err = {
-          'line': fdb_obj['line_num'],
-          'msg': f"No pdb entries for key: {fdb_obj['fdb'].keys()}"
-      }
+      err = {'line': fdb_obj['line_num'],
+             'msg': f"No pdb entries for key: {fdb_obj['fdb'].keys()[0]}"
+             }
       err_list.append(err)
       LOGGER.error('%s', err['msg'])
       continue
     pdb_group = cfg_group[cfg_drv]['pdb']
     for fdb_key, alg_list in fdb_obj['fdb'].items():
       for alg in alg_list:
-        alg_nm = alg['alg_lib']
-        solver_nm = alg['solver']
-        kernel_time = alg['kernel_time']
-        if solver_nm not in pdb_group.keys():
-          err = {
-              'line':
-                  fdb_obj['line_num'],
-              'msg':
-                  f"No pdb entries for key: {fdb_key}, solver: {alg_nm}:{solver_nm}, kernel_time: {kernel_time}"
-          }
+        if alg['solver'] not in pdb_group.keys():
+          err = {'line': fdb_obj['line_num'],
+                 'msg': f"No pdb entries for key: {fdb_key},'\
+                 'solver: {alg['alg_lib']}:{alg['solver']}, kernel_time: {alg['kernel_time']}"
+                }
           err_list.append(err)
           LOGGER.error('%s', err['msg'])
 
