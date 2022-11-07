@@ -139,6 +139,7 @@ def get_mmi_env_vars(env_vars={}):
 
   return env_vars
 
+
 def compose_f_vals(args, machine):
   """! Compose dict for WorkerInterface constructor
     @param args The command line arguments
