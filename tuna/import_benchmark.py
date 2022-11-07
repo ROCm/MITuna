@@ -57,12 +57,6 @@ def parse_args():
                       type=ModelEnum,
                       choices=ModelEnum,
                       help='Populate table with new model and version')
-  group2.add_argument('--version',
-                      dest='version',
-                      type=str,
-                      default=None,
-                      required=False,
-                      help='Specify model version')
   group3.add_argument('--print_models',
                       dest='print_models',
                       action='store_true',
@@ -103,6 +97,12 @@ def parse_args():
                       type=str,
                       dest='file_name',
                       help='File to specify multiple Driver commands')
+  parser.add_argument('--version',
+                      dest='version',
+                      type=str,
+                      default=None,
+                      required=False,
+                      help='Specify model version')
 
   args = parser.parse_args()
   if args.add_model and not args.version:
