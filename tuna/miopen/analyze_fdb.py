@@ -38,6 +38,7 @@ from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('analyze_fdb')
 
+
 def parse_args():
   """command line parsing"""
   parser = argparse.ArgumentParser(
@@ -151,9 +152,10 @@ def compare(fdb_file, pdb_file, outfile, only_fastest):
   err_list = []
   for cfg_drv, fdb_obj in find_db.items():
     if cfg_drv not in cfg_group:
-      err = {'line': fdb_obj['line_num'],
-             'msg': f"No pdb entries for key: {fdb_obj['fdb'].keys()[0]}"
-             }
+      err = {
+          'line': fdb_obj['line_num'],
+          'msg': f"No pdb entries for key: {fdb_obj['fdb'].keys()[0]}"
+      }
       err_list.append(err)
       LOGGER.error('%s', err['msg'])
       continue
@@ -161,10 +163,13 @@ def compare(fdb_file, pdb_file, outfile, only_fastest):
     for fdb_key, alg_list in fdb_obj['fdb'].items():
       for alg in alg_list:
         if alg['solver'] not in pdb_group.keys():
-          err = {'line': fdb_obj['line_num'],
-                 'msg': f"No pdb entries for key: {fdb_key},'\
+          err = {
+              'line':
+                  fdb_obj['line_num'],
+              'msg':
+                  f"No pdb entries for key: {fdb_key},'\
                  'solver: {alg['alg_lib']}:{alg['solver']}, kernel_time: {alg['kernel_time']}"
-                }
+          }
           err_list.append(err)
           LOGGER.error('%s', err['msg'])
 
