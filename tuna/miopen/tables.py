@@ -32,7 +32,6 @@ from tuna.miopen.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache
 from tuna.miopen.miopen_tables import ConvSolverApplicability, BNSolverApplicability
 from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
 from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden
-from tuna.miopen.miopen_tables import BenchmarkTable, ConvBenchPerfTable
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.session import Session
@@ -62,8 +61,6 @@ class MIOpenDBTables(DBTablesInterface):
     self.tensor_table = TensorTable
     self.golden_table = None
     self.config_type = None
-    self.benchmark_pref = None
-    self.conv_benchmark = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -98,5 +95,3 @@ class MIOpenDBTables(DBTablesInterface):
       self.fin_cache_table = ConvFinJobCache
       self.kernel_cache = ConvolutionKernelCache
       self.golden_table = ConvolutionGolden
-      self.conv_benchmark = ConvBenchPerfTable
-      self.benchmark_pref = BenchmarkTable
