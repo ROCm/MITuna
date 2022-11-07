@@ -54,7 +54,7 @@ def test_import_benchmark():
     args.version = value
     add_model(args)
   print_models()
-  #update_frameworks()
+  update_frameworks()
   with DbSession() as session:
     frmks = session.query(Framework).all()
     assert len(frmks) > 0

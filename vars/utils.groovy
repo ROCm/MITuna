@@ -316,6 +316,37 @@ def loadJobTest() {
     }
 }
 
+def solverAnalyticsTest(){
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+        checkout scm
+        // enviornment setup
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.PYTHONPATH = env.WORKSPACE
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
+
+        // install SolverAnalytics
+        sh "rm -rf SolverAnalytics"
+        sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
+
+        // run SolverAnalytics tests
+        sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/cli_test.py"
+        sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
+        sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/df_tools_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/fdb_key_utils_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/helpers_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/logging_test.py"
+    }
+}
+
 def perfCompile() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
@@ -790,8 +821,4 @@ def doxygen() {
           }
     }
 }
-
-
-
-
 
