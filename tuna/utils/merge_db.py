@@ -207,8 +207,9 @@ def best_solver(vals):
 
 def target_merge(master_list, key, vals, keep_keys):
   """merge for explicit target file"""
-  fds, vals, precision, direction = parse_pdb_key(key)
-  driver_cmd = build_driver_cmd(fds, vals, precision, DIR_MAP[direction])
+  # pylint: disable-next=invalid-name
+  fds, fds_val, precision, direction = parse_pdb_key(key, version='1.0.0')
+  driver_cmd = build_driver_cmd(fds, fds_val, precision, DIR_MAP[direction])
   if key not in master_list:
     LOGGER.info('%s: Missing Key \n %s', key, driver_cmd)
     master_list[key] = {}
