@@ -35,6 +35,8 @@ from tuna.driver_conv import DriverConvolution
 from tuna.helper import valid_cfg_dims
 from tuna.import_db import get_cfg_driver
 from tuna.utils.logger import setup_logger
+from tuna.miopen.tables import MIOpenDBTables
+from tuna.dbBase.sql_alchemy import DbSession
 
 LOGGER = setup_logger('analyze_fdb')
 
@@ -144,31 +146,41 @@ def build_find_groups(fdb_file, only_fastest):
   return find_db
 
 
+def get_tunable_solvers():
+  """get list of tunable solvers"""
+  dbt = MIOpenDBTables()
+  with DbSession() as session:
+    query = session.query(dbt.solver_table.solver)\
+                      .filter(dbt.solver_table.tunable == 1)
+    solvers = [x[0] for x in query.all()]
+  return solvers
+
+
 def compare(fdb_file, pdb_file, outfile, only_fastest):
   """compare find db entries to perf db entries"""
+  tunable_s = get_tunable_solvers()
   cfg_group = build_cfg_groups(sqlite3.connect(pdb_file))
-  find_db = build_find_groups(fdb_file, only_fastest)
 
   err_list = []
-  for cfg_drv, fdb_obj in find_db.items():
+  for cfg_drv, fdb_obj in build_find_groups(fdb_file, only_fastest).items():
     if cfg_drv not in cfg_group:
       err = {
           'line': fdb_obj['line_num'],
-          'msg': f"No pdb entries for key: {fdb_obj['fdb'].keys()[0]}"
+          'msg': f"No pdb entries for key: {list(fdb_obj['fdb'].keys())[0]}"
       }
       err_list.append(err)
       LOGGER.error('%s', err['msg'])
       continue
-    pdb_group = cfg_group[cfg_drv]['pdb']
     for fdb_key, alg_list in fdb_obj['fdb'].items():
       for alg in alg_list:
-        if alg['solver'] not in pdb_group.keys():
+        solver_nm = alg['solver']
+        if solver_nm in tunable_s and solver_nm not in cfg_group[cfg_drv]['pdb']:
           err = {
               'line':
                   fdb_obj['line_num'],
               'msg':
-                  f"No pdb entries for key: {fdb_key},'\
-                 'solver: {alg['alg_lib']}:{alg['solver']}, kernel_time: {alg['kernel_time']}"
+                  f"No pdb entries for key: {fdb_key}, "\
+                  f"solver: {alg['alg_lib']}:{solver_nm}, kernel_time: {alg['kernel_time']}"
           }
           err_list.append(err)
           LOGGER.error('%s', err['msg'])
