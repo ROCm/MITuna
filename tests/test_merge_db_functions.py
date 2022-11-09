@@ -250,6 +250,7 @@ def test_merge_text_file():
                                 keep_keys=False,
                                 target_file=None)
 
+
 def test_get_sqlite_table():
 
   local_path = '/data/utils/test_files/test_gfx90678.db'
