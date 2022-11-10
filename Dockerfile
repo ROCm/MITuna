@@ -139,7 +139,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=d599627522ac9243baeed3b48ddd1829abfe1fcd
+ARG FIN_BRANCH=1a3b47c7bfa5ef8d740d089a1438e24e050c10da
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 
@@ -150,7 +150,6 @@ RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX
 
 RUN make -j $(nproc)
 RUN make install
-
 
 #SET MIOPEN ENVIRONMENT VARIABLES
 ENV MIOPEN_LOG_LEVEL=6
@@ -176,3 +175,12 @@ ADD requirements.txt /tuna/
 WORKDIR /tuna
 
 RUN python3 setup.py install
+
+# Install SolverAnalytics dependencies (this require root access, so,
+# the dependencies must be installed here, and can't be installed in Jenkinsfile)
+RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git
+RUN pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt
+RUN rm -rf SolverAnalytics
+
+# reset WORKDIR to /tuna
+WORKDIR /tuna

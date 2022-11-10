@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
@@ -24,70 +23,34 @@
 # SOFTWARE.
 #
 ###############################################################################
+
 import os
 import sys
-import socket
-from multiprocessing import Value, Lock, Queue
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.worker_interface import WorkerInterface
-from tuna.miopen.session import Session
 from utils import DummyArgs
+from tuna.import_benchmark import add_model, update_frameworks, print_models
+from tuna.miopen.benchmark import Framework, ModelEnum
 
 
-def test_add_session():
-  res = None
-
-  num_gpus = Value('i', 1)
-  v = Value('i', 0)
-  e = Value('i', 0)
-  docker_name = 'Dummy-Docker'
-  hostname = socket.gethostname()
-  machine = Machine(hostname=hostname, local_machine=True)
-
-  kwargs = {
-      'machine': machine,
-      'gpu_id': 0,
-      'num_procs': num_gpus,
-      'barred': v,
-      'bar_lock': Lock(),
-      'envmt': ["MIOPEN_LOG_LEVEL=7"],
-      'reset_interval': False,
-      'app_test': False,
-      'label': 'testing_add_session',
-      'fin_steps': ['miopen_find_eval'],
-      'use_tuner': False,
-      'job_queue': Queue(),
-      'queue_lock': Lock(),
-      'fetch_state': ['compiled'],
-      'end_jobs': e,
+def test_import_benchmark():
+  args = DummyArgs
+  models = {
+      ModelEnum.ALEXNET: 1.0,
+      ModelEnum.GOOGLENET: 2.0,
+      ModelEnum.VGG19: 3.0
   }
-
-  args = DummyArgs()
-  args.add_session = True
-  args.arch = 'gfx908'
-  args.num_cu = 120
-  args.reason = "testing_add_session"
-  args.ticket = "JIRA-Dummy-123"
-  args.label = "my_dummy_label"
-  args.docker_name = docker_name
-  args.solver_id = 1
-
-  worker = WorkerInterface(**kwargs)
-  sess_id = Session().add_new_session(args, worker)
-  print(f"session id: {sess_id}")
-  assert (sess_id)
-
+  for key, value in models.items():
+    args.add_model = key.value
+    args.version = value
+    add_model(args)
+  print_models()
+  update_frameworks()
   with DbSession() as session:
-    res = session.query(Session).filter(Session.id == sess_id).one()
-    assert (res)
-    assert (res.reason == "my_dummy_label")
-    assert (res.rocm_v)
-    assert (res.miopen_v)
-    assert (res.docker == docker_name)
+    frmks = session.query(Framework).all()
+    assert len(frmks) > 0
