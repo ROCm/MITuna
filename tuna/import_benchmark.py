@@ -86,12 +86,12 @@ def parse_args():
                       required=False,
                       help='Specify driver cmd')
   parser.add_argument('-g',
-                      '--gpus',
-                      dest='gpus',
+                      '--gpu_count',
+                      dest='gpu_count',
                       type=int,
                       default=None,
                       required=False,
-                      help='Specify number of gpus')
+                      help='Specify number of gpus the benchmark runs on')
   parser.add_argument('-f',
                       '--file_name',
                       type=str,
@@ -107,7 +107,8 @@ def parse_args():
   args = parser.parse_args()
   if args.add_model and not args.version:
     parser.error('Version needs to be specified with model')
-  if args.add_benchmark and not (args.model and args.framework and args.gpus and
+  if args.add_benchmark and not (args.model and args.framework and
+                                 args.gpu_count and
                                  (args.driver or args.file_name)):
     parser.error('Model, framework, driver(or filename) and gpus need to all be'
                  'specified to add a new benchmark')
@@ -209,9 +210,9 @@ def add_benchmark(args, dbt):
         benchmark.framework = fid
         benchmark.model = mid
         benchmark.config = db_obj.id
-        benchmark.gpu_number = args.gpus
+        benchmark.gpu_number = args.gpu_count
         benchmark.driver_cmd = str(driver)
-        benchmark.batchsize = driver.batchsize
+        benchmark.batchsize = args.batchsize
         session.add(benchmark)
         session.commit()
       except (ValueError, IntegrityError) as verr:
