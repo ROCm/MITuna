@@ -66,6 +66,7 @@ def test_import_benchmark():
   args.framework = FrameworkEnum.PYTORCH
   args.model = ModelEnum.ALEXNET
   args.gpu_count = 8
+  args.batchsize = 512
   args.file_name = "{0}/../utils/configs/conv_configs_NHWC.txt".format(
       this_path)
   add_benchmark(args, dbt)

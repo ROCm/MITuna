@@ -103,15 +103,22 @@ def parse_args():
                       default=None,
                       required=False,
                       help='Specify model version')
+  parser.add_argument('--batchsize',
+                      dest='batchsize',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model batchsize')
 
   args = parser.parse_args()
   if args.add_model and not args.version:
     parser.error('Version needs to be specified with model')
   if args.add_benchmark and not (args.model and args.framework and
-                                 args.gpu_count and
+                                 args.gpu_count and args.batchsize and
                                  (args.driver or args.file_name)):
-    parser.error('Model, framework, driver(or filename) and gpus need to all be'
-                 'specified to add a new benchmark')
+    parser.error(
+        'Model, framework, driver(or filename), batchsize and gpus need to all be'
+        'specified to add a new benchmark')
   return args
 
 
