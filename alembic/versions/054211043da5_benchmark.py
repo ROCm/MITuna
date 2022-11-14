@@ -86,38 +86,6 @@ def upgrade() -> None:
       "uq_idx", "benchmark",
       ["framework", "model", "batchsize", "gpu_number", "driver_cmd"])
 
-  #ConvBenchPerf Table
-  op.create_table(
-      'conv_benchmark_perf',
-      sa.Column('id', sa.Integer, primary_key=True),
-      sa.Column('insert_ts',
-                DateTime,
-                nullable=False,
-                server_default=sqla_func.now()),
-      sa.Column(
-          'update_ts',
-          DateTime,
-          nullable=False,
-          server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')),
-      sa.Column('valid', TINYINT(1), nullable=False, server_default="1"),
-      sa.Column('config', Integer, ForeignKey("conv_config.id"),
-                nullable=False),
-      sa.Column('benchmark',
-                Integer,
-                ForeignKey("benchmark.id"),
-                nullable=False),
-      sa.Column('kernel_time', DOUBLE, nullable=False, server_default="-1"),
-      sa.Column('solver',
-                Integer,
-                ForeignKey("solver.id", onupdate="CASCADE", ondelete="CASCADE"),
-                nullable=False),
-      sa.Column('workspace_sz', BigInteger, nullable=False),
-      sa.Column('rocm_v', String(length=64), nullable=False),
-      sa.Column('miopen_v', String(length=64), nullable=False),
-  )
-  op.create_unique_constraint(
-      "uq_idx", "conv_benchmark_perf",
-      ["config", "benchmark", "solver", "rocm_v", "miopen_v"])
   op.add_column('conv_config_tags',
                 Column('model', Integer, ForeignKey('model.id')))
   op.add_column('bn_config_tags',
@@ -133,7 +101,6 @@ def downgrade() -> None:
                      type_="foreignkey")
   op.drop_column('conv_config_tags', "model")
   op.drop_column('bn_config_tags', "model")
-  op.drop_table('conv_benchmark_perf')
   op.drop_table('benchmark')
   op.drop_table('model')
   op.drop_table('framework')
