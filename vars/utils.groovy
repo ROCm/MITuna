@@ -609,6 +609,16 @@ def getSessionVals(session_id)
   else
   {
     rocm_version = rocm_v.substring(0, subv_i)
+    //only use first 2 version numbers, eg 5.4, not 5.4.0
+    fdot = rocm_version.indexOf('.')
+    if(fdot > 0)
+    {
+      sdot = rocm_version.indexOf('.', fdot+1)
+      if(sdot > 0)
+      {
+        rocm_version = rocm_version.substring(0, sdot)
+      }
+    }
   }
 
   subv_i = miopen_v.indexOf('-dirty')
