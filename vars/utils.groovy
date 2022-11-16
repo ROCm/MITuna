@@ -601,13 +601,14 @@ def getSessionVals(session_id)
   def osdb_bkc_version = ''
   def rocm_version = ''
   def subv_i = rocm_v.indexOf('-')
-  if(subv_i >= 0)
+  def ver_len = rocm_v.length() - subv_i - 1
+  if(ver_len > 3)
   {
     osdb_bkc_version=rocm_v.substring(subv_i+1)
   }
   else
   {
-    rocm_version = rocm_v
+    rocm_version = rocm_v.substring(0, subv_i)
   }
 
   subv_i = miopen_v.indexOf('-dirty')
