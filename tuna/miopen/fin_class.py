@@ -677,31 +677,31 @@ class FinClass(WorkerInterface):
 
   def result_queue_commit(self, session, close_job):
     """commit the result queue and set mark job complete"""
-    for_commit = {}
+    obj_list = []
+    id_list = []
+    job_list = []
     while not self.result_queue.empty():
       job, sql_obj = self.result_queue.get(True, 1)
-      if job.id not in for_commit:
-        for_commit[job.id] = {"job": job, "obj": [sql_obj]}
-      else:
-        for_commit[job.id]['obj'].append(sql_obj)
+      obj_list.append(sql_obj)
+      if job.id not in id_list:#for_commit:
+        id_list.append(job.id)
+        job_list.append(job)
+
+    self.logger.info("commit pending jobs %s, #objects: %s", id_list,
+                      len(obj_list))
+    status = session_retry(session, self.add_sql_objs,
+                            lambda x: x(session, obj_list), self.logger)
+    if not status:
+      self.logger.error("Failed commit pending job %s", id_list)
+      return False
 
     this_job = self.job
-    for job_id, job_dict in for_commit.items():
-      obj_list = job_dict['obj']
-      self.job = job_dict['job']
-
-      self.logger.info("commit pending job %s, #objects: %s", job_id,
-                       len(obj_list))
-      status = session_retry(session, self.add_sql_objs,
-                             lambda x: x(session, obj_list), self.logger)
-      if not status:
-        self.logger.error("Failed commit pending job %s", job_id)
-        continue
-
+    for job in job_list:
+      self.job = job
       #set job states after successful commit
       close_job()
-
     self.job = this_job
+
     return True
 
   def reset_job_state(self):
