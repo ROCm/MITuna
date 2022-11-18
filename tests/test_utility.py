@@ -25,22 +25,10 @@
 ###############################################################################
 
 import os
-import socket
-from tuna.utils.utility import arch2targetid
-from tuna.utils.utility import check_qts
-from tuna.machine import Machine
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
-from tuna.utils.utility import get_mmi_env_vars
+from tuna.utils.utility import get_env_vars,get_mmi_env_vars,arch2targetid
 
 LOGGER = setup_logger('utility')
-
-
-def test_utility():
-  test_arch2targetid
-  test_check_qts
-  test_get_env_vars
-  test_get_mmi_env_vars
 
 
 def test_arch2targetid():
@@ -58,20 +46,6 @@ def test_arch2targetid():
   arch = 'gfx906'
   arch_value = arch2targetid(arch)
   assert (arch_value == f"{arch}:sram-ecc+:xnack-")
-
-
-def test_check_qts():
-
-  hostname = socket.gethostname()
-  m = Machine(hostname=hostname, local_machine=True)
-  retvalue = check_qts(hostname, logger=LOGGER)
-  assert (retvalue == False)
-
-  retvalue = check_qts('192.0.2.0')
-  assert (retvalue == False)
-
-  retvalue = check_qts('198.51.100.0')
-  assert (retvalue == False)
 
 
 def test_get_env_vars():
