@@ -31,10 +31,10 @@ import os
 import tempfile
 
 from dummy_machine import DummyMachine
-from tuna.tables import ConfigType
+from tuna.config_type import ConfigType
 from multiprocessing import Value, Lock, Queue
 from tuna.metadata import LOG_TIMEOUT
-from tuna.fin_class import FinClass
+from tuna.miopen.fin_class import FinClass
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -69,12 +69,12 @@ def test_set_all_configs():
   bn_file = "{0}/../utils/test_files/bn_configs_rows.txt".format(this_path)
   db = json.load(open(bn_file))
   #no db connection, set_all_configs returns False
-  assert (fin_worker.create_dumplist() == False)
+  assert (fin_worker._FinClass__create_dumplist() == False)
   for row in db['bn_configs']:
     fin_worker.all_configs.append(row)
-  assert (fin_worker.compose_fin_list())
+  assert (fin_worker._FinClass__compose_fin_list())
   _, filename = tempfile.mkstemp()
-  assert (fin_worker.dump_json(filename))
+  assert (fin_worker._FinClass__dump_json(filename))
   assert (exists(filename))
   fin_input = json.load(open(filename))
   sample1 = fin_input[0]

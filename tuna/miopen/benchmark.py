@@ -24,32 +24,51 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for Flask functionality"""
+""" Module for defining benchmark and model enums """
 
-from sqlalchemy import create_engine
-from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
-
-LOGGER = setup_logger('flask')
-ENV_VARS = get_env_vars()
-ENGINE = create_engine(
-    f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}"
-    f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+import enum
+from sqlalchemy import Column, UniqueConstraint
+from sqlalchemy import Enum, Float
+from tuna.dbBase.base_class import BASE
 
 
-def get_driver_cmds(filters, grafana_req=None):
-  """Return driver cmds from req"""
-  driver_cmds = []
-  if filters is None:
-    driver_cmds = grafana_req[1].split(";")
-  else:
-    if ';' in filters['cmd']:
-      driver_cmds = filters['cmd'].split(";")
-    else:
-      driver_cmds.append(filters['cmd'])
+#pylint: disable=too-few-public-methods
+class FrameworkEnum(enum.Enum):
+  """Represents framework enums"""
+  PYTORCH = 'Pytorch'
+  DEEPBENCH = 'Deepbench'
 
-  if driver_cmds[-1] == '':
-    driver_cmds.pop()
-  LOGGER.info('driver_cmds: %s', driver_cmds)
+  def __str__(self):
+    return self.value
 
-  return driver_cmds
+
+class Framework(BASE):
+  """Represents framework table"""
+  __tablename__ = "framework"
+  __table_args__ = (UniqueConstraint("framework", name="uq_idx"),)
+  framework = Column(Enum(FrameworkEnum), nullable=False)
+
+
+class ModelEnum(enum.Enum):
+  """Represents model enums"""
+  RESNET50 = 'Resnet50'
+  RESNEXT101 = 'Resnext101'
+  VGG16 = 'Vgg16'
+  VGG19 = 'Vgg19'
+  ALEXNET = 'Alexnet'
+  GOOGLENET = 'Googlenet'
+  INCEPTION3 = 'Inception3'
+  INCEPTION4 = 'Inception4'
+  MASKRCNN = 'Mask-r-cnn'
+  SHUFFLENET = 'Shufflenet'
+
+  def __str__(self):
+    return self.value
+
+
+class Model(BASE):
+  """Represents model table"""
+  __tablename__ = "model"
+  __table_args__ = (UniqueConstraint("model", "version", name="uq_idx"),)
+  model = Column(Enum(ModelEnum), nullable=False)
+  version = Column(Float, nullable=False)

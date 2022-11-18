@@ -33,14 +33,15 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.go_fish import load_machines, compose_worker_list
-from tuna.fin_class import FinClass
-from tuna.tables import DBTables
+from tuna.utils.miopen_utility import load_machines
+from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.fin_class import FinClass
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
+from tuna.miopen.miopen_lib import MIOpen
 from tuna.metadata import ALG_SLV_MAP
 from tuna.utils.db_utility import get_solver_ids
 
@@ -52,7 +53,7 @@ def add_cfgs():
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = DBTables(config_type=args.config_type)
+  dbt = MIOpenDBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt)
   return dbt
 
@@ -68,7 +69,7 @@ def add_fin_find_compile_job(session_id, dbt):
   #limit job scope
   args.algo = "miopenConvolutionAlgoGEMM"
   solver_arr = ALG_SLV_MAP[args.algo]
-  solver_id_map, _ = get_solver_ids()
+  solver_id_map = get_solver_ids()
   if solver_arr:
     solver_ids = []
     for solver in solver_arr:
@@ -97,7 +98,8 @@ def test_fin_builder():
   dbt = add_cfgs()
   args.update_applicability = True
   args.label = 'test_fin_builder'
-  worker_lst = compose_worker_list(machine_lst, args)
+  miopen = MIOpen()
+  worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
 
@@ -108,7 +110,7 @@ def test_fin_builder():
   args.update_applicability = False
   args.fin_steps = ["miopen_find_compile"]
   args.label = ''
-  worker_lst = compose_worker_list(machine_lst, args)
+  worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
 

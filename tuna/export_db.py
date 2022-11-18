@@ -31,14 +31,14 @@ from collections import OrderedDict
 import base64
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
-from tuna.fin_utils import compose_config_obj
+from tuna.miopen.fin_utils import compose_config_obj
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
 
@@ -261,7 +261,7 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
 
   with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
-      solvers.sort(key=lambda x: float(x.kernel_time))
+      solvers.sort(key=lambda x: (float(x.kernel_time), x.alg_lib))
       lst = []
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
@@ -476,7 +476,7 @@ def main():
   """Main module function"""
   args = parse_args()
   result_file = ''
-  dbt = DBTables(session_id=args.session_id)
+  dbt = MIOpenDBTables(session_id=args.session_id)
 
   if args.session_id:
     args.arch = dbt.session.arch

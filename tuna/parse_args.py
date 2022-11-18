@@ -28,7 +28,7 @@
 import argparse
 from enum import Enum
 from typing import List
-from tuna.helper import ConfigType
+from tuna.config_type import ConfigType
 
 
 class TunaArgs(Enum):
@@ -41,9 +41,14 @@ class TunaArgs(Enum):
   SESSION_ID = 5
 
 
-def setup_arg_parser(desc: str, arg_list: List[TunaArgs]):
+def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
   """ function to aggregate common command line args """
-  parser = argparse.ArgumentParser(description=desc)
+  if parser is not None:
+    parser = argparse.ArgumentParser(description=desc,
+                                     parents=parser,
+                                     conflict_handler='resolve')
+  else:
+    parser = argparse.ArgumentParser(description=desc)
   if TunaArgs.ARCH in arg_list:
     parser.add_argument(
         '-a',

@@ -88,7 +88,7 @@ def finSolvers(){
 
         sh "ls /opt/rocm/bin/fin"
         sh "ls /opt/rocm/bin/"
-        sh "./tuna/go_fish.py --update_solvers"
+        sh "./tuna/go_fish.py miopen --update_solvers"
         def num_solvers = runsql("SELECT count(*) from solver;")
         println "Number of solvers: ${num_solvers}"
         if (num_solvers.toInteger() == 0){
@@ -111,9 +111,9 @@ def finApplicability(){
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "./tuna/go_fish.py --init_session -l new_session --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch gfx908 --num_cu 120"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py --init_session -l new_session2 --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch gfx908 --num_cu 120"
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
@@ -125,7 +125,7 @@ def finApplicability(){
 
         def num_cfg = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg}"
-        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --update_applicability --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py miopen --update_applicability --session_id ${sesh1}"
         def num_solvers = runsql("SELECT count(*) from solver;")
         println "Number of solvers: ${num_solvers}"
         def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${sesh1};")
@@ -139,7 +139,7 @@ def finApplicability(){
         def num_bn = runsql("SELECT count(*) from bn_config;")
         println "Count(*) bn_config table: ${num_bn}"
 
-        sh "./tuna/go_fish.py --update_applicability --session_id ${sesh2} -C batch_norm"
+        sh "./tuna/go_fish.py miopen --update_applicability --session_id ${sesh2} -C batch_norm"
         def num_sapp_bn = runsql("SELECT count(*) from bn_solver_applicability where session=${sesh2};")
         println "Count(*) bn_solver_applicability table: ${num_sapp_bn}"
         if (num_sapp_bn.toInteger() == 0){
@@ -169,7 +169,7 @@ def finFindCompile(){
         runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
@@ -183,7 +183,7 @@ def finFindCompile(){
         //runsql("alter table conv_job AUTO_INCREMENT=1;")
         sh "./tuna/load_job.py -l finFind_${branch_id}_nhwc -t recurrent_${branch_id}_nhwc --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc';").toInteger()
-        sh "./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
         def num_compiled_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs_nhwc} == ${num_jobs_nhwc}"
         if (num_compiled_jobs_nhwc != num_jobs_nhwc){
@@ -194,7 +194,7 @@ def finFindCompile(){
         println "Count(*) conv_config table: ${num_cfg_nchw}"
         sh "./tuna/load_job.py -l finFind_${branch_id}_nchw -t recurrent_${branch_id}_nchw --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw';").toInteger()
-        sh "./tuna/go_fish.py --fin_steps miopen_find_compile -l finFind_${branch_id}_nchw --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nchw --session_id ${sesh1}"
         def num_compiled_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs_nchw} == ${num_jobs_nchw}"
         if (num_compiled_jobs_nchw != num_jobs_nchw){
@@ -219,7 +219,7 @@ def finFindEval(){
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "opentelemetry-instrument python3 ./tuna/go_fish.py --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "opentelemetry-instrument python3 ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
@@ -232,7 +232,7 @@ def finFindEval(){
         archiveArtifacts "${kdb_file}"
 
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
         def fdb_file_nhwc = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
         def num_evaluated_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
@@ -245,7 +245,7 @@ def finFindEval(){
         archiveArtifacts "${kdb_file_nhwc}"
 
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
         def fdb_file_nchw = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
         def num_evaluated_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
@@ -316,6 +316,37 @@ def loadJobTest() {
     }
 }
 
+def solverAnalyticsTest(){
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+        checkout scm
+        // enviornment setup
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.PYTHONPATH = env.WORKSPACE
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
+
+        // install SolverAnalytics
+        sh "rm -rf SolverAnalytics"
+        sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
+
+        // run SolverAnalytics tests
+        sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/cli_test.py"
+        sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
+        sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/df_tools_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/fdb_key_utils_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/helpers_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/logging_test.py"
+    }
+}
+
 def perfCompile() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
@@ -336,7 +367,7 @@ def perfCompile() {
         sh "./tuna/load_job.py -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
-        sh "./tuna/go_fish.py --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
         {
@@ -348,7 +379,7 @@ def perfCompile() {
         sh "./tuna/load_job.py -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
-        sh "./tuna/go_fish.py --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1}"
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'conv_${branch_id}_v2';")
         if(compiled_conv_jobs.toInteger() == 0)
         {
@@ -374,7 +405,7 @@ def perfEval_gfx908() {
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
-        sh "./tuna/go_fish.py --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1}"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
         {
@@ -382,7 +413,7 @@ def perfEval_gfx908() {
         }
 
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
-        sh "./tuna/go_fish.py --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1}"
         def eval_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'evaluated';")
         def errored_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'errored';")
         if(eval_conv_jobs.toInteger() != compiled_conv_jobs.toInteger())
@@ -507,7 +538,7 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "cd tuna && pylint -f parseable --max-args=8 --indent-string='  ' *.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py"
           }
     }
 }
@@ -645,7 +676,7 @@ def applicUpdate(){
 
   if(params.UPDATE_SOLVERS)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_solvers'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
     def num_solvers = runsql("SELECT count(*) from solver;")
     println "Number of solvers: ${num_solvers}"
     if (num_solvers.toInteger() == 0){
@@ -654,7 +685,7 @@ def applicUpdate(){
   }
   if(params.UPDATE_APPLICABILITY)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py --update_applicability --session_id ${params.session_id} ${use_tag}'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
     def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
     println "Session ${params.session_id} applicability: ${num_sapp}"
     if (num_sapp.toInteger() == 0){
@@ -724,7 +755,7 @@ def compile()
   }
 
   // Run the jobs on the cluster
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${compile_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
@@ -773,7 +804,7 @@ def evaluate(params)
     eval_cmd += ' --dynamic_solvers_only'
   }
 
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py ${eval_cmd} --session_id ${params.session_id} || scontrol requeue \$SLURM_JOB_ID'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id} || scontrol requeue \$SLURM_JOB_ID'"
 }
 
 def doxygen() {
@@ -790,8 +821,4 @@ def doxygen() {
           }
     }
 }
-
-
-
-
 

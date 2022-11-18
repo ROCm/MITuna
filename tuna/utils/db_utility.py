@@ -33,7 +33,7 @@ import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen_tables import Solver
+from tuna.miopen.miopen_tables import Solver
 from tuna.utils.logger import setup_logger
 from tuna.metadata import NUM_SQL_RETRIES
 
@@ -43,17 +43,14 @@ LOGGER = setup_logger('db_utility')
 def get_solver_ids():
   """DB solver name to id map"""
   # TODO: Get this info from the SQLAlchemy class  # pylint: disable=fixme
-  solver_id_map_c = {}
-  solver_id_map_h = {}
+  solver_id_map = {}
   with DbSession() as session:
     query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
     for slv, sid in query.all():
-      solver_id_map_c[slv] = sid
-      solver_id_map_h[slv.replace(', ', '-')] = sid
+      solver_id_map[slv] = sid
+      solver_id_map[slv.replace(', ', '-')] = sid
 
-  solver_id_map = solver_id_map_c.copy()
-  solver_id_map.update(solver_id_map_h)
-  return solver_id_map, solver_id_map_h
+  return solver_id_map
 
 
 def get_id_solvers():

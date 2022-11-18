@@ -36,10 +36,10 @@ from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.db_tables import connect_db
-from tuna.miopen_tables import Solver
+from tuna.miopen.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 
 LOGGER = setup_logger('load_jobs')
 
@@ -122,7 +122,7 @@ def parse_args():
     steps = [x.strip() for x in args.fin_steps.split(',')]
     args.fin_steps = set(steps)
 
-  solver_id_map, _ = get_solver_ids()
+  solver_id_map = get_solver_ids()
   solver_arr = None
   if args.solvers:
     solver_arr = args.solvers.split(',')
@@ -248,7 +248,7 @@ def main():
   args = parse_args()
   connect_db()
 
-  dbt = DBTables(session_id=None, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
   if args.tag:
     try:
       test_tag_name(args.tag, dbt)
