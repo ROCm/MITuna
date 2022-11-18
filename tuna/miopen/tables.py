@@ -31,15 +31,18 @@ from tuna.miopen.miopen_tables import ConvJobCache, Solver
 from tuna.miopen.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
 from tuna.miopen.miopen_tables import ConvSolverApplicability, BNSolverApplicability
 from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
-from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden
+from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden, ConvolutionBenchmark
+from tuna.miopen.miopen_tables import BNBenchmark
+from tuna.miopen.benchmark import Framework, Model
 from tuna.config_type import ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.session import Session
+from tuna.miopen.session import Session
+from tuna.tables_interface import DBTablesInterface
 
 
 #pylint: disable=too-many-instance-attributes
 #pylint: disable=too-few-public-methods
-class DBTables():
+class MIOpenDBTables(DBTablesInterface):
   """Represents db tables based on ConfigType"""
 
   def __init__(self, **kwargs):
@@ -49,7 +52,6 @@ class DBTables():
     self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
-    self.job_table = None
     self.config_table = None
     self.config_tags_table = None
     self.find_db_table = None
@@ -60,10 +62,7 @@ class DBTables():
     self.kernel_cache = None
     self.tensor_table = TensorTable
     self.golden_table = None
-
     self.config_type = None
-    self.session_id = None
-    self.session = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -73,6 +72,8 @@ class DBTables():
     """Set appropriate tables based on config type"""
 
     self.solver_table = Solver
+    self.model = Model
+    self.framework = Framework
 
     if self.session_id is not None:
       with DbSession() as session:
@@ -88,6 +89,7 @@ class DBTables():
       self.cache_table = BNJobCache
       self.fin_cache_table = BNFinJobCache
       self.kernel_cache = BNKernelCache
+      self.benchmark = BNBenchmark
     else:
       self.job_table = ConvolutionJob
       self.config_table = ConvolutionConfig
@@ -98,3 +100,4 @@ class DBTables():
       self.fin_cache_table = ConvFinJobCache
       self.kernel_cache = ConvolutionKernelCache
       self.golden_table = ConvolutionGolden
+      self.benchmark = ConvolutionBenchmark

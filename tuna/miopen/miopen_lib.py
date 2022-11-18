@@ -26,7 +26,6 @@
 ###############################################################################
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
-import argparse
 import sys
 from multiprocessing import Value
 
@@ -39,7 +38,7 @@ from tuna.miopen.fin_class import FinClass
 from tuna.miopen.fin_builder import FinBuilder
 from tuna.miopen.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
-from tuna.session import Session
+from tuna.miopen.session import Session
 from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
@@ -217,6 +216,7 @@ class MIOpen(MITunaInterface):
     return args
 
   def clean_args(self):
+    """clean arguments"""
     if 'MIOPEN' in sys.argv:
       sys.argv.remove('MIOPEN')
     if 'miopen' in sys.argv:
@@ -334,7 +334,7 @@ class MIOpen(MITunaInterface):
           num_procs = int(env['slurm_cpus'])
         else:
           # JD: This sould be the responsibility of the machine class
-          num_procs = int(machine.get_num_cpus())
+          num_procs = int(machine.get_num_cpus() * .6)
         worker_ids = range(num_procs)
 
       if len(worker_ids) == 0:

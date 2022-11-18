@@ -27,6 +27,7 @@
 """Fin Evaluator class implements the worker interface. The purpose of this class
 is to run fin commands in benchmarking mode"""
 from time import sleep
+import random
 import functools
 import json
 
@@ -251,30 +252,29 @@ class FinEvaluator(FinClass):
         self.logger.warning('FinEval: Unable to clean %s: %s',
                             self.dbt.fin_cache_table.__tablename__, err)
 
+  def close_job(self):
+    """mark a job complete"""
+    self.set_job_state('evaluated')
+    self.clean_cache_table()
+
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
+    self.pending = []
+    self.result_queue_drain()
 
-    # pylint: disable=duplicate-code
-    try:
-      self.check_env()
-    except ValueError as verr:
-      self.logger.error(verr)
+    if not self.init_check_env():
       return False
-    # pylint: enable=duplicate-code
 
     if not self.get_job("compiled", "eval_start", True):
+      while not self.result_queue_drain():
+        sleep(random.randint(1, 10))
       return False
 
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
-    try:
-      fin_json = self.run_fin_cmd()
-    except AssertionError as err:
-      self.set_job_state('errored')
-      self.logger.warning('Unable to launch job %s : %s', self.job.id, err)
-      return True
+    fin_json = self.run_fin_cmd()
 
     failed_job = True
     result_str = ''
@@ -304,6 +304,10 @@ class FinEvaluator(FinClass):
         self.set_job_state(orig_state,
                            increment_retries=True,
                            result=result_str)
+    elif self.pending:
+      self.set_job_state('evaluated_pend', result=result_str)
+      for item in self.pending:
+        self.result_queue.put(item)
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()

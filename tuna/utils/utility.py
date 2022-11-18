@@ -148,9 +148,11 @@ def compose_f_vals(args, machine):
   f_vals = {}
   f_vals["barred"] = Value('i', 0)
   f_vals["bar_lock"] = Lock()
-  f_vals["queue_lock"] = Lock()
   #multiprocess queue for jobs, shared on machine
   f_vals["job_queue"] = mpQueue()
+  f_vals["job_queue_lock"] = Lock()
+  f_vals["result_queue"] = mpQueue()
+  f_vals["result_queue_lock"] = Lock()
   f_vals["machine"] = machine
   f_vals["envmt"] = get_envmt(args)
   f_vals["b_first"] = True
@@ -200,7 +202,9 @@ def get_kwargs(gpu_idx, f_vals, args):
       'fin_steps': args.fin_steps,
       'dynamic_solvers_only': args.dynamic_solvers_only,
       'job_queue': f_vals["job_queue"],
-      'queue_lock': f_vals["queue_lock"],
+      'job_queue_lock': f_vals["job_queue_lock"],
+      'result_queue': f_vals["result_queue"],
+      'result_queue_lock': f_vals["result_queue_lock"],
       'label': args.label,
       'docker_name': args.docker_name,
       'end_jobs': f_vals['end_jobs'],

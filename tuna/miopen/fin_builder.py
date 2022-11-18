@@ -26,6 +26,8 @@
 ###############################################################################
 """Builder class implements the worker interface. The purpose of this class is to run fin
 jobs in compile mode"""
+from time import sleep
+import random
 import json
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
@@ -53,7 +55,7 @@ class FinBuilder(FinClass):
                                         is_temp=True)
     return fin_input
 
-  def compose_job_cache_entrys(self, session, pdb_obj):
+  def compose_job_cache_entrys(self, pdb_obj):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
       kernel_obj = self.dbt.fin_cache_table()
@@ -61,12 +63,12 @@ class FinBuilder(FinClass):
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
-      session.add(kernel_obj)
-    session.commit()
+      # Bundle Insert for later
+      self.pending.append((self.job, kernel_obj))
 
     return True
 
-  def process_pdb_compile(self, session, fin_json):
+  def process_pdb_compile(self, fin_json):
     """retrieve perf db compile json results"""
     status = []
     if fin_json['miopen_perf_compile_result']:
@@ -74,7 +76,7 @@ class FinBuilder(FinClass):
         slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
         status.append(slv_stat)
         if pdb_obj['perf_compiled']:
-          self.compose_job_cache_entrys(session, pdb_obj)
+          self.compose_job_cache_entrys(pdb_obj)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
       status = [{
@@ -85,18 +87,21 @@ class FinBuilder(FinClass):
 
     return status
 
+  def close_job(self):
+    """mark a job complete"""
+    self.set_job_state('compiled')
+
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+    self.pending = []
+    self.result_queue_drain()
 
-    # pylint: disable=duplicate-code
-    try:
-      self.check_env()
-    except ValueError as verr:
-      self.logger.error(verr)
+    if not self.init_check_env():
       return False
-    # pylint: enable=duplicate-code
 
     if not self.get_job("new", "compile_start", True):
+      while not self.result_queue_drain():
+        sleep(random.randint(1, 10))
       return False
 
     # JD: while fin can exec multiple jobs at a time, that makes error detection difficult
@@ -114,7 +119,7 @@ class FinBuilder(FinClass):
             status = self.process_fdb_w_kernels(session, fin_json)
 
           elif 'miopen_perf_compile_result' in fin_json:
-            status = self.process_pdb_compile(session, fin_json)
+            status = self.process_pdb_compile(fin_json)
 
           success, result_str = get_fin_result(status)
           failed_job = not success
@@ -132,6 +137,10 @@ class FinBuilder(FinClass):
 
     if failed_job:
       self.set_job_state('errored', result=result_str)
+    elif self.pending:
+      self.set_job_state('compiled_pend', result=result_str)
+      for item in self.pending:
+        self.result_queue.put(item)
     else:
       self.set_job_state('compiled', result=result_str)
     return True

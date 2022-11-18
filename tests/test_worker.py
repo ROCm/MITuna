@@ -35,16 +35,14 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.worker_interface import WorkerInterface
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.fin_class import FinClass
 from tuna.machine import Machine
-from utils import get_worker_args, add_test_session
 from tuna.sql import DbCursor
-from tuna.tables import ConfigType
-from utils import add_test_session
+from tuna.config_type import ConfigType
+from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
-from tuna.tables import DBTables
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
@@ -58,7 +56,7 @@ def add_job(w):
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = DBTables(session_id=w.session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=w.session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt)
 
   args = GoFishArgs()
@@ -129,28 +127,28 @@ def multi_queue_test(w):
   # a separate block was necessary to force commit
   with DbCursor() as cur:
     cur.execute(
-        "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest_worker' LIMIT {}"
-        .format(w.claim_num + 1))
+        "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest_worker' and session={} LIMIT {}"
+        .format(w.session_id, w.claim_num + 1))
   job = w.get_job('new', 'compile_start', True)
   assert job == True
   res = None
   with DbCursor() as cur:
     cur.execute(
-        "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+        f"SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
     )
     res = cur.fetchall()
   assert (len(res) == w.claim_num)
 
   with DbCursor() as cur:
     cur.execute(
-        "UPDATE conv_job SET state='compiling' WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+        f"UPDATE conv_job SET state='compiling' WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
     )
   for i in range(w.claim_num - 1):
     job = w.get_job('new', 'compile_start', True)
     with DbCursor() as cur:
       assert job == True
       cur.execute(
-          "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+          f"SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
       )
       res = cur.fetchall()
       assert (len(res) == 0)
@@ -159,11 +157,13 @@ def multi_queue_test(w):
   assert job == True
   with DbCursor() as cur:
     cur.execute(
-        "SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' AND state='compile_start' AND valid=1"
+        f"SELECT state FROM conv_job WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
     )
     res = cur.fetchall()
     assert (len(res) == 1)
-    cur.execute("UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker'")
+    cur.execute(
+        f"UPDATE conv_job SET valid=0 WHERE reason='tuna_pytest_worker' and session={w.session_id}"
+    )
 
 
 def test_worker():
@@ -199,7 +199,8 @@ def test_worker():
       'session_id': session_id
   }
 
-  w = WorkerInterface(**keys)
+  #worker is an interface and has no sql tables, using fin
+  w = FinClass(**keys)
 
   add_job(w)
   get_job(w)
