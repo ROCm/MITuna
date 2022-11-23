@@ -65,21 +65,30 @@ def get_fin_slv_status(json_obj, check_str):
 
 def get_fin_result(status):
   """construct result string from status, and single success boolean"""
+  #exception for Legacy Solver
+  stat2 = []
+  for suc, slv, res in [[x['success'], x['solver'], x['result']] for x in status]:
+    entry = {'success': suc, 'solver' : slv, 'result' : res}
+    if not suc and 'Legacy' in res:
+      #legacy solvers won't return compiled kernels
+      entry['success'] = True
+    stat2.append(entry)
+
   result_str = ''
   success = False
-  if True in [x['success'] for x in status]:
+  if True in [x['success'] for x in stat2]:
     success = True
 
   unanimous = False
-  if len(status) > 0:
-    res = status[0]['result']
-    res_list = [res == val['result'] for val in status]
+  if len(stat2) > 0:
+    res = stat2[0]['result']
+    res_list = [res == val['result'] for val in stat2]
     unanimous = False not in res_list
 
   if unanimous:
-    result_str = status[0]['result']
+    result_str = stat2[0]['result']
   else:
-    for slv, res in [[x['solver'], x['result']] for x in status]:
+    for slv, res in [[x['solver'], x['result']] for x in stat2]:
       result_str += f' ({slv}: {res})'
 
   return success, result_str
