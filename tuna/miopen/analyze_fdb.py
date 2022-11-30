@@ -44,7 +44,7 @@ LOGGER = setup_logger('analyze_fdb')
 def parse_args():
   """command line parsing"""
   parser = argparse.ArgumentParser(
-      description='Merge Performance DBs once tunning is finished')
+      description='Test Find DB for matching Performance DB entries')
   parser.add_argument('-f',
                       '--fdb_file',
                       type=str,
