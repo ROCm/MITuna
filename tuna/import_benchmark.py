@@ -201,13 +201,16 @@ def get_database_id(framework, model, md_version, fw_version, dbt):
 
 def add_benchmark(args, dbt):
   """Add new benchmark"""
-  mid, fid = get_database_id(args.framework, args.model, args.md_version, args.fw_version, dbt)
+  mid, fid = get_database_id(args.framework, args.model, args.md_version,
+                             args.fw_version, dbt)
   print(mid, fid)
   if mid is None:
-    LOGGER.error('Could not find DB entry for model:%s, version:%s', args.model, args.md_version)
+    LOGGER.error('Could not find DB entry for model:%s, version:%s', args.model,
+                 args.md_version)
     return False
   if fid is None:
-    LOGGER.error('Could not find DB entry for framework:%s, version:%s', args.framework, args.fw_version)
+    LOGGER.error('Could not find DB entry for framework:%s, version:%s',
+                 args.framework, args.fw_version)
     return False
   commands = []
   if args.driver:
@@ -217,7 +220,7 @@ def add_benchmark(args, dbt):
       for line in infile:
         commands.append(line)
 
-  count=0
+  count = 0
 
   with DbSession() as session:
     for cmd in commands:
@@ -240,7 +243,7 @@ def add_benchmark(args, dbt):
         benchmark.batchsize = args.batchsize
         session.add(benchmark)
         session.commit()
-        count+=1
+        count += 1
       except (ValueError, IntegrityError) as verr:
         LOGGER.warning(verr)
         session.rollback()

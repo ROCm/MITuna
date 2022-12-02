@@ -251,26 +251,26 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
 
 def get_perf_str(args, table_name):
   """Create perf table SQL query and return"""
-  new_table = """
-  create table {} as select a.config, a.num_cu, a.arch, b.k1 as k1, c.k1 as k2,
+  new_table = f"""
+  create table {table_name} as select a.config, a.num_cu, a.arch, b.k1 as k1, c.k1 as k2,
     d.k1 as k3, c.k1-b.k1 as gv4_5, d.k1-c.k1 as gv5_6 from conv_golden a
     inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
-    where golden_miopen_v={} and kernel_time!=-1 group by config, arch, num_cu) 
+    where golden_miopen_v={args.golden_v-2} and kernel_time!=-1 group by config, arch, num_cu) 
       as b on a.config=b.config and a.arch=b.arch and a.num_cu=b.num_cu
     inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
-    where golden_miopen_v={} and kernel_time!=-1 group by config, arch, num_cu) 
+    where golden_miopen_v={args.golden_v-1} and kernel_time!=-1 group by config, arch, num_cu) 
       as c on a.config=c.config and a.arch=c.arch and a.num_cu=c.num_cu
     inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
-    where golden_miopen_v={} and kernel_time!=-1 group by config, arch, num_cu) 
+    where golden_miopen_v={args.golden_v} and kernel_time!=-1 group by config, arch, num_cu) 
       as d on a.config=d.config and a.arch=d.arch and a.num_cu=d.num_cu
-  where a.golden_miopen_v={} group by a.config, a.arch, a.num_cu, b.k1, c.k1, d.k1;
-  """.format(table_name, args.golden_v-2, args.golden_v-1, args.golden_v, args.golden_v)
+  where a.golden_miopen_v={args.golden_v} group by a.config, a.arch, a.num_cu, b.k1, c.k1, d.k1;
+  """
   return new_table
 
 
 def create_perf_table(args):
   """Create new perf_table"""
-  table_name = "testconv_gv{}{}{}".format(args.golden_v, args.golden_v-1, args.golden_v-2)
+  table_name = f"conv_gv{args.golden_v-2}{args.golden_v-1}{args.golden_v}"
   with ENGINE.connect() as conn:
     try:
       conn.execute(f'drop table if exists {table_name}')
