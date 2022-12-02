@@ -1,8 +1,9 @@
 TUNA 
 ====
 
-Tuna is a distributed tuning infrastructure that provides pre-compiled kernels for MIOpen customers
-through automated Jenkins pipelines and SLURM scalable architecture.
+Tuna is a distributed tuning infrastructure that provides tuning through automated 
+Jenkins pipelines and SLURM scalable architecture. For MIOpen customers we provide
+pre-compiled kernels.
 
 Prerequisites
 -------------
