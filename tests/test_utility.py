@@ -26,7 +26,7 @@
 
 import os
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars,get_mmi_env_vars,arch2targetid
+from tuna.utils.utility import get_env_vars, get_mmi_env_vars, arch2targetid
 
 LOGGER = setup_logger('utility')
 
@@ -49,6 +49,11 @@ def test_arch2targetid():
 
 
 def test_get_env_vars():
+  # set the env variable to test data
+  os.environ['TUNA_DB_USER_NAME'] = 'xyz_123'
+  os.environ['TUNA_DB_USER_PASSWORD'] = 'xyz1234'
+  os.environ['TUNA_DB_HOSTNAME'] = 'xyz.test.com'
+  os.environ['TUNA_DB_NAME'] = 'testdb'
 
   ENV_VARS = get_env_vars()
 
@@ -59,8 +64,13 @@ def test_get_env_vars():
 
 
 def test_get_mmi_env_vars():
+  # set the env variable to test data
+  os.environ['gateway_ip'] = '10.100.00.000'
+  os.environ['gateway_port'] = '1234'
+  os.environ['gateway_user'] = 'xyz'
 
   ENV_VARS = get_mmi_env_vars()
+
   assert '10.100.00.000' == (ENV_VARS['gateway_ip'])
   assert '1234' == (ENV_VARS['gateway_port'])
   assert 'xyz' == (ENV_VARS['gateway_user'])
