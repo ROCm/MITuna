@@ -36,7 +36,9 @@ from tuna.dbBase.base_class import BASE
 class FrameworkEnum(enum.Enum):
   """Represents framework enums"""
   PYTORCH = 'Pytorch'
-  DEEPBENCH = 'Deepbench'
+  TENSORFLOW = 'Tensorflow'
+  MIGRAPH = 'MIGraph'
+  CAFFE2 = 'CAFEE2'
 
   def __str__(self):
     return self.value
@@ -47,6 +49,7 @@ class Framework(BASE):
   __tablename__ = "framework"
   __table_args__ = (UniqueConstraint("framework", name="uq_idx"),)
   framework = Column(Enum(FrameworkEnum), nullable=False)
+  version = Column(Float, nullable=False)
 
 
 class ModelEnum(enum.Enum):
@@ -61,6 +64,12 @@ class ModelEnum(enum.Enum):
   INCEPTION4 = 'Inception4'
   MASKRCNN = 'Mask-r-cnn'
   SHUFFLENET = 'Shufflenet'
+  SSD = 'ssd'
+  MOBILENET = 'Mobilenet'
+  RESNET101 = 'Resnet101'
+  RESNET152 = 'Resnet152'
+  VGG11 = 'Vgg11'
+  DENSENET = 'Densenet'
 
   def __str__(self):
     return self.value
