@@ -308,7 +308,7 @@ def write_merge_results(master_list, final_file, copy_files):
                                       key=lambda kv: kv[0]):
       params = []
       for solver_id, solver_params in sorted(
-          solvers.items(), key=lambda kv: float(kv[1].split(',')[1])):
+          solvers.items(), key=lambda kv: (float(kv[1].split(',')[1]), kv[0])):
         params.append(f'{solver_id}:{solver_params}')
       # pylint: disable-next=consider-using-f-string ; more readble
       perf_line = '{}={}'.format(perfdb_key, ';'.join(params))
