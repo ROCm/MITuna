@@ -269,7 +269,7 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
         lst.append('{alg}:{},{},{},{alg},{}'.format(ID_SOLVER_MAP[rec.solver],
                                                     rec.kernel_time,
                                                     rec.workspace_sz,
-                                                    '<unused>',
+                                                    'not used',
                                                     alg=rec.alg_lib))
       out.write(f"{key}={';'.join(lst)}\n")
   return file_name
