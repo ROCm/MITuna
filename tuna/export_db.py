@@ -156,8 +156,7 @@ def get_base_query(dbt, args):
 
     query = query.filter(src_table.valid == 1)\
         .filter(src_table.opencl == args.opencl)\
-        .filter(src_table.config == dbt.config_table.id)\
-        .filter(src_table.solver == dbt.solver_table.id)
+        .filter(src_table.config == dbt.config_table.id)
 
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
@@ -191,6 +190,7 @@ def get_pdb_query(dbt, args):
 
   query = get_base_query(dbt, args)
   query = query.filter(src_table.params != '')\
+      .filter(src_table.solver == dbt.solver_table.id)\
       .filter(dbt.solver_table.tunable == 1)
 
   return query
@@ -269,7 +269,7 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
         lst.append('{alg}:{},{},{},{alg},{}'.format(ID_SOLVER_MAP[rec.solver],
                                                     rec.kernel_time,
                                                     rec.workspace_sz,
-                                                    '<unused>',
+                                                    'not used',
                                                     alg=rec.alg_lib))
       out.write(f"{key}={';'.join(lst)}\n")
   return file_name
