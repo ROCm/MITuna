@@ -28,7 +28,7 @@
 import argparse
 from enum import Enum
 from typing import List
-from tuna.helper import ConfigType
+from tuna.config_type import ConfigType
 
 
 class TunaArgs(Enum):

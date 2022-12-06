@@ -25,12 +25,18 @@
 #
 ###############################################################################
 """ Module adding frameworks/models/benchmarks"""
+import os
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.miopen.benchmark import Framework, Model, FrameworkEnum, ModelEnum
+from tuna.miopen.tables import MIOpenDBTables
+from tuna.config_type import ConfigType
+from tuna.driver_conv import DriverConvolution
+from tuna.driver_bn import DriverBatchNorm
 
 LOGGER = setup_logger('import_benchmarks')
 
@@ -38,30 +44,81 @@ LOGGER = setup_logger('import_benchmarks')
 def parse_args():
   """Parsing arguments"""
   parser = setup_arg_parser('Import benchmark performance related items',
-                            [TunaArgs.VERSION])
-  parser.add_argument('--update_framework',
+                            [TunaArgs.CONFIG_TYPE])
+  group1 = parser.add_mutually_exclusive_group()
+  group2 = parser.add_mutually_exclusive_group()
+  group3 = parser.add_mutually_exclusive_group()
+  group1.add_argument('--update_framework',
                       action="store_true",
                       dest='update_framework',
                       help='Populate framework table with all framework enums')
-  parser.add_argument('--add_model',
+  group2.add_argument('--add_model',
                       dest='add_model',
                       type=ModelEnum,
                       choices=ModelEnum,
                       help='Populate table with new model and version')
-  parser.add_argument('--print_models',
+  group3.add_argument('--print_models',
                       dest='print_models',
                       action='store_true',
                       help='Print models from table')
+  parser.add_argument('--add_benchmark',
+                      dest='add_benchmark',
+                      action='store_true',
+                      help='Insert new benchmark')
+  parser.add_argument('-m',
+                      '--model',
+                      dest='model',
+                      type=ModelEnum,
+                      choices=ModelEnum,
+                      required=False,
+                      help='Specify model')
+  parser.add_argument('-F',
+                      '--framework',
+                      dest='framework',
+                      type=FrameworkEnum,
+                      choices=FrameworkEnum,
+                      help='Specify framework.')
+  parser.add_argument('-d',
+                      '--driver',
+                      dest='driver',
+                      type=str,
+                      default=None,
+                      required=False,
+                      help='Specify driver cmd')
+  parser.add_argument('-g',
+                      '--gpu_count',
+                      dest='gpu_count',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify number of gpus the benchmark runs on')
+  parser.add_argument('-f',
+                      '--file_name',
+                      type=str,
+                      dest='file_name',
+                      help='File to specify multiple Driver commands')
   parser.add_argument('--version',
                       dest='version',
                       type=str,
                       default=None,
                       required=False,
                       help='Specify model version')
+  parser.add_argument('--batchsize',
+                      dest='batchsize',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model batchsize')
 
   args = parser.parse_args()
   if args.add_model and not args.version:
     parser.error('Version needs to be specified with model')
+  if args.add_benchmark and not (args.model and args.framework and
+                                 args.gpu_count and args.batchsize and
+                                 (args.driver or args.file_name)):
+    parser.error(
+        'Model, framework, driver(or filename), batchsize and gpus need to all be'
+        'specified to add a new benchmark')
   return args
 
 
@@ -106,15 +163,83 @@ def update_frameworks():
   return True
 
 
+def get_database_id(framework, model, dbt):
+  """Get DB id of item"""
+
+  mid = None
+  fid = None
+  with DbSession() as session:
+    try:
+      res = session.query(
+          dbt.framework.id).filter(dbt.framework.framework == framework).one()
+      fid = res.id
+    except NoResultFound as dberr:
+      LOGGER.error(dberr)
+      LOGGER.error(
+          'Framework not present in the DB. Please run --update_framework to populate the DB table'
+      )
+    try:
+      res = session.query(dbt.model.id).filter(dbt.model.model == model).one()
+      mid = res.id
+    except NoResultFound as dberr:
+      LOGGER.error(
+          'Model not present in the DB. Please run --add_mode to populate the DB table'
+      )
+      LOGGER.error(dberr)
+  return mid, fid
+
+
+def add_benchmark(args, dbt):
+  """Add new benchmark"""
+  mid, fid = get_database_id(args.framework, args.model, dbt)
+  print(mid, fid)
+  commands = []
+  if args.driver:
+    commands.append(args.driver)
+  else:
+    with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+      for line in infile:
+        commands.append(line)
+
+  with DbSession() as session:
+    for cmd in commands:
+      try:
+        if args.config_type == ConfigType.convolution:
+          driver = DriverConvolution(line=cmd)
+        else:
+          driver = DriverBatchNorm(line=cmd)
+        db_obj = driver.get_db_obj(keep_id=True)
+        if db_obj.id is None:
+          LOGGER.error('Config not present in the DB: %s', str(driver))
+          LOGGER.error('Please use import_configs.py to import configs')
+
+        benchmark = dbt.benchmark()
+        benchmark.framework = fid
+        benchmark.model = mid
+        benchmark.config = db_obj.id
+        benchmark.gpu_number = args.gpu_count
+        benchmark.driver_cmd = str(driver)
+        benchmark.batchsize = args.batchsize
+        session.add(benchmark)
+        session.commit()
+      except (ValueError, IntegrityError) as verr:
+        LOGGER.warning(verr)
+        session.rollback()
+        continue
+
+
 def main():
   """Main function"""
   args = parse_args()
+  dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
   if args.print_models:
     print_models()
   if args.add_model:
     add_model(args)
   if args.update_framework:
     update_frameworks()
+  if args.add_benchmark:
+    add_benchmark(args, dbt)
 
 
 if __name__ == '__main__':
