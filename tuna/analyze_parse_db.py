@@ -122,33 +122,6 @@ def get_sqlite_row(cnx, table, tid):
   return row, columns
 
 
-def get_config_mysql(fds, cnx):
-  """get the config id from the mysql table matching the fds conditions"""
-  cols, vals = zip(*fds.items())
-  # before inserting check if the entry already exists
-  conditions = [f'{col} = %s' for col in cols]
-  query = 'SELECT id from config where config.valid = TRUE AND ' + ' AND '.join(
-      conditions) + ';'
-  cur = cnx.cursor()
-  cur.execute(query, tuple(vals))
-  res = cur.fetchall()
-  cur.close()
-  if len(res) > 1:
-    config_id = res[0][0]
-    fds_str = ', '.join([f'{key}:{value}' for key, value in fds.items()])
-    LOGGER.warning('Duplicate config: %s', fds_str)
-    LOGGER.warning('Picking first config id=%u', (config_id))
-  elif not res:
-    fds_str = ', '.join([f'{key}:{value}' for key, value in fds.items()])
-    LOGGER.warning('Adding new config for: %s', fds_str)
-    #NOTE: need to add driver class to analyze_parse_db
-    #insert_config_v1(cnx, {}, fds) - needs to be reworked to support driver class
-    config_id = get_config_mysql(fds, cnx)
-  else:
-    config_id = res[0][0]
-  return config_id
-
-
 def insert_solver_sqlite(cnx, slv):
   """insert solver into sqlite """
 
