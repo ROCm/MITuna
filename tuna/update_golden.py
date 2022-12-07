@@ -115,7 +115,7 @@ def get_fdb_entries(dbt):
     ]
     attr_str = ','.join(fdb_attr)
     query = f"select {attr_str} from {dbt.find_db_table.__tablename__}"\
-            f"where valid=1 and session={dbt.session_id}"
+            f"where valid=1 and session={dbt.session_id};"
     ret = session.execute(query)
     entries = []
     for row in ret:
