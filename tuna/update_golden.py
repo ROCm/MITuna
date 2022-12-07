@@ -115,7 +115,7 @@ def get_fdb_entries(dbt):
     ]
     attr_str = ','.join(fdb_attr)
     query = f"select {attr_str} from {dbt.find_db_table.__tablename__}"\
-             "where valid=1 and session={dbt.session_id}"
+            f"where valid=1 and session={dbt.session_id}"
     ret = session.execute(query)
     entries = []
     for row in ret:
@@ -260,7 +260,7 @@ def verif_no_duplicates(golden_v, entries):
           entry.params)
       raise ValueError(
           f"Overlap on key! {key} (fdb_key {test_set[key].fdb_key}, params {test_set[key].params})"\
-           "vs (fdb_key {entry.fdb_key}, params {entry.params})"
+          f"vs (fdb_key {entry.fdb_key}, params {entry.params})"
       )
     test_set[key] = entry
 
