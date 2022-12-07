@@ -25,7 +25,7 @@
 ###############################################################################
 
 import sys
-from tuna.update_golden import merge_golden_entries, get_fdb_query
+from tuna.update_golden import merge_golden_entries, get_fdb_query, create_perf_table
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
