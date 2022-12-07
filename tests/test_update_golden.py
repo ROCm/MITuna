@@ -75,3 +75,6 @@ def test_update_golden():
     query = session.query(ConvolutionGolden)
     res = query.all()
   assert len(res) is not None
+
+  args.create_perf_table = True
+  assert create_perf_table()

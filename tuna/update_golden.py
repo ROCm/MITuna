@@ -74,6 +74,11 @@ def parse_args():
                       action='store_true',
                       default=False,
                       help='Write over existing golden version.')
+  parser.add_argument('--create_perf_table',
+                      dest='create_perf_table',
+                      action='store_true',
+                      default=False,
+                      help='Create performance table.')
 
   args = parser.parse_args()
 
@@ -274,9 +279,9 @@ def create_perf_table(args):
   with ENGINE.connect() as conn:
     try:
       conn.execute(f'drop table if exists {table_name}')
-      LOGGER.info('Creating new table...')
+      LOGGER.info(f'Creating new performance table {table_name}')
       conn.execute(get_perf_str(args, table_name))
-      LOGGER.info('Done creating new table...')
+      LOGGER.info(f'Done creating new performance table {table_name}')
     except OperationalError as oerr:
       LOGGER.info('%s \n', oerr)
       return False
@@ -312,7 +317,8 @@ def main():
 
   LOGGER.info("Merged: %s", total)
   LOGGER.info('Updating conv perf DB table')
-  create_perf_table(args)
+  if args.create_perf_table:
+    create_perf_table(args)
 
 
 if __name__ == '__main__':

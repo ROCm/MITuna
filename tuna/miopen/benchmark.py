@@ -70,6 +70,7 @@ class ModelEnum(enum.Enum):
   RESNET152 = 'Resnet152'
   VGG11 = 'Vgg11'
   DENSENET = 'Densenet'
+  DENSENET201 = 'Densenet201'
 
   def __str__(self):
     return self.value

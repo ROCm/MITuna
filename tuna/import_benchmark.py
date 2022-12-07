@@ -108,7 +108,7 @@ def parse_args():
                       type=str,
                       default=None,
                       required=False,
-                      help='Specify model version')
+                      help='Specify framework version')
   parser.add_argument('--batchsize',
                       dest='batchsize',
                       type=int,
@@ -171,7 +171,7 @@ def update_frameworks():
   return True
 
 
-def get_database_id(framework, model, md_version, fw_version, dbt):
+def get_database_id(framework, fw_version, model, md_version, dbt):
   """Get DB id of item"""
 
   mid = None
@@ -201,8 +201,8 @@ def get_database_id(framework, model, md_version, fw_version, dbt):
 
 def add_benchmark(args, dbt):
   """Add new benchmark"""
-  mid, fid = get_database_id(args.framework, args.model, args.md_version,
-                             args.fw_version, dbt)
+  mid, fid = get_database_id(args.framework, args.fw_version, args.model,
+                             args.md_version, dbt)
   print(mid, fid)
   if mid is None:
     LOGGER.error('Could not find DB entry for model:%s, version:%s', args.model,
