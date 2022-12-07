@@ -67,8 +67,9 @@ def get_fin_result(status):
   """construct result string from status, and single success boolean"""
   #exception for Legacy Solver
   stat2 = []
-  for suc, slv, res in [[x['success'], x['solver'], x['result']] for x in status]:
-    entry = {'success': suc, 'solver' : slv, 'result' : res}
+  for suc, slv, res in [[x['success'], x['solver'], x['result']] for x in status
+                       ]:
+    entry = {'success': suc, 'solver': slv, 'result': res}
     if not suc and 'Legacy' in res:
       #legacy solvers won't return compiled kernels
       entry['success'] = True
