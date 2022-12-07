@@ -279,9 +279,9 @@ def create_perf_table(args):
   with ENGINE.connect() as conn:
     try:
       conn.execute(f'drop table if exists {table_name}')
-      LOGGER.info(f'Creating new performance table {table_name}')
+      LOGGER.info('Creating new performance table %s', table_name)
       conn.execute(get_perf_str(args, table_name))
-      LOGGER.info(f'Done creating new performance table {table_name}')
+      LOGGER.info('Done creating new performance table %s', table_name)
     except OperationalError as oerr:
       LOGGER.info('%s \n', oerr)
       return False
