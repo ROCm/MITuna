@@ -102,8 +102,8 @@ def get_fdb_query(dbt):
   return query
 
 
-class Dummy:
-  pass
+class Dummy:  # pylint: disable=too-few-public-methods
+  """empty object"""
 
 
 def get_fdb_entries(dbt):
@@ -113,8 +113,9 @@ def get_fdb_entries(dbt):
         "config", "solver", "session", "fdb_key", "params", "kernel_time",
         "workspace_sz", "alg_lib", "opencl", "kernel_group"
     ]
-    query = "select {} from {} where valid=1 and session={}".format(
-        ','.join(fdb_attr), dbt.find_db_table.__tablename__, dbt.session_id)
+    attr_str = ','.join(fdb_attr)
+    query = f"select {attr_str} from {dbt.find_db_table.__tablename__}"\
+             "where valid=1 and session={dbt.session_id}"
     ret = session.execute(query)
     entries = []
     for row in ret:
@@ -244,28 +245,31 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
   return count
 
 
-def process_merge_golden(dbt, golden_v, entries, s_copy=False):
-  """" retry loop for merging into golden table """
-  LOGGER.info("Merging %s entries", len(entries))
-
+def verif_no_duplicates(golden_v, entries):
+  """ check entries for duplicates (error in fdb) """
   with DbSession() as session:
     sess_map = sess_info(session)
   test_set = {}
   for entry in entries:
     arch, num_cu = sess_map[entry.session]
-    key = "{}-{}-{}-{}-{}".format(golden_v, entry.config, entry.solver, arch,
-                                  num_cu)
+    key = f"{golden_v}-{entry.config}-{entry.solver}-{arch}-{num_cu}"
     if key in test_set:
       LOGGER.info(
           "Overlap on key! %s (fdb_key %s, params %s) vs (fdb_key %s, params %s)",
           key, test_set[key].fdb_key, test_set[key].params, entry.fdb_key,
           entry.params)
-      raise ValueError((
-          "Overlap on key! {} (fdb_key {}, params {}) vs (fdb_key {}, params {})"
-      ).format(key, test_set[key].fdb_key, test_set[key].params, entry.fdb_key,
-               entry.params))
-    else:
-      test_set[key] = entry
+      raise ValueError(
+          f"Overlap on key! {key} (fdb_key {test_set[key].fdb_key}, params {test_set[key].params})"\
+           "vs (fdb_key {entry.fdb_key}, params {entry.params})"
+      )
+    test_set[key] = entry
+
+  return True
+
+
+def process_merge_golden(dbt, golden_v, entries, s_copy=False):
+  """ retry loop for merging into golden table """
+  LOGGER.info("Merging %s entries", len(entries))
 
   all_packs = split_packets(entries, 10000)
   num_packs = len(all_packs)
@@ -319,6 +323,7 @@ def main():
   entries = get_fdb_entries(dbt)
   LOGGER.info("Prepped %s entries", len(entries))
 
+  verif_no_duplicates(args.golden_v, entries)
   total = process_merge_golden(dbt, args.golden_v, entries)
 
   LOGGER.info("Merged: %s", total)
