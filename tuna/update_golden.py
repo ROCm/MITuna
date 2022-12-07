@@ -102,6 +102,25 @@ def get_fdb_query(dbt):
   return query
 
 
+class Dummy:
+  pass
+
+def get_fdb_entries(dbt):
+  """! Compose query to get all fdb entries for the session, performs better than get_fdb_query"""
+  with DbSession() as session:
+    fdb_attr = ["config", "solver", "session", "fdb_key", "params", "kernel_time", "workspace_sz", "alg_lib", "opencl", "kernel_group"]
+    query = "select {} from {} where valid=1 and session={}".format(','.join(fdb_attr), dbt.find_db_table.__tablename__, dbt.session_id)
+    ret = session.execute(query)
+    entries=[]
+    for row in ret:
+      entry = Dummy()
+      for i,col in enumerate(fdb_attr):
+        setattr(entry, col, row[i])
+      entries.append(entry)
+
+  return entries
+
+
 def get_golden_query(dbt, golden_version):
   """! Compose query to get all entries for a golden miopen version"""
   with DbSession() as session:
@@ -222,13 +241,27 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
 
 def process_merge_golden(dbt, golden_v, entries, s_copy=False):
   """" retry loop for merging into golden table """
+  LOGGER.info("Merging %s entries", len(entries))
+
+  with DbSession() as session:
+    sess_map = sess_info(session)
+  test_set = {}
+  for entry in entries:
+    arch, num_cu = sess_map[entry.session]
+    key = "{}-{}-{}-{}-{}".format(golden_v, entry.config, entry.solver, arch, num_cu)
+    if key in test_set:
+      LOGGER.info("Overlap on key! %s (fdb_key %s, params %s) vs (fdb_key %s, params %s)", key, test_set[key].fdb_key, test_set[key].params, entry.fdb_key, entry.params)
+      raise ValueError(("Overlap on key! {} (fdb_key {}, params {}) vs (fdb_key {}, params {})").format(key, test_set[key].fdb_key, test_set[key].params, entry.fdb_key, entry.params))
+    else:
+      test_set[key] = entry
+
   all_packs = split_packets(entries, 10000)
+  num_packs = len(all_packs)
+  LOGGER.info("Merging %s packs", num_packs)
 
   pcnt = 0
   prev_pcnt = 0
   with DbSession() as session:
-    num_packs = len(all_packs)
-
     def actuator(func, pack):
       return func(session, dbt, golden_v, pack, s_copy)
 
@@ -244,7 +277,7 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
         prev_pcnt = pcnt
         LOGGER.info("Merged: %s%%", pcnt)
 
-  return num_packs
+  return len(entries)
 
 
 def main():
@@ -270,8 +303,10 @@ def main():
     else:
       process_merge_golden(dbt, args.golden_v, base_gold_db, s_copy=True)
 
-  query = get_fdb_query(dbt)
-  total = process_merge_golden(dbt, args.golden_v, query.all())
+  entries = get_fdb_entries(dbt)
+  LOGGER.info("Prepped %s entries", len(entries))
+
+  total = process_merge_golden(dbt, args.golden_v, entries)
 
   LOGGER.info("Merged: %s", total)
 
