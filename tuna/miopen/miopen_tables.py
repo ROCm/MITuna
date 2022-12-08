@@ -569,6 +569,37 @@ class BNBenchmark(BASE, BenchmarkMixin):
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
+class SolverAnalyticsResults(BASE):
+  """Table to store results from running SolverAnalytics"""
+  __tablename__ = "solver_analytics_results"
+
+  # each row in table must correspond to a unique convolution problem
+  __table_args__ = (UniqueConstraint("golden_v",
+                                     "filter",
+                                     "padding",
+                                     "stride",
+                                     "layout",
+                                     "precision",
+                                     "direction",
+                                     name="uq_idx"),)
+  
+  # columns definitions
+  golden_v = Column(Integer, nullable=False)
+  filter = Column(String(32), nullable=False)
+  padding = Column(String(32), nullable=False)
+  stride = Column(String(32), nullable=False)
+  dilation = Column(String(32), nullable=False)
+  layout = Column(String(8), nullable=False)
+  precision = Column(String(8), nullable=False)
+  direction = Column(String(1), nullable=False)
+  sf = Column(String(length=128), nullable=False) # fastest solver
+  tf = Column(Float, nullable=False) # fastest solver runtime
+  ta = Column(Float, nullable=True) # alternate solver runtime (null if no alternate solver)
+  difference = Column(Float, nullable=True) # runtime difference (null if no alternate)
+  ratio = Column(Float, nullable=True) # runtime ratio (null if infinity or no alternate)
+  count = Column(Integer, nullable=False)
+
+
 def add_conv_tables(miopen_tables):
   """Append Convolution specific MIOpen DB tables"""
   miopen_tables.append(ConvolutionConfig())
@@ -621,5 +652,7 @@ def get_miopen_tables():
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)
   miopen_tables = add_bn_tables(miopen_tables)
+
+  miopen_tables.append(SolverAnalyticsResults())
 
   return miopen_tables
