@@ -77,4 +77,4 @@ def test_update_golden():
   assert len(res) is not None
 
   args.create_perf_table = True
-  assert create_perf_table()
+  assert create_perf_table(args)
