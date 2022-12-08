@@ -296,7 +296,6 @@ def create_perf_table(args):
 def main():
   """! Main function"""
   args = parse_args()
-  """
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
   gold_db = get_golden_query(dbt, args.golden_v).first()
@@ -322,7 +321,6 @@ def main():
 
   LOGGER.info("Merged: %s", total)
   LOGGER.info('Updating conv perf DB table')
-  """
   if args.create_perf_table:
     create_perf_table(args)
 
