@@ -275,7 +275,11 @@ def get_perf_str(args, table_name):
 
 def create_perf_table(args):
   """Create new perf_table"""
-  table_name = f"conv_gv{args.golden_v-2}{args.golden_v-1}{args.golden_v}"
+  if args.golden_v == 1:
+    table_name = "conv_gv10"
+  else:
+    table_name = f"conv_gv{args.golden_v-2}{args.golden_v-1}{args.golden_v}"
+  print(table_name)
   with ENGINE.connect() as conn:
     try:
       conn.execute(f'drop table if exists {table_name}')
@@ -292,6 +296,7 @@ def create_perf_table(args):
 def main():
   """! Main function"""
   args = parse_args()
+  """
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
   gold_db = get_golden_query(dbt, args.golden_v).first()
@@ -317,6 +322,7 @@ def main():
 
   LOGGER.info("Merged: %s", total)
   LOGGER.info('Updating conv perf DB table')
+  """
   if args.create_perf_table:
     create_perf_table(args)
 
