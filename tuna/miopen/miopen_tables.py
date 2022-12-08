@@ -35,7 +35,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.ext.declarative import declared_attr
 
-from tuna.dbBase.base_class import BASE
+from tuna.dbBase.base_class import BASE, MINIMALBASE
 from tuna.machine import Machine
 from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.config_type import ConfigType
@@ -569,12 +569,15 @@ class BNBenchmark(BASE, BenchmarkMixin):
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
-class SolverAnalyticsResults(BASE):
+class SolverAnalyticsResults(MINIMALBASE):
   """Table to store results from running SolverAnalytics"""
   __tablename__ = "solver_analytics_results"
 
-  # each row in table must correspond to a unique convolution problem
+  # for a given golden version and GPU, each row in the
+  # table must correspond to a unique convolution problem
   __table_args__ = (UniqueConstraint("golden_miopen_v",
+                                     "arch",
+                                     "num_cu",
                                      "filter",
                                      "padding",
                                      "stride",
@@ -585,6 +588,8 @@ class SolverAnalyticsResults(BASE):
 
   # columns definitions
   golden_miopen_v = Column(Integer, nullable=False)
+  arch = Column(String(20), nullable=False)
+  num_cu = Column(Integer, nullable=False)
   filter = Column(String(32), nullable=False)
   padding = Column(String(32), nullable=False)
   stride = Column(String(32), nullable=False)
