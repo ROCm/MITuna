@@ -582,7 +582,7 @@ class SolverAnalyticsResults(BASE):
                                      "precision",
                                      "direction",
                                      name="uq_idx"),)
-  
+
   # columns definitions
   golden_miopen_v = Column(Integer, nullable=False)
   filter = Column(String(32), nullable=False)
@@ -592,11 +592,14 @@ class SolverAnalyticsResults(BASE):
   layout = Column(String(8), nullable=False)
   precision = Column(String(8), nullable=False)
   direction = Column(String(1), nullable=False)
-  sf = Column(String(128), nullable=False) # fastest solver
-  tf = Column(Float, nullable=False) # fastest solver runtime
-  ta = Column(Float, nullable=True) # alternate solver runtime (null if no alternate solver)
-  difference = Column(Float, nullable=True) # runtime difference (null if no alternate)
-  ratio = Column(Float, nullable=True) # runtime ratio (null if infinity or no alternate)
+  sf = Column(String(128), nullable=False)  # fastest solver
+  tf = Column(Float, nullable=False)  # fastest solver runtime
+  ta = Column(Float,
+              nullable=True)  # alternate solver runtime (null if no alternate)
+  difference = Column(
+      Float, nullable=True)  # runtime difference (null if no alternate)
+  ratio = Column(
+      Float, nullable=True)  # runtime ratio (null if infinity or no alternate)
   count = Column(Integer, nullable=False)
 
 
