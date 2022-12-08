@@ -578,6 +578,7 @@ class SolverAnalyticsResults(MINIMALBASE):
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "arch",
                                      "num_cu",
+                                     "opencl",
                                      "filter",
                                      "padding",
                                      "stride",
@@ -590,6 +591,7 @@ class SolverAnalyticsResults(MINIMALBASE):
   golden_miopen_v = Column(Integer, nullable=False)
   arch = Column(String(20), nullable=False)
   num_cu = Column(Integer, nullable=False)
+  opencl = Column(Boolean, nullable=False)
   filter = Column(String(32), nullable=False)
   padding = Column(String(32), nullable=False)
   stride = Column(String(32), nullable=False)

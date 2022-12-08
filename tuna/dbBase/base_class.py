@@ -31,7 +31,6 @@ from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy import Column, Integer, DateTime, text
 
 
-
 class BASE():
   """Base class for our own common functionalities among tables"""
 
@@ -74,7 +73,7 @@ class BASE():
 
 class MINIMALBASE():
   """Base class with a minimal set of common funcationalities"""
-  
+
   __table_args__ = {'mysql_engine': 'InnoDB'}
   __mapper_args__ = {'always_refresh': True}
 
