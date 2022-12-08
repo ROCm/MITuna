@@ -573,8 +573,6 @@ class SolverAnalyticsResults(MINIMALBASE):
   """Table to store results from running SolverAnalytics"""
   __tablename__ = "solver_analytics_results"
 
-  # for a given golden version and GPU, each row in the
-  # table must correspond to a unique convolution problem
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "arch",
                                      "num_cu",
@@ -582,9 +580,11 @@ class SolverAnalyticsResults(MINIMALBASE):
                                      "filter",
                                      "padding",
                                      "stride",
+                                     "dilation",
                                      "layout",
                                      "precision",
                                      "direction",
+                                     "sf",
                                      name="uq_idx"),)
 
   # columns definitions
