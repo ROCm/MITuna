@@ -102,5 +102,4 @@ class MIOpenDBTables(DBTablesInterface):
       self.kernel_cache = ConvolutionKernelCache
       self.golden_table = ConvolutionGolden
       self.benchmark = ConvolutionBenchmark
-
-    self.solver_analytics_results = SolverAnalyticsResults
+      self.solver_analytics_results = SolverAnalyticsResults
