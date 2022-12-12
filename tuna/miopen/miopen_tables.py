@@ -569,7 +569,29 @@ class BNBenchmark(BASE, BenchmarkMixin):
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
-class ConvSolverAnalyticsAggregated(BASE):
+class SolverAnalyticsMixin():
+  """common columns in aggregated & detailed solver analytics tables"""
+  # software state description
+  golden_miopen_v = Column(Integer, nullable=False)
+  # hardware description
+  arch = Column(String(20), nullable=False)
+  num_cu = Column(Integer, nullable=False)
+  opencl = Column(Boolean, nullable=False)
+  # convolution problem description
+  filter = Column(String(32), nullable=False)
+  padding = Column(String(32), nullable=False)
+  stride = Column(String(32), nullable=False)
+  dilation = Column(String(32), nullable=False)
+  layout = Column(String(8), nullable=False)
+  precision = Column(String(8), nullable=False)
+  direction = Column(String(1), nullable=False)
+  # fastest solvers stats
+  sf = Column(String(128), nullable=False)  # fastest solver name
+  tf = Column(Float, nullable=False)  # fastest solver runtime
+  count = Column(Integer, nullable=False)  # fastest solver count
+
+
+class ConvSolverAnalyticsAggregated(BASE, SolverAnalyticsMixin):
   """Table to store aggregated results from SolverAnalytics"""
   __tablename__ = "conv_solver_analytics_aggregated"
 
@@ -587,30 +609,13 @@ class ConvSolverAnalyticsAggregated(BASE):
                                      "sf",
                                      name="uq_idx"),)
 
-  # columns definitions
-  golden_miopen_v = Column(Integer, nullable=False)
-  arch = Column(String(20), nullable=False)
-  num_cu = Column(Integer, nullable=False)
-  opencl = Column(Boolean, nullable=False)
-  filter = Column(String(32), nullable=False)
-  padding = Column(String(32), nullable=False)
-  stride = Column(String(32), nullable=False)
-  dilation = Column(String(32), nullable=False)
-  layout = Column(String(8), nullable=False)
-  precision = Column(String(8), nullable=False)
-  direction = Column(String(1), nullable=False)
-  sf = Column(String(128), nullable=False)  # fastest solver
-  tf = Column(Float, nullable=False)  # fastest solver runtime
-  ta = Column(Float,
-              nullable=True)  # alternate solver runtime (null if no alternate)
-  difference = Column(
-      Float, nullable=True)  # runtime difference (null if no alternate)
-  ratio = Column(
-      Float, nullable=True)  # runtime ratio (null if infinity or no alternate)
-  count = Column(Integer, nullable=False)
+  # additional stats (null if no alternate solver is available)
+  ta = Column(Float, nullable=True)  # alternate solver runtime
+  difference = Column(Float, nullable=True)  # runtime difference
+  ratio = Column(Float, nullable=True)  # runtime ratio (null if infinity)
 
 
-class ConvSolverAnalyticsDetailed(BASE):
+class ConvSolverAnalyticsDetailed(BASE, SolverAnalyticsMixin):
   """Table to store detailed results from SolverAnalytics"""
   __tablename__ = "conv_solver_analytics_detailed"
 
@@ -629,25 +634,11 @@ class ConvSolverAnalyticsDetailed(BASE):
                                      "sa",
                                      name="uq_idx"),)
 
-  # columns definitions
-  golden_miopen_v = Column(Integer, nullable=False)
-  arch = Column(String(20), nullable=False)
-  num_cu = Column(Integer, nullable=False)
-  opencl = Column(Boolean, nullable=False)
-  filter = Column(String(32), nullable=False)
-  padding = Column(String(32), nullable=False)
-  stride = Column(String(32), nullable=False)
-  dilation = Column(String(32), nullable=False)
-  layout = Column(String(8), nullable=False)
-  precision = Column(String(8), nullable=False)
-  direction = Column(String(1), nullable=False)
-  sf = Column(String(128), nullable=False)  # fastest solver
+  # additional stats
   sa = Column(String(128), nullable=False)  # alternate solver
-  tf = Column(Float, nullable=False)  # fastest solver runtime
   ta = Column(Float, nullable=True)  # alternate solver runtime
   difference = Column(Float, nullable=True)  # runtime difference
   ratio = Column(Float, nullable=True)  # runtime ratio (null if infinity)
-  count = Column(Integer, nullable=False)
 
 
 def add_conv_tables(miopen_tables):
