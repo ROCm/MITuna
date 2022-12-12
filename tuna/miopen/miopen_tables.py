@@ -35,7 +35,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.ext.declarative import declared_attr
 
-from tuna.dbBase.base_class import BASE, MINIMALBASE
+from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
 from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.config_type import ConfigType
@@ -569,9 +569,9 @@ class BNBenchmark(BASE, BenchmarkMixin):
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
-class SolverAnalyticsResults(MINIMALBASE):
-  """Table to store results from running SolverAnalytics"""
-  __tablename__ = "solver_analytics_results"
+class ConvSolverAnalyticsAggregated(BASE):
+  """Table to store aggregated results from SolverAnalytics"""
+  __tablename__ = "conv_solver_analytics_aggregated"
 
   __table_args__ = (UniqueConstraint("golden_miopen_v",
                                      "arch",
@@ -610,6 +610,49 @@ class SolverAnalyticsResults(MINIMALBASE):
   count = Column(Integer, nullable=False)
 
 
+class ConvSolverAnalyticsDetailed(BASE):
+  """Table to store detailed results from SolverAnalytics"""
+  __tablename__ = "conv_solver_analytics_detailed"
+
+  __table_args__ = (UniqueConstraint("golden_miopen_v",
+                                     "arch",
+                                     "num_cu",
+                                     "opencl",
+                                     "filter",
+                                     "padding",
+                                     "stride",
+                                     "dilation",
+                                     "layout",
+                                     "precision",
+                                     "direction",
+                                     "sf",
+                                     "sa",
+                                     name="uq_idx"),)
+
+  # columns definitions
+  golden_miopen_v = Column(Integer, nullable=False)
+  arch = Column(String(20), nullable=False)
+  num_cu = Column(Integer, nullable=False)
+  opencl = Column(Boolean, nullable=False)
+  filter = Column(String(32), nullable=False)
+  padding = Column(String(32), nullable=False)
+  stride = Column(String(32), nullable=False)
+  dilation = Column(String(32), nullable=False)
+  layout = Column(String(8), nullable=False)
+  precision = Column(String(8), nullable=False)
+  direction = Column(String(1), nullable=False)
+  sf = Column(String(128), nullable=False)  # fastest solver
+  sa = Column(String(128), nullable=False)  # alternate solver
+  tf = Column(Float, nullable=False)  # fastest solver runtime
+  ta = Column(Float,
+              nullable=True)  # alternate solver runtime
+  difference = Column(
+      Float, nullable=True)  # runtime difference
+  ratio = Column(
+      Float, nullable=True)  # runtime ratio (null if infinity)
+  count = Column(Integer, nullable=False)
+
+
 def add_conv_tables(miopen_tables):
   """Append Convolution specific MIOpen DB tables"""
   miopen_tables.append(ConvolutionConfig())
@@ -621,6 +664,8 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvFinJobCache())
   miopen_tables.append(ConvolutionFindDB())
   miopen_tables.append(ConvolutionGolden())
+  miopen_tables.append(ConvSolverAnalyticsAggregated())
+  miopen_tables.append(ConvSolverAnalyticsDetailed())
   return miopen_tables
 
 
@@ -662,7 +707,5 @@ def get_miopen_tables():
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)
   miopen_tables = add_bn_tables(miopen_tables)
-
-  miopen_tables.append(SolverAnalyticsResults())
 
   return miopen_tables

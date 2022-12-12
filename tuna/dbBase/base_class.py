@@ -31,21 +31,13 @@ from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy import Column, Integer, DateTime, text
 
 
-class MINIMALBASE():
-  """Base class with a minimal set of common funcationalities"""
+class BASE():
+  """Base class for our own common functionalities among tables"""
 
   __table_args__ = {'mysql_engine': 'InnoDB'}
   __mapper_args__ = {'always_refresh': True}
 
   id = Column(Integer, primary_key=True)
-
-  def __repr__(self):
-    return f"Table name: {self.__table__}\nTable columns: {self.__table__.columns}"
-
-
-class BASE(MINIMALBASE):
-  """Base class for our own common functionalities among tables"""
-
   insert_ts = Column(DateTime, nullable=False, server_default=sqla_func.now())
   update_ts = Column(
       DateTime,
@@ -79,5 +71,4 @@ class BASE(MINIMALBASE):
     return f"Table name: {self.__table__}\nTable columns: {self.__table__.columns}"
 
 
-MINIMALBASE = declarative_base(cls=MINIMALBASE)
 BASE = declarative_base(cls=BASE)
