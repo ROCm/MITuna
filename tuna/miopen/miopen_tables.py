@@ -644,12 +644,9 @@ class ConvSolverAnalyticsDetailed(BASE):
   sf = Column(String(128), nullable=False)  # fastest solver
   sa = Column(String(128), nullable=False)  # alternate solver
   tf = Column(Float, nullable=False)  # fastest solver runtime
-  ta = Column(Float,
-              nullable=True)  # alternate solver runtime
-  difference = Column(
-      Float, nullable=True)  # runtime difference
-  ratio = Column(
-      Float, nullable=True)  # runtime ratio (null if infinity)
+  ta = Column(Float, nullable=True)  # alternate solver runtime
+  difference = Column(Float, nullable=True)  # runtime difference
+  ratio = Column(Float, nullable=True)  # runtime ratio (null if infinity)
   count = Column(Integer, nullable=False)
 
 
