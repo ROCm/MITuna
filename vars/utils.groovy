@@ -468,6 +468,7 @@ def pytestSuite1() {
            sh "pytest tests/test_fin_utils.py -s"
            sh "pytest tests/test_add_session.py -s"
            sh "pytest tests/test_merge_db.py -s"
+           sh "pytest tests/test_utility.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -633,13 +634,24 @@ def getSessionVals(session_id)
   def osdb_bkc_version = ''
   def rocm_version = ''
   def subv_i = rocm_v.indexOf('-')
-  if(subv_i >= 0)
+  def ver_len = rocm_v.length() - subv_i - 1
+  if(ver_len > 3)
   {
     osdb_bkc_version=rocm_v.substring(subv_i+1)
   }
   else
   {
-    rocm_version = rocm_v
+    rocm_version = rocm_v.substring(0, subv_i)
+    //only use first 2 version numbers, eg 5.4, not 5.4.0
+    fdot = rocm_version.indexOf('.')
+    if(fdot > 0)
+    {
+      sdot = rocm_version.indexOf('.', fdot+1)
+      if(sdot > 0)
+      {
+        rocm_version = rocm_version.substring(0, sdot)
+      }
+    }
   }
 
   subv_i = miopen_v.indexOf('-dirty')
