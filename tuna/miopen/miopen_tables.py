@@ -580,6 +580,7 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvFinJobCache())
   miopen_tables.append(ConvolutionFindDB())
   miopen_tables.append(ConvolutionGolden())
+  miopen_tables.append(ConvolutionBenchmark())
   return miopen_tables
 
 
@@ -603,6 +604,7 @@ def add_bn_tables(miopen_tables):
   miopen_tables.append(BNFinJobCache())
   miopen_tables.append(BNFindDB())
   miopen_tables.append(BNGolden())
+  miopen_tables.append(BNBenchmark())
   return miopen_tables
 
 
@@ -615,8 +617,6 @@ def get_miopen_tables():
   miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
-  miopen_tables.append(ConvolutionBenchmark())
-  miopen_tables.append(BNBenchmark())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)

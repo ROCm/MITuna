@@ -44,7 +44,7 @@ from tuna.abort import chk_abort_file
 from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables_interface import DBTablesInterface
-from tuna.db_tables import connect_db
+from tuna.miopen.db_tables import connect_db
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds

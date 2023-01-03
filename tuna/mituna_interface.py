@@ -122,3 +122,7 @@ class MITunaInterface():
     #  self.logger.info(line.rstrip())
 
     return True
+
+  def add_tables(self):
+    """Add library specific tables"""
+    return self.add_tables()

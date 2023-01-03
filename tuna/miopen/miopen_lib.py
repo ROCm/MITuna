@@ -42,6 +42,9 @@ from tuna.miopen.session import Session
 from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
+from tuna.miopen.db_tables import create_tables, recreate_triggers
+from tuna.miopen.miopen_tables import get_miopen_tables
+from tuna.miopen.miopen_db_helpers import drop_miopen_triggers, get_miopen_triggers
 
 
 class MIOpen(MITunaInterface):
@@ -364,3 +367,9 @@ class MIOpen(MITunaInterface):
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res
+
+  def add_tables(self):
+    ret_t = create_tables(get_miopen_tables())
+    self.logger.info('DB creation successful: %s', ret_t)
+    recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
+    return True

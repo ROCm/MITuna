@@ -41,7 +41,7 @@ def buildSchema(){
     def create_sql = $/ "CREATE DATABASE ${db_name};"/$
     sh "${cmd} -e ${drop_sql}"
     sh "${cmd} -e ${create_sql}"
-    sh "./tuna/db_tables.py"
+    sh "./tuna/miopen/db_tables.py"
 }
 
 def cleanup() {
