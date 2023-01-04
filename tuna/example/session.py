@@ -25,7 +25,7 @@
 #
 ###############################################################################
 """Session table and its associate functionality"""
-from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.exc import IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
@@ -33,13 +33,12 @@ from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
 from tuna.session_mixin import SessionMixin
 
-LOGGER = setup_logger('session')
+LOGGER = setup_logger('session_example')
 
 
 class SessionExample(BASE, SessionMixin):
   """Session table to keep track of tunning sesions"""
   #pylint: disable=attribute-defined-outside-init
-  #pylint: disable=too-many-instance-attributes
 
   __tablename__ = "session_example"
   __table_args__ = (UniqueConstraint("arch",
@@ -55,12 +54,10 @@ class SessionExample(BASE, SessionMixin):
     query = sess.query(sess_obj)\
         .filter(sess_obj.arch == entry.arch)\
         .filter(sess_obj.num_cu == entry.num_cu)\
-        .filter(sess_obj.miopen_v == entry.miopen_v)\
         .filter(sess_obj.rocm_v == entry.rocm_v)\
         .filter(sess_obj.reason == entry.reason)\
         .filter(sess_obj.ticket == entry.ticket)\
         .filter(sess_obj.docker == entry.docker)\
-        .filter(sess_obj.solver_id == entry.solver_id)\
 
     return query
 
@@ -83,15 +80,8 @@ class SessionExample(BASE, SessionMixin):
     else:
       self.rocm_v = worker.get_rocm_v()
 
-    if hasattr(args, 'miopen_v') and args.miopen_v:
-      self.miopen_v = args.miopen_v
-    else:
-      self.miopen_v = worker.get_miopen_v()
-
     if hasattr(args, 'ticket') and args.ticket:
       self.ticket = args.ticket
-    if args.solver_id:
-      self.solver_id = args.solver_id
 
     with DbSession() as session:
       try:

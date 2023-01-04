@@ -34,7 +34,7 @@ from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 
 #pylint: disable=too-few-public-methods
-LOGGER = setup_logger('db_tables')
+LOGGER = setup_logger('example_db_tables')
 ENV_VARS = get_env_vars()
 
 ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" +\

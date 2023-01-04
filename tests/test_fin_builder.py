@@ -36,7 +36,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.fin_class import FinClass
-from tuna.db_tables import connect_db
+from tuna.miopen.db_tables import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs

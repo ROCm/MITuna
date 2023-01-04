@@ -43,8 +43,6 @@ from tuna.example.session import SessionExample
 from tuna.metadata import DIR_MAP
 from tuna.miopen.benchmark import Model, Framework
 
-COMMON_UNIQ_FDS = ["config", "solver", "session"]
-
 #pylint: disable=too-few-public-methods
 
 
