@@ -26,6 +26,12 @@
 ###############################################################################
 """Session table and its associate functionality"""
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.exc import IntegrityError
+
+from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.logger import setup_logger
+
+LOGGER = setup_logger('session')
 
 
 class SessionMixin():
@@ -62,3 +68,19 @@ class SessionMixin():
 
     if hasattr(args, 'ticket') and args.ticket:
       self.ticket = args.ticket
+
+  def insert_session(self, session_class):
+    """Insert new session obj and return its id"""
+    with DbSession() as session:
+      try:
+        session.add(self)
+        session.commit()
+        LOGGER.info('Added new session_id: %s', self.id)
+      except IntegrityError as err:
+        LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
+                       self)
+        session.rollback()
+        entry = self.get_query(session, session_class, self).one()
+        return entry.id
+
+    return self.id

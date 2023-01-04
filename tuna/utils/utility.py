@@ -28,6 +28,7 @@
 
 import os
 from multiprocessing import Value, Lock, Queue as mpQueue
+from sqlalchemy.exc import OperationalError, IntegrityError
 from tuna.utils.logger import setup_logger
 from tuna.sql import DbCursor
 from tuna.config_type import ConfigType

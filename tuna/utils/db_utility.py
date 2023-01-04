@@ -26,17 +26,19 @@
 ###############################################################################
 """Utility module for DB helper functions"""
 
+import os
 import enum
 import random
 from time import sleep
 import pymysql
-from sqlalchemy.exc import OperationalError, IntegrityError
+from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
 from sqlalchemy import create_engine
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.miopen_tables import Solver
 from tuna.utils.logger import setup_logger
 from tuna.metadata import NUM_SQL_RETRIES
+from tuna.utils.utility import get_env_vars
 
 LOGGER = setup_logger('db_utility')
 
@@ -149,23 +151,6 @@ def session_retry(session, callback, actuator, logger=LOGGER):
 
   logger.error('All retries have failed.')
   return False
-
-
-def insert_session(session_obj):
-  """Insert new session obj and return its id"""
-  with DbSession() as session:
-    try:
-      session.add(session_obj)
-      session.commit()
-      LOGGER.info('Added new session_id: %s', session_obj.id)
-    except IntegrityError as err:
-      LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
-                     session_obj)
-      session.rollback()
-      entry = session_obj.get_query(session, Session, session_obj).one()
-      return entry.id
-
-  return session_obj.id
 
 
 class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?

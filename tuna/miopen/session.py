@@ -30,7 +30,6 @@ from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
 from tuna.session_mixin import SessionMixin
-from tuna.utils.db_utility import insert_session
 
 LOGGER = setup_logger('session')
 
@@ -84,4 +83,4 @@ class Session(BASE, SessionMixin):
     if args.solver_id:
       self.solver_id = args.solver_id
 
-    return insert_session(self)
+    return self.insert_session(session_class=self)
