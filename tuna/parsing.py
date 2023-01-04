@@ -358,7 +358,7 @@ def get_fd_name(tok1, cols_map):
     return tok1
 
   LOGGER.error('Unknown parameter: %s', tok1)
-  raise Exception(f'Unknown parameter: {tok1}')
+  raise ValueError(f'Unknown parameter: {tok1}')
 
 
 def conv_arg_valid(arg, val):
