@@ -31,7 +31,7 @@ from multiprocessing import Value
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.helper import print_solvers
-from tuna.parse_args import TunaArgs, setup_arg_parser
+from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args
 from tuna.miopen.miopen_tables import FinStep
 from tuna.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.fin_class import FinClass
@@ -173,7 +173,7 @@ class MIOpen(MITunaInterface):
                        default=None,
                        help='execute on each machine')
 
-    self.clean_args()
+    clean_args()
     args = parser.parse_args()
     if len(sys.argv) == 1:
       parser.print_help()
@@ -217,13 +217,6 @@ class MIOpen(MITunaInterface):
       parser.error("session_id must be specified with this operation")
 
     return args
-
-  def clean_args(self):
-    """clean arguments"""
-    if 'MIOPEN' in sys.argv:
-      sys.argv.remove('MIOPEN')
-    if 'miopen' in sys.argv:
-      sys.argv.remove('miopen')
 
   def check_fin_args(self, args, parser):
     """! Helper function for fin args

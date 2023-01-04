@@ -31,7 +31,7 @@ from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
-from tuna.miopen.db_tables import connect_db, ENGINE
+from tuna.utils.db_utility import connect_db, ENGINE
 from tuna.miopen.tables import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.driver_bn import DriverBatchNorm

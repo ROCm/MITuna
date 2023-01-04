@@ -26,22 +26,13 @@
 ###############################################################################
 """ Module for creating DB tables"""
 import enum
-from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
-from sqlalchemy import Text, Enum, Index
-from sqlalchemy import Float, BigInteger, Boolean
-from sqlalchemy.databases import mysql
-from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func as sqla_func
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Text, Enum
 from sqlalchemy.ext.declarative import declared_attr
 
 from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
-from tuna.find_db import ConvolutionFindDB, BNFindDB
-from tuna.config_type import ConfigType
 from tuna.example.session import SessionExample
-from tuna.metadata import DIR_MAP
-from tuna.miopen.benchmark import Model, Framework
 
 #pylint: disable=too-few-public-methods
 

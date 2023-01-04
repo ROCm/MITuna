@@ -30,17 +30,14 @@ import sys
 from multiprocessing import Value
 
 from tuna.mituna_interface import MITunaInterface
-from tuna.helper import print_solvers
-from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.miopen.miopen_tables import FinStep
-from tuna.metadata import MIOPEN_ALG_LIST
-from tuna.worker_interface import WorkerInterface
+from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args
 from tuna.miopen.session import Session
 from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
-from tuna.example.db_tables import create_tables
+from tuna.utils.db_utility import create_tables
 from tuna.example.example_tables import get_tables
+from tuna.example.example_worker import ExampleWorker
 
 
 class Example(MITunaInterface):
@@ -59,14 +56,12 @@ class Example(MITunaInterface):
             TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
         ])
 
-    group.add_argument('-e',
-                       '--exec',
-                       dest='execute_cmd',
-                       type=str,
-                       default=None,
-                       help='execute on each machine')
+    parser.add_argument('--init_session',
+                        action='store_true',
+                        dest='init_session',
+                        help='Set up a new tuning session.')
 
-    self.clean_args()
+    clean_args('EXAMPLE', 'example')
     args = parser.parse_args()
     if len(sys.argv) == 1:
       parser.print_help()
@@ -82,10 +77,15 @@ class Example(MITunaInterface):
       @param args The command line arguments
       @retturn ret Boolean value
     """
-    worker = WorkerInterface(**kwargs)
-    if args.execute_cmd:
-      self.logger.info(args.execute_cmd)
-      _, _, _ = worker.exec_command(args.execute_cmd + " 2>&1 ")
+
+    kwargs = get_kwargs(gpu_idx, f_vals, args)
+    worker = ExampleWorker(**kwargs)
+    if args.init_session:
+      Session().add_new_session(args, worker)
+    else:
+      worker.start()
+      worker_lst.append(worker)
+
     return True
 
   def compose_worker_list(self, res, args):

@@ -26,12 +26,11 @@
 ###############################################################################
 """Session table and its associate functionality"""
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey
-from sqlalchemy.exc import IntegrityError
 
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
 from tuna.session_mixin import SessionMixin
+from tuna.utils.db_utility import insert_session
 
 LOGGER = setup_logger('session')
 
@@ -75,43 +74,14 @@ class Session(BASE, SessionMixin):
 
   def add_new_session(self, args, worker):
     """Add new session entry"""
-    self.reason = args.label
-    self.docker = args.docker_name
-    if hasattr(args, 'arch') and args.arch:
-      self.arch = args.arch
-    else:
-      self.arch = worker.machine.arch
-
-    if hasattr(args, 'num_cu') and args.num_cu:
-      self.num_cu = args.num_cu
-    else:
-      self.num_cu = worker.machine.num_cu
-
-    if hasattr(args, 'rocm_v') and args.rocm_v:
-      self.rocm_v = args.rocm_v
-    else:
-      self.rocm_v = worker.get_rocm_v()
+    super().add_new_session(args, worker)
 
     if hasattr(args, 'miopen_v') and args.miopen_v:
       self.miopen_v = args.miopen_v
     else:
       self.miopen_v = worker.get_miopen_v()
 
-    if hasattr(args, 'ticket') and args.ticket:
-      self.ticket = args.ticket
     if args.solver_id:
       self.solver_id = args.solver_id
 
-    with DbSession() as session:
-      try:
-        session.add(self)
-        session.commit()
-        LOGGER.info('Added new session_id: %s', self.id)
-      except IntegrityError as err:
-        LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
-                       self)
-        session.rollback()
-        entry = self.get_query(session, Session, self).one()
-        return entry.id
-
-    return self.id
+    return insert_session(self)

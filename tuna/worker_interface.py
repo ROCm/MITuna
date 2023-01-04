@@ -44,7 +44,7 @@ from tuna.abort import chk_abort_file
 from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables_interface import DBTablesInterface
-from tuna.miopen.db_tables import connect_db
+from tuna.utils.db_utility import connect_db
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -505,3 +505,29 @@ class WorkerInterface(Process):
       self.num_procs.value -= 1
 
     return True
+
+  def run_command(self, cmd):
+    """Run cmd and return ret_code"""
+    for i in range(MAX_JOB_RETRIES):
+      ret_code, out, err = self.exec_docker_cmd(cmd)
+
+      if ret_code != 0:
+        self.logger.error('Error executing command: %s', ' '.join(cmd))
+        if err:
+          err_str = err.read()
+          self.logger.error('%s : %s', ret_code, err_str)
+          if "disk I/O error" in err_str:
+            self.logger.error('fin retry : %u', i)
+            sleep(random.randint(1, 10))
+          else:
+            break
+        else:
+          self.logger.error('err code : %s', ret_code)
+          break
+      else:
+        break
+
+    if ret_code != 0:
+      ret_code = None
+
+    return ret_code, out

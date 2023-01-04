@@ -26,6 +26,7 @@
 ###############################################################################
 """ Module to centralize command line argument parsing """
 import argparse
+import sys
 from enum import Enum
 from typing import List
 from tuna.config_type import ConfigType
@@ -97,3 +98,11 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
     )
 
   return parser
+
+
+def clean_args(opt1='MIOPEN', opt2='miopen'):
+  """clean arguments"""
+  if opt1 in sys.argv:
+    sys.argv.remove(opt1)
+  if opt2 in sys.argv:
+    sys.argv.remove(opt2)
