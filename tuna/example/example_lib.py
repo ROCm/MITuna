@@ -29,7 +29,7 @@
 import sys
 
 from tuna.mituna_interface import MITunaInterface
-from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args
+from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args, args_check
 from tuna.miopen.session import Session
 from tuna.utils.utility import get_kwargs
 from tuna.utils.miopen_utility import load_machines
@@ -49,9 +49,10 @@ class Example(MITunaInterface):
   def parse_args(self):
     # pylint: disable=too-many-statements
     """Function to parse arguments"""
-    parser = setup_arg_parser(
-        'Example library integrated with MITuna',
-        [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID])
+    parser = setup_arg_parser('Example library integrated with MITuna', [
+        TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
+        TunaArgs.MACHINES
+    ])
 
     parser.add_argument('--init_session',
                         action='store_true',
@@ -63,6 +64,8 @@ class Example(MITunaInterface):
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
+
+    args_check(args, parser)
 
     return args
 

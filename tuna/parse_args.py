@@ -40,6 +40,7 @@ class TunaArgs(Enum):
   VERSION = 3
   CONFIG_TYPE = 4
   SESSION_ID = 5
+  MACHINES = 6
 
 
 def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
@@ -96,6 +97,13 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
     )
+    parser.add_argument('-m',
+                        '--machines',
+                        dest='machines',
+                        type=str,
+                        default=None,
+                        required=False,
+                        help='Specify machine ids to use, comma separated')
 
   return parser
 
@@ -106,3 +114,17 @@ def clean_args(opt1='MIOPEN', opt2='miopen'):
     sys.argv.remove(opt1)
   if opt2 in sys.argv:
     sys.argv.remove(opt2)
+
+
+def args_check(args, parser):
+  """Common scripts args check function"""
+  if args.machines is not None:
+    args.machines = [int(x) for x in args.machines.split(',')
+                    ] if ',' in args.machines else [int(args.machines)]
+
+  args.local_machine = not args.remote_machine
+
+  if args.init_session and not args.label:
+    parser.error(
+        "When setting up a new tunning session the following must be specified: "\
+        "label.")

@@ -30,8 +30,8 @@ import sys
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.helper import print_solvers
-from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args
-from tuna.miopen.miopen_tables import FinStep
+from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args, args_check
+from tuna.miopen.miopen_tables import FinStep, get_miopen_tables
 from tuna.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.fin_class import FinClass
 from tuna.miopen.fin_builder import FinBuilder
@@ -42,7 +42,6 @@ from tuna.utils.utility import get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.db_tables import create_tables, recreate_triggers
-from tuna.miopen.miopen_tables import get_miopen_tables
 from tuna.miopen.miopen_db_helpers import drop_miopen_triggers, get_miopen_triggers
 
 
@@ -59,7 +58,7 @@ class MIOpen(MITunaInterface):
     parser = setup_arg_parser(
         'Run Performance Tuning on a certain architecture', [
             TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
-            TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
+            TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES
         ])
 
     parser.add_argument(
@@ -108,13 +107,6 @@ class MIOpen(MITunaInterface):
         type=str,
         default=None,
         help='MIOpen blacklist algorithm, if multiple then comma separate')
-    parser.add_argument('-m',
-                        '--machines',
-                        dest='machines',
-                        type=str,
-                        default=None,
-                        required=False,
-                        help='Specify machine ids to use, comma separated')
     parser.add_argument('-i',
                         '--reset_interval',
                         type=int,
@@ -193,16 +185,7 @@ class MIOpen(MITunaInterface):
     if args.blacklist:
       self.check_blacklist(args, parser)
 
-    if args.machines is not None:
-      args.machines = [int(x) for x in args.machines.split(',')
-                      ] if ',' in args.machines else [int(args.machines)]
-
-    args.local_machine = not args.remote_machine
-
-    if args.init_session and not args.label:
-      parser.error(
-          "When setting up a new tunning session the following must be specified: "\
-          "label.")
+    args_check(args, parser)
 
     fin_session_steps = [
         'miopen_find_compile', 'miopen_find_eval', 'miopen_perf_compile',
