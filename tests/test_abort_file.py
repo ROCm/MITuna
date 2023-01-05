@@ -41,7 +41,7 @@ from tuna.config_type import ConfigType
 from utils import CfgImportArgs, LdJobArgs
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.import_configs import import_cfgs
-from tuna.utils.utility import connect_db
+from tuna.utils.db_utility import connect_db
 from tuna.miopen.miopen_tables import ConvolutionJob
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import add_test_session
