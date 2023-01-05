@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,11 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
-from multiprocessing import Value
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args
 from tuna.miopen.session import Session
-from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
+from tuna.utils.utility import get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.utils.db_utility import create_tables
@@ -51,10 +50,8 @@ class Example(MITunaInterface):
     # pylint: disable=too-many-statements
     """Function to parse arguments"""
     parser = setup_arg_parser(
-        'Run Performance Tuning on a certain architecture', [
-            TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
-            TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID
-        ])
+        'Example library integrated with MITuna',
+        [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID])
 
     parser.add_argument('--init_session',
                         action='store_true',
@@ -101,22 +98,13 @@ class Example(MITunaInterface):
         continue
 
       #determine number of processes by compute capacity
-      env = get_env_vars()
-      if env['slurm_cpus'] > 0:
-        num_procs = int(env['slurm_cpus'])
-      else:
-        # JD: This sould be the responsibility of the machine class
-        num_procs = int(machine.get_num_cpus() * .6)
-      worker_ids = range(num_procs)
-
+      worker_ids = super().determine_num_procs(machine)
       if len(worker_ids) == 0:
-        self.logger.error('num_procs must be bigger than zero to launch worker')
-        self.logger.error('Cannot launch worker on machine: %s', machine.id)
         return None
 
-      f_vals = compose_f_vals(args, machine)
-      f_vals["num_procs"] = Value('i', len(worker_ids))
+      f_vals = super().get_f_vals(args, machine, worker_ids)
 
+      # pylint: disable=duplicate-code
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst, args):
@@ -124,16 +112,17 @@ class Example(MITunaInterface):
 
     return worker_lst
 
+  def add_tables(self):
+    ret_t = create_tables(get_tables())
+    self.logger.info('DB creation successful: %s', ret_t)
+
+    return True
+
   def run(self):
+    # pylint: disable=duplicate-code
     """Main function to launch library"""
     res = None
     self.args = self.parse_args()
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res
-
-  def add_tables(self):
-    ret_t = create_tables(get_tables())
-    self.logger.info('DB creation successful: %s', ret_t)
-
-    return True

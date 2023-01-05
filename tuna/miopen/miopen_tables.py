@@ -310,6 +310,7 @@ class FusionConfigTags(BASE, ConfigTagMixin):
 class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
+  # pylint: disable=duplicate-code
   new = 1
   started = 2
   running = 3

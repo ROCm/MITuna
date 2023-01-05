@@ -27,7 +27,6 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
-from multiprocessing import Value
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.helper import print_solvers
@@ -39,7 +38,7 @@ from tuna.miopen.fin_builder import FinBuilder
 from tuna.miopen.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.session import Session
-from tuna.utils.utility import get_env_vars, compose_f_vals, get_kwargs
+from tuna.utils.utility import get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.db_tables import create_tables, recreate_triggers
@@ -321,31 +320,23 @@ class MIOpen(MITunaInterface):
         continue
 
       #fin_steps should only contain one step
+      worker_ids = None
       if args.fin_steps and 'eval' in args.fin_steps[0]:
         worker_ids = machine.get_avail_gpus()
       else:
-        #determine number of processes by compute capacity
-        env = get_env_vars()
-        if env['slurm_cpus'] > 0:
-          num_procs = int(env['slurm_cpus'])
-        else:
-          # JD: This sould be the responsibility of the machine class
-          num_procs = int(machine.get_num_cpus() * .6)
-        worker_ids = range(num_procs)
+        worker_ids = super().determine_num_procs(machine)
 
       if len(worker_ids) == 0:
-        self.logger.error('num_procs must be bigger than zero to launch worker')
-        self.logger.error('Cannot launch worker on machine: %s', machine.id)
         return None
 
-      f_vals = compose_f_vals(args, machine)
-      f_vals["num_procs"] = Value('i', len(worker_ids))
+      f_vals = super().get_f_vals(args, machine, worker_ids)
 
       if (args.update_solvers) and not fin_work_done:
         self.do_fin_work(args, 0, f_vals)
         fin_work_done = True
         break
 
+      # pylint: disable=duplicate-code
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst, args):
@@ -353,16 +344,17 @@ class MIOpen(MITunaInterface):
 
     return worker_lst
 
+  def add_tables(self):
+    ret_t = create_tables(get_miopen_tables())
+    self.logger.info('DB creation successful: %s', ret_t)
+    recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
+    return True
+
   def run(self):
+    # pylint: disable=duplicate-code
     """Main function to launch library"""
     res = None
     self.args = self.parse_args()
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res
-
-  def add_tables(self):
-    ret_t = create_tables(get_miopen_tables())
-    self.logger.info('DB creation successful: %s', ret_t)
-    recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
-    return True

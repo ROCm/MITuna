@@ -25,9 +25,11 @@
 #
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
+from multiprocessing import Value
 
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
+from tuna.utils.utility import get_env_vars, compose_f_vals
 
 
 class MITunaInterface():
@@ -126,3 +128,28 @@ class MITunaInterface():
   def add_tables(self):
     """Add library specific tables"""
     return self.add_tables()
+
+  def determine_num_procs(self, machine):
+    """Determine number of processes by compute capacity"""
+    worker_ids = None
+    env = get_env_vars()
+    if env['slurm_cpus'] > 0:
+      num_procs = int(env['slurm_cpus'])
+    else:
+      # JD: This sould be the responsibility of the machine class
+      num_procs = int(machine.get_num_cpus() * .6)
+
+    worker_ids = range(num_procs)
+
+    if len(worker_ids) == 0:
+      self.logger.error('num_procs must be bigger than zero to launch worker')
+      self.logger.error('Cannot launch worker on machine: %s', machine.id)
+      worker_ids = None
+
+    return worker_ids
+
+  def get_f_vals(self, args, machine, worker_ids):
+    """Determine kwargs for worker_interface"""
+    f_vals = compose_f_vals(args, machine)
+    f_vals["num_procs"] = Value('i', len(worker_ids))
+    return f_vals
