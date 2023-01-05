@@ -41,6 +41,7 @@ class TunaArgs(Enum):
   CONFIG_TYPE = 4
   SESSION_ID = 5
   MACHINES = 6
+  REMOTE_MACHINE = 7
 
 
 def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
@@ -97,6 +98,7 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
     )
+  if TunaArgs.MACHINES in arg_list:
     parser.add_argument('-m',
                         '--machines',
                         dest='machines',
@@ -104,6 +106,12 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
                         default=None,
                         required=False,
                         help='Specify machine ids to use, comma separated')
+  if TunaArgs.REMOTE_MACHINE in arg_list:
+    parser.add_argument('--remote_machine',
+                        dest='remote_machine',
+                        action='store_true',
+                        default=False,
+                        help='Run the process on a network machine')
 
   return parser
 

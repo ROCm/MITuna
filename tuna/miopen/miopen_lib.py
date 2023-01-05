@@ -68,11 +68,6 @@ class MIOpen(MITunaInterface):
         default=1,
         help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
         choices=[1, 3])
-    parser.add_argument('--remote_machine',
-                        dest='remote_machine',
-                        action='store_true',
-                        default=False,
-                        help='Run the process on a network machine')
     parser.add_argument('-l',
                         '--label',
                         dest='label',
