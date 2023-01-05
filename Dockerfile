@@ -80,6 +80,7 @@ RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysq
 RUN pip3 install /tmp/mysql_connector/*.whl
 RUN pip3 install --quiet pylint
 RUN pip3 install --quiet nosexcover
+RUN pip3 install --quiet mypy==0.971
 
 # opentelemetry
 RUN opentelemetry-bootstrap -a install

@@ -97,12 +97,18 @@ def parse_args():
                       type=str,
                       dest='file_name',
                       help='File to specify multiple Driver commands')
-  parser.add_argument('--version',
-                      dest='version',
+  parser.add_argument('--md_version',
+                      dest='md_version',
                       type=str,
                       default=None,
                       required=False,
                       help='Specify model version')
+  parser.add_argument('--fw_version',
+                      dest='fw_version',
+                      type=str,
+                      default=None,
+                      required=False,
+                      help='Specify framework version')
   parser.add_argument('--batchsize',
                       dest='batchsize',
                       type=int,
@@ -111,14 +117,15 @@ def parse_args():
                       help='Specify model batchsize')
 
   args = parser.parse_args()
-  if args.add_model and not args.version:
+  if args.add_model and not args.md_version:
     parser.error('Version needs to be specified with model')
   if args.add_benchmark and not (args.model and args.framework and
                                  args.gpu_count and args.batchsize and
+                                 args.md_version and args.fw_version and
                                  (args.driver or args.file_name)):
     parser.error(
-        'Model, framework, driver(or filename), batchsize and gpus need to all be'
-        'specified to add a new benchmark')
+        """Model, md_version, framework, fw_version, driver(or filename), batchsize \n
+         and gpus need to all be specified to add a new benchmark""")
   return args
 
 
@@ -134,12 +141,12 @@ def print_models():
 def add_model(args):
   """Add new model and version to the db table"""
   with DbSession() as session:
-    new_model = Model(model=args.add_model, version=args.version)
+    new_model = Model(model=args.add_model, version=args.md_version)
     try:
       session.add(new_model)
       session.commit()
       LOGGER.info('Added model %s with version %s ', args.add_model,
-                  str(args.version))
+                  str(args.md_version))
     except IntegrityError as err:
       LOGGER.error(err)
       return False
@@ -158,12 +165,13 @@ def update_frameworks():
         LOGGER.info('Added new framework %s', elem)
       except IntegrityError as ierr:
         LOGGER.warning(ierr)
+        session.rollback()
         continue
 
   return True
 
 
-def get_database_id(framework, model, dbt):
+def get_database_id(framework, fw_version, model, md_version, dbt):
   """Get DB id of item"""
 
   mid = None
@@ -171,7 +179,8 @@ def get_database_id(framework, model, dbt):
   with DbSession() as session:
     try:
       res = session.query(
-          dbt.framework.id).filter(dbt.framework.framework == framework).one()
+          dbt.framework.id).filter(dbt.framework.framework == framework)\
+                           .filter(dbt.framework.version == fw_version).one()
       fid = res.id
     except NoResultFound as dberr:
       LOGGER.error(dberr)
@@ -179,7 +188,8 @@ def get_database_id(framework, model, dbt):
           'Framework not present in the DB. Please run --update_framework to populate the DB table'
       )
     try:
-      res = session.query(dbt.model.id).filter(dbt.model.model == model).one()
+      res = session.query(dbt.model.id).filter(dbt.model.model == model)\
+                                       .filter(dbt.model.version == md_version).one()
       mid = res.id
     except NoResultFound as dberr:
       LOGGER.error(
@@ -191,8 +201,17 @@ def get_database_id(framework, model, dbt):
 
 def add_benchmark(args, dbt):
   """Add new benchmark"""
-  mid, fid = get_database_id(args.framework, args.model, dbt)
+  mid, fid = get_database_id(args.framework, args.fw_version, args.model,
+                             args.md_version, dbt)
   print(mid, fid)
+  if mid is None:
+    LOGGER.error('Could not find DB entry for model:%s, version:%s', args.model,
+                 args.md_version)
+    return False
+  if fid is None:
+    LOGGER.error('Could not find DB entry for framework:%s, version:%s',
+                 args.framework, args.fw_version)
+    return False
   commands = []
   if args.driver:
     commands.append(args.driver)
@@ -200,6 +219,8 @@ def add_benchmark(args, dbt):
     with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
       for line in infile:
         commands.append(line)
+
+  count = 0
 
   with DbSession() as session:
     for cmd in commands:
@@ -222,10 +243,13 @@ def add_benchmark(args, dbt):
         benchmark.batchsize = args.batchsize
         session.add(benchmark)
         session.commit()
+        count += 1
       except (ValueError, IntegrityError) as verr:
         LOGGER.warning(verr)
         session.rollback()
         continue
+  LOGGER.info('Tagged %s configs', count)
+  return True
 
 
 def main():
