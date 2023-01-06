@@ -1,8 +1,9 @@
 TUNA 
 ====
 
-Tuna is a distributed tuning infrastructure that provides pre-compiled kernels for MIOpen customers
-through automated Jenkins pipelines and SLURM scalable architecture.
+Tuna is a distributed tuning infrastructure that provides tuning through automated 
+Jenkins pipelines and SLURM scalable architecture. For MIOpen customers we provide
+pre-compiled kernels.
 
 Prerequisites
 -------------
@@ -97,7 +98,7 @@ To create the database run the following script:
 ```
 
 The installation and setup are now complete. To start a tuning cycle, please follow the steps
-documented in [TuningCycle](https://github.com/ROCmSoftwarePlatform/MITuna/blob/develop/doc/TuningCycle.md)
+documented in [TuningCycle](https://github.com/ROCmSoftwarePlatform/MITuna/blob/develop/doc/src/TuningCycle.md)
 
 Code formatting
 ---------------

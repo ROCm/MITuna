@@ -63,7 +63,7 @@ def main():
     for line in fin:
       if '=' in line:
         elem = line.split('=')
-        fds, vals, precision, direction, _ = parse_pdb_key(elem[0])
+        fds, vals, precision, direction = parse_pdb_key(elem[0])
         cmd = build_driver_cmd(fds, vals, precision, direction)
         outstr = f'"{cmd}",{elem[1]}'
       else:

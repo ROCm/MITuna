@@ -24,57 +24,52 @@
 #
 ###############################################################################
 
+import os
 import sys
-from tuna.update_golden import merge_golden_entries, get_fdb_query, create_perf_table
-from tuna.miopen.tables import MIOpenDBTables
-from tuna.dbBase.sql_alchemy import DbSession
-from tuna.config_type import ConfigType
-from tuna.miopen.miopen_tables import ConvolutionGolden
-from tuna.find_db import ConvolutionFindDB
-from utils import add_test_session, DummyArgs
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
+this_path = os.path.dirname(__file__)
 
-def add_fdb_entry(session_id):
+from tuna.dbBase.sql_alchemy import DbSession
+from utils import DummyArgs
+from tuna.import_benchmark import add_model, update_frameworks, print_models
+from tuna.import_benchmark import add_benchmark
+from tuna.miopen.benchmark import Framework, ModelEnum, FrameworkEnum
+from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.miopen_tables import ConvolutionBenchmark
+from tuna.config_type import ConfigType
+
+
+def test_import_benchmark():
+  args = DummyArgs
+  models = {
+      ModelEnum.ALEXNET: 1.0,
+      ModelEnum.GOOGLENET: 2.0,
+      ModelEnum.VGG19: 3.0
+  }
+  for key, value in models.items():
+    args.add_model = key.value
+    args.version = value
+    add_model(args)
+  print_models()
+  update_frameworks()
   with DbSession() as session:
-    fdb_entry = ConvolutionFindDB()
-    fdb_entry.config = 1
-    fdb_entry.solver = 1
-    fdb_entry.session = session_id
-    fdb_entry.opencl = False
+    frmks = session.query(Framework).all()
+    assert len(frmks) > 0
 
-    fdb_entry.fdb_key = 1
-    fdb_entry.alg_lib = 'Test'
-    fdb_entry.params = 1
-    fdb_entry.workspace_sz = 0
-    fdb_entry.valid = True
-    fdb_entry.kernel_time = 11111
-    fdb_entry.kernel_group = 1
-
-    session.add(fdb_entry)
-    session.commit()
-
-
-def test_update_golden():
-  session_id = add_test_session()
-  add_fdb_entry(session_id)
-
-  res = None
-  args = DummyArgs()
-  args.session_id = session_id
   args.config_type = ConfigType.convolution
-  args.golden_v = 1
-  dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
-  entries = get_fdb_query(dbt).all()
-  assert entries
-
+  dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
+  args.driver = None
+  args.add_benchmark = True
+  args.framework = FrameworkEnum.PYTORCH
+  args.model = ModelEnum.ALEXNET
+  args.gpu_count = 8
+  args.batchsize = 512
+  args.file_name = "{0}/../utils/configs/conv_configs_NHWC.txt".format(
+      this_path)
+  add_benchmark(args, dbt)
   with DbSession() as session:
-    assert merge_golden_entries(session, dbt, args.golden_v, entries)
-    query = session.query(ConvolutionGolden)
-    res = query.all()
-  assert len(res) is not None
-
-  args.create_perf_table = True
-  assert create_perf_table(args)
+    bk_entries = session.query(ConvolutionBenchmark).all()
+    assert len(bk_entries) > 0

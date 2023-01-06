@@ -27,6 +27,7 @@
 """! @brief Script to populate the golden table based on session_id"""
 import functools
 from sqlalchemy.sql.expression import func as sqlfunc
+from sqlalchemy.exc import OperationalError
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
@@ -35,6 +36,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry
 from tuna.miopen.session import Session
 from tuna.utils.utility import split_packets
+from tuna.db_tables import ENGINE
 
 # Setup logging
 LOGGER = setup_logger('update_golden')
@@ -72,6 +74,11 @@ def parse_args():
                       action='store_true',
                       default=False,
                       help='Write over existing golden version.')
+  parser.add_argument('--create_perf_table',
+                      dest='create_perf_table',
+                      action='store_true',
+                      default=False,
+                      help='Create performance table.')
 
   args = parser.parse_args()
 
@@ -247,6 +254,45 @@ def process_merge_golden(dbt, golden_v, entries, s_copy=False):
   return num_packs
 
 
+def get_perf_str(args, table_name):
+  """Create perf table SQL query and return"""
+  new_table = f"""
+  create table {table_name} as select a.config, a.num_cu, a.arch, b.k1 as k1, c.k1 as k2,
+    d.k1 as k3, c.k1-b.k1 as gv4_5, d.k1-c.k1 as gv5_6 from conv_golden a
+    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
+    where golden_miopen_v={args.golden_v-2} and kernel_time!=-1 group by config, arch, num_cu) 
+      as b on a.config=b.config and a.arch=b.arch and a.num_cu=b.num_cu
+    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
+    where golden_miopen_v={args.golden_v-1} and kernel_time!=-1 group by config, arch, num_cu) 
+      as c on a.config=c.config and a.arch=c.arch and a.num_cu=c.num_cu
+    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
+    where golden_miopen_v={args.golden_v} and kernel_time!=-1 group by config, arch, num_cu) 
+      as d on a.config=d.config and a.arch=d.arch and a.num_cu=d.num_cu
+  where a.golden_miopen_v={args.golden_v} group by a.config, a.arch, a.num_cu, b.k1, c.k1, d.k1;
+  """
+  return new_table
+
+
+def create_perf_table(args):
+  """Create new perf_table"""
+  if args.golden_v == 1:
+    table_name = "conv_gv10"
+  else:
+    table_name = f"conv_gv{args.golden_v-2}{args.golden_v-1}{args.golden_v}"
+  print(table_name)
+  with ENGINE.connect() as conn:
+    try:
+      conn.execute(f'drop table if exists {table_name}')
+      LOGGER.info('Creating new performance table %s', table_name)
+      conn.execute(get_perf_str(args, table_name))
+      LOGGER.info('Done creating new performance table %s', table_name)
+    except OperationalError as oerr:
+      LOGGER.info('%s \n', oerr)
+      return False
+
+  return True
+
+
 def main():
   """! Main function"""
   args = parse_args()
@@ -274,6 +320,9 @@ def main():
   total = process_merge_golden(dbt, args.golden_v, query.all())
 
   LOGGER.info("Merged: %s", total)
+  LOGGER.info('Updating conv perf DB table')
+  if args.create_perf_table:
+    create_perf_table(args)
 
 
 if __name__ == '__main__':

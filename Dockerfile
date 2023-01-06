@@ -80,6 +80,7 @@ RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysq
 RUN pip3 install /tmp/mysql_connector/*.whl
 RUN pip3 install --quiet pylint
 RUN pip3 install --quiet nosexcover
+RUN pip3 install --quiet mypy==0.971
 
 # opentelemetry
 RUN opentelemetry-bootstrap -a install
@@ -151,7 +152,6 @@ RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX
 RUN make -j $(nproc)
 RUN make install
 
-
 #SET MIOPEN ENVIRONMENT VARIABLES
 ENV MIOPEN_LOG_LEVEL=6
 ENV PATH=$PREFIX/miopen/bin:$PREFIX/bin:$PATH
@@ -176,3 +176,12 @@ ADD requirements.txt /tuna/
 WORKDIR /tuna
 
 RUN python3 setup.py install
+
+# Install SolverAnalytics dependencies (this require root access, so,
+# the dependencies must be installed here, and can't be installed in Jenkinsfile)
+RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git
+RUN pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt
+RUN rm -rf SolverAnalytics
+
+# reset WORKDIR to /tuna
+WORKDIR /tuna

@@ -452,13 +452,13 @@ FDS_3D = [
     'pad_d', 'pad_h', 'pad_w', 'out_channels', 'fil_d', 'fil_w', 'fil_h',
     'dilation_d', 'dilation_w', 'dilation_h', 'conv_stride_d', 'conv_stride_w',
     'conv_stride_h', 'in_channels', 'in_d', 'in_w', 'in_h', 'batchsize',
-    'group_count'
+    'group_count', 'in_layout', 'out_layout', 'fil_layout'
 ]
 
 FDS_2D = [
     'pad_h', 'pad_w', 'out_channels', 'fil_w', 'fil_h', 'dilation_w',
     'dilation_h', 'conv_stride_w', 'conv_stride_h', 'in_channels', 'in_w',
-    'in_h', 'batchsize', 'group_count'
+    'in_h', 'batchsize', 'group_count', 'in_layout', 'out_layout', 'fil_layout'
 ]
 
 MIOPEN_ALG_LIST = [
