@@ -101,6 +101,7 @@ class Example(MITunaInterface):
         continue
 
       #determine number of processes by compute capacity
+      # pylint: disable=duplicate-code
       worker_ids = super().determine_num_procs(machine)
       if len(worker_ids) == 0:
         return None
@@ -108,7 +109,6 @@ class Example(MITunaInterface):
       f_vals = super().get_f_vals(machine, worker_ids)
       f_vals['envmt'] = self.get_envmt(args)
 
-      # pylint: disable=duplicate-code
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst, args):
