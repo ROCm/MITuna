@@ -25,11 +25,11 @@
 #
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
-from multiprocessing import Value
+from multiprocessing import Value, Lock, Queue as mpQueue
 
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars, compose_f_vals
+from tuna.utils.utility import get_env_vars
 
 
 class MITunaInterface():
@@ -148,8 +148,54 @@ class MITunaInterface():
 
     return worker_ids
 
-  def get_f_vals(self, args, machine, worker_ids):
+  def get_f_vals(self, machine, worker_ids):
     """Determine kwargs for worker_interface"""
-    f_vals = compose_f_vals(args, machine)
+    f_vals = self.compose_f_vals(machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))
     return f_vals
+
+  def compose_f_vals(self, machine):
+    """! Compose dict for WorkerInterface constructor
+      @param args The command line arguments
+      @param machine Machine instance
+    """
+    f_vals = {}
+    f_vals["barred"] = Value('i', 0)
+    f_vals["bar_lock"] = Lock()
+    #multiprocess queue for jobs, shared on machine
+    f_vals["job_queue"] = mpQueue()
+    f_vals["job_queue_lock"] = Lock()
+    f_vals["result_queue"] = mpQueue()
+    f_vals["result_queue_lock"] = Lock()
+    f_vals["machine"] = machine
+    f_vals["b_first"] = True
+    f_vals["end_jobs"] = Value('i', 0)
+
+    return f_vals
+
+  def get_kwargs(self, gpu_idx, f_vals, args):
+    """! Helper function to set up kwargs for worker instances
+      @param gpu_idx Unique ID of the GPU
+      @param f_vals Dict containing runtime information
+      @param args The command line arguments
+    """
+    envmt = f_vals["envmt"].copy()
+
+    kwargs = {
+        'machine': f_vals["machine"],
+        'gpu_id': gpu_idx,
+        'num_procs': f_vals["num_procs"],
+        'barred': f_vals["barred"],
+        'bar_lock': f_vals["bar_lock"],
+        'envmt': envmt,
+        'job_queue': f_vals["job_queue"],
+        'job_queue_lock': f_vals["job_queue_lock"],
+        'result_queue': f_vals["result_queue"],
+        'result_queue_lock': f_vals["result_queue_lock"],
+        'label': args.label,
+        'docker_name': args.docker_name,
+        'end_jobs': f_vals['end_jobs'],
+        'session_id': args.session_id
+    }
+
+    return kwargs

@@ -30,13 +30,12 @@ import sys
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args, args_check
-from tuna.miopen.session import Session
-from tuna.utils.utility import get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.utils.db_utility import create_tables
 from tuna.example.example_tables import get_tables
 from tuna.example.example_worker import ExampleWorker
+from tuna.example.session import SessionExample
 
 
 class Example(MITunaInterface):
@@ -51,7 +50,8 @@ class Example(MITunaInterface):
     """Function to parse arguments"""
     parser = setup_arg_parser('Example library integrated with MITuna', [
         TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
-        TunaArgs.MACHINES
+        TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
+        TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
 
     parser.add_argument('--init_session',
@@ -78,14 +78,14 @@ class Example(MITunaInterface):
       @retturn ret Boolean value
     """
 
-    kwargs = get_kwargs(gpu_idx, f_vals, args)
+    kwargs = self.get_kwargs(gpu_idx, f_vals, args)
     worker = ExampleWorker(**kwargs)
     if args.init_session:
-      Session().add_new_session(args, worker)
-    else:
-      worker.start()
-      worker_lst.append(worker)
+      SessionExample().add_new_session(args, worker)
+      return False
 
+    worker.start()
+    worker_lst.append(worker)
     return True
 
   def compose_worker_list(self, res, args):
@@ -105,7 +105,8 @@ class Example(MITunaInterface):
       if len(worker_ids) == 0:
         return None
 
-      f_vals = super().get_f_vals(args, machine, worker_ids)
+      f_vals = super().get_f_vals(machine, worker_ids)
+      f_vals['envmt'] = self.get_envmt(args)
 
       # pylint: disable=duplicate-code
       for gpu_idx in worker_ids:
@@ -129,3 +130,22 @@ class Example(MITunaInterface):
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res
+
+  def get_envmt(self, args):
+    # pylint: disable=unused-argument
+    """! Function to construct environment var
+       @param args The command line arguments
+    """
+    envmt = []
+
+    return envmt
+
+  def get_kwargs(self, gpu_idx, f_vals, args):
+    """! Helper function to set up kwargs for worker instances
+      @param gpu_idx Unique ID of the GPU
+      @param f_vals Dict containing runtime information
+      @param args The command line arguments
+    """
+    kwargs = super().get_kwargs(gpu_idx, f_vals, args)
+
+    return kwargs

@@ -28,10 +28,7 @@
 from sqlalchemy import UniqueConstraint
 
 from tuna.dbBase.base_class import BASE
-from tuna.utils.logger import setup_logger
 from tuna.session_mixin import SessionMixin
-
-LOGGER = setup_logger('session_example')
 
 
 class SessionExample(BASE, SessionMixin):
@@ -43,18 +40,16 @@ class SessionExample(BASE, SessionMixin):
                                      "num_cu",
                                      "rocm_v",
                                      "reason",
-                                     "ticket",
                                      "docker",
                                      name="uq_idx"),)
 
   def get_query(self, sess, sess_obj, entry):
     """get session matching this object"""
-    query = sess.query(sess_obj)\
+    query = sess.query(sess_obj.id)\
         .filter(sess_obj.arch == entry.arch)\
         .filter(sess_obj.num_cu == entry.num_cu)\
         .filter(sess_obj.rocm_v == entry.rocm_v)\
         .filter(sess_obj.reason == entry.reason)\
-        .filter(sess_obj.ticket == entry.ticket)\
         .filter(sess_obj.docker == entry.docker)\
 
     return query
@@ -62,4 +57,4 @@ class SessionExample(BASE, SessionMixin):
   def add_new_session(self, args, worker):
     """Add new session entry"""
     super().add_new_session(args, worker)
-    return self.insert_session(session_class=self)
+    return self.insert_session()

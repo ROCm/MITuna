@@ -38,11 +38,11 @@ from tuna.miopen.fin_builder import FinBuilder
 from tuna.miopen.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.session import Session
-from tuna.utils.utility import get_kwargs
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.db_tables import create_tables, recreate_triggers
 from tuna.miopen.miopen_db_helpers import drop_miopen_triggers, get_miopen_triggers
+from tuna.config_type import ConfigType
 
 
 class MIOpen(MITunaInterface):
@@ -58,7 +58,9 @@ class MIOpen(MITunaInterface):
     parser = setup_arg_parser(
         'Run Performance Tuning on a certain architecture', [
             TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
-            TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES
+            TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES,
+            TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
+            TunaArgs.DOCKER_NAME
         ])
 
     parser.add_argument(
@@ -68,22 +70,11 @@ class MIOpen(MITunaInterface):
         default=1,
         help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
         choices=[1, 3])
-    parser.add_argument('-l',
-                        '--label',
-                        dest='label',
-                        type=str,
-                        default=None,
-                        help='Specify label for jobs')
     parser.add_argument('--ticket',
                         dest='ticket',
                         type=str,
                         default=None,
                         help='Specify tuning ticket number')
-    parser.add_argument('--docker_name',
-                        dest='docker_name',
-                        type=str,
-                        default='miopentuna',
-                        help='Select a docker to run on. (default miopentuna)')
     parser.add_argument(
         '--solver_id',
         type=int,
@@ -133,12 +124,6 @@ class MIOpen(MITunaInterface):
                        dest='update_applicability',
                        action='store_true',
                        help='Update the applicability table in the database')
-    group.add_argument('-r',
-                       '--restart',
-                       dest='restart_machine',
-                       action='store_true',
-                       default=False,
-                       help='Restart machines')
     group.add_argument('-s',
                        '--status',
                        dest='check_status',
@@ -226,7 +211,7 @@ class MIOpen(MITunaInterface):
       @param gpu Unique ID of the GPU
       @param f_vals Dict containing runtime information
     """
-    kwargs = get_kwargs(gpu, f_vals, args)
+    kwargs = self.get_kwargs(gpu, f_vals, args)
     fin_worker = FinClass(**kwargs)
 
     if args.update_solvers:
@@ -245,7 +230,7 @@ class MIOpen(MITunaInterface):
     """
     # pylint: disable=too-many-branches
     worker = None
-    kwargs = get_kwargs(gpu_idx, f_vals, args)
+    kwargs = self.get_kwargs(gpu_idx, f_vals, args)
 
     if args.fin_steps:
       if 'miopen_find_compile' in args.fin_steps or 'miopen_perf_compile' in args.fin_steps:
@@ -307,7 +292,8 @@ class MIOpen(MITunaInterface):
       if len(worker_ids) == 0:
         return None
 
-      f_vals = super().get_f_vals(args, machine, worker_ids)
+      f_vals = super().get_f_vals(machine, worker_ids)
+      f_vals['envmt'] = self.get_envmt(args)
 
       if (args.update_solvers) and not fin_work_done:
         self.do_fin_work(args, 0, f_vals)
@@ -336,3 +322,39 @@ class MIOpen(MITunaInterface):
     res = load_machines(self.args)
     res = self.compose_worker_list(res, self.args)
     return res
+
+  def get_envmt(self, args):
+    """! Function to construct environment var
+       @param args The command line arguments
+    """
+    envmt = ["MIOPEN_LOG_LEVEL=4"]
+
+    envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
+    envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
+
+    if args.find_mode:
+      envmt.append(f"MIOPEN_FIND_MODE={args.find_mode}")
+
+    if args.blacklist:
+      bk_str = ", ".join([f"{arg}=0" for arg in args.blacklist])
+      for bk_var in bk_str.split(','):
+        envmt.append(bk_var)
+
+    return envmt
+
+  def get_kwargs(self, gpu_idx, f_vals, args):
+    """! Helper function to set up kwargs for worker instances
+      @param gpu_idx Unique ID of the GPU
+      @param f_vals Dict containing runtime information
+      @param args The command line arguments
+    """
+    if args.config_type is None:
+      args.config_type = ConfigType.convolution
+
+    kwargs = super().get_kwargs(gpu_idx, f_vals, args)
+    kwargs['fin_steps'] = args.fin_steps
+    kwargs['dynamic_solvers_only'] = args.dynamic_solvers_only
+    kwargs['config_type'] = args.config_type
+    kwargs['reset_interval'] = args.reset_interval
+
+    return kwargs

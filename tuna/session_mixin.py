@@ -69,7 +69,7 @@ class SessionMixin():
     if hasattr(args, 'ticket') and args.ticket:
       self.ticket = args.ticket
 
-  def insert_session(self, session_class):
+  def insert_session(self):
     """Insert new session obj and return its id"""
     with DbSession() as session:
       try:
@@ -80,7 +80,8 @@ class SessionMixin():
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
         session.rollback()
-        entry = self.get_query(session, session_class, self).one()
+        entry = self.get_query(session, type(self), self).one()
+        LOGGER.warning('Session for these values already exists: %s', entry.id)
         return entry.id
 
     return self.id

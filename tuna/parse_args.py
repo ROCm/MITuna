@@ -42,6 +42,9 @@ class TunaArgs(Enum):
   SESSION_ID = 5
   MACHINES = 6
   REMOTE_MACHINE = 7
+  LABEL = 8
+  RESTART_MACHINE = 9
+  DOCKER_NAME = 10
 
 
 def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
@@ -112,6 +115,26 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
                         action='store_true',
                         default=False,
                         help='Run the process on a network machine')
+  if TunaArgs.LABEL in arg_list:
+    parser.add_argument('-l',
+                        '--label',
+                        dest='label',
+                        type=str,
+                        default=None,
+                        help='Specify label for jobs')
+  if TunaArgs.RESTART_MACHINE in arg_list:
+    parser.add_argument('-r',
+                        '--restart',
+                        dest='restart_machine',
+                        action='store_true',
+                        default=False,
+                        help='Restart machines')
+  if TunaArgs.DOCKER_NAME in arg_list:
+    parser.add_argument('--docker_name',
+                        dest='docker_name',
+                        type=str,
+                        default='miopentuna',
+                        help='Select a docker to run on. (default miopentuna)')
 
   return parser
 

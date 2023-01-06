@@ -47,7 +47,6 @@ class Session(BASE, SessionMixin):
                                      "reason",
                                      "ticket",
                                      "docker",
-                                     "solver_id",
                                      name="uq_idx"),)
 
   miopen_v = Column(String(length=64), nullable=False)
@@ -83,4 +82,4 @@ class Session(BASE, SessionMixin):
     if args.solver_id:
       self.solver_id = args.solver_id
 
-    return self.insert_session(session_class=self)
+    return self.insert_session()
