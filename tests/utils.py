@@ -26,11 +26,12 @@
 
 from multiprocessing import Value
 
-from tuna.utils.utility import compose_f_vals, get_kwargs
+from tuna.utils.mituna_interface import compose_f_vals, get_kwargs
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.session import Session
 from tuna.machine import Machine
 from tuna.config_type import ConfigType
+from tuna.mituna_interface import MITunaInterface
 
 # TODO: This is a copy and is unacceptable
 sqlite_config_cols = [
@@ -114,10 +115,9 @@ class DummyArgs(object):
     pass
 
 
-def get_worker_args(args, machine):
+def get_worker_args(args, machine, miopen):
   worker_ids = range(machine.get_num_cpus())
-  f_vals = compose_f_vals(args, machine)
-  f_vals["num_procs"] = Value('i', len(worker_ids))
+  f_vals = miopen.get_f_vals(machine, worker_ids)
   kwargs = get_kwargs(0, f_vals, args)
   return kwargs
 
@@ -129,7 +129,8 @@ def add_test_session(arch='gfx908', num_cu=120):
   machine.num_cu = num_cu
 
   #create a session
-  kwargs = get_worker_args(args, machine)
+  miopen = MIOpen()
+  kwargs = get_worker_args(args, machine, miopen)
   worker = WorkerInterface(**kwargs)
   session_id = Session().add_new_session(args, worker)
   assert (session_id)
