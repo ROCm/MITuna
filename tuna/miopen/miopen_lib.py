@@ -292,8 +292,7 @@ class MIOpen(MITunaInterface):
       if len(worker_ids) == 0:
         return None
 
-      f_vals = super().get_f_vals(machine, worker_ids)
-      f_vals['envmt'] = self.get_envmt(args)
+      f_vals = super().get_f_vals(machine, worker_ids, self.args)
 
       if (args.update_solvers) and not fin_work_done:
         self.do_fin_work(args, 0, f_vals)

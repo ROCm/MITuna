@@ -148,11 +148,16 @@ class MITunaInterface():
 
     return worker_ids
 
-  def get_f_vals(self, machine, worker_ids):
+  def get_f_vals(self, machine, worker_ids, args):
     """Determine kwargs for worker_interface"""
     f_vals = self.compose_f_vals(machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))
+    f_vals['envmt'] = self.get_envmt(args)
     return f_vals
+
+  def get_envmt(self, args):
+    """Get runtime envmt"""
+    raise NotImplementedError("Not implemented")
 
   def compose_f_vals(self, machine):
     """! Compose dict for WorkerInterface constructor

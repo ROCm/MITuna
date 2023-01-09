@@ -106,8 +106,7 @@ class Example(MITunaInterface):
       if len(worker_ids) == 0:
         return None
 
-      f_vals = super().get_f_vals(machine, worker_ids)
-      f_vals['envmt'] = self.get_envmt(args)
+      f_vals = super().get_f_vals(machine, worker_ids, self.args)
 
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
@@ -137,7 +136,6 @@ class Example(MITunaInterface):
        @param args The command line arguments
     """
     envmt = []
-
     return envmt
 
   def get_kwargs(self, gpu_idx, f_vals, args):
