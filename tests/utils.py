@@ -100,8 +100,8 @@ class GoFishArgs():
   reset_interval = None
   dynamic_solvers_only = False
   label = 'pytest'
-  docker_name = None
-  ticket = None
+  docker_name = 'miopentuna'
+  ticket = 'N/A'
   solver_id = None
 
 

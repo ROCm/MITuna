@@ -64,7 +64,8 @@ def add_job(w):
   machine = machine_lst[0]
 
   #update solvers
-  kwargs = get_worker_args(args, machine)
+  miopen = MIOpen()
+  kwargs = get_worker_args(args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
@@ -72,7 +73,6 @@ def add_job(w):
   args.update_applicability = True
   args.label = 'tuna_pytest_worker'
   args.session_id = w.session_id
-  miopen = MIOpen()
   worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()

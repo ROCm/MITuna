@@ -65,8 +65,7 @@ class Session(BASE, SessionMixin):
         .filter(sess_obj.rocm_v == entry.rocm_v)\
         .filter(sess_obj.reason == entry.reason)\
         .filter(sess_obj.ticket == entry.ticket)\
-        .filter(sess_obj.docker == entry.docker)\
-        .filter(sess_obj.solver_id == entry.solver_id)\
+        .filter(sess_obj.docker == entry.docker)
 
     return query
 
@@ -78,8 +77,5 @@ class Session(BASE, SessionMixin):
       self.miopen_v = args.miopen_v
     else:
       self.miopen_v = worker.get_miopen_v()
-
-    if args.solver_id:
-      self.solver_id = args.solver_id
 
     return self.insert_session()

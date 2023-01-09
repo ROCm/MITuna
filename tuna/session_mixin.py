@@ -68,6 +68,8 @@ class SessionMixin():
 
     if hasattr(args, 'ticket') and args.ticket:
       self.ticket = args.ticket
+    else:
+      self.ticket = 'N/A'
 
   def insert_session(self):
     """Insert new session obj and return its id"""
