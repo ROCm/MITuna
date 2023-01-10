@@ -98,18 +98,19 @@ def test_fin_builder():
   #get applicability
   dbt = add_cfgs()
   args.update_applicability = True
-  args.label = 'test_fin_builder'
+  args.label = 'tuna_pytest_fin_builder'
   worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
 
   #load jobs
   num_jobs = add_fin_find_compile_job(args.session_id, dbt)
+  print('num_jobs: {}'.format(num_jobs))
 
   #compile
   args.update_applicability = False
   args.fin_steps = ["miopen_find_compile"]
-  args.label = ''
+  args.label = 'tuna_pytest_fin_builder'
   worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
