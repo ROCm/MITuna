@@ -65,6 +65,7 @@ def add_job(w):
 
   #update solvers
   miopen = MIOpen()
+  miopen.args = args
   kwargs = get_worker_args(args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())

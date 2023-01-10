@@ -103,7 +103,8 @@ class GoFishArgs():
   docker_name = 'miopentuna'
   ticket = 'N/A'
   solver_id = None
-
+  find_mode = 1
+  blacklist = None
 
 class DummyArgs(object):
   """Dummy args object class to be used for testing"""
