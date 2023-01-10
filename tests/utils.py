@@ -106,6 +106,7 @@ class GoFishArgs():
   find_mode = 1
   blacklist = None
 
+
 class DummyArgs(object):
   """Dummy args object class to be used for testing"""
 
