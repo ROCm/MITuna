@@ -197,7 +197,9 @@ def test_worker():
       'end_jobs': e,
       'fin_steps': ['not_fin'],
       'config_type': ConfigType.convolution,
-      'session_id': session_id
+      'session_id': session_id,
+      'find_mode': 1,
+      'blacklist': None
   }
 
   #worker is an interface and has no sql tables, using fin
