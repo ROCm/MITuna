@@ -190,7 +190,7 @@ def test_worker():
       'envmt': ["MIOPEN_LOG_LEVEL=7"],
       'reset_interval': False,
       'app_test': False,
-      'label': '',
+      'label': 'tuna_pytest_worker',
       'use_tuner': False,
       'job_queue': Queue(),
       'queue_lock': Lock(),
