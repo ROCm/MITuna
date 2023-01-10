@@ -86,11 +86,12 @@ def test_fin_builder():
   args = GoFishArgs()
   machine_lst = load_machines(args)
   machine = machine_lst[0]
-
   args.session_id = add_test_session()
+  miopen = MIOpen()
+  miopen.args = args
 
   #update solvers
-  kwargs = get_worker_args(args, machine)
+  kwargs = get_worker_args(args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
@@ -98,7 +99,6 @@ def test_fin_builder():
   dbt = add_cfgs()
   args.update_applicability = True
   args.label = 'test_fin_builder'
-  miopen = MIOpen()
   worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
