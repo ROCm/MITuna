@@ -33,12 +33,12 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.utils.merge_db import parse_jobline, parse_text_fdb_name, parse_text_pdb_name, load_master_list
+from tuna.utils.merge_db import parse_jobline, parse_text_fdb_name, parse_text_pdb_name
 from tuna.utils.merge_db import best_solver, target_merge, no_job_merge, single_job_merge
 from tuna.utils.merge_db import multi_job_merge, update_master_list, write_merge_results
 from tuna.utils.merge_db import merge_text_file, merge_sqlite_pdb, merge_sqlite_bin_cache
 from tuna.utils.merge_db import merge_sqlite, get_file_list, get_sqlite_table
-from tuna.utils.merge_db import get_sqlite_row, get_sqlite_data
+from tuna.utils.merge_db import get_sqlite_row, get_sqlite_data, load_master_list
 from tuna.helper import prune_cfg_dims
 
 
@@ -48,7 +48,7 @@ def test_parse_jobline():
 
   key, vals = parse_jobline(data)
 
-  assert (key == '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F')
+  assert key == '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F'
   assert (vals == {
       'miopenConvolutionFwdAlgoImplicitGEMM':
           'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm,0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
@@ -119,17 +119,19 @@ def test_load_master_list():
 
   if master_list == {}:
     assert False
-  else:
-    assert True
 
   if master_list:
     assert (list(master_list.keys())[0] ==
-            '1-1-1-4x4-512-4-4-128-0x0-1x1-1x1-0-NCHW-FP32-B')
+            '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F')
     assert (list(master_list.values())[0] == {
-        'miopenConvolutionBwdDataAlgoWinograd':
-            'ConvBinWinogradRxSf2x3,0.06365,0,miopenConvolutionBwdDataAlgoWinograd,<unused>',
-        'miopenConvolutionBwdDataAlgoGEMM':
-            'GemmBwdRest,4.0393,32768,rocBlas,<unused>'
+        'miopenConvolutionFwdAlgoImplicitGEMM':
+            'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm,0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
+        'miopenConvolutionFwdAlgoWinograd':
+            'ConvBinWinogradRxSf2x3g1,0.03856,0,miopenConvolutionFwdAlgoWinograd,not used',
+        'miopenConvolutionFwdAlgoDirect':
+            'ConvOclDirectFwdGen,0.0536,0,miopenConvolutionFwdAlgoDirect,not used',
+        'miopenConvolutionFwdAlgoGEMM':
+            'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
     })
 
 
@@ -246,15 +248,127 @@ def test_target_merge():
 
   key = '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F'
   vals = {}
-  target_merge(master_list, key, vals, keep_keys)
-  assert (vals == {})
 
-  # inputs wth key= None,{},'' raise exception, Need to fix this by appropriate check
+  err_found = False
   try:
-    target_merge(master_list={}, key=None, vals={}, keep_keys=False)
-  except AttributeError as e:
-    assert False
+    target_merge(master_list, key, vals, keep_keys)
+  except ValueError:
+    err_found = True
+  assert (err_found)
 
+  # inputs wth key= None
+  err_found = False
+  key = None
+
+  vals = {
+      'miopenConvolutionFwdAlgoImplicitGEMM':
+          'ConvMlirIgemmFwdXdlops,0.03776,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
+  }
+
+  master_list = {
+      '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F': {
+          'miopenConvolutionFwdAlgoImplicitGEMM':
+              'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm,0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
+          'miopenConvolutionFwdAlgoWinograd':
+              'ConvBinWinogradRxSf2x3g1,0.03856,0,miopenConvolutionFwdAlgoWinograd,not used',
+          'miopenConvolutionFwdAlgoDirect':
+              'ConvOclDirectFwdGen,0.0536,0,miopenConvolutionFwdAlgoDirect,not used',
+          'miopenConvolutionFwdAlgoGEMM':
+              'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
+      }
+  }
+
+  try:
+    target_merge(master_list, key, vals, keep_keys=False)
+  except ValueError:
+    err_found = True
+  assert (err_found)
+
+  # key = ""
+  err_found = False
+  key = ""
+  vals = {
+      'miopenConvolutionFwdAlgoImplicitGEMM':
+          'ConvMlirIgemmFwdXdlops,0.03776,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
+  }
+
+  master_list = {
+      '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F': {
+          'miopenConvolutionFwdAlgoImplicitGEMM':
+              'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm,0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
+          'miopenConvolutionFwdAlgoWinograd':
+              'ConvBinWinogradRxSf2x3g1,0.03856,0,miopenConvolutionFwdAlgoWinograd,not used',
+          'miopenConvolutionFwdAlgoDirect':
+              'ConvOclDirectFwdGen,0.0536,0,miopenConvolutionFwdAlgoDirect,not used',
+          'miopenConvolutionFwdAlgoGEMM':
+              'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
+      }
+  }
+
+  try:
+    target_merge(master_list, key, vals, keep_keys=False)
+  except ValueError:
+    err_found = True
+  assert (err_found)
+
+  # key = " "
+  err_found = False
+  key = "  "
+  vals = {
+      'miopenConvolutionFwdAlgoImplicitGEMM':
+          'ConvMlirIgemmFwdXdlops,0.03776,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
+  }
+
+  master_list = {
+      '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F': {
+          'miopenConvolutionFwdAlgoImplicitGEMM':
+              'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm,0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
+          'miopenConvolutionFwdAlgoWinograd':
+              'ConvBinWinogradRxSf2x3g1,0.03856,0,miopenConvolutionFwdAlgoWinograd,not used',
+          'miopenConvolutionFwdAlgoDirect':
+              'ConvOclDirectFwdGen,0.0536,0,miopenConvolutionFwdAlgoDirect,not used',
+          'miopenConvolutionFwdAlgoGEMM':
+              'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
+      }
+  }
+
+  try:
+    target_merge(master_list, key, vals, keep_keys=False)
+  except ValueError:
+    err_found = True
+  assert (err_found)
+
+  # inputs wth key={}
+  err_found = False
+  key = {}
+
+  vals = {
+      'miopenConvolutionFwdAlgoImplicitGEMM':
+          'ConvMlirIgemmFwdXdlops,0.03776,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
+  }
+
+  master_list = {
+      '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F': {
+          'miopenConvolutionFwdAlgoImplicitGEMM':
+              'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm,0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
+          'miopenConvolutionFwdAlgoWinograd':
+              'ConvBinWinogradRxSf2x3g1,0.03856,0,miopenConvolutionFwdAlgoWinograd,not used',
+          'miopenConvolutionFwdAlgoDirect':
+              'ConvOclDirectFwdGen,0.0536,0,miopenConvolutionFwdAlgoDirect,not used',
+          'miopenConvolutionFwdAlgoGEMM':
+              'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
+      }
+  }
+
+  try:
+    target_merge(master_list, key, vals, keep_keys=False)
+  except ValueError:
+    err_found = True
+  assert (err_found)
+
+  # inputs wth master_list={}, error handling
+  err_found = True
+  master_list = {}
   keep_keys = False
   key = '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F'
 
@@ -263,11 +377,11 @@ def test_target_merge():
           'ConvMlirIgemmFwdXdlops,0.03776,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
   }
 
-  master_list = {}
   try:
     target_merge(master_list, key, vals, keep_keys)
-  except AttributeError as e:
-    assert False
+  except ValueError as err:
+    error_found = False
+  assert (err_found)
 
 
 def test_update_master_list():
@@ -404,13 +518,17 @@ def test_merge_text_file():
   master_file = "{0}/../utils/test_files/old_gfx90a68.HIP.fdb.txt".format(
       this_path)
 
+  err_found = False
+  target_file = " "
   try:
     result_file = merge_text_file(master_file,
                                   copy_only=False,
                                   keep_keys=False,
                                   target_file=None)
-  except TypeError:
-    assert False
+
+  except ValueError:
+    err_found = True
+  assert (err_found)
 
 
 def test_get_sqlite_table():
@@ -419,10 +537,7 @@ def test_get_sqlite_table():
   cnx_from = sqlite3.connect(local_path)
   perf_rows, perf_cols = get_sqlite_table(cnx_from, 'perf_db')
 
-  if not perf_rows and not perf_cols:
-    assert (False)
-  else:
-    assert (True)
+  assert perf_rows or perf_cols
 
 
 def test_get_sqlite_row():
@@ -438,24 +553,12 @@ def test_get_sqlite_row():
     cfg = dict(zip(cfg_cols, cfg_row))
     cfg.pop('id', None)
 
-  if not cfg_row and cfg_row:
-    assert (False)
-  else:
-    assert (True)
+  assert cfg_row and cfg_row
 
 
 def test_get_sqlite_data():
 
-  master_file = "{0}/../utils/test_files/old_gfx90a68.HIP.fdb.txt".format(
-      this_path)
-  target_file = "{0}/../utils/test_files/usr_gfx90a68.HIP.fdb.txt".format(
-      this_path)
-
-  db_name = os.path.basename(master_file)
-  arch_cu = db_name.split('.')[0]
-
-  local_path = [os.path.abspath(os.path.expanduser(target_file))]
-  final_file = f'{os.getcwd()}/{arch_cu}.db'
+  test_file = "{0}/../utils/test_files/test_gfx90678.db".format(this_path)
 
   cfg = {
       'layout': 'NCHW',
@@ -484,11 +587,8 @@ def test_get_sqlite_data():
       'group_count': 1
   }
 
-  cnx_to = sqlite3.connect(final_file)
+  cnx_to = sqlite3.connect(test_file)
 
   res, col = get_sqlite_data(cnx_to, 'config', prune_cfg_dims(cfg))
 
-  if not res:
-    assert (False)
-  else:
-    assert (True)
+  assert res
