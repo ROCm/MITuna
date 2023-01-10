@@ -24,8 +24,8 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Builder class implements the worker interface. The purpose of this class is to run fin
-jobs in compile mode"""
+"""Builder class implements the worker interface. The purpose of this class is to run the
+rocminfo command"""
 from time import sleep
 import random
 
@@ -33,7 +33,7 @@ from tuna.worker_interface import WorkerInterface
 
 
 class ExampleWorker(WorkerInterface):
-  """ The Builder class implementes the worker class. Its purpose is to compile jobs. It picks up
+  """ The Example class implementes the worker class. Its purpose is to run a command. It picks up
   new jobs and when completed, sets the state to compiled. """
 
   def close_job(self):
@@ -47,7 +47,6 @@ class ExampleWorker(WorkerInterface):
       sleep(random.randint(1, 10))
       return False
 
-    # JD: while fin can exec multiple jobs at a time, that makes error detection difficult
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('compiling')
     cmd_output = self.run_cmd()
@@ -64,7 +63,7 @@ class ExampleWorker(WorkerInterface):
     return True
 
   def run_cmd(self):
-    """Run a fin command after generating the JSON"""
+    """Run a command"""
     cmd = []
 
     env_str = " ".join(self.envmt)

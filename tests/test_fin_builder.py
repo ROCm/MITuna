@@ -88,7 +88,6 @@ def test_fin_builder():
   machine = machine_lst[0]
   args.label = 'tuna_pytest_fin_builder'
   args.session_id = add_test_session(label='tuna_pytest_fin_builder')
-  print(args.session_id)
   miopen = MIOpen()
   miopen.args = args
 
@@ -107,7 +106,6 @@ def test_fin_builder():
   #load jobs
   args.label = 'tuna_pytest_fin_builder'
   num_jobs = add_fin_find_compile_job(args.session_id, dbt)
-  print('num_jobs: {}'.format(num_jobs))
 
   #compile
   args.update_applicability = False

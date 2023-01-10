@@ -106,6 +106,18 @@ class GoFishArgs():
   find_mode = 1
   blacklist = None
 
+class ExampleArgs():
+  local_machine = True
+  remote_machine = False
+  session_id = None
+  arch = None
+  num_cu = None
+  machines = None
+  restart_machine = None
+  reset_interval = None
+  label = 'pytest_example'
+  docker_name = 'miopentuna'
+
 
 class DummyArgs(object):
   """Dummy args object class to be used for testing"""

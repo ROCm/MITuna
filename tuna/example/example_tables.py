@@ -74,7 +74,7 @@ class Job(BASE):
 
 
 def get_tables():
-  """Returns a list of all MIOpen Tuna DB tables"""
+  """Returns a list of all Example lib DB tables"""
   tables = []
   tables.append(SessionExample())
   tables.append(Machine(local_machine=True))

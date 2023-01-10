@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""MIOpen class that holds MIOpen specifig  tuning functionality"""
+"""Example library, integrated with MITuna, runs 'rocminfo' cmd"""
 
 import sys
 
@@ -39,7 +39,7 @@ from tuna.example.session import SessionExample
 
 
 class Example(MITunaInterface):
-  """Class to support MIOpen specific tuning functionality"""
+  """Class to support an example of 'romcinfo' run"""
 
   def __init__(self):
     super().__init__(library=Library.EXAMPLE)
