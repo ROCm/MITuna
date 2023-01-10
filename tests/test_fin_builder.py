@@ -49,7 +49,7 @@ from tuna.utils.db_utility import get_solver_ids
 def add_cfgs():
   #import configs
   args = CfgImportArgs()
-  args.tag = 'test_fin_builder'
+  args.tag = 'tuna_pytest_fin_builder'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
@@ -62,7 +62,7 @@ def add_fin_find_compile_job(session_id, dbt):
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
-  args.tag = 'test_fin_builder'
+  args.tag = 'tuna_pytest_fin_builder'
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
   args.session_id = session_id
 
@@ -86,7 +86,9 @@ def test_fin_builder():
   args = GoFishArgs()
   machine_lst = load_machines(args)
   machine = machine_lst[0]
-  args.session_id = add_test_session()
+  args.label = 'tuna_pytest_fin_builder'
+  args.session_id = add_test_session(label='tuna_pytest_fin_builder')
+  print(args.session_id)
   miopen = MIOpen()
   miopen.args = args
 
@@ -98,12 +100,12 @@ def test_fin_builder():
   #get applicability
   dbt = add_cfgs()
   args.update_applicability = True
-  args.label = 'tuna_pytest_fin_builder'
   worker_lst = miopen.compose_worker_list(machine_lst, args)
   for worker in worker_lst:
     worker.join()
 
   #load jobs
+  args.label = 'tuna_pytest_fin_builder'
   num_jobs = add_fin_find_compile_job(args.session_id, dbt)
   print('num_jobs: {}'.format(num_jobs))
 

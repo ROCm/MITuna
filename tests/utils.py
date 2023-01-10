@@ -124,8 +124,10 @@ def get_worker_args(args, machine, miopen):
   return kwargs
 
 
-def add_test_session(arch='gfx908', num_cu=120):
+def add_test_session(arch='gfx908', num_cu=120, label=None):
   args = GoFishArgs()
+  if label:
+    args.label = label
   machine = Machine(local_machine=True)
   machine.arch = arch
   machine.num_cu = num_cu
