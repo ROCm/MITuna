@@ -50,7 +50,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     libncurses5-dev \
     libnuma-dev \
     libpthread-stubs0-dev \
-    llvm-amdgpu \
+    llvm \
     miopengemm \
     pkg-config \
     python3 \
