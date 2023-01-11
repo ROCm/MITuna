@@ -27,6 +27,7 @@
 """Utility functions to support fin commands
 """
 
+from datetime import datetime
 from tuna.metadata import NCHW_LAYOUT, NHWC_LAYOUT, NCDHW_LAYOUT, NDHWC_LAYOUT
 from tuna.metadata import PREC_TO_CMD, INVERS_DIR_MAP
 from tuna.utils.logger import setup_logger
@@ -105,15 +106,19 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
   cmd = None
 
   if 'input_t' in config.__dict__.keys():
-    input_t_dict = {'input_t': config.input_t.to_dict()}
+    input_t_dict = {'input_t': vars(config.input_t)}
     cmd = PREC_TO_CMD[config_type][input_t_dict['input_t']['data_type']]
     in_layout = input_t_dict['input_t']['layout']
   if 'weight_t' in config.__dict__.keys():
-    weight_t_dict = {'weight_t': config.weight_t.to_dict()}
+    weight_t_dict = {'weight_t': vars(config.weight_t)}
     cmd = PREC_TO_CMD[config_type][weight_t_dict['weight_t']['data_type']]
     wei_layout = weight_t_dict['weight_t']['layout']
 
-  return_config = config.to_dict()
+  return_config = vars(config) #use vars to return SimpleNamespace as a dict
+  for key, val in return_config.items():
+    if isinstance(val, datetime):
+      return_config[key] = str(val)
+
   if in_layout and wei_layout:
     if in_layout != wei_layout != return_config['out_layout']:
       LOGGER.error('Layouts must match. in_layout = %s, wei_layout=%s',

@@ -28,11 +28,14 @@
 
 import enum
 import random
+import types
 from time import sleep
+from datetime import datetime
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.dbBase.base_class import BASE
 from tuna.miopen.miopen_tables import Solver
 from tuna.utils.logger import setup_logger
 from tuna.metadata import NUM_SQL_RETRIES
@@ -89,6 +92,51 @@ def session_retry(session, callback, actuator, logger=LOGGER):
   logger.error('All retries have failed.')
   return False
 
+
+def gen_update_query(obj, attribs, tablename):
+  """Create a query string updating all attributes for the input object"""
+  set_arr = []
+  for attr in attribs:
+    val = getattr(obj, attr)
+    if val is None:
+      val='NULL'
+    elif isinstance(val, str) or isinstance(val, datetime):
+      val=f"'{val}'"
+    set_arr.append(f"{attr}={val}" )
+
+  set_str = ','.join(set_arr)
+  query = f"update {tablename} set {set_str}"\
+          f" where id={obj.id};"
+  return query
+
+def gen_select_objs(session, attribs, tablename, cond_str):
+  """create a select query and generate name space objects for the results"""
+  attr_str = ','.join(attribs)
+  query = f"select {attr_str} from {tablename}"\
+          f" {cond_str};"
+  #LOGGER.info('Query Select: %s', query)
+  ret = session.execute(query)
+  entries = []
+  for row in ret:
+    #LOGGER.info('select_row: %s', row)
+    entry = types.SimpleNamespace()
+    for i, col in enumerate(attribs):
+      setattr(entry, col, row[i])
+    entries.append(entry)
+  return entries
+
+def has_attr_set(obj, attribs):
+  """test if a namespace as the supplied attributes"""
+  for attr in attribs:
+    if not hasattr(obj, attr):
+      return False
+  return True
+
+def get_class_by_tablename(tablename):
+  """use tablename to find class"""
+  for c in BASE._decl_class_registry.values():
+    if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
+      return c
 
 class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?
   """@alex defines the types of databases produced in tuning sessions?"""

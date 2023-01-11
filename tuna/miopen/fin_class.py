@@ -39,6 +39,7 @@ except ImportError:
   import Queue as queue
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
+from sqlalchemy.inspection import inspect
 
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
@@ -51,6 +52,7 @@ from tuna.config_type import ConfigType
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.utility import split_packets
+from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename
 
 MAX_JOB_RETRIES = 10
 
@@ -91,6 +93,15 @@ class FinClass(WorkerInterface):
     #call to set_db_tables in super must come after config_type is set
     super().__init__(**kwargs)
 
+    self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
+
+    # dict of relationship_column : dict{local_key, remote_table_name, foreign_key, [remote_attr}
+    self.cfg_rel = {key: {'key':list(val.local_columns)[0].name, 'ftble':str(list(val.remote_side)[0]).split('.')[0], 'fkey':str(list(val.remote_side)[0]).split('.')[1]} for key,val in inspect(self.dbt.config_table).relationships.items()}
+    for key,val in self.cfg_rel.items():
+      rel_attr = [column.name for column in inspect(get_class_by_tablename(val['ftble'])).c]
+      val['fattr'] = rel_attr
+
+
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
@@ -111,23 +122,35 @@ class FinClass(WorkerInterface):
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 
-  def base_job_query(self, session):
-    """select tables for job query"""
-    query = session.query(self.dbt.job_table, self.dbt.config_table)
-    return query
-
-  def compose_work_query(self, query):
+  def compose_work_objs(self, session, conds):
     """query for fin command and config"""
+    ret=[]
     if self.fin_steps:
-      query = query.filter(
-          self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
+      conds.append(f"fin_step like '%{self.fin_steps[0]}%'")
     else:
-      query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
+      conds.append("fin_step='not_fin'")
 
-    query = query.filter(self.dbt.config_table.valid == 1)\
-                 .filter(self.dbt.job_table.config == self.dbt.config_table.id)
+    job_entries = super().compose_work_objs(session, conds)
 
-    return query
+    if job_entries:
+      id_str = ','.join([str(job.config) for job in job_entries])
+      cfg_cond_str = f"where valid=1 and id in ({id_str})"
+      cfg_entries = gen_select_objs(session, self.cfg_attr, self.dbt.config_table.__tablename__, cfg_cond_str)
+
+      #attach tensor relationship information to config entries
+      for cfg in cfg_entries:
+        for key, val in self.cfg_rel.items():
+          rel_val = getattr(cfg, val['key'])
+          rel_cond_str = f"where {val['fkey']}={rel_val}"
+          setattr(cfg, key, gen_select_objs(session, val['fattr'], val['ftble'], rel_cond_str)[0])
+
+      cfg_map = {cfg.id: cfg for cfg in cfg_entries}
+
+      for job in job_entries:
+        ret.append([job, cfg_map[job.config]])
+
+    return ret
+
 
   #pylint: disable=R0801
   def check_jobs_found(self, job_rows, find_state, imply_end):
