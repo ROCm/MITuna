@@ -106,17 +106,20 @@ class GoFishArgs():
   find_mode = 1
   blacklist = None
 
+
 class ExampleArgs():
+  arch = 'gfx908'
+  num_cu = 120
   local_machine = True
   remote_machine = False
   session_id = None
-  arch = None
-  num_cu = None
   machines = None
   restart_machine = None
   reset_interval = None
   label = 'pytest_example'
   docker_name = 'miopentuna'
+  init_session = True
+  ticket = 'N/A'
 
 
 class DummyArgs(object):
