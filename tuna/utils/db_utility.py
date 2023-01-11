@@ -107,6 +107,29 @@ def gen_update_query(obj, attribs, tablename):
   set_str = ','.join(set_arr)
   query = f"update {tablename} set {set_str}"\
           f" where id={obj.id};"
+  LOGGER.info('Query Update: %s', query)
+  return query
+
+def gen_insert_query(obj, attribs, tablename):
+  """create a select query and generate name space objects for the results"""
+  attr_list = [attr for attr in attribs]
+  attr_list.remove('id')
+  attr_str = ','.join(attr_list)
+  val_list = []
+  for attr in attr_list:
+    val = getattr(obj, attr)
+    if val is None:
+      val='NULL'
+    elif isinstance(val, str) or isinstance(val, datetime):
+      val=f"'{val}'"
+    else:
+      val=str(val)
+    val_list.append(val)
+
+  val_str = ','.join(val_list)
+  query = f"insert into {tablename}({attr_str})"\
+          f" select {val_str};"
+  LOGGER.info('Query Insert: %s', query)
   return query
 
 def gen_select_objs(session, attribs, tablename, cond_str):
@@ -114,16 +137,17 @@ def gen_select_objs(session, attribs, tablename, cond_str):
   attr_str = ','.join(attribs)
   query = f"select {attr_str} from {tablename}"\
           f" {cond_str};"
-  #LOGGER.info('Query Select: %s', query)
+  LOGGER.info('Query Select: %s', query)
   ret = session.execute(query)
   entries = []
   for row in ret:
-    #LOGGER.info('select_row: %s', row)
+    LOGGER.info('select_row: %s', row)
     entry = types.SimpleNamespace()
     for i, col in enumerate(attribs):
       setattr(entry, col, row[i])
     entries.append(entry)
   return entries
+
 
 def has_attr_set(obj, attribs):
   """test if a namespace as the supplied attributes"""

@@ -31,6 +31,7 @@ import os
 import tempfile
 import functools
 import random
+import types
 from time import sleep
 import paramiko
 try:
@@ -52,7 +53,7 @@ from tuna.config_type import ConfigType
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.utility import split_packets
-from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename
+from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename, gen_insert_query, gen_update_query, has_attr_set
 
 MAX_JOB_RETRIES = 10
 
@@ -100,6 +101,10 @@ class FinClass(WorkerInterface):
     for key,val in self.cfg_rel.items():
       rel_attr = [column.name for column in inspect(get_class_by_tablename(val['ftble'])).c]
       val['fattr'] = rel_attr
+
+    self.fdb_attr = [column.name for column in inspect(self.dbt.find_db_table).c]
+    self.fdb_attr.remove("insert_ts")
+    self.fdb_attr.remove("update_ts")
 
 
   def chk_abort_file(self):
@@ -573,15 +578,30 @@ class FinClass(WorkerInterface):
 
   def get_fdb_entry(self, session, solver):
     """ Get FindDb entry from db """
-    fdb_entry = self.dbt.find_db_table()
-    fdb_entry.config = self.config.id
-    fdb_entry.solver = solver
-    fdb_entry.session = self.dbt.session.id
-    fdb_entry.opencl = False
-    fdb_entry.logger = self.logger
-    fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
-                                    self.dbt.session.id)
-    obj = fdb_query.first()
+    obj = None
+    fdb_entry = None
+
+    conds = [f"session={self.dbt.session.id}",
+             "valid=1",
+             f"config={self.config.id}",
+             f"solver={solver}",
+             "opencl=0"]
+    cond_str = f"where {' AND '.join(conds)}"
+    entries = gen_select_objs(session, self.fdb_attr, self.dbt.find_db_table.__tablename__, cond_str)
+
+    if entries:
+      assert len(entries) == 1
+      obj = entries[0]
+    else:
+      fdb_entry = types.SimpleNamespace()
+      for attr in self.fdb_attr:
+        setattr(fdb_entry, attr, None)
+      setattr(fdb_entry, 'session', self.dbt.session.id)
+      setattr(fdb_entry, 'config', self.config.id)
+      setattr(fdb_entry, 'solver', solver)
+      setattr(fdb_entry, 'opencl', False)
+      setattr(fdb_entry, 'logger', self.logger)
+
     return obj, fdb_entry
 
   def __update_fdb_entry(self, session, solver):
@@ -651,6 +671,10 @@ class FinClass(WorkerInterface):
         if fdb_obj[check_str]:
           #returned entry is added to the table
           fdb_entry = self.__compose_fdb_entry(session, fin_json, fdb_obj)
+          if not self.pending:
+            query = gen_update_query(fdb_entry, self.fdb_attr, self.dbt.find_db_table.__tablename__)
+            session.execute(query)
+
           if fdb_obj['reason'] == 'Success':
             self.__compose_kernel_entry(fdb_obj, fdb_entry)
             self.logger.info('Updating find Db(Build) for job_id=%s',
@@ -697,8 +721,15 @@ class FinClass(WorkerInterface):
   def __add_sql_objs(self, session, obj_list):
     """add sql objects to the table"""
     self.logger.info("adding pending #objects: %s", len(obj_list))
-    for sql_obj in obj_list:
-      session.add(sql_obj)
+    for obj in obj_list:
+      if isinstance(obj, types.SimpleNamespace):
+        if has_attr_set(obj, self.fdb_attr):
+          query = gen_insert_query(obj, self.fdb_attr, self.dbt.find_db_table.__tablename__)
+          session.execute(query)
+        else:
+          return False
+      else:
+        session.add(obj)
     session.commit()
     return True
 

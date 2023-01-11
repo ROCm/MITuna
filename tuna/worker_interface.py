@@ -100,6 +100,8 @@ class WorkerInterface(Process):
     self.set_db_tables()
 
     self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+    self.job_attr.remove("insert_ts")
+    self.job_attr.remove("update_ts")
 
     #add cache directories
     self.envmt.append(
@@ -110,7 +112,6 @@ class WorkerInterface(Process):
 
     self.hostname = self.machine.hostname
     self.job = types.SimpleNamespace()
-    self.config = None
     self.claim_num = self.num_procs.value
     self.last_reset = datetime.now()
 
