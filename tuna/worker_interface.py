@@ -38,7 +38,7 @@ import random
 import string
 import types
 from time import sleep
-from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
+from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
@@ -99,9 +99,13 @@ class WorkerInterface(Process):
     #initialize tables
     self.set_db_tables()
 
-    self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
-    self.job_attr.remove("insert_ts")
-    self.job_attr.remove("update_ts")
+    try:
+      self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+      self.job_attr.remove("insert_ts")
+      self.job_attr.remove("update_ts")
+    except NoInspectionAvailable:
+      #pass here for init_session
+      pass
 
     #add cache directories
     self.envmt.append(
