@@ -56,7 +56,7 @@ from tuna.utils.utility import split_packets
 from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename, gen_insert_query, gen_update_query, has_attr_set
 
 MAX_JOB_RETRIES = 10
-MAX_COMMIT_SIZE = 10000
+MAX_COMMIT_SIZE = 1000
 
 
 class FinClass(WorkerInterface):
