@@ -58,6 +58,13 @@ class Example(MITunaInterface):
                         action='store_true',
                         dest='init_session',
                         help='Set up a new tuning session.')
+    parser.add_argument(
+        '-e',
+        '--execute',
+        dest='execute',
+        action='store_true',
+        help='Run jobs from the job tables based on arch, num_cu and session_id'
+    )
 
     clean_args('EXAMPLE', 'example')
     args = parser.parse_args()
@@ -79,6 +86,7 @@ class Example(MITunaInterface):
     """
 
     kwargs = self.get_kwargs(gpu_idx, f_vals, args)
+    print(kwargs)
     worker = ExampleWorker(**kwargs)
     if args.init_session:
       SessionExample().add_new_session(args, worker)

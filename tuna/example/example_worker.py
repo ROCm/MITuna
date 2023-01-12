@@ -30,36 +30,50 @@ from time import sleep
 import random
 
 from tuna.worker_interface import WorkerInterface
+from tuna.example.tables import ExampleDBTables
 
 
 class ExampleWorker(WorkerInterface):
   """ The Example class implementes the worker class. Its purpose is to run a command. It picks up
-  new jobs and when completed, sets the state to compiled. """
+  new jobs and when completed, sets the state to completed. """
+
+  def __init__(self, **kwargs):
+    """Constructor"""
+    super().__init__()
+    allowed_keys = set(['session_id'])
+    self.session_id = None
+    self.__dict__.update((key, None) for key in allowed_keys)
+
+    #initialize tables
+    self.set_db_tables()
+
+  def set_db_tables(self):
+    """Initialize tables"""
+    self.dbt = ExampleDBTables(session_id=self.session_id)
 
   def close_job(self):
     """mark a job complete"""
     self.set_job_state('compiled')
 
   def step(self):
-    """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+    """Main functionality of the worker class. It picks up jobs in new state and executes them"""
 
-    if not self.get_job("new", "compile_start", True):
+    if not self.get_job("new", "running", True):
       sleep(random.randint(1, 10))
       return False
 
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
-    self.set_job_state('compiling')
+    self.set_job_state('running')
     cmd_output = self.run_cmd()
 
     failed_job = True
-    result_str = ''
     if cmd_output:
       failed_job = False
 
     if failed_job:
-      self.set_job_state('errored', result=result_str)
+      self.set_job_state('errored', result='')
     else:
-      self.set_job_state('compiled', result=result_str)
+      self.set_job_state('completed', result=cmd_output)
     return True
 
   def run_cmd(self):

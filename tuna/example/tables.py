@@ -24,27 +24,27 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates the DB representation for a library"""
+"""Module that encapsulates the DB representation"""
+from tuna.tables_interface import DBTablesInterface
+from tuna.example.example_tables import Job
+from tuna.example.session import SessionExample
 
 
 #pylint: disable=too-few-public-methods
-class DBTablesInterface():
-  """Represents db tables interface class"""
+class ExampleDBTables(DBTablesInterface):
+  """Represents db tables for example lib"""
 
   def __init__(self, **kwargs):
     """Constructor"""
     super().__init__()
-    allowed_keys = set(['session_id'])
-    self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
     self.job_table = None
-    self.session_id = None
-    self.session = None
+    self.session_table = None
 
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+    self.set_tables()
 
   def set_tables(self):
     """Set appropriate tables based on requirements"""
-    return True
+    self.job_table = Job
+    self.session_table = SessionExample
