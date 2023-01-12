@@ -84,6 +84,13 @@ class FinClass(WorkerInterface):
 
     self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
 
+    #add cache directories
+    self.envmt.append(
+        f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
+    )
+    self.envmt.append(
+        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
+
     #call to set_db_tables in super must come after config_type is set
     super().__init__(**kwargs)
 

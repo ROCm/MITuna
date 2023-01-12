@@ -53,11 +53,15 @@ def test_example():
   assert (example.add_tables())
 
   res = load_machines(args)
+  #res = example.compose_worker_list(res, args)
+  #with DbSession() as session:
+  #  query = session.query(SessionExample)
+  #  res = query.all()
+  #assert len(res) is not None
+  args.init_session = False
+  example.session_id = 1
+  args.execute = True
   res = example.compose_worker_list(res, args)
-  with DbSession() as session:
-    query = session.query(SessionExample)
-    res = query.all()
-  assert len(res) is not None
 
   return True
 

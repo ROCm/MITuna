@@ -39,7 +39,7 @@ class ExampleWorker(WorkerInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
-    super().__init__()
+    super().__init__(**kwargs)
     allowed_keys = set(['session_id'])
     self.session_id = None
     self.__dict__.update((key, None) for key in allowed_keys)

@@ -153,5 +153,7 @@ class Example(MITunaInterface):
       @param args The command line arguments
     """
     kwargs = super().get_kwargs(gpu_idx, f_vals, args)
+    print('hostname: ')
+    print(kwargs['machine'].hostname)
 
     return kwargs
