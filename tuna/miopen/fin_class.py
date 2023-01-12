@@ -56,6 +56,7 @@ from tuna.utils.utility import split_packets
 from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename, gen_insert_query, gen_update_query, has_attr_set
 
 MAX_JOB_RETRIES = 10
+MAX_COMMIT_SIZE = 10000
 
 
 class FinClass(WorkerInterface):
@@ -735,30 +736,33 @@ class FinClass(WorkerInterface):
 
   def __result_queue_commit(self, session, close_job):
     """commit the result queue and set mark job complete"""
-    obj_list = []
-    id_list = []
-    job_list = []
     while not self.result_queue.empty():
-      job, sql_obj = self.result_queue.get(True, 1)
-      obj_list.append(sql_obj)
-      if job.id not in id_list:#for_commit:
-        id_list.append(job.id)
-        job_list.append(job)
+      obj_list = []
+      id_list = []
+      job_list = []
+      grabs = 0
+      while not self.result_queue.empty() and grabs < MAX_COMMIT_SIZE:
+        grabs += 1
+        job, sql_obj = self.result_queue.get(True, 1)
+        obj_list.append(sql_obj)
+        if job.id not in id_list:#for_commit:
+          id_list.append(job.id)
+          job_list.append(job)
 
-    self.logger.info("commit pending jobs %s, #objects: %s", id_list,
-                      len(obj_list))
-    status = session_retry(session, self.__add_sql_objs,
-                            lambda x: x(session, obj_list), self.logger)
-    if not status:
-      self.logger.error("Failed commit pending job(s) %s", id_list)
-      return False
+      self.logger.info("commit pending jobs %s, #objects: %s", id_list,
+                        len(obj_list))
+      status = session_retry(session, self.__add_sql_objs,
+                              lambda x: x(session, obj_list), self.logger)
+      if not status:
+        self.logger.error("Failed commit pending job(s) %s", id_list)
+        return False
 
-    this_job = self.job
-    for job in job_list:
-      self.job = job
-      #set job states after successful commit
-      close_job()
-    self.job = this_job
+      this_job = self.job
+      for job in job_list:
+        self.job = job
+        #set job states after successful commit
+        close_job()
+      self.job = this_job
 
     return True
 
