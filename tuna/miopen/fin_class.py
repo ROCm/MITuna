@@ -637,7 +637,7 @@ class FinClass(WorkerInterface):
 
     return fdb_entry
 
-  def __compose_kernel_entry(self, fdb_obj, fdb_entry):
+  def __compose_kernel_entry(self, session, fdb_obj, fdb_entry):
     """Compose a new Kernel Cache entry from fin input"""
     # Now we have the ID, lets add the binary cache objects
     for kern_obj in fdb_obj['kernel_objects']:
@@ -645,7 +645,8 @@ class FinClass(WorkerInterface):
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.kernel_group = fdb_entry.kernel_group
       # Bundle Insert for later
-      self.pending.append((self.job, kernel_obj))
+      #self.pending.append((self.job, kernel_obj))
+      session.add(kernel_obj)
     return True
 
   def populate_kernels(self, kern_obj, kernel_obj):
@@ -671,13 +672,19 @@ class FinClass(WorkerInterface):
 
         if fdb_obj[check_str]:
           #returned entry is added to the table
-          fdb_entry = self.__compose_fdb_entry(session, fin_json, fdb_obj)
+          fdb_entry = session_retry(
+                        session, self.__compose_fdb_entry,
+                        lambda x: x(session, fin_json, fdb_obj), self.logger)
+          assert fdb_entry
           if not self.pending:
             query = gen_update_query(fdb_entry, self.fdb_attr, self.dbt.find_db_table.__tablename__)
             session.execute(query)
 
           if fdb_obj['reason'] == 'Success':
-            self.__compose_kernel_entry(fdb_obj, fdb_entry)
+            status = session.retry(
+                        session, self.__compose_kernel_entry,
+                        lambda x: x(session, fdb_obj, fdb_entry), self.logger)
+            assert status
             self.logger.info('Updating find Db(Build) for job_id=%s',
                              self.job.id)
           else:
@@ -703,11 +710,7 @@ class FinClass(WorkerInterface):
                             result_str='miopen_find_compile_result',
                             check_str='find_compiled'):
     """initiate find db update"""
-
-    callback = self.__update_fdb_w_kernels
-    status = session_retry(
-        session, callback,
-        lambda x: x(session, fin_json, result_str, check_str), self.logger)
+    status = self.__update_fdb_w_kernels(session, fin_json, result_str, check_str)
 
     if not status:
       self.logger.warning('Fin: Unable to update Database')
@@ -721,7 +724,6 @@ class FinClass(WorkerInterface):
 
   def __add_sql_objs(self, session, obj_list):
     """add sql objects to the table"""
-    self.logger.info("adding pending #objects: %s", len(obj_list))
     for obj in obj_list:
       if isinstance(obj, types.SimpleNamespace):
         if has_attr_set(obj, self.fdb_attr):
