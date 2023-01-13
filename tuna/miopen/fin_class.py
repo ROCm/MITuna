@@ -672,19 +672,13 @@ class FinClass(WorkerInterface):
 
         if fdb_obj[check_str]:
           #returned entry is added to the table
-          fdb_entry = session_retry(
-                        session, self.__compose_fdb_entry,
-                        lambda x: x(session, fin_json, fdb_obj), self.logger)
-          assert fdb_entry
+          fdb_entry = self.__compose_fdb_entry(session, fin_json, fdb_obj)
           if not self.pending:
             query = gen_update_query(fdb_entry, self.fdb_attr, self.dbt.find_db_table.__tablename__)
             session.execute(query)
 
           if fdb_obj['reason'] == 'Success':
-            status = session.retry(
-                        session, self.__compose_kernel_entry,
-                        lambda x: x(session, fdb_obj, fdb_entry), self.logger)
-            assert status
+            self.__compose_kernel_entry(session, fdb_obj, fdb_entry)
             self.logger.info('Updating find Db(Build) for job_id=%s',
                              self.job.id)
           else:
@@ -710,7 +704,11 @@ class FinClass(WorkerInterface):
                             result_str='miopen_find_compile_result',
                             check_str='find_compiled'):
     """initiate find db update"""
-    status = self.__update_fdb_w_kernels(session, fin_json, result_str, check_str)
+
+    callback = self.__update_fdb_w_kernels
+    status = session_retry(
+        session, callback,
+        lambda x: x(session, fin_json, result_str, check_str), self.logger)
 
     if not status:
       self.logger.warning('Fin: Unable to update Database')
