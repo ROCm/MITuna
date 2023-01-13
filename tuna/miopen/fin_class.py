@@ -738,30 +738,25 @@ class FinClass(WorkerInterface):
     """commit the result queue and set mark job complete"""
     while not self.result_queue.empty():
       obj_list = []
-      id_list = []
-      job_list = []
-      grabs = 0
-      while not self.result_queue.empty() and grabs < MAX_COMMIT_SIZE:
-        grabs += 1
-        job, sql_obj = self.result_queue.get(True, 1)
-        obj_list.append(sql_obj)
-        if job.id not in id_list:#for_commit:
-          id_list.append(job.id)
-          job_list.append(job)
+      res_list = self.result_queue.get(True, 1)
+      res_job = res_list[0][0]
+      for job, obj in res_list:
+        obj_list.append(obj)
 
-      self.logger.info("commit pending jobs %s, #objects: %s", id_list,
+      self.logger.info("commit pending job %s, #objects: %s", res_job.id,
                         len(obj_list))
       status = session_retry(session, self.__add_sql_objs,
                               lambda x: x(session, obj_list), self.logger)
       if not status:
-        self.logger.error("Failed commit pending job(s) %s", id_list)
+        self.logger.error("Failed commit pending job %s", res_job.id)
         return False
 
       this_job = self.job
-      for job in job_list:
-        self.job = job
-        #set job states after successful commit
-        close_job()
+
+      #set job states after successful commit
+      self.job = res_job
+      close_job()
+
       self.job = this_job
 
     return True

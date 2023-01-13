@@ -306,8 +306,7 @@ class FinEvaluator(FinClass):
                            result=result_str)
     elif self.pending:
       self.set_job_state('evaluated_pend', result=result_str)
-      for item in self.pending:
-        self.result_queue.put(item)
+      self.result_queue.put(self.pending)
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()

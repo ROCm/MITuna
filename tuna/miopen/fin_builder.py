@@ -139,8 +139,7 @@ class FinBuilder(FinClass):
       self.set_job_state('errored', result=result_str)
     elif self.pending:
       self.set_job_state('compiled_pend', result=result_str)
-      for item in self.pending:
-        self.result_queue.put(item)
+      self.result_queue.put(self.pending)
     else:
       self.set_job_state('compiled', result=result_str)
     return True
