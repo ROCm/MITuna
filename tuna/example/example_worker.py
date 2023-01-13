@@ -39,13 +39,8 @@ class ExampleWorker(WorkerInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
+    self.dbt = None
     super().__init__(**kwargs)
-    allowed_keys = set(['session_id'])
-    self.session_id = None
-    self.__dict__.update((key, None) for key in allowed_keys)
-
-    #initialize tables
-    self.set_db_tables()
 
   def set_db_tables(self):
     """Initialize tables"""
@@ -58,19 +53,25 @@ class ExampleWorker(WorkerInterface):
   def step(self):
     """Main functionality of the worker class. It picks up jobs in new state and executes them"""
 
-    if not self.get_job("new", "running", True):
+    if not self.get_job("new", "running", False):
       sleep(random.randint(1, 10))
       return False
 
+    failed_job = False
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('running')
-    cmd_output = self.run_cmd()
+    cmd_output = None
+    try:
+      cmd_output = self.run_cmd()
+    except ValueError as verr:
+      self.logger.info(verr)
+      failed_job = True
 
-    failed_job = True
     if cmd_output:
       failed_job = False
 
     if failed_job:
+      print('Failed job')
       self.set_job_state('errored', result='')
     else:
       self.set_job_state('completed', result=cmd_output)

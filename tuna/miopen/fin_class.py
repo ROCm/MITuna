@@ -91,7 +91,6 @@ class FinClass(WorkerInterface):
     self.envmt.append(
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
 
-    #call to set_db_tables in super must come after config_type is set
     super().__init__(**kwargs)
 
   def chk_abort_file(self):

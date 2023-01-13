@@ -45,6 +45,7 @@ from utils import ExampleArgs
 from tuna.utils.miopen_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.example.session import SessionExample
+from tuna.example.example_tables import Job
 
 
 def test_example():
@@ -53,15 +54,20 @@ def test_example():
   assert (example.add_tables())
 
   res = load_machines(args)
-  #res = example.compose_worker_list(res, args)
-  #with DbSession() as session:
-  #  query = session.query(SessionExample)
-  #  res = query.all()
-  #assert len(res) is not None
+  res = example.compose_worker_list(res, args)
+  with DbSession() as session:
+    query = session.query(SessionExample)
+    res = query.all()
+  assert len(res) is not None
   args.init_session = False
   example.session_id = 1
   args.execute = True
   res = example.compose_worker_list(res, args)
+  with DbSession() as session:
+    query = session.query(Job).filter(Job.session_id==1)\
+                              .filter(Job.state=='completed')
+    res = query.all()
+  assert len(res) is not None
 
   return True
 

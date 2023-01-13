@@ -36,15 +36,15 @@ class ExampleDBTables(DBTablesInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
-    super().__init__()
+    super().__init__(**kwargs)
 
     #for pylint
     self.job_table = None
-    self.session_table = None
+    self.session_table = SessionExample
 
     self.set_tables()
 
-  def set_tables(self):
+  def set_tables(self, sess_class=SessionExample):
     """Set appropriate tables based on requirements"""
+    super().set_tables(sess_class)
     self.job_table = Job
-    self.session_table = SessionExample

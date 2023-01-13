@@ -86,7 +86,6 @@ class Example(MITunaInterface):
     """
 
     kwargs = self.get_kwargs(gpu_idx, f_vals, args)
-    print(kwargs)
     worker = ExampleWorker(**kwargs)
     if args.init_session:
       SessionExample().add_new_session(args, worker)

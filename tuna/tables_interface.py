@@ -26,6 +26,8 @@
 ###############################################################################
 """Module that encapsulates the DB representation for a library"""
 
+from tuna.dbBase.sql_alchemy import DbSession
+
 
 #pylint: disable=too-few-public-methods
 class DBTablesInterface():
@@ -45,6 +47,11 @@ class DBTablesInterface():
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-  def set_tables(self):
+  def set_tables(self, sess_class):
     """Set appropriate tables based on requirements"""
+    if self.session_id is not None:
+      with DbSession() as session:
+        query = session.query(sess_class).filter(
+            sess_class.id == self.session_id)
+        self.session = query.one()
     return True
