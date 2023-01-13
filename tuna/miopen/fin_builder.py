@@ -36,6 +36,7 @@ from tuna.miopen.fin_class import FinClass
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.fin_utils import fin_job
 from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
+from tuna.utils.db_utility import session_retry
 
 
 class FinBuilder(FinClass):
@@ -78,7 +79,8 @@ class FinBuilder(FinClass):
         slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
         status.append(slv_stat)
         if pdb_obj['perf_compiled']:
-          self.compose_job_cache_entrys(session, pdb_obj)
+          session_retry(session, self.compose_job_cache_entrys,
+                        lambda x: x(session, pdb_obj), self.logger)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
       status = [{
