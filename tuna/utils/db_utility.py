@@ -100,8 +100,11 @@ def gen_update_query(obj, attribs, tablename):
     val = getattr(obj, attr)
     if val is None:
       val='NULL'
-    elif isinstance(val, str) or isinstance(val, datetime) or isinstance(val, bytes):
-      val=f"\"{val}\""
+    elif isinstance(val, str) or isinstance(val, datetime):
+      val=f"'{val}'"
+    elif isinstance(val, bytes):
+      val=val.decode('utf-8')
+      val=f"'{val}'"
     set_arr.append(f"{attr}={val}" )
 
   set_str = ','.join(set_arr)
@@ -120,8 +123,11 @@ def gen_insert_query(obj, attribs, tablename):
     val = getattr(obj, attr)
     if val is None:
       val='NULL'
-    elif isinstance(val, str) or isinstance(val, datetime) or isinstance(val, bytes):
-      val=f"\"{val}\""
+    elif isinstance(val, str) or isinstance(val, datetime):
+      val=f"'{val}'"
+    elif isinstance(val, bytes):
+      val=val.decode('utf-8')
+      val=f"'{val}'"
     else:
       val=str(val)
     val_list.append(val)
