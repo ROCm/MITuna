@@ -29,19 +29,28 @@ jobs in compile mode"""
 from time import sleep
 import random
 import json
+import types
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
+from sqlalchemy.inspection import inspect
 
 from tuna.miopen.fin_class import FinClass
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.fin_utils import fin_job
 from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.utils.db_utility import session_retry
+from tuna.utils.db_utility import gen_insert_query
 
 
 class FinBuilder(FinClass):
   """ The Builder class implementes the worker class. Its purpose is to compile jobs. It picks up
   new jobs and when completed, sets the state to compiled. """
+
+  def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    self.jcache_attr = [column.name for column in inspect(self.dbt.fin_cache_table).c]
+    self.jcache_attr.remove("insert_ts")
+    self.jcache_attr.remove("update_ts")
 
   def get_fin_input(self):
     """Create the input dict for fin, serialize to json and write to machine
@@ -59,14 +68,18 @@ class FinBuilder(FinClass):
   def compose_job_cache_entrys(self, session, pdb_obj):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
-      kernel_obj = self.dbt.fin_cache_table()
+      #kernel_obj = self.dbt.fin_cache_table()
+      kernel_obj = types.SimpleNamespace()
+      for attr in self.jcache_attr:
+        setattr(kernel_obj, attr, None)
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
       # Bundle Insert for later
       #self.pending.append((self.job, kernel_obj))
-      session.add(kernel_obj)
+      query = gen_insert_query(kernel_obj, self.jcache_attr, self.dbt.fin_cache_table.__tablename__)
+      session.execute(query)
     session.commit()
 
     return True
