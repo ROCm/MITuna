@@ -49,7 +49,9 @@ def get_solver_ids():
   solver_id_map = {}
   with DbSession() as session:
     query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
-    for slv, sid in query.all():
+    res = session_retry(session, query.all,
+                        lambda x: x(), LOGGER)
+    for slv, sid in res:
       solver_id_map[slv] = sid
       solver_id_map[slv.replace(', ', '-')] = sid
 
