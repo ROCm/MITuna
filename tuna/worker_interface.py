@@ -166,14 +166,14 @@ class WorkerInterface(Process):
     if cond_str:
       cond_str = f"WHERE {cond_str}"
     cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
-    entries = gen_select_objs(session, self.job_attr, self.dbt.job_table.__tablename__, cond_str)
+    entries = gen_select_objs(session, self.job_attr,
+                              self.dbt.job_table.__tablename__, cond_str)
 
     return entries
 
   def get_job_objs(self, session, find_state):
     """Helper function to compose query"""
-    conds = [f"session={self.dbt.session.id}",
-             "valid=1"]
+    conds = [f"session={self.dbt.session.id}", "valid=1"]
 
     if self.label:
       conds.append(f"reason='{self.label}'")
@@ -277,7 +277,8 @@ class WorkerInterface(Process):
                 else:
                   job.machine_id = self.machine.id
 
-                query = gen_update_query(job, self.job_attr, self.dbt.job_table.__tablename__)
+                query = gen_update_query(job, self.job_attr,
+                                         self.dbt.job_table.__tablename__)
                 session.execute(query)
 
               session.commit()
@@ -324,7 +325,8 @@ class WorkerInterface(Process):
             cache_loc = cache + blurr
             self.job.cache_loc = cache_loc
 
-          query = gen_update_query(self.job, self.job_attr, self.dbt.job_table.__tablename__)
+          query = gen_update_query(self.job, self.job_attr,
+                                   self.dbt.job_table.__tablename__)
           session.execute(query)
           session.commit()
           return True

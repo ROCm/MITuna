@@ -100,11 +100,12 @@ def get_fin_result(status):
 def to_dict(obj):
   """return dict for SimpleNamespace or sqlalchemy orm"""
   if isinstance(obj, types.SimpleNamespace):
-    ret = vars(obj) #use vars to return SimpleNamespace as a dict
+    ret = vars(obj)  #use vars to return SimpleNamespace as a dict
   else:
     ret = obj.to_dict()
 
   return ret
+
 
 def compose_config_obj(config, config_type=ConfigType.convolution):
   """Helper function to compose non-conv config obj"""

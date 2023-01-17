@@ -57,8 +57,7 @@ def load_machines(args, logger=LOGGER):
       if args.local_machine:
         query = query.filter(Machine.remarks == hostname)
 
-      res = session_retry(session, query.all,
-                          lambda x: x(), logger)
+      res = session_retry(session, query.all, lambda x: x(), logger)
 
       if args.local_machine:
         if res:

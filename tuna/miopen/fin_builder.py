@@ -48,10 +48,12 @@ class FinBuilder(FinClass):
 
   def __init__(self, **kwargs):
     super().__init__(**kwargs)
-    self.jcache_attr = [column.name for column in inspect(self.dbt.fin_cache_table).c]
+    self.jcache_attr = [
+        column.name for column in inspect(self.dbt.fin_cache_table).c
+    ]
     self.jcache_attr.remove("insert_ts")
     self.jcache_attr.remove("update_ts")
-    self.jcache_attr.remove("valid") #use default, don't specify
+    self.jcache_attr.remove("valid")  #use default, don't specify
 
   def get_fin_input(self):
     """Create the input dict for fin, serialize to json and write to machine
@@ -79,7 +81,8 @@ class FinBuilder(FinClass):
 
       # Bundle Insert for later
       #self.pending.append((self.job, kernel_obj))
-      query = gen_insert_query(kernel_obj, self.jcache_attr, self.dbt.fin_cache_table.__tablename__)
+      query = gen_insert_query(kernel_obj, self.jcache_attr,
+                               self.dbt.fin_cache_table.__tablename__)
       session.execute(query)
     session.commit()
 

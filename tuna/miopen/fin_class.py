@@ -98,15 +98,25 @@ class FinClass(WorkerInterface):
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
 
     # dict of relationship_column : dict{local_key, remote_table_name, foreign_key, [remote_attr}
-    self.cfg_rel = {key: {'key':list(val.local_columns)[0].name, 'ftble':str(list(val.remote_side)[0]).split('.')[0], 'fkey':str(list(val.remote_side)[0]).split('.')[1]} for key,val in inspect(self.dbt.config_table).relationships.items()}
-    for key,val in self.cfg_rel.items():
-      rel_attr = [column.name for column in inspect(get_class_by_tablename(val['ftble'])).c]
+    self.cfg_rel = {
+        key: {
+            'key': list(val.local_columns)[0].name,
+            'ftble': str(list(val.remote_side)[0]).split('.')[0],
+            'fkey': str(list(val.remote_side)[0]).split('.')[1]
+        } for key, val in inspect(self.dbt.config_table).relationships.items()
+    }
+    for key, val in self.cfg_rel.items():
+      rel_attr = [
+          column.name
+          for column in inspect(get_class_by_tablename(val['ftble'])).c
+      ]
       val['fattr'] = rel_attr
 
-    self.fdb_attr = [column.name for column in inspect(self.dbt.find_db_table).c]
+    self.fdb_attr = [
+        column.name for column in inspect(self.dbt.find_db_table).c
+    ]
     self.fdb_attr.remove("insert_ts")
     self.fdb_attr.remove("update_ts")
-
 
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
@@ -130,7 +140,7 @@ class FinClass(WorkerInterface):
 
   def compose_work_objs(self, session, conds):
     """query for fin command and config"""
-    ret=[]
+    ret = []
     if self.fin_steps:
       conds.append(f"fin_step like '%{self.fin_steps[0]}%'")
     else:
@@ -141,14 +151,19 @@ class FinClass(WorkerInterface):
     if job_entries:
       id_str = ','.join([str(job.config) for job in job_entries])
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
-      cfg_entries = gen_select_objs(session, self.cfg_attr, self.dbt.config_table.__tablename__, cfg_cond_str)
+      cfg_entries = gen_select_objs(session, self.cfg_attr,
+                                    self.dbt.config_table.__tablename__,
+                                    cfg_cond_str)
 
       #attach tensor relationship information to config entries
       for cfg in cfg_entries:
         for key, val in self.cfg_rel.items():
           rel_val = getattr(cfg, val['key'])
           rel_cond_str = f"where {val['fkey']}={rel_val}"
-          setattr(cfg, key, gen_select_objs(session, val['fattr'], val['ftble'], rel_cond_str)[0])
+          setattr(
+              cfg, key,
+              gen_select_objs(session, val['fattr'], val['ftble'],
+                              rel_cond_str)[0])
 
       cfg_map = {cfg.id: cfg for cfg in cfg_entries}
 
@@ -156,7 +171,6 @@ class FinClass(WorkerInterface):
         ret.append([job, cfg_map[job.config]])
 
     return ret
-
 
   #pylint: disable=R0801
   def check_jobs_found(self, job_rows, find_state, imply_end):
@@ -582,13 +596,13 @@ class FinClass(WorkerInterface):
     obj = None
     fdb_entry = None
 
-    conds = [f"session={self.dbt.session.id}",
-             "valid=1",
-             f"config={self.config.id}",
-             f"solver={solver}",
-             "opencl=0"]
+    conds = [
+        f"session={self.dbt.session.id}", "valid=1", f"config={self.config.id}",
+        f"solver={solver}", "opencl=0"
+    ]
     cond_str = f"where {' AND '.join(conds)}"
-    entries = gen_select_objs(session, self.fdb_attr, self.dbt.find_db_table.__tablename__, cond_str)
+    entries = gen_select_objs(session, self.fdb_attr,
+                              self.dbt.find_db_table.__tablename__, cond_str)
 
     if entries:
       assert len(entries) == 1
@@ -674,12 +688,14 @@ class FinClass(WorkerInterface):
           #returned entry is added to the table
           fdb_entry = self.__compose_fdb_entry(session, fin_json, fdb_obj)
           if not self.pending:
-            query = gen_update_query(fdb_entry, self.fdb_attr, self.dbt.find_db_table.__tablename__)
+            query = gen_update_query(fdb_entry, self.fdb_attr,
+                                     self.dbt.find_db_table.__tablename__)
             session.execute(query)
           else:
             assert len(self.pending) == 1
             self.pending.pop()
-            query = gen_insert_query(fdb_entry, self.fdb_attr, self.dbt.find_db_table.__tablename__)
+            query = gen_insert_query(fdb_entry, self.fdb_attr,
+                                     self.dbt.find_db_table.__tablename__)
             session.execute(query)
 
           if fdb_obj['reason'] == 'Success':
@@ -730,7 +746,8 @@ class FinClass(WorkerInterface):
     for obj in obj_list:
       if isinstance(obj, types.SimpleNamespace):
         if has_attr_set(obj, self.fdb_attr):
-          query = gen_insert_query(obj, self.fdb_attr, self.dbt.find_db_table.__tablename__)
+          query = gen_insert_query(obj, self.fdb_attr,
+                                   self.dbt.find_db_table.__tablename__)
           session.execute(query)
         else:
           return False
@@ -749,9 +766,9 @@ class FinClass(WorkerInterface):
         obj_list.append(obj)
 
       self.logger.info("commit pending job %s, #objects: %s", res_job.id,
-                        len(obj_list))
+                       len(obj_list))
       status = session_retry(session, self.__add_sql_objs,
-                              lambda x: x(session, obj_list), self.logger)
+                             lambda x: x(session, obj_list), self.logger)
       if not status:
         self.logger.error("Failed commit pending job %s", res_job.id)
         return False

@@ -49,8 +49,7 @@ def get_solver_ids():
   solver_id_map = {}
   with DbSession() as session:
     query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
-    res = session_retry(session, query.all,
-                        lambda x: x(), LOGGER)
+    res = session_retry(session, query.all, lambda x: x(), LOGGER)
     for slv, sid in res:
       solver_id_map[slv] = sid
       solver_id_map[slv.replace(', ', '-')] = sid
@@ -64,8 +63,7 @@ def get_id_solvers():
   solver_id_map_h = {}
   with DbSession() as session:
     query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
-    res = session_retry(session, query.all,
-                        lambda x: x(), LOGGER)
+    res = session_retry(session, query.all, lambda x: x(), LOGGER)
     for slv, sid in res:
       solver_id_map_c[slv] = sid
       solver_id_map_h[slv.replace(', ', '-')] = sid
@@ -103,19 +101,20 @@ def gen_update_query(obj, attribs, tablename):
   for attr in attribs:
     val = getattr(obj, attr)
     if val is None:
-      val='NULL'
+      val = 'NULL'
     elif isinstance(val, str) or isinstance(val, datetime):
-      val=f"'{val}'"
+      val = f"'{val}'"
     elif isinstance(val, bytes):
-      val=val.decode('utf-8')
-      val=f"'{val}'"
-    set_arr.append(f"{attr}={val}" )
+      val = val.decode('utf-8')
+      val = f"'{val}'"
+    set_arr.append(f"{attr}={val}")
 
   set_str = ','.join(set_arr)
   query = f"UPDATE {tablename} SET {set_str}"\
           f" WHERE id={obj.id};"
   LOGGER.info('Query Update: %s', query)
   return query
+
 
 def gen_insert_query(obj, attribs, tablename):
   """create a select query and generate name space objects for the results"""
@@ -126,14 +125,14 @@ def gen_insert_query(obj, attribs, tablename):
   for attr in attr_list:
     val = getattr(obj, attr)
     if val is None:
-      val='NULL'
+      val = 'NULL'
     elif isinstance(val, str) or isinstance(val, datetime):
-      val=f"'{val}'"
+      val = f"'{val}'"
     elif isinstance(val, bytes):
-      val=val.decode('utf-8')
-      val=f"'{val}'"
+      val = val.decode('utf-8')
+      val = f"'{val}'"
     else:
-      val=str(val)
+      val = str(val)
     val_list.append(val)
 
   val_str = ','.join(val_list)
@@ -141,6 +140,7 @@ def gen_insert_query(obj, attribs, tablename):
           f" SELECT {val_str};"
   LOGGER.info('Query Insert: %s', query)
   return query
+
 
 def gen_select_objs(session, attribs, tablename, cond_str):
   """create a select query and generate name space objects for the results"""
@@ -166,11 +166,13 @@ def has_attr_set(obj, attribs):
       return False
   return True
 
+
 def get_class_by_tablename(tablename):
   """use tablename to find class"""
   for c in BASE._decl_class_registry.values():
     if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
       return c
+
 
 class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?
   """@alex defines the types of databases produced in tuning sessions?"""

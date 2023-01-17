@@ -85,8 +85,8 @@ class FinEvaluator(FinClass):
           self.dbt.solver_app.applicable == 1)
       # pylint: enable=comparison-with-callable
 
-      slv_entries = session_retry(session, query.all,
-                                  lambda x: x(), self.logger)
+      slv_entries = session_retry(session, query.all, lambda x: x(),
+                                  self.logger)
 
       for slv_entry in slv_entries:
         slv_name = self.id_solver_map[slv_entry.solver]
