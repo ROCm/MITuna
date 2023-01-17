@@ -676,6 +676,11 @@ class FinClass(WorkerInterface):
           if not self.pending:
             query = gen_update_query(fdb_entry, self.fdb_attr, self.dbt.find_db_table.__tablename__)
             session.execute(query)
+          else:
+            assert len(self.pending) == 1
+            self.pending.pop()
+            query = gen_insert_query(fdb_entry, self.fdb_attr, self.dbt.find_db_table.__tablename__)
+            session.execute(query)
 
           if fdb_obj['reason'] == 'Success':
             self.__compose_kernel_entry(session, fdb_obj, fdb_entry)
