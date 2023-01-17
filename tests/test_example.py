@@ -57,14 +57,14 @@ def test_example():
   res = example.compose_worker_list(res, args)
   with DbSession() as session:
     query = session.query(SessionExample)
-    res = query.all()
-  assert len(res) is not None
+    sess = query.all()
+  assert len(sess) is not None
   args.init_session = False
   example.session_id = 1
   args.execute = True
   res = example.compose_worker_list(res, args)
   with DbSession() as session:
-    query = session.query(Job).filter(Job.session_id==1)\
+    query = session.query(Job).filter(Job.session==1)\
                               .filter(Job.state=='completed')
     res = query.all()
   assert len(res) is not None
