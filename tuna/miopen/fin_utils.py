@@ -101,6 +101,9 @@ def to_dict(obj):
   """return dict for SimpleNamespace or sqlalchemy orm"""
   if isinstance(obj, types.SimpleNamespace):
     ret = vars(obj)  #use vars to return SimpleNamespace as a dict
+    for key, val in ret.items():
+      if isinstance(val, datetime):
+        ret[key] = str(val)
   else:
     ret = obj.to_dict()
 
@@ -126,9 +129,6 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
     wei_layout = weight_t_dict['weight_t']['layout']
 
   return_config = to_dict(config)
-  for key, val in return_config.items():
-    if isinstance(val, datetime):
-      return_config[key] = str(val)
 
   if in_layout and wei_layout:
     if in_layout != wei_layout != return_config['out_layout']:

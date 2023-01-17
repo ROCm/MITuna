@@ -56,7 +56,6 @@ from tuna.utils.utility import split_packets
 from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename, gen_insert_query, gen_update_query, has_attr_set
 
 MAX_JOB_RETRIES = 10
-MAX_COMMIT_SIZE = 1000
 
 
 class FinClass(WorkerInterface):
@@ -97,7 +96,7 @@ class FinClass(WorkerInterface):
 
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
 
-    # dict of relationship_column : dict{local_key, remote_table_name, foreign_key, [remote_attr}
+    # dict of relationship_column : dict{local_key, foreign_table_name, foreign_key, [remote_attr]}
     self.cfg_rel = {
         key: {
             'key': list(val.local_columns)[0].name,
@@ -597,7 +596,7 @@ class FinClass(WorkerInterface):
     fdb_entry = None
 
     conds = [
-        f"session={self.dbt.session.id}", "valid=1", f"config={self.config.id}",
+        f"session={self.dbt.session.id}", f"config={self.config.id}",
         f"solver={solver}", "opencl=0"
     ]
     cond_str = f"where {' AND '.join(conds)}"
@@ -658,8 +657,6 @@ class FinClass(WorkerInterface):
       kernel_obj = self.dbt.kernel_cache()
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.kernel_group = fdb_entry.kernel_group
-      # Bundle Insert for later
-      #self.pending.append((self.job, kernel_obj))
       session.add(kernel_obj)
     return True
 
