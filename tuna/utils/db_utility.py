@@ -112,8 +112,8 @@ def gen_update_query(obj, attribs, tablename):
     set_arr.append(f"{attr}={val}" )
 
   set_str = ','.join(set_arr)
-  query = f"update {tablename} set {set_str}"\
-          f" where id={obj.id};"
+  query = f"UPDATE {tablename} SET {set_str}"\
+          f" WHERE id={obj.id};"
   LOGGER.info('Query Update: %s', query)
   return query
 
@@ -137,15 +137,15 @@ def gen_insert_query(obj, attribs, tablename):
     val_list.append(val)
 
   val_str = ','.join(val_list)
-  query = f"insert into {tablename}({attr_str})"\
-          f" select {val_str};"
+  query = f"INSERT INTO {tablename}({attr_str})"\
+          f" SELECT {val_str};"
   LOGGER.info('Query Insert: %s', query)
   return query
 
 def gen_select_objs(session, attribs, tablename, cond_str):
   """create a select query and generate name space objects for the results"""
   attr_str = ','.join(attribs)
-  query = f"select {attr_str} from {tablename}"\
+  query = f"SELECT {attr_str} FROM {tablename}"\
           f" {cond_str};"
   LOGGER.info('Query Select: %s', query)
   ret = session.execute(query)
