@@ -84,14 +84,14 @@ class FinClass(WorkerInterface):
 
     self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
 
+    super().__init__(**kwargs)
+
     #add cache directories
     self.envmt.append(
         f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
     )
     self.envmt.append(
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
-
-    super().__init__(**kwargs)
 
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
