@@ -41,6 +41,7 @@ class ExampleWorker(WorkerInterface):
     """Constructor"""
     self.dbt = None
     super().__init__(**kwargs)
+    self.set_db_tables()
 
   def set_db_tables(self):
     """Initialize tables"""

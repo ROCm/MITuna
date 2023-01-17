@@ -46,6 +46,8 @@ from tuna.utils.miopen_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.example.session import SessionExample
 from tuna.example.example_tables import Job
+from tuna.example.load_job import add_jobs
+from tuna.example.tables import ExampleDBTables
 
 
 def test_example():
@@ -53,29 +55,30 @@ def test_example():
   example = Example()
   assert (example.add_tables())
 
+  #adding new session
   res = load_machines(args)
   res = example.compose_worker_list(res, args)
   with DbSession() as session:
     query = session.query(SessionExample)
     sess = query.all()
   assert len(sess) is not None
+
+  #test load_job
+  dbt = ExampleDBTables(session_id=None)
   args.init_session = False
-  example.session_id = 1
+  args.session_id = 1
   args.execute = True
+  args.label = 'test_example'
+  num_jobs = add_jobs(args, dbt)
+  assert num_jobs
+
+  #testing execute rocminfo
+  res = load_machines(args)
   res = example.compose_worker_list(res, args)
   with DbSession() as session:
     query = session.query(Job).filter(Job.session==1)\
                               .filter(Job.state=='completed')
     res = query.all()
-  assert len(res) is not None
+    assert res
 
   return True
-
-
-def create_db():
-  with ENGINE.connect() as conn:
-    try:
-      conn.execute(f"drop database if exists example_db")
-      conn.execute(f"create database example_db")
-    except OperationalError as oerr:
-      LOGGER.info('%s \n', oerr)
