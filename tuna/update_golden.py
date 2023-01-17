@@ -252,23 +252,20 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
   return count
 
 
-def verif_no_duplicates(golden_v, entries):
+def verif_no_duplicates(entries):
   """ check entries for duplicates (error in fdb) """
   with DbSession() as session:
     sess_map = sess_info(session)
   test_set = {}
   for entry in entries:
     arch, num_cu = sess_map[entry.session]
-    key = f"{golden_v}-{entry.config}-{entry.solver}-{arch}-{num_cu}"
+    key = f"{entry.config}-{entry.solver}-{arch}-{num_cu}"
     if key in test_set:
-      LOGGER.info(
+      LOGGER.error(
           "Overlap on key! %s (fdb_key %s, params %s) vs (fdb_key %s, params %s)",
           key, test_set[key].fdb_key, test_set[key].params, entry.fdb_key,
           entry.params)
-      raise ValueError(
-          f"Overlap on key! {key} (fdb_key {test_set[key].fdb_key}, params {test_set[key].params})"\
-          f" vs (fdb_key {entry.fdb_key}, params {entry.params})"
-      )
+      return False
     test_set[key] = entry
 
   return True
@@ -309,14 +306,14 @@ def get_perf_str(args, table_name):
   new_table = f"""
   create table {table_name} as select a.config, a.num_cu, a.arch, b.k1 as k1, c.k1 as k2,
     d.k1 as k3, c.k1-b.k1 as gv4_5, d.k1-c.k1 as gv5_6 from conv_golden a
-    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
-    where golden_miopen_v={args.golden_v-2} and kernel_time!=-1 group by config, arch, num_cu) 
+    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden
+    where golden_miopen_v={args.golden_v-2} and kernel_time!=-1 group by config, arch, num_cu)
       as b on a.config=b.config and a.arch=b.arch and a.num_cu=b.num_cu
-    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
-    where golden_miopen_v={args.golden_v-1} and kernel_time!=-1 group by config, arch, num_cu) 
+    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden
+    where golden_miopen_v={args.golden_v-1} and kernel_time!=-1 group by config, arch, num_cu)
       as c on a.config=c.config and a.arch=c.arch and a.num_cu=c.num_cu
-    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden  
-    where golden_miopen_v={args.golden_v} and kernel_time!=-1 group by config, arch, num_cu) 
+    inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden
+    where golden_miopen_v={args.golden_v} and kernel_time!=-1 group by config, arch, num_cu)
       as d on a.config=d.config and a.arch=d.arch and a.num_cu=d.num_cu
   where a.golden_miopen_v={args.golden_v} group by a.config, a.arch, a.num_cu, b.k1, c.k1, d.k1;
   """
@@ -369,7 +366,9 @@ def main():
   entries = get_fdb_entries(dbt)
   LOGGER.info("Prepped %s entries", len(entries))
 
-  verif_no_duplicates(args.golden_v, entries)
+  success = verif_no_duplicates(entries)
+  if not success:
+    return False
   total = process_merge_golden(dbt, args.golden_v, entries)
 
   LOGGER.info("Merged: %s", total)
