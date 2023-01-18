@@ -324,7 +324,7 @@ def create_perf_table(args):
   """Create new perf_table"""
   if args.golden_v == 0:
     table_name = "conv_gv0"
-  if args.golden_v == 1:
+  elif args.golden_v == 1:
     table_name = "conv_gv10"
   else:
     vm1 = str(args.golden_v - 1)
