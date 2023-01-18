@@ -376,6 +376,8 @@ def main():
   if args.create_perf_table:
     create_perf_table(args)
 
+  return True
+
 
 if __name__ == '__main__':
   main()

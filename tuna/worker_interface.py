@@ -99,6 +99,7 @@ class WorkerInterface(Process):
     #initialize tables
     self.set_db_tables()
 
+    self.job = types.SimpleNamespace()
     try:
       self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
       self.job_attr.remove("insert_ts")
@@ -115,7 +116,6 @@ class WorkerInterface(Process):
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
 
     self.hostname = self.machine.hostname
-    self.job = types.SimpleNamespace()
     self.claim_num = self.num_procs.value
     self.last_reset = datetime.now()
 

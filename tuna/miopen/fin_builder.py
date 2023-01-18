@@ -28,8 +28,8 @@
 jobs in compile mode"""
 from time import sleep
 import random
+import functools
 import json
-import types
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
@@ -39,7 +39,6 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.fin_utils import fin_job
 from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.utils.db_utility import session_retry
-from tuna.utils.db_utility import gen_insert_query
 
 
 class FinBuilder(FinClass):
@@ -71,17 +70,11 @@ class FinBuilder(FinClass):
   def compose_job_cache_entrys(self, session, pdb_obj):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
-      #kernel_obj = types.SimpleNamespace()
-      #for attr in self.jcache_attr:
-      #  setattr(kernel_obj, attr, None)
       kernel_obj = self.dbt.fin_cache_table()
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
-      #query = gen_insert_query(kernel_obj, self.jcache_attr,
-      #                         self.dbt.fin_cache_table.__tablename__)
-      #session.execute(query)
       session.add(kernel_obj)
     session.commit()
 
@@ -91,12 +84,17 @@ class FinBuilder(FinClass):
     """retrieve perf db compile json results"""
     status = []
     if fin_json['miopen_perf_compile_result']:
+
+      def actuator(func, pdb_obj):
+        return func(session, pdb_obj)
+
       for pdb_obj in fin_json['miopen_perf_compile_result']:
         slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
         status.append(slv_stat)
         if pdb_obj['perf_compiled']:
           session_retry(session, self.compose_job_cache_entrys,
-                        lambda x: x(session, pdb_obj), self.logger)
+                        functools.partial(actuator, pdb_obj=pdb_obj),
+                        self.logger)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
       status = [{

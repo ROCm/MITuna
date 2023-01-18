@@ -85,10 +85,8 @@ class FinEvaluator(FinClass):
           self.dbt.solver_app.applicable == 1)
       # pylint: enable=comparison-with-callable
 
-      slv_entries = session_retry(session, query.all, lambda x: x(),
-                                  self.logger)
-
-      for slv_entry in slv_entries:
+      res = session_retry(session, query.all, lambda x: x(), self.logger)
+      for slv_entry in res:
         slv_name = self.id_solver_map[slv_entry.solver]
         if not self.job.solver or slv_name == self.job.solver:
           compile_entry = {
@@ -102,7 +100,9 @@ class FinEvaluator(FinClass):
 
       query = session.query(self.dbt.fin_cache_table).filter(
           self.dbt.fin_cache_table.job_id == self.job.id)
-      for cache_entry in query.all():
+
+      res = session_retry(session, query.all, lambda x: x(), self.logger)
+      for cache_entry in res:
         slv_name = self.id_solver_map[cache_entry.solver_id]
         #if job solver is defined limit entries to that solver
         if not self.job.solver or slv_name == self.job.solver:

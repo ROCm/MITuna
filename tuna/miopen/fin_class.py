@@ -53,7 +53,8 @@ from tuna.config_type import ConfigType
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.utility import split_packets
-from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename, gen_insert_query, gen_update_query, has_attr_set
+from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
+from tuna.utils.db_utility import get_class_by_tablename, has_attr_set
 
 MAX_JOB_RETRIES = 10
 
@@ -94,13 +95,14 @@ class FinClass(WorkerInterface):
     #call to set_db_tables in super must come after config_type is set
     super().__init__(**kwargs)
 
+    self.config = types.SimpleNamespace()
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
 
     # dict of relationship_column : dict{local_key, foreign_table_name, foreign_key, [remote_attr]}
     self.cfg_rel = {
         key: {
             'key': list(val.local_columns)[0].name,
-            'ftble': str(list(val.remote_side)[0]).split('.')[0],
+            'ftble': str(list(val.remote_side)[0]).split('.', maxsplit=1)[0],
             'fkey': str(list(val.remote_side)[0]).split('.')[1]
         } for key, val in inspect(self.dbt.config_table).relationships.items()
     }
@@ -759,7 +761,7 @@ class FinClass(WorkerInterface):
       obj_list = []
       res_list = self.result_queue.get(True, 1)
       res_job = res_list[0][0]
-      for job, obj in res_list:
+      for _, obj in res_list:
         obj_list.append(obj)
 
       self.logger.info("commit pending job %s, #objects: %s", res_job.id,
