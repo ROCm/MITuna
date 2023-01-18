@@ -30,6 +30,7 @@ import sys
 from tuna.utils.logger import setup_logger
 from tuna.libraries import Library
 from tuna.lib_utils import get_library
+from tuna.yaml_parser import parse_yaml
 
 # Setup logging
 LOGGER = setup_logger('go_fish')
@@ -46,6 +47,12 @@ def parse_args():
                       help="Specify library to run",
                       choices=Library)
 
+  parser.add_argument('-f',
+                      '--file_name',
+                      dest='file_name',
+                      default=None,
+                      help='Path to yaml input file')
+
   args, _ = parser.parse_known_args()
   return vars(args)
 
@@ -54,6 +61,12 @@ def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
   args = parse_args()
+  print(args['file_name'])
+  print(args)
+  if args['file_name']:
+    args = parse_yaml(args['file_name'])
+  print(args)
+  exit(-1)
   library = get_library(args)
 
   try:

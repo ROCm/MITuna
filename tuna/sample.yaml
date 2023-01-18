@@ -1,0 +1,40 @@
+---
+# common script arguments
+# yamllint disable rule:line-length
+arch: 'gfx908'              # choices: ['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a']
+num_cu: 120
+direction: 'None'           # choices: ['fwd','bwd','wrw', false] 
+version: false
+config_type: 'convolution'  # choices: ['convolution', 'batch_norm']
+session_id: 1
+machines: false
+remote_machine: false
+label: 'Example'
+restart_machine: false
+docker_name: 'my_docker_name'
+
+
+run:
+  # '-' represents a sequence, order matters
+  - import_config:
+      enabled: false
+      command: 'convolution' # choices: ['convolution', 'batch_norm']
+      batches: false
+      mark_recurrent: false
+      tag: 'someTag'
+      tag_only: false
+
+  - load_jobs:
+      enabled: true
+      tag: 'some_tag'
+      all_configs: false
+      algo: false
+      only_dynamic: false
+      tunable: true
+      cmd: false
+
+  - go_fish:
+      enabled: true
+
+  - go_fish:
+      enabled: true
