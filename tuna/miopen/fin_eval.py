@@ -69,7 +69,9 @@ class FinEvaluator(FinClass):
           self.gpu_id, 30)
       #sleep(30)
     self.logger.warning('GPU: %s not visible in clinfo', self.gpu_id)
-    self.set_job_state('compiled', increment_retries=True, result=f"GPU {self.gpu_id} not visible")
+    self.set_job_state('compiled',
+                       increment_retries=True,
+                       result=f"GPU {self.gpu_id} not visible")
     #self.set_barrier(self.reset_machine, True)
     return False
 
