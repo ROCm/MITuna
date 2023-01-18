@@ -71,16 +71,18 @@ class FinBuilder(FinClass):
   def compose_job_cache_entrys(self, session, pdb_obj):
     """Compose new pdb kernel cache entry from fin input"""
     for kern_obj in pdb_obj['kernel_objects']:
-      kernel_obj = types.SimpleNamespace()
-      for attr in self.jcache_attr:
-        setattr(kernel_obj, attr, None)
+      #kernel_obj = types.SimpleNamespace()
+      #for attr in self.jcache_attr:
+      #  setattr(kernel_obj, attr, None)
+      kernel_obj = self.dbt.fin_cache_table()
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
-      query = gen_insert_query(kernel_obj, self.jcache_attr,
-                               self.dbt.fin_cache_table.__tablename__)
-      session.execute(query)
+      #query = gen_insert_query(kernel_obj, self.jcache_attr,
+      #                         self.dbt.fin_cache_table.__tablename__)
+      #session.execute(query)
+      session.add(kernel_obj)
     session.commit()
 
     return True
