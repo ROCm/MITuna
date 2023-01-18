@@ -327,8 +327,8 @@ def create_perf_table(args):
   if args.golden_v == 1:
     table_name = "conv_gv10"
   else:
-    vm1 = args.golden_v - 1
-    vm2 = args.golden_v - 2
+    vm1 = str(args.golden_v - 1)
+    vm2 = str(args.golden_v - 2)
     table_name = f"conv_gv{vm2}{vm1}{args.golden_v}"
   print(table_name)
   with ENGINE.connect() as conn:

@@ -63,14 +63,15 @@ class FinEvaluator(FinClass):
     """Function to check gpu heartbeat"""
     for _ in range(5):
       if self.machine.chk_gpu_status(self.gpu_id):
-        return
+        return True
       self.logger.warning(
           'Unable to detect GPU: %s, sleeping for %s seconds before retry',
           self.gpu_id, 30)
-      sleep(30)
+      #sleep(30)
     self.logger.warning('GPU: %s not visible in clinfo', self.gpu_id)
-    self.set_job_state('compiled', increment_retries=True)
-    self.set_barrier(self.reset_machine, True)
+    self.set_job_state('compiled', increment_retries=True, result=f"GPU {self.gpu_id} not visible")
+    #self.set_barrier(self.reset_machine, True)
+    return False
 
   def fin_pdb_input(self, _fjob):
     """prepare perf db command input for fin"""
@@ -297,7 +298,8 @@ class FinEvaluator(FinClass):
       failed_job = not success
 
     if failed_job:
-      self.check_gpu()
+      if not self.check_gpu():
+        return False
       if self.job.retries == (MAX_ERRORED_JOB_RETRIES - 1):
         self.logger.warning('max job retries exhausted, setting to errored')
         self.set_job_state('errored', result=result_str)
