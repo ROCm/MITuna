@@ -55,7 +55,6 @@ def build_fdb_entry(session_id):
   return fdb_entry
 
 
-
 def test_update_golden():
   session_id = add_test_session()
   fdb_entry = build_fdb_entry(session_id)
@@ -93,7 +92,6 @@ def test_update_golden():
   success = verif_no_duplicates(entries)
   assert success
 
-
   fdb_entry2 = build_fdb_entry(session_id)
   fdb_entry2.config = 2
   entries.append(fdb_entry2)
@@ -103,7 +101,6 @@ def test_update_golden():
   fdb_entry3.solver = 2
   entries.append(fdb_entry3)
   assert verif_no_duplicates(entries)
-
 
   session_id2 = add_test_session(arch='gfx90a', num_cu=110)
   fdb_entry4 = build_fdb_entry(session_id2)
