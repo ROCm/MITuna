@@ -36,10 +36,6 @@ class ExampleWorker(WorkerInterface):
   """ The Example class implementes the worker class. Its purpose is to run a command. It picks up
   new jobs and when completed, sets the state to compiled. """
 
-  def close_job(self):
-    """mark a job complete"""
-    self.set_job_state('compiled')
-
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
 
