@@ -57,15 +57,6 @@ def test_example():
   with DbSession() as session:
     query = session.query(SessionExample)
     res = query.all()
-  assert len(res) is not None
+    assert len(res) is not None
 
   return True
-
-
-def create_db():
-  with ENGINE.connect() as conn:
-    try:
-      conn.execute(f"drop database if exists example_db")
-      conn.execute(f"create database example_db")
-    except OperationalError as oerr:
-      LOGGER.info('%s \n', oerr)
