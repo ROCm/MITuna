@@ -322,10 +322,14 @@ def get_perf_str(args, table_name):
 
 def create_perf_table(args):
   """Create new perf_table"""
-  if args.golden_v == 1:
+  if args.golden_v == 0:
+    table_name = "conv_gv0"
+  elif args.golden_v == 1:
     table_name = "conv_gv10"
   else:
-    table_name = f"conv_gv{args.golden_v-2}{args.golden_v-1}{args.golden_v}"
+    vm1 = str(args.golden_v - 1)
+    vm2 = str(args.golden_v - 2)
+    table_name = f"conv_gv{vm2}{vm1}{args.golden_v}"
   print(table_name)
   with ENGINE.connect() as conn:
     try:
@@ -375,6 +379,8 @@ def main():
   LOGGER.info('Updating conv perf DB table')
   if args.create_perf_table:
     create_perf_table(args)
+
+  return True
 
 
 if __name__ == '__main__':
