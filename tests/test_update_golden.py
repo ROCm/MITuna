@@ -25,7 +25,7 @@
 ###############################################################################
 
 import sys
-from tuna.update_golden import merge_golden_entries, get_fdb_entries, create_perf_table, verif_no_duplicates, latest_golden_v
+from tuna.update_golden import merge_golden_entries, get_fdb_entries, create_perf_table, verify_no_duplicates, latest_golden_v
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
@@ -89,28 +89,28 @@ def test_update_golden():
     assert len(res) == 1
     assert res[0].params == 'param'
 
-  success = verif_no_duplicates(entries)
+  success = verify_no_duplicates(entries)
   assert success
 
   fdb_entry2 = build_fdb_entry(session_id)
   fdb_entry2.config = 2
   entries.append(fdb_entry2)
-  assert verif_no_duplicates(entries)
+  assert verify_no_duplicates(entries)
 
   fdb_entry3 = build_fdb_entry(session_id)
   fdb_entry3.solver = 2
   entries.append(fdb_entry3)
-  assert verif_no_duplicates(entries)
+  assert verify_no_duplicates(entries)
 
   session_id2 = add_test_session(arch='gfx90a', num_cu=110)
   fdb_entry4 = build_fdb_entry(session_id2)
   entries.append(fdb_entry4)
-  assert verif_no_duplicates(entries)
+  assert verify_no_duplicates(entries)
 
   fdb_entry5 = build_fdb_entry(session_id)
   fdb_entry5.params = 'something'
   entries.append(fdb_entry5)
-  assert verif_no_duplicates(entries) == False
+  assert verify_no_duplicates(entries) == False
 
   args.create_perf_table = True
   assert create_perf_table(args)
