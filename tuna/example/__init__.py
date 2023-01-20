@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,16 +23,3 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different liraries supported by Tuna"""
-from enum import Enum
-
-
-#pylint: disable=too-few-public-methods
-class Library(Enum):
-  """Enumerate supported libraries"""
-  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  MIOPEN = 'miopen'
-  EXAMPLE = 'example'
-
-  def __str__(self):
-    return self.value

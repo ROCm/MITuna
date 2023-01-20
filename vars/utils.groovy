@@ -41,7 +41,7 @@ def buildSchema(){
     def create_sql = $/ "CREATE DATABASE ${db_name};"/$
     sh "${cmd} -e ${drop_sql}"
     sh "${cmd} -e ${create_sql}"
-    sh "./tuna/db_tables.py"
+    sh "./tuna/miopen/db_tables.py"
 }
 
 def cleanup() {
@@ -470,6 +470,7 @@ def pytestSuite1() {
            sh "pytest tests/test_merge_db.py -s"
            sh "pytest tests/test_merge_db_functions.py -s"
            sh "pytest tests/test_utility.py -s"
+           sh "pytest tests/test_example.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -540,7 +541,7 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
             sh "cd tuna && mypy analyze_parse_db.py"
             sh "cd tuna && mypy build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
           }

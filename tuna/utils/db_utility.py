@@ -26,18 +26,81 @@
 ###############################################################################
 """Utility module for DB helper functions"""
 
+import os
 import enum
 import random
 from time import sleep
 import pymysql
-from sqlalchemy.exc import OperationalError, IntegrityError
+from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
+from sqlalchemy import create_engine
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.miopen_tables import Solver
 from tuna.utils.logger import setup_logger
 from tuna.metadata import NUM_SQL_RETRIES
+from tuna.utils.utility import get_env_vars
 
 LOGGER = setup_logger('db_utility')
+
+ENV_VARS = get_env_vars()
+
+ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" +\
+                         f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}",
+                       encoding="utf8")
+
+
+def connect_db():
+  """Create DB if it doesnt exist"""
+  db_name = None
+  if 'TUNA_DB_NAME' in os.environ:
+    db_name = os.environ['TUNA_DB_NAME']
+  else:
+    raise ValueError('DB name must be specified in env variable: TUNA_DB_NAME')
+
+  try:
+    ENGINE.execute(f'Use {db_name}')
+    return
+  except OperationalError:  # as err:
+    LOGGER.warning('Database %s does not exist, attempting to create database',
+                   db_name)
+
+  try:
+    ENGINE.execute(f'Create database if not exists {db_name}')
+  except OperationalError as err:
+    LOGGER.error('Database creation failed %s for username: %s', err,
+                 ENV_VARS['user_name'])
+  ENGINE.execute(f'Use {db_name}')
+  ENGINE.execute('SET GLOBAL max_allowed_packet=4294967296')
+
+
+def create_tables(all_tables):
+  """Function to create or sync DB tables/triggers"""
+  #pylint: disable=too-many-locals
+  connect_db()
+  for table in all_tables:
+    try:
+      table.__table__.create(ENGINE)
+      LOGGER.info("Created: %s", table.__tablename__)
+
+    except (OperationalError, ProgrammingError) as err:
+      LOGGER.warning('Err occurred %s \n For table: %s.', err, table)
+      LOGGER.warning(
+          'Schema migration not implemented, please udpate schema manually')
+      continue
+
+  return True
+
+
+def create_indices(all_indices):
+  """Create indices from index list"""
+  with ENGINE.connect() as conn:
+    for idx in all_indices:
+      try:
+        conn.execute(idx)
+        LOGGER.info('Idx created successfully: %s', idx)
+      except (OperationalError, ProgrammingError) as oerr:
+        LOGGER.info('%s \n', oerr)
+        continue
 
 
 def get_solver_ids():

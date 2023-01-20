@@ -43,7 +43,7 @@ from tuna.config_type import ConfigType
 from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from tuna.miopen.tables import MIOpenDBTables
-from tuna.db_tables import connect_db
+from tuna.utils.db_utility import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from miopen.miopen_lib import MIOpen
@@ -64,7 +64,9 @@ def add_job(w):
   machine = machine_lst[0]
 
   #update solvers
-  kwargs = get_worker_args(args, machine)
+  miopen = MIOpen()
+  miopen.args = args
+  kwargs = get_worker_args(args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
@@ -72,8 +74,7 @@ def add_job(w):
   args.update_applicability = True
   args.label = 'tuna_pytest_worker'
   args.session_id = w.session_id
-  miopen = MIOpen()
-  worker_lst = miopen.compose_worker_list(machine_lst, args)
+  worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
 
@@ -189,14 +190,16 @@ def test_worker():
       'envmt': ["MIOPEN_LOG_LEVEL=7"],
       'reset_interval': False,
       'app_test': False,
-      'label': '',
+      'label': 'tuna_pytest_worker',
       'use_tuner': False,
       'job_queue': Queue(),
       'queue_lock': Lock(),
       'end_jobs': e,
       'fin_steps': ['not_fin'],
       'config_type': ConfigType.convolution,
-      'session_id': session_id
+      'session_id': session_id,
+      'find_mode': 1,
+      'blacklist': None
   }
 
   #worker is an interface and has no sql tables, using fin

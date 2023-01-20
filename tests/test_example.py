@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
@@ -24,53 +23,32 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief Script to launch tuning jobs, or execute commands on available machines"""
-import argparse
+
+import os
 import sys
-from tuna.utils.logger import setup_logger
-from tuna.libraries import Library
-from tuna.lib_utils import get_library
 
-# Setup logging
-LOGGER = setup_logger('go_fish')
+sys.path.append("../tuna")
+sys.path.append("tuna")
 
+this_path = os.path.dirname(__file__)
 
-def parse_args():
-  """Function to parse arguments"""
-  parser = argparse.ArgumentParser()
-
-  parser.add_argument('lib',
-                      nargs='?',
-                      default=Library.MIOPEN,
-                      type=Library,
-                      help="Specify library to run, defaults to MIOpen",
-                      choices=Library)
-
-  args, _ = parser.parse_known_args()
-  return vars(args)
+from tuna.example.example_lib import Example
+from utils import ExampleArgs
+from tuna.utils.miopen_utility import load_machines
+from tuna.dbBase.sql_alchemy import DbSession
+from tuna.example.session import SessionExample
 
 
-def main():
-  """Main function to start Tuna"""
-  LOGGER.info(sys.argv)
-  args = parse_args()
-  library = get_library(args)
+def test_example():
+  example = Example()
+  example.args = ExampleArgs()
+  assert (example.add_tables())
 
-  try:
-
-    #returns a list of workers/processes it started
-    worker_lst = library.run()
-    if worker_lst is None:
-      return True
-
-    for worker in worker_lst:
-      worker.join()
-      LOGGER.warning('Process finished')
-  except KeyboardInterrupt:
-    LOGGER.warning('Interrupt signal caught')
+  res = load_machines(example.args)
+  res = example.compose_worker_list(res)
+  with DbSession() as session:
+    query = session.query(SessionExample)
+    res = query.all()
+    assert len(res) is not None
 
   return True
-
-
-if __name__ == '__main__':
-  main()

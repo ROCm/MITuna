@@ -25,46 +25,15 @@
 #
 ###############################################################################
 """ Module for creating DB tables"""
-import os
-from sqlalchemy.exc import OperationalError, ProgrammingError
-from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from tuna.miopen.miopen_tables import get_miopen_tables
 from tuna.miopen.miopen_db_helpers import get_miopen_triggers, drop_miopen_triggers
-from tuna.db_engine import ENV_VARS, ENGINE
+from tuna.db_engine import ENGINE
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
+from tuna.utils.db_utility import create_tables
 
 #pylint: disable=too-few-public-methods
 LOGGER = setup_logger('db_tables')
-ENV_VARS = get_env_vars()
-
-ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" +\
-                         f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}",
-                       encoding="utf8")
-
-
-def connect_db():
-  """Create DB if it doesnt exist"""
-  db_name = None
-  if 'TUNA_DB_NAME' in os.environ:
-    db_name = os.environ['TUNA_DB_NAME']
-  else:
-    raise ValueError('DB name must be specified in env variable: TUNA_DB_NAME')
-
-  try:
-    ENGINE.execute(f'Use {db_name}')
-    return
-  except OperationalError:  # as err:
-    LOGGER.warning('Database %s does not exist, attempting to create database',
-                   db_name)
-
-  try:
-    ENGINE.execute(f'Create database if not exists {db_name}')
-  except OperationalError as err:
-    LOGGER.error('Database creation failed %s for username: %s', err,
-                 ENV_VARS['user_name'])
-  ENGINE.execute(f'Use {db_name}')
-  ENGINE.execute('SET GLOBAL max_allowed_packet=4294967296')
 
 
 def recreate_triggers(drop_triggers, create_triggers):
@@ -79,38 +48,6 @@ def recreate_triggers(drop_triggers, create_triggers):
       except OperationalError as oerr:
         LOGGER.warning("Operational Error occured while adding trigger: '%s'",
                        trg)
-        LOGGER.info('%s \n', oerr)
-        continue
-
-  return True
-
-
-def create_tables(all_tables):
-  """Function to create or sync DB tables/triggers"""
-  #pylint: disable=too-many-locals
-  connect_db()
-  for table in all_tables:
-    try:
-      table.__table__.create(ENGINE)
-      LOGGER.info("Created: %s", table.__tablename__)
-
-    except (OperationalError, ProgrammingError) as err:
-      LOGGER.warning('Err occurred %s \n For table: %s.', err, table)
-      LOGGER.warning(
-          'Schema migration not implemented, please udpate schema manually')
-      continue
-
-  return True
-
-
-def create_indices(all_indices):
-  """Create indices from index list"""
-  with ENGINE.connect() as conn:
-    for idx in all_indices:
-      try:
-        conn.execute(idx)
-        LOGGER.info('Idx created successfully: %s', idx)
-      except (OperationalError, ProgrammingError) as oerr:
         LOGGER.info('%s \n', oerr)
         continue
 

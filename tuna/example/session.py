@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,53 +24,37 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief Script to launch tuning jobs, or execute commands on available machines"""
-import argparse
-import sys
-from tuna.utils.logger import setup_logger
-from tuna.libraries import Library
-from tuna.lib_utils import get_library
+"""Session table and its associate functionality"""
+from sqlalchemy import UniqueConstraint
 
-# Setup logging
-LOGGER = setup_logger('go_fish')
+from tuna.dbBase.base_class import BASE
+from tuna.session_mixin import SessionMixin
 
 
-def parse_args():
-  """Function to parse arguments"""
-  parser = argparse.ArgumentParser()
+class SessionExample(BASE, SessionMixin):
+  """Session table to keep track of tunning sesions"""
+  #pylint: disable=attribute-defined-outside-init
 
-  parser.add_argument('lib',
-                      nargs='?',
-                      default=Library.MIOPEN,
-                      type=Library,
-                      help="Specify library to run, defaults to MIOpen",
-                      choices=Library)
+  __tablename__ = "session_example"
+  __table_args__ = (UniqueConstraint("arch",
+                                     "num_cu",
+                                     "rocm_v",
+                                     "reason",
+                                     "docker",
+                                     name="uq_idx"),)
 
-  args, _ = parser.parse_known_args()
-  return vars(args)
+  def get_query(self, sess, sess_obj, entry):
+    """get session matching this object"""
+    query = sess.query(sess_obj.id)\
+        .filter(sess_obj.arch == entry.arch)\
+        .filter(sess_obj.num_cu == entry.num_cu)\
+        .filter(sess_obj.rocm_v == entry.rocm_v)\
+        .filter(sess_obj.reason == entry.reason)\
+        .filter(sess_obj.docker == entry.docker)\
 
+    return query
 
-def main():
-  """Main function to start Tuna"""
-  LOGGER.info(sys.argv)
-  args = parse_args()
-  library = get_library(args)
-
-  try:
-
-    #returns a list of workers/processes it started
-    worker_lst = library.run()
-    if worker_lst is None:
-      return True
-
-    for worker in worker_lst:
-      worker.join()
-      LOGGER.warning('Process finished')
-  except KeyboardInterrupt:
-    LOGGER.warning('Interrupt signal caught')
-
-  return True
-
-
-if __name__ == '__main__':
-  main()
+  def add_new_session(self, args, worker):
+    """Add new session entry"""
+    super().add_new_session(args, worker)
+    return self.insert_session()
