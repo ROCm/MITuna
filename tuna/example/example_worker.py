@@ -40,6 +40,7 @@ class ExampleWorker(WorkerInterface):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
 
     if not self.get_job("new", "compile_start", True):
+      #Sleep in case of DB contention
       sleep(random.randint(1, 10))
       return False
 
@@ -55,11 +56,11 @@ class ExampleWorker(WorkerInterface):
     if failed_job:
       self.set_job_state('errored', result=result_str)
     else:
-      self.set_job_state('compiled', result=result_str)
+      self.set_job_state('compiled', result=cmd_output)
     return True
 
   def run_cmd(self):
-    """Run a command"""
+    """Run the actual workload"""
     cmd = []
 
     env_str = " ".join(self.envmt)

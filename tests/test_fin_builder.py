@@ -89,7 +89,7 @@ def test_fin_builder():
   args.label = 'tuna_pytest_fin_builder'
   args.session_id = add_test_session(label='tuna_pytest_fin_builder')
   miopen = MIOpen()
-  miopen.args = args
+  #miopen.args = args
 
   #update solvers
   kwargs = get_worker_args(args, machine, miopen)

@@ -101,6 +101,10 @@ class MIOpen(MITunaInterface):
                         help='Restart interval for job in hours.')
 
     group = parser.add_mutually_exclusive_group()
+    group.add_argument('--add_tables',
+                       dest='add_tables',
+                       action='store_true',
+                       help='Add MIOpen library specific tables')
     group.add_argument('--init_session',
                        action='store_true',
                        dest='init_session',
@@ -145,98 +149,93 @@ class MIOpen(MITunaInterface):
                        help='execute on each machine')
 
     clean_args()
-    args = parser.parse_args()
+    self.args = parser.parse_args()
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
 
-    if args.list_solvers:
+    if self.args.list_solvers:
       print_solvers()
       raise ValueError('Printing solvers...')
 
-    if args.fin_steps:
-      self.check_fin_args(args, parser)
+    if self.args.fin_steps:
+      self.check_fin_args(parser)
 
-    if args.find_mode is None and not (args.check_status or args.restart_machine
-                                       or args.execute_cmd or
-                                       args.execute_docker_cmd):
+    if self.args.find_mode is None and not (
+        self.args.check_status or self.args.restart_machine or
+        self.args.execute_cmd or self.args.execute_docker_cmd):
       parser.error('find_mode must be specified for a tuning run')
 
-    if args.blacklist:
-      self.check_blacklist(args, parser)
+    if self.args.blacklist:
+      self.check_blacklist(parser)
 
-    args_check(args, parser)
+    args_check(self.args, parser)
 
     fin_session_steps = [
         'miopen_find_compile', 'miopen_find_eval', 'miopen_perf_compile',
         'miopen_perf_eval', 'get_applicability', 'find_compile', 'find_eval'
     ]
     has_fin = False
-    if args.fin_steps:
-      has_fin = all(x in fin_session_steps for x in args.fin_steps)
+    if self.args.fin_steps:
+      has_fin = all(x in fin_session_steps for x in self.args.fin_steps)
 
-    if (args.update_applicability or has_fin) and not args.session_id:
+    if (self.args.update_applicability or has_fin) and not self.args.session_id:
       parser.error("session_id must be specified with this operation")
 
-    return args
-
-  def check_fin_args(self, args, parser):
+  def check_fin_args(self, parser):
     """! Helper function for fin args
-       @param args The command line arguments
        @param parser The command line argument parser
     """
     valid_fin_steps = list(k for k in FinStep.__members__)
-    if ',' in args.fin_steps:
+    if ',' in self.args.fin_steps:
       parser.error('Multiple fin_steps currently not supported')
-    f_steps = args.fin_steps.split(',')
-    args.fin_steps = f_steps
-    for step in args.fin_steps:
+    f_steps = self.args.fin_steps.split(',')
+    self.args.fin_steps = f_steps
+    for step in self.args.fin_steps:
       if step not in valid_fin_steps:
         parser.error(f"Supported fin steps are: {valid_fin_steps}")
-    assert len(args.fin_steps) == 1
+    assert len(self.args.fin_steps) == 1
 
-  def check_blacklist(self, args, parser):
+  def check_blacklist(self, parser):
     """! Helper function
-       @param args The command line arguments
        @param parser The command line argument parser
     """
-    args.blacklist = args.blacklist.split(',')
-    for sol in args.blacklist:
+    self.args.blacklist = self.args.blacklist.split(',')
+    for sol in self.args.blacklist:
       if sol not in MIOPEN_ALG_LIST:
         parser.error("Incorrect blacklist value")
 
-  def do_fin_work(self, args, gpu, f_vals):
+  def do_fin_work(self, gpu, f_vals):
     """! Helper function to execute job independendent fin work
-      @param args The command line arguments
       @param gpu Unique ID of the GPU
       @param f_vals Dict containing runtime information
     """
-    kwargs = self.get_kwargs(gpu, f_vals, args)
+    kwargs = self.get_kwargs(gpu, f_vals)
     fin_worker = FinClass(**kwargs)
 
-    if args.update_solvers:
+    if self.args.update_solvers:
       if not fin_worker.get_solvers():
         self.logger.error('No solvers returned from Fin class')
 
     return True
 
-  def launch_worker(self, gpu_idx, f_vals, worker_lst, args):
+  def launch_worker(self, gpu_idx, f_vals, worker_lst):
     """! Function to launch worker
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param worker_lst List containing worker instances
-      @param args The command line arguments
       @retturn ret Boolean value
     """
     # pylint: disable=too-many-branches
     worker = None
-    kwargs = self.get_kwargs(gpu_idx, f_vals, args)
+    kwargs = self.get_kwargs(gpu_idx, f_vals)
 
-    if args.fin_steps:
-      if 'miopen_find_compile' in args.fin_steps or 'miopen_perf_compile' in args.fin_steps:
+    if self.args.fin_steps:
+      if 'miopen_find_compile' in self.args.fin_steps \
+      or 'miopen_perf_compile' in self.args.fin_steps:
         kwargs['fetch_state'] = ['new']
         worker = FinBuilder(**kwargs)
-      elif 'miopen_find_eval' in args.fin_steps or 'miopen_perf_eval' in args.fin_steps:
+      elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
         kwargs['fetch_state'] = ['compiled']
         worker = FinEvaluator(**kwargs)
       else:
@@ -244,7 +243,7 @@ class MIOpen(MITunaInterface):
       worker.start()
       worker_lst.append(worker)
       return True
-    if args.update_applicability:
+    if self.args.update_applicability:
       kwargs['fin_steps'] = ['applicability']
       worker = FinClass(**kwargs)
       worker.start()
@@ -253,23 +252,24 @@ class MIOpen(MITunaInterface):
 
     worker = WorkerInterface(**kwargs)
     ret = False
-    if args.check_status:
+    if self.args.check_status:
       if not super().check_status(worker, f_vals["b_first"], gpu_idx,
-                                  f_vals["machine"], args.docker_name):
+                                  f_vals["machine"], self.args.docker_name):
         ret = True
-    elif args.init_session:
-      Session().add_new_session(args, worker)
-    elif args.execute_cmd:
+    elif self.args.init_session:
+      Session().add_new_session(self.args, worker)
+    elif self.args.execute_cmd:
       # JD: Move the worker.exec_command to machine
-      self.logger.info(args.execute_cmd)
-      _, _, _ = worker.exec_command(args.execute_cmd + " 2>&1 ")
+      self.logger.info(self.args.execute_cmd)
+      _, _, _ = worker.exec_command(self.args.execute_cmd + " 2>&1 ")
       #log printed by exec_command
-    elif args.execute_docker_cmd:
-      super().execute_docker(worker, args.execute_docker_cmd, f_vals["machine"])
+    elif self.args.execute_docker_cmd:
+      super().execute_docker(worker, self.args.execute_docker_cmd,
+                             f_vals["machine"])
 
     return ret
 
-  def compose_worker_list(self, res, args):
+  def compose_worker_list(self, res):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
       @param res DB query return item containg available machines
@@ -278,31 +278,31 @@ class MIOpen(MITunaInterface):
     worker_lst = []
     fin_work_done = False
     for machine in res:
-      if args.restart_machine:
+      if self.args.restart_machine:
         machine.restart_server(wait=False)
         continue
 
       #fin_steps should only contain one step
       worker_ids = None
-      if args.fin_steps and 'eval' in args.fin_steps[0]:
+      if self.args.fin_steps and 'eval' in self.args.fin_steps[0]:
         worker_ids = machine.get_avail_gpus()
       else:
-        worker_ids = super().determine_num_procs(machine)
+        worker_ids = super().get_num_procs(machine)
 
       if len(worker_ids) == 0:
         return None
 
-      f_vals = super().get_f_vals(machine, worker_ids, self.args)
+      f_vals = super().get_f_vals(machine, worker_ids)
 
-      if (args.update_solvers) and not fin_work_done:
-        self.do_fin_work(args, 0, f_vals)
+      if (self.args.update_solvers) and not fin_work_done:
+        self.do_fin_work(0, f_vals)
         fin_work_done = True
         break
 
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
-        if not self.launch_worker(gpu_idx, f_vals, worker_lst, args):
-          break
+        if not self.launch_worker(gpu_idx, f_vals, worker_lst):
+          raise ValueError('The worker failed to launch')
 
     return worker_lst
 
@@ -316,43 +316,45 @@ class MIOpen(MITunaInterface):
     # pylint: disable=duplicate-code
     """Main function to launch library"""
     res = None
-    self.args = self.parse_args()
+    self.parse_args()
+    if self.args.add_tables:
+      self.add_tables()
+      return None
     res = load_machines(self.args)
-    res = self.compose_worker_list(res, self.args)
+    res = self.compose_worker_list(res)
     return res
 
-  def get_envmt(self, args):
+  def get_envmt(self):
     """! Function to construct environment var
-       @param args The command line arguments
     """
     envmt = ["MIOPEN_LOG_LEVEL=4"]
 
     envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
     envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
 
-    if args.find_mode:
-      envmt.append(f"MIOPEN_FIND_MODE={args.find_mode}")
+    if self.args.find_mode:
+      envmt.append(f"MIOPEN_FIND_MODE={self.args.find_mode}")
 
-    if args.blacklist:
-      bk_str = ", ".join([f"{arg}=0" for arg in args.blacklist])
+    if self.args.blacklist:
+      bk_str = ", ".join([f"{arg}=0" for arg in self.args.blacklist])
       for bk_var in bk_str.split(','):
         envmt.append(bk_var)
 
     return envmt
 
-  def get_kwargs(self, gpu_idx, f_vals, args):
+  def get_kwargs(self, gpu_idx, f_vals):
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param args The command line arguments
     """
-    if args.config_type is None:
-      args.config_type = ConfigType.convolution
+    if self.args.config_type is None:
+      self.args.config_type = ConfigType.convolution
 
-    kwargs = super().get_kwargs(gpu_idx, f_vals, args)
-    kwargs['fin_steps'] = args.fin_steps
-    kwargs['dynamic_solvers_only'] = args.dynamic_solvers_only
-    kwargs['config_type'] = args.config_type
-    kwargs['reset_interval'] = args.reset_interval
+    kwargs = super().get_kwargs(gpu_idx, f_vals)
+    kwargs['fin_steps'] = self.args.fin_steps
+    kwargs['dynamic_solvers_only'] = self.args.dynamic_solvers_only
+    kwargs['config_type'] = self.args.config_type
+    kwargs['reset_interval'] = self.args.reset_interval
 
     return kwargs

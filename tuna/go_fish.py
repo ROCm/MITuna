@@ -44,12 +44,8 @@ def parse_args():
                       default=Library.MIOPEN,
                       type=Library,
                       help="Specify library to run, defaults to MIOpen",
+                      required=True,
                       choices=Library)
-  parser.add_argument('--add_tables',
-                      dest='add_tables',
-                      action='store_true',
-                      help='Add library specific tables. If no library specified, '\
-                           'MIOpen is implied')
 
   args, _ = parser.parse_known_args()
   return vars(args)
@@ -59,11 +55,7 @@ def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
   args = parse_args()
-
   library = get_library(args)
-  if args["add_tables"]:
-    library.add_tables()
-    return True
 
   try:
 

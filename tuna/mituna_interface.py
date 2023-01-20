@@ -41,6 +41,7 @@ class MITunaInterface():
 
     self.logger = setup_logger(logger_name=self.library.value,
                                add_streamhandler=True)
+    self.args = None
 
   def check_docker(self, worker, dockername="miopentuna"):
     """! Checking for docker
@@ -129,14 +130,13 @@ class MITunaInterface():
     """Add library specific tables"""
     return self.add_tables()
 
-  def determine_num_procs(self, machine):
+  def get_num_procs(self, machine):
     """Determine number of processes by compute capacity"""
     worker_ids = None
     env = get_env_vars()
     if env['slurm_cpus'] > 0:
       num_procs = int(env['slurm_cpus'])
     else:
-      # JD: This sould be the responsibility of the machine class
       num_procs = int(machine.get_num_cpus() * .6)
 
     worker_ids = range(num_procs)
@@ -148,14 +148,14 @@ class MITunaInterface():
 
     return worker_ids
 
-  def get_f_vals(self, machine, worker_ids, args):
+  def get_f_vals(self, machine, worker_ids):
     """Determine kwargs for worker_interface"""
     f_vals = self.compose_f_vals(machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))
-    f_vals['envmt'] = self.get_envmt(args)
+    f_vals['envmt'] = self.get_envmt()
     return f_vals
 
-  def get_envmt(self, args):
+  def get_envmt(self):
     """Get runtime envmt"""
     raise NotImplementedError("Not implemented")
 
@@ -178,11 +178,10 @@ class MITunaInterface():
 
     return f_vals
 
-  def get_kwargs(self, gpu_idx, f_vals, args):
+  def get_kwargs(self, gpu_idx, f_vals):
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
-      @param args The command line arguments
     """
     envmt = f_vals["envmt"].copy()
 
@@ -197,10 +196,10 @@ class MITunaInterface():
         'job_queue_lock': f_vals["job_queue_lock"],
         'result_queue': f_vals["result_queue"],
         'result_queue_lock': f_vals["result_queue_lock"],
-        'label': args.label,
-        'docker_name': args.docker_name,
+        'label': self.args.label,
+        'docker_name': self.args.docker_name,
         'end_jobs': f_vals['end_jobs'],
-        'session_id': args.session_id
+        'session_id': self.args.session_id
     }
 
     return kwargs
