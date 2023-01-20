@@ -40,12 +40,12 @@ from tuna.example.session import SessionExample
 
 
 def test_example():
-  args = ExampleArgs()
   example = Example()
+  example.args = ExampleArgs()
   assert (example.add_tables())
 
-  res = load_machines(args)
-  res = example.compose_worker_list(res, args)
+  res = load_machines(example.args)
+  res = example.compose_worker_list(res)
   with DbSession() as session:
     query = session.query(SessionExample)
     res = query.all()
