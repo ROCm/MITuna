@@ -144,6 +144,27 @@ def get_golden_query(dbt, golden_version):
   return query
 
 
+def get_golden_entries(dbt, golden_version):
+  """! Compose query to get all golden db entries for the session, performs better than get_golden_query"""
+  with DbSession() as session:
+    fdb_attr = [
+        "config", "solver", "session", "fdb_key", "params", "kernel_time",
+        "workspace_sz", "alg_lib", "opencl", "kernel_group"
+    ]
+    attr_str = ','.join(fdb_attr)
+    query = f"select {attr_str} from {dbt.golden_table.__tablename__}"\
+            f" where valid=1 and golden_miopen_v={golden_version};"
+    ret = session.execute(query)
+    entries = []
+    for row in ret:
+      entry = Dummy()
+      for i, col in enumerate(fdb_attr):
+        setattr(entry, col, row[i])
+      entries.append(entry)
+
+  return entries
+
+
 def latest_golden_v(dbt):
   """Get highest golden version in the table """
   version = -1
@@ -356,7 +377,8 @@ def main():
     )
 
   if args.base_golden_v is not None:
-    base_gold_db = get_golden_query(dbt, args.base_golden_v).all()
+    base_gold_db = get_golden_entries(dbt, args.base_golden_v)
+    LOGGER.info("Base Golden Version entries %s", len(base_gold_db))
     if not base_gold_db:
       ver = latest_golden_v(dbt)
       if ver == -1:
@@ -367,17 +389,18 @@ def main():
     else:
       process_merge_golden(dbt, args.golden_v, base_gold_db, s_copy=True)
 
-  entries = get_fdb_entries(dbt)
-  LOGGER.info("Prepped %s entries", len(entries))
+  if args.overwrite:
+    entries = get_fdb_entries(dbt)
+    LOGGER.info("Import Session entries %s", len(entries))
+    success = verif_no_duplicates(entries)
+    if not success:
+      return False
 
-  success = verif_no_duplicates(entries)
-  if not success:
-    return False
-  total = process_merge_golden(dbt, args.golden_v, entries)
+    total = process_merge_golden(dbt, args.golden_v, entries)
+    LOGGER.info("Merged: %s", total)
 
-  LOGGER.info("Merged: %s", total)
-  LOGGER.info('Updating conv perf DB table')
   if args.create_perf_table:
+    LOGGER.info('Updating conv perf DB table')
     create_perf_table(args)
 
   return True
