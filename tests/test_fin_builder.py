@@ -83,45 +83,44 @@ def add_fin_find_compile_job(session_id, dbt):
 
 
 def test_fin_builder():
-  args = GoFishArgs()
-  machine_lst = load_machines(args)
-  machine = machine_lst[0]
-  args.label = 'tuna_pytest_fin_builder'
-  args.session_id = add_test_session(label='tuna_pytest_fin_builder')
   miopen = MIOpen()
-  #miopen.args = args
+  miopen.args = GoFishArgs()
+  machine_lst = load_machines(miopen.args)
+  machine = machine_lst[0]
+  miopen.args.label = 'tuna_pytest_fin_builder'
+  miopen.args.session_id = add_test_session(label='tuna_pytest_fin_builder')
 
   #update solvers
-  kwargs = get_worker_args(args, machine, miopen)
+  kwargs = get_worker_args(miopen.args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
   #get applicability
   dbt = add_cfgs()
-  args.update_applicability = True
-  worker_lst = miopen.compose_worker_list(machine_lst, args)
+  miopen.args.update_applicability = True
+  worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
 
   #load jobs
-  args.label = 'tuna_pytest_fin_builder'
-  num_jobs = add_fin_find_compile_job(args.session_id, dbt)
+  miopen.args.label = 'tuna_pytest_fin_builder'
+  num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
 
   #compile
-  args.update_applicability = False
-  args.fin_steps = ["miopen_find_compile"]
-  args.label = 'tuna_pytest_fin_builder'
-  worker_lst = miopen.compose_worker_list(machine_lst, args)
+  miopen.args.update_applicability = False
+  miopen.args.fin_steps = ["miopen_find_compile"]
+  miopen.args.label = 'tuna_pytest_fin_builder'
+  worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
 
   with DbSession() as session:
-    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='errored')\
                                          .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
                                          .count()
     #ommiting valid Fin/MIOpen errors
     num_jobs = (num_jobs - valid_fin_err)
-    count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='compiled').count()
     assert (count == num_jobs)
