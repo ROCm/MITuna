@@ -252,7 +252,7 @@ def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
   return count
 
 
-def verif_no_duplicates(entries):
+def verify_no_duplicates(entries):
   """ check entries for duplicates (error in fdb) """
   with DbSession() as session:
     sess_map = sess_info(session)
@@ -370,7 +370,7 @@ def main():
   entries = get_fdb_entries(dbt)
   LOGGER.info("Prepped %s entries", len(entries))
 
-  success = verif_no_duplicates(entries)
+  success = verify_no_duplicates(entries)
   if not success:
     return False
   total = process_merge_golden(dbt, args.golden_v, entries)
