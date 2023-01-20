@@ -302,7 +302,7 @@ class MIOpen(MITunaInterface):
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst):
-          raise ValueError('The worker failed to launch')
+          break
 
     return worker_lst
 
