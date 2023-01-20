@@ -107,25 +107,6 @@ class MITunaInterface():
 
     return True
 
-  def execute_docker(self, worker, docker_cmd, machine):
-    """! Function to executed docker cmd
-      @param worker The worker interface instance
-      @param docker_cmd The command to be executed in the docker
-      @param machine The machine instance
-    """
-    self.logger.info('Running on host: %s port: %u', machine.hostname,
-                     machine.port)
-    _, _, _ = worker.exec_docker_cmd(docker_cmd + " 2>&1")
-    #logger output already printed by exec_docker_cmd
-    #self.logger.info(docker_cmd)
-    #while not out.channel.exit_status_ready():
-    #  lines = out.readline()
-    #  self.logger.info(lines.rstrip())
-    #for line in out.readlines():
-    #  self.logger.info(line.rstrip())
-
-    return True
-
   def add_tables(self):
     """Add library specific tables"""
     return self.add_tables()

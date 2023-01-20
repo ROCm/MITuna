@@ -91,14 +91,14 @@ class Example(MITunaInterface):
     worker_lst.append(worker)
     return True
 
-  def compose_worker_list(self, res):
+  def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
     worker_lst = []
-    for machine in res:
+    for machine in machines:
       if self.args.restart_machine:
         machine.restart_server(wait=False)
         continue
@@ -132,8 +132,8 @@ class Example(MITunaInterface):
     if self.args.add_tables:
       self.add_tables()
       return None
-    res = load_machines(self.args)
-    res = self.compose_worker_list(res)
+    machines = load_machines(self.args)
+    res = self.compose_worker_list(machines)
     return res
 
   def get_envmt(self):

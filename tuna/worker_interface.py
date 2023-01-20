@@ -41,7 +41,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wr
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.abort import chk_abort_file
-from tuna.metadata import TUNA_LOG_DIR, TUNA_DOCKER_NAME
+from tuna.metadata import TUNA_LOG_DIR
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.db_utility import connect_db
@@ -65,7 +65,7 @@ class WorkerInterface(Process):
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'docker_name', 'end_jobs',
+        'result_queue_lock', 'label', 'fetch_state', 'end_jobs',
         'dynamic_solvers_only', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
@@ -85,7 +85,6 @@ class WorkerInterface(Process):
     #job detail vars
     self.envmt = []
     self.fetch_state = ['new']
-    self.docker_name = TUNA_DOCKER_NAME
     self.label = None
     self.dynamic_solvers_only = False
     self.session_id = None
@@ -349,9 +348,7 @@ class WorkerInterface(Process):
 
   def exec_docker_cmd(self, cmd):
     """forward command execution to machine method"""
-    ret_code, out, err = self.machine.exec_command(cmd,
-                                                   docker_name=self.docker_name,
-                                                   timeout=LOG_TIMEOUT)
+    ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
       out = out.read().strip()
     if not out and err:

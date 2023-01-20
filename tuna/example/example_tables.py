@@ -45,15 +45,7 @@ class JobEnum(enum.Enum):
   started = 2
   running = 3
   completed = 4
-  timeout = 5
-  error_status = 6
-  no_update = 7
-  errored = 8
-  bad_param = 9
-  error = 10
-  transfer_error = 11
-  not_applicable = 20
-  aborted = 21
+  error = 5
 
 
 class Job(BASE):

@@ -135,12 +135,6 @@ class MIOpen(MITunaInterface):
                        default=False,
                        help='Check the status of machines')
 
-    group.add_argument('-d',
-                       '--docker_exec',
-                       dest='execute_docker_cmd',
-                       type=str,
-                       default=None,
-                       help='execute in a docker on each machine')
     group.add_argument('-e',
                        '--exec',
                        dest='execute_cmd',
@@ -161,9 +155,9 @@ class MIOpen(MITunaInterface):
     if self.args.fin_steps:
       self.check_fin_args(parser)
 
-    if self.args.find_mode is None and not (
-        self.args.check_status or self.args.restart_machine or
-        self.args.execute_cmd or self.args.execute_docker_cmd):
+    if self.args.find_mode is None and not (self.args.check_status or
+                                            self.args.restart_machine or
+                                            self.args.execute_cmd):
       parser.error('find_mode must be specified for a tuning run')
 
     if self.args.blacklist:
@@ -262,14 +256,10 @@ class MIOpen(MITunaInterface):
       # JD: Move the worker.exec_command to machine
       self.logger.info(self.args.execute_cmd)
       _, _, _ = worker.exec_command(self.args.execute_cmd + " 2>&1 ")
-      #log printed by exec_command
-    elif self.args.execute_docker_cmd:
-      super().execute_docker(worker, self.args.execute_docker_cmd,
-                             f_vals["machine"])
 
     return ret
 
-  def compose_worker_list(self, res):
+  def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
       @param res DB query return item containg available machines
@@ -277,7 +267,7 @@ class MIOpen(MITunaInterface):
     """
     worker_lst = []
     fin_work_done = False
-    for machine in res:
+    for machine in machines:
       if self.args.restart_machine:
         machine.restart_server(wait=False)
         continue
@@ -302,7 +292,8 @@ class MIOpen(MITunaInterface):
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst):
-          break
+          #break
+          raise ValueError('The worker failed to launch')
 
     return worker_lst
 
@@ -320,8 +311,8 @@ class MIOpen(MITunaInterface):
     if self.args.add_tables:
       self.add_tables()
       return None
-    res = load_machines(self.args)
-    res = self.compose_worker_list(res)
+    machines = load_machines(self.args)
+    res = self.compose_worker_list(machines)
     return res
 
   def get_envmt(self):
