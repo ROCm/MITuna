@@ -44,7 +44,6 @@ def parse_args():
                       default=Library.MIOPEN,
                       type=Library,
                       help="Specify library to run, defaults to MIOpen",
-                      required=True,
                       choices=Library)
 
   args, _ = parser.parse_known_args()
