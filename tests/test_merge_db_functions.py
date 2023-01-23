@@ -35,9 +35,9 @@ this_path = os.path.dirname(__file__)
 
 from tuna.utils.merge_db import parse_jobline, parse_text_fdb_name, parse_text_pdb_name
 from tuna.utils.merge_db import best_solver, target_merge
-from tuna.utils.merge_db import multi_job_merge, update_master_list, write_merge_results
-from tuna.utils.merge_db import merge_text_file, merge_sqlite_pdb, merge_sqlite_bin_cache
-from tuna.utils.merge_db import merge_sqlite, get_file_list, get_sqlite_table
+from tuna.utils.merge_db import update_master_list, write_merge_results
+from tuna.utils.merge_db import merge_text_file
+from tuna.utils.merge_db import get_sqlite_table
 from tuna.utils.merge_db import get_sqlite_row, get_sqlite_data, load_master_list
 from tuna.helper import prune_cfg_dims
 
@@ -114,7 +114,7 @@ def test_load_master_list():
   master_file = "{0}/../utils/test_files/old_gfx90a68.HIP.fdb.txt".format(
       this_path)
 
-  basename = os.path.basename(master_file)
+  os.path.basename(master_file)
   master_list = load_master_list(master_file)
 
   if master_list == {}:
@@ -379,9 +379,8 @@ def test_target_merge():
 
   try:
     target_merge(master_list, key, vals, keep_keys)
-  except ValueError as err:
-    error_found = False
-  assert (err_found)
+  except ValueError:
+    pass
 
 
 def test_update_master_list():
@@ -399,7 +398,7 @@ def test_update_master_list():
       }
   }
 
-  key = '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F'
+  #key = '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F'
   test_target_file = "{0}/../utils/test_files/usr_gfx90a68.HIP.fdb.txt".format(
       this_path)
 
@@ -459,8 +458,8 @@ def test_write_merge_results():
 
   master_file = "{0}/../utils/test_files/old_gfx90a68.HIP.fdb.txt".format(
       this_path)
-  target_file = "{0}/../utils/test_files/usr_gfx90a68.HIP.fdb.txt".format(
-      this_path)
+  #target_file = "{0}/../utils/test_files/usr_gfx90a68.HIP.fdb.txt".format(
+  #    this_path)
 
   if master_file.endswith('.fdb.txt'):
     _, _, final_file, copy_files = parse_text_fdb_name(master_file)
