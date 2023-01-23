@@ -32,12 +32,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.machine import Machine
-from tuna.sql import DbCursor
-from tuna.utils.db_utility import connect_db
 from tuna.example.example_lib import Example
-from tuna.db_engine import ENGINE
-from tuna.utils.logger import setup_logger
 from utils import ExampleArgs
 from tuna.utils.miopen_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
