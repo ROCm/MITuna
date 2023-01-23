@@ -207,6 +207,14 @@ def best_solver(vals):
 
 def target_merge(master_list, key, vals, keep_keys):
   """merge for explicit target file"""
+  #Error handling of Ivalid input parameter types
+  if not (vals and isinstance(vals, dict)):
+    raise ValueError(f'Invalid vals: {vals}')
+  if not (key and isinstance(key, str) and key.strip()):
+    raise ValueError(f'Invalid key value: {key}')
+  if not (master_list and isinstance(master_list, dict)):
+    raise ValueError(f'Invalid master_list: {master_list}')
+
   fds, fds_val, precision, direction = parse_pdb_key(key)
   driver_cmd = build_driver_cmd(fds, fds_val, precision, DIR_MAP[direction])
   if key not in master_list:
@@ -231,53 +239,6 @@ def target_merge(master_list, key, vals, keep_keys):
     master_list[key] = vals
 
 
-def no_job_merge(master_list, key, vals):
-  """no job id found, but still merge values"""
-  if key in master_list:
-    if len(master_list[key]) < len(vals):
-      master_list[key] = vals
-  else:
-    master_list[key] = vals
-
-
-def single_job_merge(master_list, machine_id, key, vals, res):
-  """merge results when a single job was run"""
-  if machine_id == res[0][2]:
-    # we ran this job!
-    LOGGER.info(res)
-    if key in master_list:
-      old_vals = master_list[key]
-      for k, val in vals.items():
-        old_vals[k] = val
-      master_list[key] = old_vals
-    else:
-      master_list[key] = vals
-
-
-def multi_job_merge(master_list, machine_id, key, vals, res):
-  """merge results from multiple jobs """
-  for _, _, mid, cmd in res:
-    if mid != machine_id:
-      continue
-
-    LOGGER.info(res)
-    if key in master_list:
-      LOGGER.info('First run result: ')
-      LOGGER.info(master_list[key])
-    if 'CBAInfer' in cmd:
-      for s_id, s_val in vals.items():
-        if s_id in ['ConvActivAsm1x1U', 'ConvOclDirectFwdFused']:
-          if key not in master_list:
-            master_list[key] = {}
-          master_list[key][s_id] = s_val
-    else:
-      for s_id, s_val in vals.items():
-        if s_id not in ['ConvActivAsm1x1U', 'ConvOclDirectFwdFused']:
-          if key not in master_list:
-            master_list[key] = {}
-          master_list[key][s_id] = s_val
-
-
 def update_master_list(master_list, local_paths, mids, keep_keys):
   """merge data in master_list with values from the file at local_path"""
   for local_path, machine_id in zip(local_paths, mids):
@@ -286,16 +247,9 @@ def update_master_list(master_list, local_paths, mids, keep_keys):
       # read the file get rid of the duplicates by keeping the first entry
       for line in local_file:
         key, vals = parse_jobline(line)
-        res = []
         if machine_id < 0:
           #a file was selected explicitly to merge mid = -1
           target_merge(master_list, key, vals, keep_keys)
-        elif not res:
-          no_job_merge(master_list, key, vals)
-        elif len(res) == 1:
-          single_job_merge(master_list, machine_id, key, vals, res)
-        elif len(res) > 1:
-          multi_job_merge(master_list, machine_id, key, vals, res)
 
 
 def write_merge_results(master_list, final_file, copy_files):
@@ -321,6 +275,9 @@ def write_merge_results(master_list, final_file, copy_files):
 
 def merge_text_file(master_file, copy_only, keep_keys, target_file=None):
   """merge db text files"""
+  if not (target_file and isinstance(target_file, str) and target_file.strip()):
+    raise ValueError(f'Invalid target_file: {target_file}')
+
   if master_file.endswith('.fdb.txt'):
     _, _, final_file, copy_files = parse_text_fdb_name(master_file)
   else:

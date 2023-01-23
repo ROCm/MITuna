@@ -30,9 +30,7 @@ import json
 import os
 import tempfile
 import functools
-import random
 import types
-from time import sleep
 import paramiko
 try:
   import queue
@@ -55,8 +53,6 @@ from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.utility import split_packets
 from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
 from tuna.utils.db_utility import get_class_by_tablename, has_attr_set
-
-MAX_JOB_RETRIES = 10
 
 
 class FinClass(WorkerInterface):
@@ -821,24 +817,7 @@ class FinClass(WorkerInterface):
         ['/opt/rocm/bin/fin', '-i',
          self.get_fin_input(), '-o', fin_output])  # pylint: disable=no-member
 
-    for i in range(MAX_JOB_RETRIES):
-      ret_code, _, err = self.exec_docker_cmd(cmd)
-
-      if ret_code != 0:
-        self.logger.error('Error executing command: %s', ' '.join(cmd))
-        if err:
-          err_str = err.read()
-          self.logger.error('%s : %s', ret_code, err_str)
-          if "disk I/O error" in err_str:
-            self.logger.error('fin retry : %u', i)
-            sleep(random.randint(1, 10))
-          else:
-            break
-        else:
-          self.logger.error('err code : %s', ret_code)
-          break
-      else:
-        break
+    ret_code, _ = super().run_command(cmd)
 
     if ret_code != 0:
       return None
