@@ -26,11 +26,7 @@
 ###############################################################################
 """ Module for creating DB tables"""
 import enum
-<<<<<<< HEAD
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
-=======
-from sqlalchemy import Column, Integer, String, ForeignKey
->>>>>>> develop
 from sqlalchemy import Text, Enum
 from sqlalchemy.ext.declarative import declared_attr
 

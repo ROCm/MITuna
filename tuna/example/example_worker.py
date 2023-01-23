@@ -70,12 +70,11 @@ class ExampleWorker(WorkerInterface):
       failed_job = True
 
     if failed_job:
-      self.set_job_state('errored', result=result_str)
+      self.set_job_state('errored', result='')
     else:
       self.set_job_state('compiled', result=cmd_output)
 
     return True
-
 
   def run_cmd(self):
     """Run the actual workload"""

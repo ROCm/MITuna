@@ -78,10 +78,7 @@ class Example(MITunaInterface):
       parser.print_help()
       sys.exit(-1)
 
-    args_check(args, parser)
-
-    return args
-
+    args_check(self.args, parser)
 
   def launch_worker(self, gpu_idx, f_vals, worker_lst):
     """! Function to launch worker
