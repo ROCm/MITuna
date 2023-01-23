@@ -42,7 +42,6 @@ class JobEnum(enum.Enum):
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
   new = 1
-  started = 2
   running = 3
   completed = 4
   error = 5

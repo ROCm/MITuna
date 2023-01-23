@@ -49,7 +49,7 @@ class ExampleWorker(WorkerInterface):
 
   def close_job(self):
     """mark a job complete"""
-    self.set_job_state('compiled')
+    self.set_job_state('completed')
 
   def step(self):
     """Main functionality of the worker class. It picks up jobs in new state and executes them"""
@@ -72,7 +72,7 @@ class ExampleWorker(WorkerInterface):
     if failed_job:
       self.set_job_state('errored', result='')
     else:
-      self.set_job_state('compiled', result=cmd_output)
+      self.set_job_state('completed', result=cmd_output)
 
     return True
 
