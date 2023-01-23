@@ -69,7 +69,7 @@ def test_example():
   assert num_jobs
 
   #testing execute rocminfo
-  res = load_machines(args)
+  res = load_machines(example.args)
   res = example.compose_worker_list(res)
   with DbSession() as session:
     query = session.query(Job).filter(Job.session==1)\
