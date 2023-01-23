@@ -367,7 +367,6 @@ def test_target_merge():
   assert (err_found)
 
   # inputs wth master_list={}, error handling
-  err_found = True
   master_list = {}
   keep_keys = False
   key = '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F'
@@ -377,10 +376,7 @@ def test_target_merge():
           'ConvMlirIgemmFwdXdlops,0.03776,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
   }
 
-  try:
-    target_merge(master_list, key, vals, keep_keys)
-  except ValueError:
-    pass
+  target_merge(master_list, key, vals, keep_keys)
 
 
 def test_update_master_list():
