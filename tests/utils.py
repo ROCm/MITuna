@@ -134,8 +134,8 @@ class DummyArgs(object):
 
 def get_worker_args(args, machine, miopen):
   worker_ids = range(machine.get_num_cpus())
-  f_vals = miopen.get_f_vals(machine, worker_ids, args)
-  kwargs = miopen.get_kwargs(0, f_vals, args)
+  f_vals = miopen.get_f_vals(machine, worker_ids)
+  kwargs = miopen.get_kwargs(0, f_vals)
   return kwargs
 
 
@@ -149,6 +149,7 @@ def add_test_session(arch='gfx908', num_cu=120, label=None):
 
   #create a session
   miopen = MIOpen()
+  miopen.args = args
   kwargs = get_worker_args(args, machine, miopen)
   worker = WorkerInterface(**kwargs)
   session_id = Session().add_new_session(args, worker)

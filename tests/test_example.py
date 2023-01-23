@@ -26,9 +26,6 @@
 
 import os
 import sys
-#import pytest
-from multiprocessing import Value, Lock, Queue
-from subprocess import Popen, PIPE
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -51,30 +48,29 @@ from tuna.example.tables import ExampleDBTables
 
 
 def test_example():
-  args = ExampleArgs()
   example = Example()
+  example.args = ExampleArgs()
   assert (example.add_tables())
 
-  #adding new session
-  res = load_machines(args)
-  res = example.compose_worker_list(res, args)
+  res = load_machines(example.args)
+  res = example.compose_worker_list(res)
   with DbSession() as session:
     query = session.query(SessionExample)
-    sess = query.all()
-  assert len(sess) is not None
+    res = query.all()
+    assert len(res) is not None
 
   #test load_job
   dbt = ExampleDBTables(session_id=None)
-  args.init_session = False
-  args.session_id = 1
-  args.execute = True
-  args.label = 'test_example'
+  example.args.init_session = False
+  example.args.session_id = 1
+  example.args.execute = True
+  example.args.label = 'test_example'
   num_jobs = add_jobs(args, dbt)
   assert num_jobs
 
   #testing execute rocminfo
   res = load_machines(args)
-  res = example.compose_worker_list(res, args)
+  res = example.compose_worker_list(res)
   with DbSession() as session:
     query = session.query(Job).filter(Job.session==1)\
                               .filter(Job.state=='completed')

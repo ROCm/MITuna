@@ -74,7 +74,7 @@ def add_job(w):
   args.update_applicability = True
   args.label = 'tuna_pytest_worker'
   args.session_id = w.session_id
-  worker_lst = miopen.compose_worker_list(machine_lst, args)
+  worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
 

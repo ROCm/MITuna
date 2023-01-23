@@ -328,7 +328,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     return self.write_file(b'', is_temp=True)
 
-  def exec_command(self, command, docker_name=None, timeout=LOG_TIMEOUT):
+  def exec_command(self, command, timeout=LOG_TIMEOUT):
     """
     Execute a command on this machine
     - through docker if on a remote machine
@@ -338,8 +338,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     if isinstance(command, list):
       command = ' '.join(command)
     if not self.local_machine:  # pylint: disable=no-member ; false alarm
-      assert docker_name
-      command = DOCKER_CMD.format(docker_name, command)
+      command = DOCKER_CMD.format(command)
     logger.info('Running command: %s', command)
     cnx = self.connect()
     ret_code, out, err = cnx.exec_command(command, timeout=timeout)

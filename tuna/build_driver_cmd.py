@@ -26,10 +26,11 @@
 ###############################################################################
 """Module to compose driver cmd"""
 import argparse
+import _io
 from tuna.parsing import parse_pdb_key, build_driver_cmd
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
   """Parsing arguments"""
   parser = argparse.ArgumentParser(
       description='Replace token string with driver command')
@@ -54,17 +55,27 @@ def parse_args():
 
 def main():
   """Main module function"""
-  args = parse_args()
+  args: argparse.Namespace = parse_args()
+
+  fin: _io.TextIOWrapper
+  fout: _io.TextIOWrapper
 
   # pylint: disable=unspecified-encoding
   with open(args.infile, 'r') as fin, \
        open(args.outfile, 'w') as fout:
     # pylint: enable=unspecified-encoding
+    line: str
+    fin: _io.TextIOWrapper
+    outstr: str
     for line in fin:
       if '=' in line:
-        elem = line.split('=')
-        fds, vals, precision, direction, _ = parse_pdb_key(elem[0])
-        cmd = build_driver_cmd(fds, vals, precision, direction)
+        elem: list = line.split('=')
+        fds: list
+        vals: list
+        precision: str
+        direction: int
+        fds, vals, precision, direction = parse_pdb_key(elem[0])
+        cmd: str = build_driver_cmd(fds, vals, precision, direction)
         outstr = f'"{cmd}",{elem[1]}'
       else:
         outstr = line

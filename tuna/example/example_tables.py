@@ -26,7 +26,11 @@
 ###############################################################################
 """ Module for creating DB tables"""
 import enum
+<<<<<<< HEAD
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+=======
+from sqlalchemy import Column, Integer, String, ForeignKey
+>>>>>>> develop
 from sqlalchemy import Text, Enum
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -42,9 +46,10 @@ class JobEnum(enum.Enum):
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
   new = 1
-  running = 2
-  completed = 3
-  errored = 4
+  started = 2
+  running = 3
+  completed = 4
+  error = 5
 
 
 class Job(BASE):

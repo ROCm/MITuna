@@ -53,12 +53,13 @@ class Example(MITunaInterface):
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--add_tables',
+                       dest='add_tables',
+                       action='store_true',
+                       help='Add Example library specific tables')
 
-    parser.add_argument('--init_session',
-                        action='store_true',
-                        dest='init_session',
-                        help='Set up a new tuning session.')
-    parser.add_argument(
+    group.add_argument(
         '-e',
         '--execute',
         dest='execute',
@@ -66,8 +67,13 @@ class Example(MITunaInterface):
         help='Run jobs from the job tables based on arch, num_cu and session_id'
     )
 
+    group.add_argument('--init_session',
+                       action='store_true',
+                       dest='init_session',
+                       help='Set up a new tuning session.')
+
     clean_args('EXAMPLE', 'example')
-    args = parser.parse_args()
+    self.args = parser.parse_args()
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
@@ -76,7 +82,8 @@ class Example(MITunaInterface):
 
     return args
 
-  def launch_worker(self, gpu_idx, f_vals, worker_lst, args):
+
+  def launch_worker(self, gpu_idx, f_vals, worker_lst):
     """! Function to launch worker
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
@@ -85,39 +92,39 @@ class Example(MITunaInterface):
       @retturn ret Boolean value
     """
 
-    kwargs = self.get_kwargs(gpu_idx, f_vals, args)
+    kwargs = self.get_kwargs(gpu_idx, f_vals)
     worker = ExampleWorker(**kwargs)
-    if args.init_session:
-      SessionExample().add_new_session(args, worker)
+    if self.args.init_session:
+      SessionExample().add_new_session(self.args, worker)
       return False
 
     worker.start()
     worker_lst.append(worker)
     return True
 
-  def compose_worker_list(self, res, args):
+  def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
     worker_lst = []
-    for machine in res:
-      if args.restart_machine:
+    for machine in machines:
+      if self.args.restart_machine:
         machine.restart_server(wait=False)
         continue
 
       #determine number of processes by compute capacity
       # pylint: disable=duplicate-code
-      worker_ids = super().determine_num_procs(machine)
+      worker_ids = super().get_num_procs(machine)
       if len(worker_ids) == 0:
         return None
 
-      f_vals = super().get_f_vals(machine, worker_ids, self.args)
+      f_vals = super().get_f_vals(machine, worker_ids)
 
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
-        if not self.launch_worker(gpu_idx, f_vals, worker_lst, args):
+        if not self.launch_worker(gpu_idx, f_vals, worker_lst):
           break
 
     return worker_lst
@@ -132,12 +139,15 @@ class Example(MITunaInterface):
     # pylint: disable=duplicate-code
     """Main function to launch library"""
     res = None
-    self.args = self.parse_args()
-    res = load_machines(self.args)
-    res = self.compose_worker_list(res, self.args)
+    self.parse_args()
+    if self.args.add_tables:
+      self.add_tables()
+      return None
+    machines = load_machines(self.args)
+    res = self.compose_worker_list(machines)
     return res
 
-  def get_envmt(self, args):
+  def get_envmt(self):
     # pylint: disable=unused-argument
     """! Function to construct environment var
        @param args The command line arguments
@@ -145,14 +155,12 @@ class Example(MITunaInterface):
     envmt = []
     return envmt
 
-  def get_kwargs(self, gpu_idx, f_vals, args):
+  def get_kwargs(self, gpu_idx, f_vals):
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param args The command line arguments
     """
-    kwargs = super().get_kwargs(gpu_idx, f_vals, args)
-    print('hostname: ')
-    print(kwargs['machine'].hostname)
+    kwargs = super().get_kwargs(gpu_idx, f_vals)
 
     return kwargs
