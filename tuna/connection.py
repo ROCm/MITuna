@@ -30,6 +30,8 @@ from random import randrange
 from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 from io import StringIO
+
+from typing import Tuple, Set, Any, Optional, Union
 import paramiko
 
 from tuna.utils.logger import setup_logger
@@ -44,36 +46,38 @@ class Connection():
   """Connection class defined an ssh or ftp client connection. Instantiated by the machine class"""
 
   #pylint: disable=no-member
-
-  def __init__(self, **kwargs):
+  def __init__(self, **kwargs: dict) -> None:
     #pylint
-    self.logger = None
-    self.local_machine = False
-    self.subp = None  # Holds the subprocess obj for local_machine
-    self.out_channel = None  # Holds the out channel for remote connection
+    self.logger: Any = None
+    self.local_machine: bool = False
+    self.subp: Any = None  # Holds the subprocess obj for local_machine
+    self.out_channel: Any = None  # Holds the out channel for remote connection
 
-    allowed_keys = set([
+    allowed_keys: Set[str] = set([
         'id', 'hostname', 'user', 'password', 'port', 'local_machine',
         'chk_abort_file', 'logger'
     ])
+
     self.__dict__.update((key, None) for key in allowed_keys)
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-    self.ssh = None
+    self.ssh: Any = None
 
     if self.logger is None:
       self.logger = setup_logger('Connection')
 
     self.inst_bins = {'which': True, 'cd': True}
-    self.connect(self.chk_abort_file)
+    self.connect(chk_abort_file)
 
-  def check_binary(self, bin_str):
+  def check_binary(self, bin_str: str) -> bool:
     """Checking existence of binary"""
     if bin_str in self.inst_bins:
       return self.inst_bins[bin_str]
 
-    cmd = f"which {bin_str}"
+    cmd: str = f"which {bin_str}"
+    out: Any
+
     _, out, _ = self.exec_command(cmd)
     if not out:
       return False
@@ -88,11 +92,12 @@ class Connection():
     return ret
 
   @staticmethod
-  def get_bin_str(cmd):
+  def get_bin_str(cmd: str) -> str:
     """Helper function"""
-    bin_str = ''
-    line = cmd[:]
-    args = line.split(' ')
+    bin_str: str = ''
+    line: str = cmd[:]
+    args: list = line.split(' ')
+    arg: str
     for arg in args:
       arg = arg.strip()
       if not arg:  # skip empty tokens due to white spaces
@@ -106,22 +111,25 @@ class Connection():
 
     return bin_str
 
-  def test_cmd_str(self, cmd):
+  def test_cmd_str(self, cmd: str) -> bool:
     """Function to look for installed binary"""
+    split_cmd: Any
     split_cmd = cmd[:]
     split_cmd = split_cmd.replace('|', ';')
     split_cmd = split_cmd.split(';')
+
+    sub_cmd: str
     for sub_cmd in split_cmd:
       sub_cmd = sub_cmd.strip()
-      bin_str = self.get_bin_str(sub_cmd)
-      installed = self.check_binary(bin_str)
+      bin_str: str = self.get_bin_str(sub_cmd)
+      installed: bool = self.check_binary(bin_str)
       if not installed:
         self.logger.error('Tuna cannot find binary: %s', bin_str)
         return False
 
     return True
 
-  def is_alive(self):
+  def is_alive(self) -> bool:
     ''' Check if the launched process is running '''
     if self.local_machine:  # pylint: disable=no-else-return
       if not self.subp:
@@ -132,7 +140,8 @@ class Connection():
         self.logger.error('Checking isAlive when channel does not exist')
       return not self.out_channel.exit_status_ready()
 
-  def exec_command_unparsed(self, cmd, timeout=SSH_TIMEOUT, abort=None):
+  def exec_command_unparsed(self, cmd: str, timeout: int =int(SSH_TIMEOUT),\
+  abort:Union[Any, None]= None) -> Tuple[Any, Any, None]:
     """Function to exec commands
 
     warning: leaky! client code responsible for closing the resources!
@@ -144,6 +153,12 @@ class Connection():
     if self.local_machine:
       #universal_newlines corrects output format to utf-8
       # pylint: disable=consider-using-with ; see exec_command_unparsed's docstring
+      stdout: Any
+      stderr: Any
+      _shell: bool
+      _close_fds: bool
+      _universal_newlines: bool
+
       self.subp = Popen(cmd,
                         stdout=PIPE,
                         stderr=STDOUT,
@@ -153,35 +168,43 @@ class Connection():
       stdout, stderr = self.subp.stdout, self.subp.stderr
       return 0, stdout, stderr
 
+    cmd_idx: int
     for cmd_idx in range(NUM_CMD_RETRIES):
       try:
         if self.ssh is None or not self.ssh.get_transport(
         ) or not self.ssh.get_transport().is_active():
           self.ssh_connect()
+        i_var: Any
+        o_var: Any
+        e_var: None
         i_var, o_var, e_var = self.ssh.exec_command(cmd, timeout=timeout)
+
       except Exception as exc:
-        self.logger.warning('Machine %s failed to execute command: %s', self.id,
-                            cmd)
+        self.logger.warning('Machine %s failed to execute command: %s', id, cmd)
         self.logger.warning('Exception occurred %s', exc)
         self.logger.warning('Retrying ... %s', cmd_idx)
-        retry_interval = randrange(SSH_TIMEOUT)
+        retry_interval = randrange((int)(SSH_TIMEOUT))
         self.logger.warning('sleeping for %s seconds', retry_interval)
         sleep(retry_interval)
       else:
         self.out_channel = o_var.channel
         return i_var, o_var, e_var
 
-      if abort is not None and chk_abort_file(self.id, self.logger):
-        self.logger.warning('Machine %s aborted command execution: %s', self.id,
-                            cmd)
+      if abort is not None and chk_abort_file(id, self.logger):
+        self.logger.warning('Machine %s aborted command execution: %s', id, cmd)
         return None, None, None
 
     self.logger.error('cmd_exec retries exhausted, giving up')
+
     return None, None, None
 
-  def exec_command(self, cmd, timeout=SSH_TIMEOUT, abort=None, proc_line=None):
+
+  def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort:Union[Any, None]=None,\
+  proc_line: Union[Any, None]= None) -> Tuple[Any, int, Any]:
     # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
+    o_var: Any
+    e_var: None
     _, o_var, e_var = self.exec_command_unparsed(cmd, timeout, abort)
     try:
       if not o_var:
@@ -190,11 +213,11 @@ class Connection():
       if not proc_line:
         # pylint: disable-next=unnecessary-lambda-assignment ; more readable
         proc_line = lambda x: self.logger.info(line.strip())
-      ret_out = StringIO()
-      ret_err = e_var
+      ret_out: Any = StringIO()
+      ret_err: Any = e_var
       try:
         while True:
-          line = o_var.readline()
+          line: str = o_var.readline()
           if line == '' and not self.is_alive():
             break
           if line:
@@ -202,11 +225,11 @@ class Connection():
             ret_out.write(line)
         ret_out.seek(0)
         if self.local_machine:
-          ret_code = self.subp.returncode
+          ret_code: int = self.subp.returncode
           if ret_out:
             ret_out.seek(0)
             ret_err = StringIO()
-            err_str = ret_out.readlines()
+            err_str: list = ret_out.readlines()
             for line in err_str[-5:]:
               ret_err.write(line)
             ret_err.seek(0)
@@ -217,7 +240,6 @@ class Connection():
         self.logger.warning('Exception occurred %s', exc)
         ret_code = 1
         ret_out = None
-
       return ret_code, ret_out, ret_err
     finally:
       if o_var and hasattr(o_var, "close"):
@@ -225,14 +247,14 @@ class Connection():
       if e_var and hasattr(e_var, "close"):
         e_var.close()
 
-  def connect(self, abort=None):
+  def connect(self, abort: Any = None) -> None:
     """Establishing new connecion"""
     if not self.local_machine:
       self.ssh_connect(abort)
 
-  def ssh_connect(self, abort=None):
+  def ssh_connect(self, abort: Any = None) -> bool:
     """Establishing ssh connection"""
-    ret = True
+    ret: bool = True
     if self.ssh is not None and self.ssh.get_transport(
     ) and self.ssh.get_transport().is_active():
       ret = False
@@ -241,36 +263,43 @@ class Connection():
     self.ssh = paramiko.SSHClient()
     self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     for ssh_idx in range(NUM_SSH_RETRIES):
-      if abort is not None and chk_abort_file(self.id, self.logger):
-        self.logger.warning('Machine %s aborted ssh connection', self.id)
+      if abort is not None and chk_abort_file(id, self.logger):
+        self.logger.warning('Machine %s aborted ssh connection', id)
         return False
 
       try:
-        self.ssh.connect(self.hostname,
-                         username=self.user,
-                         password=self.password,
-                         port=self.port,
-                         timeout=SSH_TIMEOUT,
-                         allow_agent=False)
+        self.ssh.connect(  #type: ignore
+            self.hostname,  #type: ignore
+            username=self.user,  #type: ignore
+            password=self.password,  #type: ignore
+            port=self.port,  #type: ignore
+            timeout=SSH_TIMEOUT,
+            allow_agent=False)
       except paramiko.ssh_exception.BadHostKeyException:
         self.ssh = None
         self.logger.error('Bad host exception which connecting to host: %s',
-                          self.hostname)
+                          self.hostname)  #type: ignore
       except (paramiko.ssh_exception.SSHException, socket.error):
-        retry_interval = randrange(SSH_TIMEOUT)
+        retry_interval = randrange((int(SSH_TIMEOUT)))
         self.logger.warning(
             'Attempt %s to connect to machine %s (%s p%s) via ssh failed, sleeping for %s seconds',
-            ssh_idx, self.id, self.hostname, self.port, retry_interval)
+            ssh_idx,
+            id,
+            self.hostname,  #type: ignore
+            self.port,  #type: ignore
+            retry_interval)  #type: ignore
         sleep(retry_interval)
       else:
         self.logger.info(
-            'SSH connection successfully established to machine %s', self.id)
+            'SSH connection successfully established to machine %s',
+            self.id)  #type: ignore
         return True
 
-    self.logger.error('SSH retries exhausted machine: %s', self.hostname)
+    self.logger.error('SSH retries exhausted machine: %s',
+                      self.hostname)  #type: ignore
     return False
 
-  def open_sftp(self):
+  def open_sftp(self) -> Optional[paramiko.sftp_client.SFTPClient]:
     """Helper function for ftp client"""
     ftp_client = None
     if self.ssh and not self.local_machine:
