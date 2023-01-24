@@ -16,13 +16,17 @@ docker_name: 'my_docker_name'
 
 run:
   # '-' represents a sequence, order matters
+  - go_fish:
+      enabled: true
+      init_session: true
   - import_config:
-      enabled: false
+      enabled: true
       command: 'convolution' # choices: ['convolution', 'batch_norm']
       batches: false
       mark_recurrent: false
       tag: 'someTag'
       tag_only: false
+      file_name: 'config.txt'
 
   - load_jobs:
       enabled: true
@@ -37,4 +41,4 @@ run:
       enabled: true
 
   - go_fish:
-      enabled: true
+      enabled: false
