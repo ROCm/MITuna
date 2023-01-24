@@ -33,6 +33,7 @@ class Library(Enum):
   """Enumerate supported libraries"""
   # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
   MIOPEN = 'miopen'
+  EXAMPLE = 'example'
 
   def __str__(self):
     return self.value

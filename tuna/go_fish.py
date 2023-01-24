@@ -43,7 +43,7 @@ def parse_args():
                       nargs='?',
                       default=Library.MIOPEN,
                       type=Library,
-                      help="Specify library to run",
+                      help="Specify library to run, defaults to MIOpen",
                       choices=Library)
 
   args, _ = parser.parse_known_args()
@@ -61,13 +61,15 @@ def main():
     #returns a list of workers/processes it started
     worker_lst = library.run()
     if worker_lst is None:
-      return
+      return True
 
     for worker in worker_lst:
       worker.join()
       LOGGER.warning('Process finished')
   except KeyboardInterrupt:
     LOGGER.warning('Interrupt signal caught')
+
+  return True
 
 
 if __name__ == '__main__':

@@ -31,7 +31,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 
 from tuna.utils.logger import setup_logger
-from tuna.db_tables import create_tables
+from tuna.miopen.db_tables import create_tables
 from tuna.miopen.miopen_tables import get_miopen_tables
 from tuna.utils.utility import get_env_vars
 

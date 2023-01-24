@@ -129,8 +129,6 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
   __tablename__ = "conv_find_db"
   __table_args__ = (UniqueConstraint("config",
                                      "solver",
-                                     "fdb_key",
-                                     "alg_lib",
                                      "opencl",
                                      "session",
                                      name="uq_idx"),)
@@ -151,8 +149,6 @@ class BNFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attribute
   __tablename__ = "bn_find_db"
   __table_args__ = (UniqueConstraint("config",
                                      "solver",
-                                     "fdb_key",
-                                     "alg_lib",
                                      "opencl",
                                      "session",
                                      name="uq_idx"),)
