@@ -545,7 +545,7 @@ def runLint() {
             sh "cd tuna && mypy analyze_parse_db.py"
             sh "cd tuna && mypy build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "cd tuna && mypy config_type.py"
-            sh "cd tuna && mypy --install-types --non-interactive connection.py"
+            sh "cd tuna && mypy connection.py"
           }
     }
 }

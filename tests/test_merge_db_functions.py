@@ -34,8 +34,8 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.utils.merge_db import parse_jobline, parse_text_fdb_name, parse_text_pdb_name
-from tuna.utils.merge_db import best_solver, target_merge, no_job_merge, single_job_merge
-from tuna.utils.merge_db import multi_job_merge, update_master_list, write_merge_results
+from tuna.utils.merge_db import best_solver, target_merge
+from tuna.utils.merge_db import update_master_list, write_merge_results
 from tuna.utils.merge_db import merge_text_file, merge_sqlite_pdb, merge_sqlite_bin_cache
 from tuna.utils.merge_db import merge_sqlite, get_file_list, get_sqlite_table
 from tuna.utils.merge_db import get_sqlite_row, get_sqlite_data, load_master_list
