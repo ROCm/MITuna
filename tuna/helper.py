@@ -40,7 +40,6 @@ from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT
 from tuna.metadata import BN_DEFAULTS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.metadata import NUM_SQL_RETRIES
-from tuna.miopen.miopen_tables import Session
 
 LOGGER = setup_logger('helper')
 
@@ -202,30 +201,3 @@ def get_db_id(db_elems, config_table):
     if res:
       cid = res[0][0]
   return cid
-
-
-def add_new_session(args, worker):
-  """Add new session entry"""
-  new_sesh_id = None
-  session_entry = Session()
-  session_entry.arch = args.arch
-  session_entry.num_cu = args.num_cu
-  session_entry.rocm_v = worker.get_rocm_v()
-  session_entry.miopen_v = worker.get_miopen_v()
-  session_entry.reason = args.label
-  if args.ticket:
-    session_entry.ticket = args.ticket
-  session_entry.docker = args.docker_name
-
-  with DbSession() as session:
-    try:
-      session.add(session_entry)
-      session.commit()
-      session.flush(session_entry)
-      new_sesh_id = session_entry.id
-      LOGGER.info('Added new session id: %s', session_entry.id)
-    except IntegrityError as err:
-      LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
-                     session_entry)
-
-  return new_sesh_id

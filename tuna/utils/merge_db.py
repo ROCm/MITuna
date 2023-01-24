@@ -207,6 +207,14 @@ def best_solver(vals):
 
 def target_merge(master_list, key, vals, keep_keys):
   """merge for explicit target file"""
+  #Error handling of Ivalid input parameter types
+  if not (vals and isinstance(vals, dict)):
+    raise ValueError(f'Invalid vals: {vals}')
+  if not (key and isinstance(key, str) and key.strip()):
+    raise ValueError(f'Invalid key value: {key}')
+  if not (master_list and isinstance(master_list, dict)):
+    raise ValueError(f'Invalid master_list: {master_list}')
+
   fds, fds_val, precision, direction = parse_pdb_key(key)
   driver_cmd = build_driver_cmd(fds, fds_val, precision, DIR_MAP[direction])
   if key not in master_list:
@@ -267,6 +275,9 @@ def write_merge_results(master_list, final_file, copy_files):
 
 def merge_text_file(master_file, copy_only, keep_keys, target_file=None):
   """merge db text files"""
+  if not (target_file and isinstance(target_file, str) and target_file.strip()):
+    raise ValueError(f'Invalid target_file: {target_file}')
+
   if master_file.endswith('.fdb.txt'):
     _, _, final_file, copy_files = parse_text_fdb_name(master_file)
   else:

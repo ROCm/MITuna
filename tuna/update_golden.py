@@ -36,7 +36,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry
 from tuna.miopen.session import Session
 from tuna.utils.utility import split_packets
-from tuna.db_tables import ENGINE
+from tuna.db_engine import ENGINE
 
 # Setup logging
 LOGGER = setup_logger('update_golden')

@@ -94,7 +94,7 @@ export PYTHONPATH=/<path_to_MITuna>/:$PYTHONPATH
 
 To create the database run the following script:
 ```
-./tuna/db_tables.py
+./tuna/miopen/db_tables.py
 ```
 
 The installation and setup are now complete. To start a tuning cycle, please follow the steps

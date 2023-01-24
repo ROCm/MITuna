@@ -26,6 +26,7 @@
 ###############################################################################
 """ Module to centralize command line argument parsing """
 import jsonargparse
+import sys
 from enum import Enum
 from typing import List
 from tuna.config_type import ConfigType
@@ -39,6 +40,11 @@ class TunaArgs(Enum):
   VERSION = 3
   CONFIG_TYPE = 4
   SESSION_ID = 5
+  MACHINES = 6
+  REMOTE_MACHINE = 7
+  LABEL = 8
+  RESTART_MACHINE = 9
+  DOCKER_NAME = 10
 
 
 def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
@@ -95,5 +101,61 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
     )
+  if TunaArgs.MACHINES in arg_list:
+    parser.add_argument('-m',
+                        '--machines',
+                        dest='machines',
+                        type=str,
+                        default=None,
+                        required=False,
+                        help='Specify machine ids to use, comma separated')
+  if TunaArgs.REMOTE_MACHINE in arg_list:
+    parser.add_argument('--remote_machine',
+                        dest='remote_machine',
+                        action='store_true',
+                        default=False,
+                        help='Run the process on a network machine')
+  if TunaArgs.LABEL in arg_list:
+    parser.add_argument('-l',
+                        '--label',
+                        dest='label',
+                        type=str,
+                        default=None,
+                        help='Specify label for jobs')
+  if TunaArgs.RESTART_MACHINE in arg_list:
+    parser.add_argument('-r',
+                        '--restart',
+                        dest='restart_machine',
+                        action='store_true',
+                        default=False,
+                        help='Restart machines')
+  if TunaArgs.DOCKER_NAME in arg_list:
+    parser.add_argument('--docker_name',
+                        dest='docker_name',
+                        type=str,
+                        default='miopentuna',
+                        help='Select a docker to run on. (default miopentuna)')
 
   return parser
+
+
+def clean_args(opt1='MIOPEN', opt2='miopen'):
+  """clean arguments"""
+  if opt1 in sys.argv:
+    sys.argv.remove(opt1)
+  if opt2 in sys.argv:
+    sys.argv.remove(opt2)
+
+
+def args_check(args, parser):
+  """Common scripts args check function"""
+  if args.machines is not None:
+    args.machines = [int(x) for x in args.machines.split(',')
+                    ] if ',' in args.machines else [int(args.machines)]
+
+  args.local_machine = not args.remote_machine
+
+  if args.init_session and not args.label:
+    parser.error(
+        "When setting up a new tunning session the following must be specified: "\
+        "label.")
