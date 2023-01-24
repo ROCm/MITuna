@@ -26,11 +26,12 @@
 
 from multiprocessing import Value
 
-from tuna.utils.utility import compose_f_vals, get_kwargs
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.session import Session
 from tuna.machine import Machine
 from tuna.config_type import ConfigType
+from tuna.mituna_interface import MITunaInterface
+from tuna.miopen.miopen_lib import MIOpen
 
 # TODO: This is a copy and is unacceptable
 sqlite_config_cols = [
@@ -99,9 +100,26 @@ class GoFishArgs():
   reset_interval = None
   dynamic_solvers_only = False
   label = 'pytest'
-  docker_name = None
-  ticket = None
+  docker_name = 'miopentuna'
+  ticket = 'N/A'
   solver_id = None
+  find_mode = 1
+  blacklist = None
+
+
+class ExampleArgs():
+  arch = 'gfx908'
+  num_cu = 120
+  local_machine = True
+  remote_machine = False
+  session_id = None
+  machines = None
+  restart_machine = None
+  reset_interval = None
+  label = 'pytest_example'
+  docker_name = 'miopentuna'
+  init_session = True
+  ticket = 'N/A'
 
 
 class DummyArgs(object):
@@ -114,22 +132,25 @@ class DummyArgs(object):
     pass
 
 
-def get_worker_args(args, machine):
+def get_worker_args(args, machine, miopen):
   worker_ids = range(machine.get_num_cpus())
-  f_vals = compose_f_vals(args, machine)
-  f_vals["num_procs"] = Value('i', len(worker_ids))
-  kwargs = get_kwargs(0, f_vals, args)
+  f_vals = miopen.get_f_vals(machine, worker_ids)
+  kwargs = miopen.get_kwargs(0, f_vals)
   return kwargs
 
 
-def add_test_session(arch='gfx908', num_cu=120):
+def add_test_session(arch='gfx908', num_cu=120, label=None):
   args = GoFishArgs()
+  if label:
+    args.label = label
   machine = Machine(local_machine=True)
   machine.arch = arch
   machine.num_cu = num_cu
 
   #create a session
-  kwargs = get_worker_args(args, machine)
+  miopen = MIOpen()
+  miopen.args = args
+  kwargs = get_worker_args(args, machine, miopen)
   worker = WorkerInterface(**kwargs)
   session_id = Session().add_new_session(args, worker)
   assert (session_id)
