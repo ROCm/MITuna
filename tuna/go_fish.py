@@ -47,9 +47,8 @@ def parse_args():
                       help="Specify library to run",
                       choices=Library)
 
-  parser.add_argument('-f',
-                      '--file_name',
-                      dest='file_name',
+  parser.add_argument('--yaml',
+                      dest='yaml',
                       default=None,
                       help='Path to yaml input file')
 
@@ -61,12 +60,10 @@ def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
   args = parse_args()
-  print(args['file_name'])
-  print(args)
-  if args['file_name']:
-    args = parse_yaml(args['file_name'])
-  print(args)
-  exit(-1)
+  #if args['yaml']:
+  #  args = parse_yaml(args['yaml'])
+  #print(args)
+  #exit(-1)
   library = get_library(args)
 
   try:

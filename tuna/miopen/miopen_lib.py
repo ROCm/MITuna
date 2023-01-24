@@ -175,6 +175,7 @@ class MIOpen(MITunaInterface):
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
+    print(args)
 
     if args.list_solvers:
       print_solvers()
@@ -300,6 +301,7 @@ class MIOpen(MITunaInterface):
                                   f_vals["machine"], args.docker_name):
         ret = True
     elif args.init_session:
+      print(args)
       Session().add_new_session(args, worker)
     elif args.execute_cmd:
       # JD: Move the worker.exec_command to machine

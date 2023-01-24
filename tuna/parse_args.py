@@ -25,7 +25,7 @@
 #
 ###############################################################################
 """ Module to centralize command line argument parsing """
-import argparse
+import jsonargparse
 from enum import Enum
 from typing import List
 from tuna.config_type import ConfigType
@@ -44,11 +44,12 @@ class TunaArgs(Enum):
 def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
   """ function to aggregate common command line args """
   if parser is not None:
-    parser = argparse.ArgumentParser(description=desc,
+    parser = jsonargparse.ArgumentParser(description=desc,
                                      parents=parser,
                                      conflict_handler='resolve')
   else:
-    parser = argparse.ArgumentParser(description=desc)
+    parser = jsonargparse.ArgumentParser(description=desc)
+  parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
   if TunaArgs.ARCH in arg_list:
     parser.add_argument(
         '-a',
@@ -90,7 +91,6 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
     parser.add_argument(
         '--session_id',
         action='store',
-        type=int,
         dest='session_id',
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
