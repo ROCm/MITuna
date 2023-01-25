@@ -438,6 +438,28 @@ def perfEval_gfx908() {
     }
 }
 
+def coverageReport() {
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_coverage", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_pytest1"
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
+        // download the latest perf db
+        //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
+        sshagent (credentials: ['bastion-ssh-key']) {                 
+           sh "python3 -m coverage run -m pytest -s"
+        }
+    }
+}
+
 def pytestSuite1() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {

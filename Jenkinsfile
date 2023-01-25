@@ -59,6 +59,15 @@ pipeline {
             }
             }
         }
+        stage("coverage"){
+        //coverage report
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+            script{
+            utils.coverageReport()
+            }
+            }
+        }
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
         steps{
