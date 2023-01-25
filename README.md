@@ -119,7 +119,7 @@ pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
 ```
 ## Code Coverage 
 
-To extract coverage percentage from the underlying code base, do the following:
+To manually extract coverage percentage using the command line:
 
 ```
 //run the docker image and mount the MITuna repo folder to it from host
