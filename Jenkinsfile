@@ -64,12 +64,11 @@ pipeline {
         agent{  label utils.rocmnode("tunatest") }
         steps {
             script{
-            utils.coverageReport()
+            catchError (buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                        utils.coverageReport()
+                    }
             }
             }
-        error {
-            println("Skipping find builder & workers")
-        }
         }
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
