@@ -212,6 +212,7 @@ class FinEvaluator(FinClass):
       query = gen_update_query(fdb_entry, self.fdb_attr,
                                self.dbt.find_db_table.__tablename__)
       session.execute(query)
+      session.commit()
     else:
       self.logger.warning("Not evaluated: job(%s), solver(%s), %s", self.job.id,
                           fdb_obj['solver_name'], fdb_obj['reason'])

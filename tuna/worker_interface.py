@@ -279,6 +279,7 @@ class WorkerInterface(Process):
                                          self.dbt.job_table.__tablename__)
                 session.execute(query)
 
+              session.commit()
               self.job_queue_push(job_rows)
 
           #also in job_queue_lock
@@ -325,6 +326,7 @@ class WorkerInterface(Process):
           query = gen_update_query(self.job, self.job_attr,
                                    self.dbt.job_table.__tablename__)
           session.execute(query)
+          session.commit()
           return True
         except OperationalError as error:
           self.logger.warning('%s, Db contention, attempt %s, sleeping ...',
