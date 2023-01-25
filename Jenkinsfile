@@ -59,19 +59,6 @@ pipeline {
             }
             }
         }
-        stage("Coverage"){
-        //coverage report
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-            script{
-                try {
-                    utils.coverageReport()
-                    } catch (Exception err) {
-                        currentBuild.result = 'SUCCESS'
-                    }
-            }
-            }
-        }
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
         steps{
@@ -95,7 +82,20 @@ pipeline {
             utils.pytestSuite3()
             }
             }
-        }    
+        }
+        stage("approx coverage"){
+        //coverage report
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+            script{
+                try {
+                    utils.coverageReport()
+                    } catch (Exception err) {
+                        currentBuild.result = 'SUCCESS'
+                    }
+            }
+            }
+        } 
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
