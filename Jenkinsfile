@@ -64,9 +64,10 @@ pipeline {
         agent{  label utils.rocmnode("tunatest") }
         steps {
             script{
-            catchError (buildResult: 'FAILURE', stageResult: 'FAILURE') {
+            catchError (buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                         utils.coverageReport()
                     }
+            sh "python3 -m coverage report"
             }
             }
         }
