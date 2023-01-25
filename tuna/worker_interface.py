@@ -125,7 +125,6 @@ class WorkerInterface(Process):
       self.job_attr.remove("update_ts")
     except NoInspectionAvailable as error:
       self.logger.warning("Ignoring error for init_session: %s", error)
-      pass
 
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly

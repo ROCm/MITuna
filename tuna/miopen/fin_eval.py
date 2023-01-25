@@ -301,7 +301,7 @@ class FinEvaluator(FinClass):
     if failed_job:
       if not self.check_gpu():
         return False
-      if self.job.retries == (MAX_ERRORED_JOB_RETRIES - 1):
+      if self.job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):
         self.logger.warning('max job retries exhausted, setting to errored')
         self.set_job_state('errored', result=result_str)
       else:
