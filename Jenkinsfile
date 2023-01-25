@@ -59,7 +59,7 @@ pipeline {
             }
             }
         }
-        stage("coverage"){
+        stage("Coverage"){
         //coverage report
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -67,6 +67,9 @@ pipeline {
             utils.coverageReport()
             }
             }
+        error {
+            println("Skipping find builder & workers")
+        }
         }
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
