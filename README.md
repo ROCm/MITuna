@@ -117,12 +117,21 @@ In order for a PR to be accepted the following pylint command needs to result in
 cd MITuna/tuna
 pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
 ```
-## Coverage 
+## Code Coverage 
 
-To extract coverage percentage from the underlying code base prior to opening Pull Request:
+To extract coverage percentage from the underlying code base, do the following:
 
 ```
-cd MITunaX
+//run the docker image and mount the MITuna repo folder to it from host
+docker run -it -v "/path/on/host:/path/on/container" Tuna 
+
+//change directory to the mounted folder inside the docker containter
+cd ./path/on/container/MITuna 
+
+//double check that the environment is sourced. If not sourced, please source the environment as specified in the installation step
+printenv | grep TUNA 
+
+//run the code coverage scripts from MITuna root folder inside the docker container
 ./tests/covscripts/coverage_script.sh
 ```
 
