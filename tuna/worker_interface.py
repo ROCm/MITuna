@@ -38,7 +38,7 @@ import random
 import string
 import types
 from time import sleep
-from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable  #pylint: disable=wrong-import-order
+from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
@@ -98,15 +98,6 @@ class WorkerInterface(Process):
     #initialize tables
     self.set_db_tables()
 
-    self.job = types.SimpleNamespace()
-    try:
-      self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
-      self.job_attr.remove("insert_ts")
-      self.job_attr.remove("update_ts")
-    except NoInspectionAvailable:
-      #pass here for init_session
-      pass
-
     #add cache directories
     self.envmt.append(
         f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
@@ -126,6 +117,16 @@ class WorkerInterface(Process):
     logger_name = os.path.join(dir_name, str(self.gpu_id))
     self.set_logger(logger_name)
     connect_db()
+
+    self.job = types.SimpleNamespace()
+    try:
+      self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+      self.job_attr.remove("insert_ts")
+      self.job_attr.remove("update_ts")
+    except NoInspectionAvailable as error:
+      self.logger.warning("Ignoring error for init_session: %s", error)
+      pass
+
 
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly
@@ -280,7 +281,6 @@ class WorkerInterface(Process):
                                          self.dbt.job_table.__tablename__)
                 session.execute(query)
 
-              session.commit()
               self.job_queue_push(job_rows)
 
           #also in job_queue_lock
@@ -327,7 +327,6 @@ class WorkerInterface(Process):
           query = gen_update_query(self.job, self.job_attr,
                                    self.dbt.job_table.__tablename__)
           session.execute(query)
-          session.commit()
           return True
         except OperationalError as error:
           self.logger.warning('%s, Db contention, attempt %s, sleeping ...',

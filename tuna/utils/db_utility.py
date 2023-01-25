@@ -158,10 +158,10 @@ def session_retry(session, callback, actuator, logger=LOGGER):
   return False
 
 
-def gen_update_query(obj, attribs, tablename):
-  """Create a query string updating all attributes for the input object"""
-  set_arr = []
-  for attr in attribs:
+def get_attr_vals(obj, attr_list):
+  """create the dictionary of values for the attribute list """
+  attr_vals = {}
+  for attr in attr_list:
     val = getattr(obj, attr)
     if val is None:
       val = 'NULL'
@@ -170,7 +170,19 @@ def gen_update_query(obj, attribs, tablename):
     elif isinstance(val, bytes):
       val = val.decode('utf-8')
       val = f"'{val}'"
-    set_arr.append(f"{attr}={val}")
+    else:
+      val = str(val)
+    attr_vals[attr] = val
+  return attr_vals
+
+
+def gen_update_query(obj, attribs, tablename):
+  """Create an update query strig to table with tablename for an object (obj)
+  for the attributes in attribs"""
+  set_arr = []
+  attr_vals = get_attr_vals(obj, attribs)
+  for attr in attribs:
+    set_arr.append(f"{attr}={attr_vals[attr]}")
 
   set_str = ','.join(set_arr)
   query = f"UPDATE {tablename} SET {set_str}"\
@@ -184,21 +196,11 @@ def gen_insert_query(obj, attribs, tablename):
   attr_list = [attr for attr in attribs]
   attr_list.remove('id')
   attr_str = ','.join(attr_list)
-  val_list = []
-  for attr in attr_list:
-    val = getattr(obj, attr)
-    if val is None:
-      val = 'NULL'
-    elif isinstance(val, str) or isinstance(val, datetime):
-      val = f"'{val}'"
-    elif isinstance(val, bytes):
-      val = val.decode('utf-8')
-      val = f"'{val}'"
-    else:
-      val = str(val)
-    val_list.append(val)
 
+  attr_vals = get_attr_vals(obj, attr_list)
+  val_list = [attr_vals[a] for a in attr_list]
   val_str = ','.join(val_list)
+
   query = f"INSERT INTO {tablename}({attr_str})"\
           f" SELECT {val_str};"
   LOGGER.info('Query Insert: %s', query)
@@ -223,7 +225,7 @@ def gen_select_objs(session, attribs, tablename, cond_str):
 
 
 def has_attr_set(obj, attribs):
-  """test if a namespace as the supplied attributes"""
+  """test if a namespace has the supplied attributes"""
   for attr in attribs:
     if not hasattr(obj, attr):
       return False

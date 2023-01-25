@@ -37,7 +37,7 @@ from tuna.miopen.fin_class import FinClass
 from tuna.miopen.fin_utils import fin_job
 from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import session_retry
+from tuna.utils.db_utility import session_retry, gen_update_query
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -64,15 +64,10 @@ class FinEvaluator(FinClass):
     for _ in range(5):
       if self.machine.chk_gpu_status(self.gpu_id):
         return True
-      self.logger.warning(
-          'Unable to detect GPU: %s, sleeping for %s seconds before retry',
-          self.gpu_id, 30)
-      #sleep(30)
     self.logger.warning('GPU: %s not visible in clinfo', self.gpu_id)
     self.set_job_state('compiled',
                        increment_retries=True,
                        result=f"GPU {self.gpu_id} not visible")
-    #self.set_barrier(self.reset_machine, True)
     return False
 
   def fin_pdb_input(self, _fjob):
@@ -204,19 +199,23 @@ class FinEvaluator(FinClass):
             'arch: %s, num_cu: %s, direction: %s',
             self.config.id, self.solver_id_map[fdb_obj['solver_name']],
             self.dbt.session.arch, self.dbt.session.num_cu, self.config.direction)
-        raise ValueError("Unable to query find db entry")
+        return False
+
       fdb_entry = obj
       fdb_entry.alg_lib = fdb_obj['algorithm']
       fdb_entry.kernel_time = fdb_obj['time']
       fdb_entry.workspace_sz = fdb_obj['workspace']
       fdb_entry.session = self.dbt.session.id
       fdb_entry.params = fdb_obj['params']
+
+      self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
+      query = gen_update_query(fdb_entry, self.fdb_attr,
+                                self.dbt.find_db_table.__tablename__)
+      session.execute(query)
     else:
       self.logger.warning("Not evaluated: job(%s), solver(%s), %s", self.job.id,
                           fdb_obj['solver_name'], fdb_obj['reason'])
-
-    self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
-    session.commit()
+      return False
 
     return True
 
