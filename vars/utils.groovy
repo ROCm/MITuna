@@ -455,7 +455,8 @@ def coverageReport() {
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
-           sh "python3 -m coverage run -m pytest -s"
+           //sh "python3 -m coverage run -m pytest -s"
+           sh "./tests/covscripts/coverage_script.sh -s"
         }
     }
 }
