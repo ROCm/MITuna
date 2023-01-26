@@ -114,7 +114,6 @@ def test_load_master_list():
   master_file = "{0}/../utils/test_files/old_gfx90a68.HIP.fdb.txt".format(
       this_path)
 
-  os.path.basename(master_file)
   master_list = load_master_list(master_file)
 
   if master_list == {}:
@@ -399,7 +398,6 @@ def test_update_master_list():
       }
   }
 
-  #key = '1-160-698-5x5-64-79-348-1-1x1-2x2-1x1-0-NCHW-FP32-F'
   test_target_file = "{0}/../utils/test_files/usr_gfx90a68.HIP.fdb.txt".format(
       this_path)
 
@@ -459,8 +457,6 @@ def test_write_merge_results():
 
   master_file = "{0}/../utils/test_files/old_gfx90a68.HIP.fdb.txt".format(
       this_path)
-  #target_file = "{0}/../utils/test_files/usr_gfx90a68.HIP.fdb.txt".format(
-  #    this_path)
 
   if master_file.endswith('.fdb.txt'):
     _, _, final_file, copy_files = parse_text_fdb_name(master_file)
