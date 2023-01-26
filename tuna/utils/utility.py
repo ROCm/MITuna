@@ -141,10 +141,26 @@ def get_mmi_env_vars(env_vars={}):
 class SimpleDict:
   """empty object"""
 
-  def to_dict(self):
+  def to_dict(self, ommit_ts=True, ommit_valid=False):
     """return dict copy of object"""
     ret = {}
     for key, val in vars(self).items():
       ret[key] = val
+
+    exclude_cols = [
+        '_sa_instance_state', 'md5', 'valid', 'input_tensor', 'weight_tensor'
+    ]
+    if not ommit_valid:
+      exclude_cols.remove('valid')
+
+    for col in exclude_cols:
+      if col in ret:
+        ret.pop(col)
+
+    if ommit_ts:
+      if 'update_ts' in ret:
+        ret.pop('update_ts')
+      if 'insert_ts' in ret:
+        ret.pop('insert_ts')
 
     return ret
