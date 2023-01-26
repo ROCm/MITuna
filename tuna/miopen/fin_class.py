@@ -30,7 +30,6 @@ import json
 import os
 import tempfile
 import functools
-import types
 import paramiko
 try:
   import queue
@@ -50,9 +49,10 @@ from tuna.miopen.fin_utils import get_fin_slv_status
 from tuna.config_type import ConfigType
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
-from tuna.utils.utility import split_packets
 from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
 from tuna.utils.db_utility import get_class_by_tablename, has_attr_set
+from tuna.utils.utility import split_packets
+from tuna.utils.utility import SimpleDict
 
 
 class FinClass(WorkerInterface):
@@ -91,7 +91,7 @@ class FinClass(WorkerInterface):
     #call to set_db_tables in super must come after config_type is set
     super().__init__(**kwargs)
 
-    self.config = types.SimpleNamespace()
+    self.config = SimpleDict()
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
 
     # dict of relationship_column : dict{local_key, foreign_table_name, foreign_key, [remote_attr]}
@@ -605,7 +605,7 @@ class FinClass(WorkerInterface):
       assert len(entries) == 1
       obj = entries[0]
     else:
-      fdb_entry = types.SimpleNamespace()
+      fdb_entry = SimpleDict()
       for attr in self.fdb_attr:
         setattr(fdb_entry, attr, None)
       setattr(fdb_entry, 'session', self.dbt.session.id)
@@ -739,7 +739,7 @@ class FinClass(WorkerInterface):
   def __add_sql_objs(self, session, obj_list):
     """add sql objects to the table"""
     for obj in obj_list:
-      if isinstance(obj, types.SimpleNamespace):
+      if isinstance(obj, SimpleDict):
         if has_attr_set(obj, self.fdb_attr):
           query = gen_insert_query(obj, self.fdb_attr,
                                    self.dbt.find_db_table.__tablename__)

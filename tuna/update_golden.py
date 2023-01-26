@@ -30,12 +30,13 @@ from sqlalchemy.sql.expression import func as sqlfunc
 from sqlalchemy.exc import OperationalError
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.utils.logger import setup_logger
-from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import session_retry
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.session import Session
+from tuna.utils.db_utility import session_retry
+from tuna.utils.logger import setup_logger
 from tuna.utils.utility import split_packets
+from tuna.utils.utility import SimpleDict
 from tuna.db_engine import ENGINE
 
 # Setup logging
@@ -109,10 +110,6 @@ def get_fdb_query(dbt):
   return query
 
 
-class Dummy:  # pylint: disable=too-few-public-methods
-  """empty object"""
-
-
 def get_fdb_entries(dbt):
   """! Compose query to get all fdb entries for the session, performs better than get_fdb_query"""
   with DbSession() as session:
@@ -126,7 +123,7 @@ def get_fdb_entries(dbt):
     ret = session.execute(query)
     entries = []
     for row in ret:
-      entry = Dummy()
+      entry = SimpleDict()
       for i, col in enumerate(fdb_attr):
         setattr(entry, col, row[i])
       entries.append(entry)
@@ -158,7 +155,7 @@ def get_golden_entries(dbt, golden_version):
     ret = session.execute(query)
     entries = []
     for row in ret:
-      entry = Dummy()
+      entry = SimpleDict()
       for i, col in enumerate(fdb_attr):
         setattr(entry, col, row[i])
       entries.append(entry)

@@ -29,7 +29,6 @@
 import os
 import enum
 import random
-import types
 from time import sleep
 from datetime import datetime
 import pymysql
@@ -39,9 +38,10 @@ from sqlalchemy import create_engine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
 from tuna.miopen.miopen_tables import Solver
-from tuna.utils.logger import setup_logger
 from tuna.metadata import NUM_SQL_RETRIES
+from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
+from tuna.utils.utility import SimpleDict
 
 LOGGER = setup_logger('db_utility')
 
@@ -217,7 +217,7 @@ def gen_select_objs(session, attribs, tablename, cond_str):
   entries = []
   for row in ret:
     LOGGER.info('select_row: %s', row)
-    entry = types.SimpleNamespace()
+    entry = SimpleDict()
     for i, col in enumerate(attribs):
       setattr(entry, col, row[i])
     entries.append(entry)

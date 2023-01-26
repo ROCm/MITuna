@@ -36,7 +36,6 @@ from datetime import datetime
 import socket
 import random
 import string
-import types
 from time import sleep
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
@@ -48,6 +47,7 @@ from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
+from tuna.utils.utility import SimpleDict
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -118,7 +118,7 @@ class WorkerInterface(Process):
     self.set_logger(logger_name)
     connect_db()
 
-    self.job = types.SimpleNamespace()
+    self.job = SimpleDict()
     try:
       self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
       self.job_attr.remove("insert_ts")

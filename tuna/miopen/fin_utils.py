@@ -27,8 +27,6 @@
 """Utility functions to support fin commands
 """
 
-import types
-from datetime import datetime
 from tuna.metadata import NCHW_LAYOUT, NHWC_LAYOUT, NCDHW_LAYOUT, NDHWC_LAYOUT
 from tuna.metadata import PREC_TO_CMD, INVERS_DIR_MAP
 from tuna.utils.logger import setup_logger
@@ -97,19 +95,6 @@ def get_fin_result(status):
   return success, result_str
 
 
-def to_dict(obj):
-  """return dict for SimpleNamespace or sqlalchemy orm"""
-  if isinstance(obj, types.SimpleNamespace):
-    ret = vars(obj)  #use vars to return SimpleNamespace as a dict
-    for key, val in ret.items():
-      if isinstance(val, datetime):
-        ret[key] = str(val)
-  else:
-    ret = obj.to_dict()
-
-  return ret
-
-
 def compose_config_obj(config, config_type=ConfigType.convolution):
   """Helper function to compose non-conv config obj"""
   return_config = {}
@@ -120,15 +105,15 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
   cmd = None
 
   if 'input_t' in config.__dict__.keys():
-    input_t_dict = {'input_t': to_dict(config.input_t)}
+    input_t_dict = {'input_t': config.input_t.to_dict()}
     cmd = PREC_TO_CMD[config_type][input_t_dict['input_t']['data_type']]
     in_layout = input_t_dict['input_t']['layout']
   if 'weight_t' in config.__dict__.keys():
-    weight_t_dict = {'weight_t': to_dict(config.weight_t)}
+    weight_t_dict = {'weight_t': config.weight_t.to_dict()}
     cmd = PREC_TO_CMD[config_type][weight_t_dict['weight_t']['data_type']]
     wei_layout = weight_t_dict['weight_t']['layout']
 
-  return_config = to_dict(config)
+  return_config = config.to_dict()
 
   if in_layout and wei_layout:
     if in_layout != wei_layout != return_config['out_layout']:
