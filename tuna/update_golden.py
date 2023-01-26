@@ -233,7 +233,9 @@ def copy_gold_data(gold_entry, entry):
   gold_entry.session = entry.session
 
   gold_entry.fdb_key = entry.fdb_key
-  gold_entry.params = entry.params
+  #if new entry has no params (is from a find tuning), then don't overwrite
+  if entry.params:
+    gold_entry.params = entry.params
   gold_entry.kernel_time = entry.kernel_time
   gold_entry.workspace_sz = entry.workspace_sz
   gold_entry.alg_lib = entry.alg_lib
