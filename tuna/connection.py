@@ -45,6 +45,7 @@ SSH_TIMEOUT = 60.0  # in seconds
 class Connection():
   """Connection class defined an ssh or ftp client connection. Instantiated by the machine class"""
 
+  # pylint: disable=too-many-instance-attributes
   #pylint: disable=no-member
   def __init__(self, **kwargs: dict) -> None:
     #pylint
@@ -52,6 +53,15 @@ class Connection():
     self.local_machine: bool = False
     self.subp: Any = None  # Holds the subprocess obj for local_machine
     self.out_channel: Any = None  # Holds the out channel for remote connection
+
+    #initialize the class member variables
+    self.id = 0  # pylint: disable=invalid-name
+    self.hostname = ' '
+    self.port = 0
+    self.user = None
+    self.password = None
+
+    self.ssh: Any = None
 
     allowed_keys: Set[str] = set([
         'id', 'hostname', 'user', 'password', 'port', 'local_machine',
@@ -61,8 +71,6 @@ class Connection():
     self.__dict__.update((key, None) for key in allowed_keys)
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
-
-    self.ssh: Any = None
 
     if self.logger is None:
       self.logger = setup_logger('Connection')
@@ -141,7 +149,7 @@ class Connection():
       return not self.out_channel.exit_status_ready()
 
   def exec_command_unparsed(self, cmd: str, timeout: int =int(SSH_TIMEOUT),\
-  abort:Union[Any, None]= None) -> Tuple[Any, Any, None]:
+  abort:Union[Any, None]= None) -> Tuple[Any, Any, Any]:
     """Function to exec commands
 
     warning: leaky! client code responsible for closing the resources!
@@ -180,7 +188,8 @@ class Connection():
         i_var, o_var, e_var = self.ssh.exec_command(cmd, timeout=timeout)
 
       except Exception as exc:
-        self.logger.warning('Machine %s failed to execute command: %s', id, cmd)
+        self.logger.warning('Machine %s failed to execute command: %s', self.id,
+                            cmd)
         self.logger.warning('Exception occurred %s', exc)
         self.logger.warning('Retrying ... %s', cmd_idx)
         retry_interval = randrange((int)(SSH_TIMEOUT))
@@ -191,7 +200,8 @@ class Connection():
         return i_var, o_var, e_var
 
       if abort is not None and chk_abort_file(id, self.logger):
-        self.logger.warning('Machine %s aborted command execution: %s', id, cmd)
+        self.logger.warning('Machine %s aborted command execution: %s', self.id,
+                            cmd)
         return None, None, None
 
     self.logger.error('cmd_exec retries exhausted, giving up')
@@ -200,7 +210,7 @@ class Connection():
 
 
   def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort:Union[Any, None]=None,\
-  proc_line: Union[Any, None]= None) -> Tuple[Any, int, Any]:
+  proc_line: Union[Any, None]= None) -> Tuple[int, Any, Any]:
     # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
     o_var: Any
@@ -263,40 +273,34 @@ class Connection():
     self.ssh = paramiko.SSHClient()
     self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     for ssh_idx in range(NUM_SSH_RETRIES):
-      if abort is not None and chk_abort_file(id, self.logger):
-        self.logger.warning('Machine %s aborted ssh connection', id)
+      if abort is not None and chk_abort_file(self.id, self.logger):
+        self.logger.warning('Machine %s aborted ssh connection', self.id)
         return False
 
       try:
-        self.ssh.connect(  #type: ignore
+        self.ssh.connect(
             self.hostname,  #type: ignore
-            username=self.user,  #type: ignore
-            password=self.password,  #type: ignore
-            port=self.port,  #type: ignore
+            username=self.user,
+            password=self.password,
+            port=self.port,
             timeout=SSH_TIMEOUT,
             allow_agent=False)
       except paramiko.ssh_exception.BadHostKeyException:
         self.ssh = None
         self.logger.error('Bad host exception which connecting to host: %s',
-                          self.hostname)  #type: ignore
+                          self.hostname)
       except (paramiko.ssh_exception.SSHException, socket.error):
         retry_interval = randrange((int(SSH_TIMEOUT)))
         self.logger.warning(
             'Attempt %s to connect to machine %s (%s p%s) via ssh failed, sleeping for %s seconds',
-            ssh_idx,
-            id,
-            self.hostname,  #type: ignore
-            self.port,  #type: ignore
-            retry_interval)  #type: ignore
+            ssh_idx, self.id, self.hostname, self.port, retry_interval)
         sleep(retry_interval)
       else:
         self.logger.info(
-            'SSH connection successfully established to machine %s',
-            self.id)  #type: ignore
+            'SSH connection successfully established to machine %s', self.id)
         return True
 
-    self.logger.error('SSH retries exhausted machine: %s',
-                      self.hostname)  #type: ignore
+    self.logger.error('SSH retries exhausted machine: %s', self.hostname)
     return False
 
   def open_sftp(self) -> Optional[paramiko.sftp_client.SFTPClient]:

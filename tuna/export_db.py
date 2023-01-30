@@ -156,15 +156,12 @@ def get_base_query(dbt, args):
 
     query = query.filter(src_table.valid == 1)\
         .filter(src_table.opencl == args.opencl)\
-        .filter(src_table.config == dbt.config_table.id)\
-        .filter(src_table.solver == dbt.solver_table.id)
+        .filter(src_table.config == dbt.config_table.id)
 
     if args.config_tag:
       LOGGER.info("config_tag : %s", args.config_tag)
       query = query.filter(dbt.config_tags_table.tag == args.config_tag)\
           .filter(dbt.config_table.config == dbt.config_table.id)
-
-    LOGGER.info("base db query returned: %s", len(query.all()))
 
   return query
 
@@ -192,10 +189,9 @@ def get_pdb_query(dbt, args):
     src_table = dbt.golden_table
 
   query = get_base_query(dbt, args)
-  query = query.filter(dbt.solver_table.tunable == 1)\
-      .filter(src_table.params != '')
-
-  LOGGER.info("pdb query returned: %s", len(query.all()))
+  query = query.filter(src_table.params != '')\
+      .filter(src_table.solver == dbt.solver_table.id)\
+      .filter(dbt.solver_table.tunable == 1)
 
   return query
 
@@ -204,7 +200,11 @@ def get_fdb_alg_lists(query):
   """return dict with key: fdb_key + alg_lib, val: solver list"""
   find_db = OrderedDict()
   solvers = {}
-  for fdb_entry, _ in query.all():
+  db_entries = query.all()
+  total_entries = len(db_entries)
+  LOGGER.info("fdb query returned: %s", total_entries)
+
+  for fdb_entry, _ in db_entries:
     fdb_key = fdb_entry.fdb_key
     if fdb_key not in solvers:
       solvers[fdb_key] = {}
@@ -449,6 +449,8 @@ def export_pdb(dbt, args):
   cfg_map = {}
   db_entries = query.all()
   total_entries = len(db_entries)
+  LOGGER.info("pdb query returned: %s", total_entries)
+
   for perf_db_entry, cfg_entry in db_entries:
     if cfg_entry.id in cfg_map:
       ins_cfg_id = cfg_map[cfg_entry.id]
