@@ -89,8 +89,7 @@ def test_update_golden():
     assert len(res) == 1
     assert res[0].params == 'param'
 
-  success = verify_no_duplicates(entries)
-  assert success
+  assert verify_no_duplicates(entries)
 
   fdb_entry2 = build_fdb_entry(session_id)
   fdb_entry2.config = 2
@@ -117,4 +116,4 @@ def test_update_golden():
 
 
 def copy(dest, src):
-  dest.__dict__ = src.__dict.copy()
+  dest.__dict__ = src.__dict__.copy()

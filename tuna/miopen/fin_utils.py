@@ -114,6 +114,7 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
     wei_layout = weight_t_dict['weight_t']['layout']
 
   return_config = config.to_dict()
+
   if in_layout and wei_layout:
     if in_layout != wei_layout != return_config['out_layout']:
       LOGGER.error('Layouts must match. in_layout = %s, wei_layout=%s',
