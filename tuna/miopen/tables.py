@@ -34,9 +34,10 @@ from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, Convolutio
 from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden, ConvolutionBenchmark
 from tuna.miopen.miopen_tables import BNBenchmark
 from tuna.miopen.benchmark import Framework, Model
+from tuna.miopen.session import Session
+
 from tuna.config_type import ConfigType
 from tuna.tables_interface import DBTablesInterface
-from tuna.miopen.session import Session
 
 
 #pylint: disable=too-many-instance-attributes

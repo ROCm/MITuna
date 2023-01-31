@@ -52,7 +52,6 @@ def parse_args():
                       required=True,
                       help='Label to annontate the jobs.',
                       default='new')
-  parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
 
   args = parser.parse_args()
   if not args.session_id:

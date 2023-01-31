@@ -1,8 +1,7 @@
 New library integration 
 =======================
-
-Historically, MITuna only supported MIOpen tuning. The tuning infrastructure has been updated
-to support a new library integration through minimal steps.
+An example of how to integrate external applications in Tuna to utilize the scaling
+features of Tuna
 
 
 Example library

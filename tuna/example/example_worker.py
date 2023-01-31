@@ -47,10 +47,6 @@ class ExampleWorker(WorkerInterface):
     """Initialize tables"""
     self.dbt = ExampleDBTables(session_id=self.session_id)
 
-  def close_job(self):
-    """mark a job complete"""
-    self.set_job_state('completed')
-
   def step(self):
     """Main functionality of the worker class. It picks up jobs in new state and executes them"""
 
@@ -63,14 +59,16 @@ class ExampleWorker(WorkerInterface):
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('running')
     cmd_output = None
+    err_str = ''
     try:
       cmd_output = self.run_cmd()
     except ValueError as verr:
       self.logger.info(verr)
       failed_job = True
+      err_str = verr
 
     if failed_job:
-      self.set_job_state('errored', result='')
+      self.set_job_state('errored', result=err_str)
     else:
       self.set_job_state('completed', result=cmd_output)
 
