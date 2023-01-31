@@ -37,6 +37,7 @@ except ImportError:
   import Queue as queue
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
+from sqlalchemy.inspection import inspect
 
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
@@ -48,7 +49,10 @@ from tuna.miopen.fin_utils import get_fin_slv_status
 from tuna.config_type import ConfigType
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
+from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
+from tuna.utils.db_utility import get_class_by_tablename, has_attr_set
 from tuna.utils.utility import split_packets
+from tuna.utils.utility import SimpleDict
 
 
 class FinClass(WorkerInterface):
@@ -93,6 +97,30 @@ class FinClass(WorkerInterface):
     self.envmt.append(
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
 
+    self.config = SimpleDict()
+    self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
+
+    # dict of relationship_column : dict{local_key, foreign_table_name, foreign_key, [remote_attr]}
+    self.cfg_rel = {
+        key: {
+            'key': list(val.local_columns)[0].name,
+            'ftble': str(list(val.remote_side)[0]).split('.', maxsplit=1)[0],
+            'fkey': str(list(val.remote_side)[0]).split('.')[1]
+        } for key, val in inspect(self.dbt.config_table).relationships.items()
+    }
+    for key, val in self.cfg_rel.items():
+      rel_attr = [
+          column.name
+          for column in inspect(get_class_by_tablename(val['ftble'])).c
+      ]
+      val['fattr'] = rel_attr
+
+    self.fdb_attr = [
+        column.name for column in inspect(self.dbt.find_db_table).c
+    ]
+    self.fdb_attr.remove("insert_ts")
+    self.fdb_attr.remove("update_ts")
+
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
@@ -113,23 +141,39 @@ class FinClass(WorkerInterface):
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 
-  def base_job_query(self, session):
-    """select tables for job query"""
-    query = session.query(self.dbt.job_table, self.dbt.config_table)
-    return query
-
-  def compose_work_query(self, query):
+  def compose_work_objs(self, session, conds):
     """query for fin command and config"""
+    ret = []
     if self.fin_steps:
-      query = query.filter(
-          self.dbt.job_table.fin_step.like('%' + self.fin_steps[0] + '%'))
+      conds.append(f"fin_step like '%{self.fin_steps[0]}%'")
     else:
-      query = query.filter(self.dbt.job_table.fin_step == 'not_fin')
+      conds.append("fin_step='not_fin'")
 
-    query = query.filter(self.dbt.config_table.valid == 1)\
-                 .filter(self.dbt.job_table.config == self.dbt.config_table.id)
+    job_entries = super().compose_work_objs(session, conds)
 
-    return query
+    if job_entries:
+      id_str = ','.join([str(job.config) for job in job_entries])
+      cfg_cond_str = f"where valid=1 and id in ({id_str})"
+      cfg_entries = gen_select_objs(session, self.cfg_attr,
+                                    self.dbt.config_table.__tablename__,
+                                    cfg_cond_str)
+
+      #attach tensor relationship information to config entries
+      for cfg in cfg_entries:
+        for key, val in self.cfg_rel.items():
+          rel_val = getattr(cfg, val['key'])
+          rel_cond_str = f"where {val['fkey']}={rel_val}"
+          setattr(
+              cfg, key,
+              gen_select_objs(session, val['fattr'], val['ftble'],
+                              rel_cond_str)[0])
+
+      cfg_map = {cfg.id: cfg for cfg in cfg_entries}
+
+      for job in job_entries:
+        ret.append([job, cfg_map[job.config]])
+
+    return ret
 
   #pylint: disable=R0801
   def check_jobs_found(self, job_rows, find_state, imply_end):
@@ -552,15 +596,30 @@ class FinClass(WorkerInterface):
 
   def get_fdb_entry(self, session, solver):
     """ Get FindDb entry from db """
-    fdb_entry = self.dbt.find_db_table()
-    fdb_entry.config = self.config.id
-    fdb_entry.solver = solver
-    fdb_entry.session = self.dbt.session.id
-    fdb_entry.opencl = False
-    fdb_entry.logger = self.logger
-    fdb_query = fdb_entry.get_query(session, self.dbt.find_db_table,
-                                    self.dbt.session.id)
-    obj = fdb_query.first()
+    obj = None
+    fdb_entry = None
+
+    conds = [
+        f"session={self.dbt.session.id}", f"config={self.config.id}",
+        f"solver={solver}", "opencl=0"
+    ]
+    cond_str = f"where {' AND '.join(conds)}"
+    entries = gen_select_objs(session, self.fdb_attr,
+                              self.dbt.find_db_table.__tablename__, cond_str)
+
+    if entries:
+      assert len(entries) == 1
+      obj = entries[0]
+    else:
+      fdb_entry = SimpleDict()
+      for attr in self.fdb_attr:
+        setattr(fdb_entry, attr, None)
+      setattr(fdb_entry, 'session', self.dbt.session.id)
+      setattr(fdb_entry, 'config', self.config.id)
+      setattr(fdb_entry, 'solver', solver)
+      setattr(fdb_entry, 'opencl', False)
+      setattr(fdb_entry, 'logger', self.logger)
+
     return obj, fdb_entry
 
   def __update_fdb_entry(self, session, solver):
@@ -595,15 +654,14 @@ class FinClass(WorkerInterface):
 
     return fdb_entry
 
-  def __compose_kernel_entry(self, fdb_obj, fdb_entry):
+  def __compose_kernel_entry(self, session, fdb_obj, fdb_entry):
     """Compose a new Kernel Cache entry from fin input"""
     # Now we have the ID, lets add the binary cache objects
     for kern_obj in fdb_obj['kernel_objects']:
       kernel_obj = self.dbt.kernel_cache()
       self.populate_kernels(kern_obj, kernel_obj)
       kernel_obj.kernel_group = fdb_entry.kernel_group
-      # Bundle Insert for later
-      self.pending.append((self.job, kernel_obj))
+      session.add(kernel_obj)
     return True
 
   def populate_kernels(self, kern_obj, kernel_obj):
@@ -630,8 +688,19 @@ class FinClass(WorkerInterface):
         if fdb_obj[check_str]:
           #returned entry is added to the table
           fdb_entry = self.__compose_fdb_entry(session, fin_json, fdb_obj)
+          if not self.pending:
+            query = gen_update_query(fdb_entry, self.fdb_attr,
+                                     self.dbt.find_db_table.__tablename__)
+            session.execute(query)
+          else:
+            assert len(self.pending) == 1
+            self.pending.pop()
+            query = gen_insert_query(fdb_entry, self.fdb_attr,
+                                     self.dbt.find_db_table.__tablename__)
+            session.execute(query)
+
           if fdb_obj['reason'] == 'Success':
-            self.__compose_kernel_entry(fdb_obj, fdb_entry)
+            self.__compose_kernel_entry(session, fdb_obj, fdb_entry)
             self.logger.info('Updating find Db(Build) for job_id=%s',
                              self.job.id)
           else:
@@ -675,45 +744,44 @@ class FinClass(WorkerInterface):
 
   def __add_sql_objs(self, session, obj_list):
     """add sql objects to the table"""
-    self.logger.info("adding pending #objects: %s", len(obj_list))
-    for sql_obj in obj_list:
-      session.add(sql_obj)
+    for obj in obj_list:
+      if isinstance(obj, SimpleDict):
+        if has_attr_set(obj, self.fdb_attr):
+          query = gen_insert_query(obj, self.fdb_attr,
+                                   self.dbt.find_db_table.__tablename__)
+          session.execute(query)
+        else:
+          return False
+      else:
+        session.add(obj)
     session.commit()
     return True
 
   def __result_queue_commit(self, session, close_job):
     """commit the result queue and set mark job complete"""
-    for_commit = {}
     while not self.result_queue.empty():
-      job, sql_obj = self.result_queue.get(True, 1)
-      if job.id not in for_commit:
-        for_commit[job.id] = {"job": job, "obj": [sql_obj]}
-      else:
-        for_commit[job.id]['obj'].append(sql_obj)
+      obj_list = []
+      res_list = self.result_queue.get(True, 1)
+      res_job = res_list[0][0]
+      for _, obj in res_list:
+        obj_list.append(obj)
 
-    this_job = self.job
-    for job_id, job_dict in for_commit.items():
-      obj_list = job_dict['obj']
-      self.job = job_dict['job']
-
-      self.logger.info("commit pending job %s, #objects: %s", job_id,
+      self.logger.info("commit pending job %s, #objects: %s", res_job.id,
                        len(obj_list))
-
-      def actuator(func, obj_list):
-        return func(session, obj_list)
-
       status = session_retry(session, self.__add_sql_objs,
-                             functools.partial(actuator, obj_list=obj_list),
-                             self.logger)
-
+                             lambda x: x(session, obj_list), self.logger)
       if not status:
-        self.logger.error("Failed commit pending job %s", job_id)
-        continue
+        self.logger.error("Failed commit pending job %s", res_job.id)
+        return False
+
+      this_job = self.job
 
       #set job states after successful commit
+      self.job = res_job
       close_job()
 
-    self.job = this_job
+      self.job = this_job
+
     return True
 
   def close_job(self):

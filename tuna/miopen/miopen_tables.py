@@ -623,4 +623,7 @@ def get_miopen_tables():
   miopen_tables = add_fusion_tables(miopen_tables)
   miopen_tables = add_bn_tables(miopen_tables)
 
+  miopen_tables.append(ConvolutionBenchmark())
+  miopen_tables.append(BNBenchmark())
+
   return miopen_tables
