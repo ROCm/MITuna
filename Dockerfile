@@ -113,8 +113,6 @@ ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
 # Install dependencies
 #issue with upstream for composable kernel install
 RUN sed -i "s#[^\n]*composable_kernel[^\n]*##g" requirements.txt
-RUN sed -i "s#\(half,https://github.com/pfultz2/half/archive/1.12.0.tar.gz -X header -H\) sha256:0a08660b68abb176ebc2a0cdf8de46e3182a7f46c66443bb80dbfaaec98cf969#\1 sha256:a203e1525a3096d6977c9fd7b0e51c9708140702d0e6f508d718d61f54800bb6#g" requirements.txt
-RUN sed -i "s#\(ROCmSoftwarePlatform/rocMLIR@rocm-5.5.0 -H\) sha256:a5f62769d28a73e60bc8d61022820f050e97c977c8f6f6275488db31512e1f42#\1 sha256:f3535b96f1fc112bbdf8131969fdffd0b71b91e9baa2aabb4ec24a7071b52611#g" requirements.txt
 RUN cmake -P install_deps.cmake --minimum
 
 RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
