@@ -1,0 +1,12 @@
+---
+# common script arguments
+# yamllint disable rule:line-length
+arch: 'gfx908'              # choices: ['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a']
+num_cu: 120
+session_id: 1
+remote_machine: false
+label: 'Example'
+restart_machine: false
+docker_name: 'my_docker_name'
+
+init_session: true

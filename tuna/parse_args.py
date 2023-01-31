@@ -34,25 +34,28 @@ from tuna.config_type import ConfigType
 
 class TunaArgs(Enum):
   """ Enumeration of all the common argument supported by setup_arg_parser """
-  ARCH = 0
-  NUM_CU = 1
-  DIRECTION = 2
-  VERSION = 3
-  CONFIG_TYPE = 4
-  SESSION_ID = 5
-  MACHINES = 6
-  REMOTE_MACHINE = 7
-  LABEL = 8
-  RESTART_MACHINE = 9
-  DOCKER_NAME = 10
+  ARCH = 'arch'
+  NUM_CU = 'num_cu'
+  DIRECTION = 'direction'
+  VERSION = 'version'
+  CONFIG_TYPE = 'config_type'
+  SESSION_ID = 'session_id'
+  MACHINES = 'machines'
+  REMOTE_MACHINE = 'remote_machine'
+  LABEL = 'label'
+  RESTART_MACHINE = 'restart_machine'
+  DOCKER_NAME = 'docker_name'
 
 
-def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
+def setup_arg_parser(desc: str,
+                     arg_list: List[TunaArgs],
+                     parser=None,
+                     yaml_file=None):
   """ function to aggregate common command line args """
   if parser is not None:
     parser = jsonargparse.ArgumentParser(description=desc,
-                                     parents=parser,
-                                     conflict_handler='resolve')
+                                         parents=parser,
+                                         conflict_handler='resolve')
   else:
     parser = jsonargparse.ArgumentParser(description=desc)
   parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)

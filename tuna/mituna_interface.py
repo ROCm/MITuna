@@ -42,6 +42,7 @@ class MITunaInterface():
     self.logger = setup_logger(logger_name=self.library.value,
                                add_streamhandler=True)
     self.args = None
+    self.yaml_file = None
 
   def check_docker(self, worker, dockername="miopentuna"):
     """! Checking for docker

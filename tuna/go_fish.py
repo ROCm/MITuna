@@ -59,23 +59,37 @@ def parse_args():
 def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
+  LOGGER.info(len(sys.argv))
   args = parse_args()
-  #if args['yaml']:
-  #  args = parse_yaml(args['yaml'])
-  #print(args)
-  #exit(-1)
-  library = get_library(args)
+  if '--yaml' in sys.argv and len(sys.argv) > 4:
+    LOGGER.error('Command like arguments not accepted with yaml file')
+    return
+
+  libraries = []
+  libraries.append(get_library(args))
+  yaml_files = [args['yaml']]
+
+  if args['yaml']:
+    #custom yaml parser per library to support multiple tuning steps per run
+    yaml_files = parse_yaml(args['yaml'], args['lib'])
+    libraries = []
+    for i in range(len(yaml_files)):
+      libraries.append(get_library(args))
 
   try:
+    for library, yaml_file in zip(libraries, yaml_files):
+      args['yaml_file'] = yaml_file
+      #library.yaml_file = yaml_file
+      sys.argv[3] = yaml_file
+      print(sys.argv)
+      #returns a list of workers/processes it started
+      worker_lst = library.run()
+      if worker_lst is None:
+        return True
 
-    #returns a list of workers/processes it started
-    worker_lst = library.run()
-    if worker_lst is None:
-      return True
-
-    for worker in worker_lst:
-      worker.join()
-      LOGGER.warning('Process finished')
+      for worker in worker_lst:
+        worker.join()
+        LOGGER.warning('Process finished')
   except KeyboardInterrupt:
     LOGGER.warning('Interrupt signal caught')
 

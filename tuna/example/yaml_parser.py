@@ -24,36 +24,11 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief YAML custom parser for yaml files to support multiple tuning steps
-     per yaml file. """
+"""! @brief YAML library specific input parsing for tuning steps"""
 
 import os
 import yaml
-from tuna.miopen.yaml_parser import parse_miopen_yaml
-from tuna.example.yaml_parser import parse_example_yaml
-from tuna.libraries import Library
 
 
-def parse_yaml(filename, lib):
-  """Parses input yaml file and returns 1 or multiple yaml files(when library support
-     for multiple yaml files is provided).
-     Multiple yaml files are returned when more that 1 step per initial yaml file
-     are specified."""
-  yaml_dict = None
-  yaml_files = []
-  with open(os.path.expanduser(filename)) as stream:
-    try:
-      yaml_dict = yaml.safe_load(stream)
-    except yaml.YAMLError as exc:
-      print(exc)
-
-  #if Library not specified here, no custom parsing function will be used
-  if lib == Library.MIOPEN:
-    yaml_files = parse_miopen_yaml(yaml_dict)
-  elif lib == Library.EXAMPLE:
-    yaml_files = parse_example_yaml(yaml_dict)
-  else:
-    #return current yaml file without custom parsing
-    return filename
-
-  return yaml_files
+def parse_example_yaml(yaml_dict):
+  return None
