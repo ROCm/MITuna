@@ -452,8 +452,6 @@ def coverageReport() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
-        // download the latest perf db
-        //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            //sh "python3 -m coverage run -m pytest -s"
            sh "./tests/covscripts/coverage_script.sh -s"
