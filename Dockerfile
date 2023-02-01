@@ -74,8 +74,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN apt-get upgrade
-
 ADD requirements.txt requirements.txt
 RUN pip3 install --default-timeout=100000 -r requirements.txt
 RUN pip3 download --no-deps --implementation py --only-binary=:all: -d /tmp/mysql_connector mysql-connector-python==8.0.20
