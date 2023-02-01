@@ -247,7 +247,7 @@ class FinClass(WorkerInterface):
       if ret_code > 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
         self.logger.warning(out)
-        raise Exception(
+        raise ValueError(
             f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 
       result = self.__parse_out()
