@@ -50,7 +50,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     libncurses5-dev \
     libnuma-dev \
     libpthread-stubs0-dev \
-    llvm-amdgpu \
+    llvm \
     miopengemm \
     pkg-config \
     python3 \
@@ -140,7 +140,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=1a3b47c7bfa5ef8d740d089a1438e24e050c10da
+ARG FIN_BRANCH=6bdfe003b9659ce5ed0c8fb894e69c5be5896cb6
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 

@@ -37,7 +37,7 @@ from tuna.miopen.fin_class import FinClass
 from tuna.miopen.fin_utils import fin_job
 from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import session_retry
+from tuna.utils.db_utility import session_retry, gen_update_query
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -63,14 +63,12 @@ class FinEvaluator(FinClass):
     """Function to check gpu heartbeat"""
     for _ in range(5):
       if self.machine.chk_gpu_status(self.gpu_id):
-        return
-      self.logger.warning(
-          'Unable to detect GPU: %s, sleeping for %s seconds before retry',
-          self.gpu_id, 30)
-      sleep(30)
+        return True
     self.logger.warning('GPU: %s not visible in clinfo', self.gpu_id)
-    self.set_job_state('compiled', increment_retries=True)
-    self.set_barrier(self.reset_machine, True)
+    self.set_job_state('compiled',
+                       increment_retries=True,
+                       result=f"GPU {self.gpu_id} not visible")
+    return False
 
   def fin_pdb_input(self, _fjob):
     """prepare perf db command input for fin"""
@@ -85,7 +83,8 @@ class FinEvaluator(FinClass):
           self.dbt.solver_app.applicable == 1)
       # pylint: enable=comparison-with-callable
 
-      for slv_entry in query.all():
+      res = session_retry(session, query.all, lambda x: x(), self.logger)
+      for slv_entry in res:
         slv_name = self.id_solver_map[slv_entry.solver]
         if not self.job.solver or slv_name == self.job.solver:
           compile_entry = {
@@ -99,7 +98,9 @@ class FinEvaluator(FinClass):
 
       query = session.query(self.dbt.fin_cache_table).filter(
           self.dbt.fin_cache_table.job_id == self.job.id)
-      for cache_entry in query.all():
+
+      res = session_retry(session, query.all, lambda x: x(), self.logger)
+      for cache_entry in res:
         slv_name = self.id_solver_map[cache_entry.solver_id]
         #if job solver is defined limit entries to that solver
         if not self.job.solver or slv_name == self.job.solver:
@@ -198,19 +199,24 @@ class FinEvaluator(FinClass):
             'arch: %s, num_cu: %s, direction: %s',
             self.config.id, self.solver_id_map[fdb_obj['solver_name']],
             self.dbt.session.arch, self.dbt.session.num_cu, self.config.direction)
-        raise ValueError("Unable to query find db entry")
+        return False
+
       fdb_entry = obj
       fdb_entry.alg_lib = fdb_obj['algorithm']
       fdb_entry.kernel_time = fdb_obj['time']
       fdb_entry.workspace_sz = fdb_obj['workspace']
       fdb_entry.session = self.dbt.session.id
       fdb_entry.params = fdb_obj['params']
+
+      self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
+      query = gen_update_query(fdb_entry, self.fdb_attr,
+                               self.dbt.find_db_table.__tablename__)
+      session.execute(query)
+      session.commit()
     else:
       self.logger.warning("Not evaluated: job(%s), solver(%s), %s", self.job.id,
                           fdb_obj['solver_name'], fdb_obj['reason'])
-
-    self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
-    session.commit()
+      return False
 
     return True
 
@@ -294,8 +300,9 @@ class FinEvaluator(FinClass):
       failed_job = not success
 
     if failed_job:
-      self.check_gpu()
-      if self.job.retries == (MAX_ERRORED_JOB_RETRIES - 1):
+      if not self.check_gpu():
+        return False
+      if self.job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):
         self.logger.warning('max job retries exhausted, setting to errored')
         self.set_job_state('errored', result=result_str)
       else:
@@ -306,8 +313,7 @@ class FinEvaluator(FinClass):
                            result=result_str)
     elif self.pending:
       self.set_job_state('evaluated_pend', result=result_str)
-      for item in self.pending:
-        self.result_queue.put(item)
+      self.result_queue.put(self.pending)
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()
