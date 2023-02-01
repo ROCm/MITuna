@@ -24,11 +24,9 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief YAML library specific input parsing for tuning steps"""
+""" This file contains mappings relevant to launching the Example lib
+"""
 
-import os
-import yaml
+EXAMPLE_TUNING_STEPS = ['init_session', 'execute']
+EXAMPLE_SINGLE_OP = ['init_session', 'execute']
 
-
-def parse_example_yaml(yaml_dict):
-  return None

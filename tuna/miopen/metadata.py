@@ -24,9 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief YAML library specific input parsing for tuning steps"""
-
-from tuna.yaml_parser import get_common_yaml, dump_yaml
+"""! @brief """
 
 MIOPEN_TUNING_STEPS = [
     'init_session', 'add_tables', 'import_configs', 'load_job',
@@ -35,26 +33,4 @@ MIOPEN_TUNING_STEPS = [
 ]
 
 #tuning steps with 1 argument (possibly also --session_id)
-SINGLE_OP = ['init_session', 'add_tables', 'update_applicability', 'list_solvers'
-]
-
-
-def parse_miopen_yaml(yaml_dict):
-  yaml_files = []
-  common_yaml_part = get_common_yaml(yaml_dict)
-
-  for key in yaml_dict:
-    #only looked at enabled items
-    if key in MIOPEN_TUNING_STEPS and yaml_dict.get(key).get('enabled'):
-        #append common args
-        new_yaml = common_yaml_part.copy()
-        yaml_dict[key].pop('enabled', None)
-
-        for key2, value2 in yaml_dict.get(key).items():
-          new_yaml[key2] = value2
-
-        if key in SINGLE_OP:
-          new_yaml[key] = True 
-        yaml_files.append(dump_yaml(new_yaml))
-
-  return yaml_files
+MIOPEN_SINGLE_OP = ['init_session', 'add_tables', 'update_applicability', 'list_solvers']

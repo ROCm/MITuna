@@ -29,9 +29,12 @@
 
 import os
 import yaml
-from tuna.miopen.yaml_parser import parse_miopen_yaml
-from tuna.example.yaml_parser import parse_example_yaml
+import tempfile
 from tuna.libraries import Library
+from tuna.parse_args import TunaArgs
+from tuna.miopen.metadata import MIOPEN_TUNING_STEPS, MIOPEN_SINGLE_OP
+from tuna.example.metadata import EXAMPLE_TUNING_STEPS, EXAMPLE_SINGLE_OP
+
 
 
 def parse_yaml(filename, lib):
@@ -49,11 +52,49 @@ def parse_yaml(filename, lib):
 
   #if Library not specified here, no custom parsing function will be used
   if lib == Library.MIOPEN:
-    yaml_files = parse_miopen_yaml(yaml_dict)
+    yaml_files = get_yaml_files(yaml_dict, MIOPEN_TUNING_STEPS, MIOPEN_SINGLE_OP)
   elif lib == Library.EXAMPLE:
-    yaml_files = parse_example_yaml(yaml_dict)
+    yaml_files = get_yaml_files(yaml_dict, EXAMPLE_TUNING_STEPS, EXAMPLE_SINGLE_OP)
   else:
     #return current yaml file without custom parsing
     return filename
+
+  return yaml_files
+
+def get_common_yaml(yaml_dict):
+  common_args = [enum.value for enum in TunaArgs]
+  common_yaml_part = {}
+
+  #extract common TunaArgs
+  for key in yaml_dict:
+    if key in common_args:
+      common_yaml_part[key] = yaml_dict[key]
+
+  return common_yaml_part
+
+def dump_yaml(new_yaml):
+  _, local_file = tempfile.mkstemp()
+  with open(local_file, 'w') as outfile:
+    yaml.dump(new_yaml, outfile, default_flow_style=False)
+
+  return local_file
+
+def get_yaml_files(yaml_dict, TUNING_STEPS, SINGLE_OP):
+  yaml_files = []
+  common_yaml_part = get_common_yaml(yaml_dict)
+
+  for key in yaml_dict:
+    #only looked at enabled items
+    if key in TUNING_STEPS and yaml_dict.get(key).get('enabled'):
+        #append common args
+        new_yaml = common_yaml_part.copy()
+        yaml_dict[key].pop('enabled', None)
+
+        for key2, value2 in yaml_dict.get(key).items():
+          new_yaml[key2] = value2
+
+        if key in SINGLE_OP:
+          new_yaml[key] = True 
+        yaml_files.append(dump_yaml(new_yaml))
 
   return yaml_files
