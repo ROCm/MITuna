@@ -147,8 +147,6 @@ class MIOpen(MITunaInterface):
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
-    print('Init args: %s \n', self.args)
-    print('\n')
 
     if self.args.list_solvers:
       print_solvers()
@@ -309,7 +307,6 @@ class MIOpen(MITunaInterface):
     """Main function to launch library"""
     res = None
     self.parse_args()
-    print(self.args)
     if self.args.add_tables:
       self.add_tables()
       return None

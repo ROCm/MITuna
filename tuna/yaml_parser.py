@@ -24,17 +24,15 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief YAML custom parser for yaml files to support multiple tuning steps
-     per yaml file. """
+"""! @brief YAML parser to support multiple tuning steps """
 
 import os
-import yaml
 import tempfile
+import yaml
 from tuna.libraries import Library
 from tuna.parse_args import TunaArgs
 from tuna.miopen.metadata import MIOPEN_TUNING_STEPS, MIOPEN_SINGLE_OP
 from tuna.example.metadata import EXAMPLE_TUNING_STEPS, EXAMPLE_SINGLE_OP
-
 
 
 def parse_yaml(filename, lib):
@@ -44,7 +42,7 @@ def parse_yaml(filename, lib):
      are specified."""
   yaml_dict = None
   yaml_files = []
-  with open(os.path.expanduser(filename)) as stream:
+  with open(os.path.expanduser(filename), encoding="utf8") as stream:
     try:
       yaml_dict = yaml.safe_load(stream)
     except yaml.YAMLError as exc:
@@ -52,16 +50,20 @@ def parse_yaml(filename, lib):
 
   #if Library not specified here, no custom parsing function will be used
   if lib == Library.MIOPEN:
-    yaml_files = get_yaml_files(yaml_dict, MIOPEN_TUNING_STEPS, MIOPEN_SINGLE_OP)
+    yaml_files = get_yaml_files(yaml_dict, MIOPEN_TUNING_STEPS,
+                                MIOPEN_SINGLE_OP)
   elif lib == Library.EXAMPLE:
-    yaml_files = get_yaml_files(yaml_dict, EXAMPLE_TUNING_STEPS, EXAMPLE_SINGLE_OP)
+    yaml_files = get_yaml_files(yaml_dict, EXAMPLE_TUNING_STEPS,
+                                EXAMPLE_SINGLE_OP)
   else:
     #return current yaml file without custom parsing
     return filename
 
   return yaml_files
 
+
 def get_common_yaml(yaml_dict):
+  """Set TunaArgs common yaml fields"""
   common_args = [enum.value for enum in TunaArgs]
   common_yaml_part = {}
 
@@ -72,29 +74,34 @@ def get_common_yaml(yaml_dict):
 
   return common_yaml_part
 
+
 def dump_yaml(new_yaml):
+  """Dump yaml file to /tmp"""
   _, local_file = tempfile.mkstemp()
-  with open(local_file, 'w') as outfile:
+  with open(local_file, 'w', encoding="utf8") as outfile:
     yaml.dump(new_yaml, outfile, default_flow_style=False)
 
   return local_file
 
-def get_yaml_files(yaml_dict, TUNING_STEPS, SINGLE_OP):
+
+def get_yaml_files(yaml_dict, tuning_steps, single_op):
+  """Split initial YAML file to multiple files and return list of files"""
   yaml_files = []
   common_yaml_part = get_common_yaml(yaml_dict)
 
   for key in yaml_dict:
-    #only looked at enabled items
-    if key in TUNING_STEPS and yaml_dict.get(key).get('enabled'):
-        #append common args
-        new_yaml = common_yaml_part.copy()
-        yaml_dict[key].pop('enabled', None)
+    #only look at enabled items
+    if key in tuning_steps and yaml_dict.get(key).get('enabled'):
+      #append common args
+      new_yaml = common_yaml_part.copy()
+      yaml_dict[key].pop('enabled', None)
 
-        for key2, value2 in yaml_dict.get(key).items():
-          new_yaml[key2] = value2
+      #append nested dicts
+      for key2, value2 in yaml_dict.get(key).items():
+        new_yaml[key2] = value2
 
-        if key in SINGLE_OP:
-          new_yaml[key] = True 
-        yaml_files.append(dump_yaml(new_yaml))
+      if key in single_op:
+        new_yaml[key] = True
+      yaml_files.append(dump_yaml(new_yaml))
 
   return yaml_files

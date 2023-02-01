@@ -25,10 +25,10 @@
 #
 ###############################################################################
 """ Module to centralize command line argument parsing """
-import jsonargparse
 import sys
 from enum import Enum
 from typing import List
+import jsonargparse
 from tuna.config_type import ConfigType
 
 
@@ -49,8 +49,7 @@ class TunaArgs(Enum):
 
 def setup_arg_parser(desc: str,
                      arg_list: List[TunaArgs],
-                     parser=None,
-                     yaml_file=None):
+                     parser=None):
   """ function to aggregate common command line args """
   if parser is not None:
     parser = jsonargparse.ArgumentParser(description=desc,

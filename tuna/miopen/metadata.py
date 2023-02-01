@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief """
+""" This file contains mappings relevant to launching the MIOpen lib"""
 
 MIOPEN_TUNING_STEPS = [
     'init_session', 'add_tables', 'import_configs', 'load_job',
@@ -33,4 +33,6 @@ MIOPEN_TUNING_STEPS = [
 ]
 
 #tuning steps with 1 argument (possibly also --session_id)
-MIOPEN_SINGLE_OP = ['init_session', 'add_tables', 'update_applicability', 'list_solvers']
+MIOPEN_SINGLE_OP = [
+    'init_session', 'add_tables', 'update_applicability', 'list_solvers'
+]

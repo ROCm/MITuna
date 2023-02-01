@@ -29,4 +29,3 @@
 
 EXAMPLE_TUNING_STEPS = ['init_session', 'execute']
 EXAMPLE_SINGLE_OP = ['init_session', 'execute']
-
