@@ -49,6 +49,8 @@ def get_logger():
 
 def main():
   """Main module function"""
+  file_name = None
+  arch = None
   if len(sys.argv) == 3:
     file_name = sys.argv[1]
     arch = sys.argv[2]

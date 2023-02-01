@@ -139,7 +139,7 @@ class Connection():
     """
     # pylint: disable=broad-except
     if not self.test_cmd_str(cmd):
-      raise Exception('Machine {self.id} failed, missing binary: {cmd}')
+      raise ValueError(f'Machine {self.id} failed, missing binary: {cmd}')
 
     if self.local_machine:
       #universal_newlines corrects output format to utf-8
