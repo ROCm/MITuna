@@ -32,8 +32,12 @@ from tuna.parse_args import TunaArgs
 
 MIOPEN_TUNING_STEPS = [
     'init_session', 'add_tables', 'import_configs', 'load_job',
-    'update_applicability', 'update_solvers', 'list_solvers', 'fin_steps'
+    'update_applicability', 'update_solvers', 'list_solvers', 'fin_steps',
     'export_db', 'import_db', 'check_status', 'execute_cmd'
+]
+
+#tuning steps with 1 argument (possibly also --session_id)
+SINGLE_OP = ['init_session', 'add_tables', 'update_applicability', 'list_solvers'
 ]
 
 
@@ -47,16 +51,23 @@ def parse_miopen_yaml(yaml_dict):
   for key in yaml_dict:
     if key in common_args:
       common_yaml_part[key] = yaml_dict[key]
-  #print('common_yaml_part: {}'.format(common_yaml_part))
 
   for key in yaml_dict:
-    if key in MIOPEN_TUNING_STEPS:
-      new_yaml = common_yaml_part.copy()
-      new_yaml[key] = yaml_dict[key]
-      _, local_file = tempfile.mkstemp()
-      with open(local_file, 'w') as outfile:
-        yaml.dump(new_yaml, outfile, default_flow_style=False)
-      yaml_files.append(local_file)
+    #only looked at enabled items
+    if key in MIOPEN_TUNING_STEPS and yaml_dict.get(key).get('enabled'):
+        #append common args
+        new_yaml = common_yaml_part.copy()
+        yaml_dict[key].pop('enabled', None)
+
+        for key2, value2 in yaml_dict.get(key).items():
+          new_yaml[key2] = value2
+
+        if key in SINGLE_OP:
+          new_yaml[key] = True 
+        _, local_file = tempfile.mkstemp()
+        with open(local_file, 'w') as outfile:
+          yaml.dump(new_yaml, outfile, default_flow_style=False)
+        yaml_files.append(local_file)
 
   print('YAML files: {}'.format(yaml_files))
 

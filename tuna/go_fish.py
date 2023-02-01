@@ -80,8 +80,10 @@ def main():
     for library, yaml_file in zip(libraries, yaml_files):
       args['yaml_file'] = yaml_file
       #library.yaml_file = yaml_file
-      sys.argv[3] = yaml_file
+      if args['yaml_file']:
+        sys.argv[3] = yaml_file
       print(sys.argv)
+      exit()
       #returns a list of workers/processes it started
       worker_lst = library.run()
       if worker_lst is None:

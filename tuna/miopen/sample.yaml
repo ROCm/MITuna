@@ -10,4 +10,36 @@ label: 'Example'
 restart_machine: false
 docker_name: 'my_docker_name'
 
-init_session: true
+
+add_tables:
+  enabled: false 
+
+init_session: 
+  enabled: false
+
+update_applicability:
+  enabled: true 
+  session_id: 1
+
+list_solvers:
+  enabled: false 
+
+load_job:
+  enabled: true
+  fin_steps: 'miopen_find_compile, miopen_find_eval'
+  session_id: 1
+  all_configs: true
+
+fin_steps:
+  enabled: false 
+  all_configs: true
+  fin_steps: 'miopen_find_compile'
+  label: 'fin_find_compile'
+  session_id: 4
+
+fin_steps:
+  enabled: false 
+  all_configs: true
+  fin_steps: 'miopen_find_eval'
+  label: 'fin_find_compile'
+  session_id: 1
