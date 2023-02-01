@@ -26,6 +26,12 @@
 ###############################################################################
 """Session table and its associate functionality"""
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.exc import IntegrityError
+
+from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.logger import setup_logger
+
+LOGGER = setup_logger('session')
 
 
 class SessionMixin():
@@ -40,3 +46,44 @@ class SessionMixin():
   docker = Column(String(length=64),
                   nullable=False,
                   server_default="miopentuna")
+
+  def add_new_session(self, args, worker):
+    """Add new session entry"""
+    self.reason = args.label
+    self.docker = args.docker_name
+    if hasattr(args, 'arch') and args.arch:
+      self.arch = args.arch
+    else:
+      self.arch = worker.machine.arch
+
+    if hasattr(args, 'num_cu') and args.num_cu:
+      self.num_cu = args.num_cu
+    else:
+      self.num_cu = worker.machine.num_cu
+
+    if hasattr(args, 'rocm_v') and args.rocm_v:
+      self.rocm_v = args.rocm_v
+    else:
+      self.rocm_v = worker.get_rocm_v()
+
+    if hasattr(args, 'ticket') and args.ticket:
+      self.ticket = args.ticket
+    else:
+      self.ticket = 'N/A'
+
+  def insert_session(self):
+    """Insert new session obj and return its id"""
+    with DbSession() as session:
+      try:
+        session.add(self)
+        session.commit()
+        LOGGER.info('Added new session_id: %s', self.id)
+      except IntegrityError as err:
+        LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
+                       self)
+        session.rollback()
+        entry = self.get_query(session, type(self), self).one()
+        LOGGER.warning('Session for these values already exists: %s', entry.id)
+        return entry.id
+
+    return self.id

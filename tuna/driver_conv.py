@@ -117,8 +117,9 @@ class DriverConvolution(DriverBase):
     """import config attributes from fdb key line"""
     fds, _, direction = get_fds_from_cmd(line)
     setattr(self, 'direction', DIR_MAP[direction])
-    for key, val in fds.items():
-      setattr(self, key, val)
+    for key in self.to_dict():
+      if key in fds:
+        setattr(self, key, fds[key])
 
     pattern_3d = '[0-9]x[0-9]x[0-9]'
     if search(pattern_3d, line):
@@ -182,6 +183,7 @@ class DriverConvolution(DriverBase):
       if k in defaults.keys():
         if val is None:
           setattr(self, k, defaults[k])
+          LOGGER.info("Set default %s: %s", k, defaults[k])
         #for 2d configs filter out 3rd dimensional paramaters from unscrupulous users
         elif self.spatial_dim != 3 and k.endswith('_d'):
           setattr(self, k, defaults[k])

@@ -28,19 +28,31 @@
 jobs in compile mode"""
 from time import sleep
 import random
+import functools
 import json
 
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
+from sqlalchemy.inspection import inspect
 
 from tuna.miopen.fin_class import FinClass
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.fin_utils import fin_job
 from tuna.miopen.fin_utils import get_fin_slv_status, get_fin_result
+from tuna.utils.db_utility import session_retry
 
 
 class FinBuilder(FinClass):
   """ The Builder class implementes the worker class. Its purpose is to compile jobs. It picks up
   new jobs and when completed, sets the state to compiled. """
+
+  def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    self.jcache_attr = [
+        column.name for column in inspect(self.dbt.fin_cache_table).c
+    ]
+    self.jcache_attr.remove("insert_ts")
+    self.jcache_attr.remove("update_ts")
+    self.jcache_attr.remove("valid")  #use default, don't specify
 
   def get_fin_input(self):
     """Create the input dict for fin, serialize to json and write to machine
@@ -63,8 +75,8 @@ class FinBuilder(FinClass):
       kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
       kernel_obj.job_id = self.job.id
 
-      # Bundle Insert for later
-      self.pending.append((self.job, kernel_obj))
+      session.add(kernel_obj)
+    session.commit()
 
     return True
 
@@ -72,11 +84,17 @@ class FinBuilder(FinClass):
     """retrieve perf db compile json results"""
     status = []
     if fin_json['miopen_perf_compile_result']:
+
+      def actuator(func, pdb_obj):
+        return func(session, pdb_obj)
+
       for pdb_obj in fin_json['miopen_perf_compile_result']:
         slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
         status.append(slv_stat)
         if pdb_obj['perf_compiled']:
-          self.compose_job_cache_entrys(session, pdb_obj)
+          session_retry(session, self.compose_job_cache_entrys,
+                        functools.partial(actuator, pdb_obj=pdb_obj),
+                        self.logger)
           self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
     else:
       status = [{
@@ -91,29 +109,13 @@ class FinBuilder(FinClass):
     """mark a job complete"""
     self.set_job_state('compiled')
 
-  def result_queue_drain(self):
-    """check for lock and commit the result queue"""
-    if self.result_queue_lock.acquire(block=False):
-      with DbSession() as session:
-        self.result_queue_commit(session, self.close_job)
-      self.result_queue_lock.release()
-      return True
-    return False
-
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     self.pending = []
     self.result_queue_drain()
 
-    # pylint: disable=duplicate-code
-    if self.first_pass:
-      self.first_pass = False
-      try:
-        self.check_env()
-      except ValueError as verr:
-        self.logger.error(verr)
-        return False
-    # pylint: enable=duplicate-code
+    if not self.init_check_env():
+      return False
 
     if not self.get_job("new", "compile_start", True):
       while not self.result_queue_drain():
@@ -155,8 +157,7 @@ class FinBuilder(FinClass):
       self.set_job_state('errored', result=result_str)
     elif self.pending:
       self.set_job_state('compiled_pend', result=result_str)
-      for item in self.pending:
-        self.result_queue.put(item)
+      self.result_queue.put(self.pending)
     else:
       self.set_job_state('compiled', result=result_str)
     return True

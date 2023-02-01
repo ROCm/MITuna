@@ -27,37 +27,47 @@
 """Functions for interacting with MIOpen perf and find db """
 import sys
 import os
+import sqlite3
 
+from typing import Any, List, Tuple
 from tuna.utils.logger import setup_logger
 from tuna.metadata import SQLITE_CONFIG_COLS, ARCH_NUM_CU_LIST
 
 LOGGER = setup_logger('AnalyzeParseDB')
 
 
-def insert_config_sqlite(cnx, fds):
+def insert_config_sqlite(cnx: sqlite3.Connection, fds: dict) -> int:
   """insert a config into the sqlite table """
+  vals: list
   vals = [fds[x] for x in SQLITE_CONFIG_COLS]
 
+  cur: sqlite3.Cursor
   cur = cnx.cursor()
+  query: str
   query = "INSERT into config(" + ", ".join(
       SQLITE_CONFIG_COLS) + " ) values ( " + ",".join(
           [" ? "] * len(SQLITE_CONFIG_COLS)) + ");"
   cur.execute(query, tuple(vals))
   cur.execute("select last_insert_rowid() as id;")
+  res: list
   res = cur.fetchall()
   cur.close()
   return res[0][0]
 
 
-def get_config_sqlite(cnx, fds):
+def get_config_sqlite(cnx: sqlite3.Connection, fds: dict) -> int:
   """get the config id from the sqlite table matching the fds conditions"""
+  vals: List[Any]
   vals = [fds[x] for x in SQLITE_CONFIG_COLS]
+  conditions: List
   conditions = [f'{col} = ?' for col in SQLITE_CONFIG_COLS]
-  query = 'SELECT id from config where ' + ' AND '.join(conditions) + ';'
+  query: str = 'SELECT id from config where ' + ' AND '.join(conditions) + ';'
+  cur: sqlite3.Cursor
   cur = cnx.cursor()
   cur.execute(query, tuple(vals))
-  res = cur.fetchall()
+  res: list = cur.fetchall()
   cur.close()
+  config_id: int
   if len(res) == 1:
     config_id = res[0][0]
   elif not res:
@@ -69,10 +79,13 @@ def get_config_sqlite(cnx, fds):
   return config_id
 
 
-def get_sqlite_data(cnx, table_name, fds):
+def get_sqlite_data(cnx: sqlite3.Connection, table_name: str,
+                    fds: dict) -> Tuple[List, List]:
   """get the config id from the sqlite table matching the fds conditions"""
-  conditions = []
+  conditions: List = []
   if fds:
+    key: str
+    val: str
     for key, val in fds.items():
       if isinstance(val, list):
         val = ','.join([str(item) for item in val])
@@ -81,107 +94,90 @@ def get_sqlite_data(cnx, table_name, fds):
         conditions.append(f'{key} = {val}')
       else:
         conditions.append(f'{key} = \'{val}\'')
-  query = f'SELECT * from {table_name}'
+  query: str = f'SELECT * from {table_name}'
   if conditions:
     query = query + ' where ' + ' AND '.join(conditions)
   query = query + ';'
   #LOGGER.info(query)
-  cur = cnx.cursor()
+  cur: sqlite3.Cursor = cnx.cursor()
   cur.execute(query)
-  columns = [x[0] for x in cur.description]
-  res = cur.fetchall()
+  columns: list = [x[0] for x in cur.description]
+  res: list = cur.fetchall()
   cur.close()
 
   return res, columns
 
 
-def get_sqlite_table(cnx, table_name, include_id=False):
+def get_sqlite_table(cnx: sqlite3.Connection,
+                     table_name: str,
+                     include_id: bool = False) -> Tuple[List, List]:
   """return the sqlite table """
-  query = f'SELECT * from {table_name} LIMIT 1'
-  cur = cnx.cursor()
+  query: str = f'SELECT * from {table_name} LIMIT 1'
+  cur: sqlite3.Cursor = cnx.cursor()
   cur.execute(query)
+  columns: List
   if include_id:
     columns = [x[0] for x in cur.description]
   else:
     columns = [x[0] for x in cur.description if x[0] != 'id']
   query = f"SELECT {','.join(columns)} FROM {table_name};"
   cur.execute(query)
-  res = cur.fetchall()
+  res: List = cur.fetchall()
   cur.close()
   return res, columns
 
 
-def get_sqlite_row(cnx, table, tid):
+def get_sqlite_row(cnx: sqlite3.Connection, table: str,
+                   tid: dict) -> Tuple[List, List]:
   """return the config row for the given id"""
   query = f'SELECT * from {table} where id={tid}'
-  cur = cnx.cursor()
+  cur: sqlite3.Cursor = cnx.cursor()
   cur.execute(query)
-  res = cur.fetchall()
-  row = res[0]
-  columns = [x[0] for x in cur.description]
+  res: List = cur.fetchall()
+  row: List = res[0]
+  columns: List = [x[0] for x in cur.description]
   return row, columns
 
 
-def get_config_mysql(fds, cnx):
-  """get the config id from the mysql table matching the fds conditions"""
-  cols, vals = zip(*fds.items())
-  # before inserting check if the entry already exists
-  conditions = [f'{col} = %s' for col in cols]
-  query = 'SELECT id from config where config.valid = TRUE AND ' + ' AND '.join(
-      conditions) + ';'
-  cur = cnx.cursor()
-  cur.execute(query, tuple(vals))
-  res = cur.fetchall()
-  cur.close()
-  if len(res) > 1:
-    config_id = res[0][0]
-    fds_str = ', '.join([f'{key}:{value}' for key, value in fds.items()])
-    LOGGER.warning('Duplicate config: %s', fds_str)
-    LOGGER.warning('Picking first config id=%u', (config_id))
-  elif not res:
-    fds_str = ', '.join([f'{key}:{value}' for key, value in fds.items()])
-    LOGGER.warning('Adding new config for: %s', fds_str)
-    #NOTE: need to add driver class to analyze_parse_db
-    #insert_config_v1(cnx, {}, fds) - needs to be reworked to support driver class
-    config_id = get_config_mysql(fds, cnx)
-  else:
-    config_id = res[0][0]
-  return config_id
-
-
-def insert_solver_sqlite(cnx, slv):
+def insert_solver_sqlite(cnx: sqlite3.Connection, slv: dict) -> None:
   """insert solver into sqlite """
 
-  config = slv['config']
-  solver_id = slv['solver']
-  params = slv['params']
-  mrk = "?"
+  config: int = slv['config']
+  solver_id: str = slv['solver']
+  params: str = slv['params']
+  mrk: str = "?"
 
   where_clause = f" where config = {mrk} and solver = {mrk}"
-  query = "select id from perf_db " + where_clause
+  query: str = "select id from perf_db " + where_clause
+  cur: sqlite3.Cursor
   cur = cnx.cursor()
   cur.execute(query, (config, solver_id))
-  res = cur.fetchall()
+  res: list = cur.fetchall()
   if not res:
     query = f"insert into perf_db(config, solver, params) values \
     ({mrk}, {mrk}, {mrk});"
 
     cur.execute(query, (config, solver_id, params))
   else:
-    perf_id = res[0][0]
+    perf_id: int = res[0][0]
     query = f"update perf_db set params = {mrk} where id={mrk};"
     cur.execute(query, (params, perf_id))
 
   cur.close()
 
 
-def parse_pdb_filename(fname):
+def parse_pdb_filename(fname: str) -> Tuple[str, int]:
   """parse filename of perfdb file"""
   fname = os.path.basename(fname)
-  found = False
+  found: bool = False
+  item: str
+  arch: str
+  num_cu: int
+  num_cu_str: str
+  db_arch: str
   for item in ARCH_NUM_CU_LIST:
-    arch, num_cu = item.split('-')
-    num_cu = int(num_cu)
+    arch, num_cu_str = item.split('-')
+    num_cu = int(num_cu_str)
     db_arch = f'{arch}_{num_cu}'
     if num_cu > 64:
       db_arch = f'{arch}{num_cu:x}'
@@ -195,11 +191,12 @@ def parse_pdb_filename(fname):
   return (arch, num_cu)
 
 
-def mysql_to_sqlite_cfg(in_perf_cfg):
+def mysql_to_sqlite_cfg(in_perf_cfg: dict) -> dict:
   """convert values to represent sqlite config table"""
-  perf_cfg = in_perf_cfg.copy()
+  perf_cfg: dict = in_perf_cfg.copy()
 
   if perf_cfg['direction'] in ('B', 'W'):
+    tmp: str
     tmp = perf_cfg['out_channels']
     perf_cfg['out_channels'] = perf_cfg['in_channels']
     perf_cfg['in_channels'] = tmp
@@ -218,11 +215,12 @@ def mysql_to_sqlite_cfg(in_perf_cfg):
   return perf_cfg
 
 
-def sqlite_to_mysql_cfg(in_perf_cfg):
+def sqlite_to_mysql_cfg(in_perf_cfg: dict) -> dict:
   """convert values to represent mysql config table"""
-  perf_cfg = in_perf_cfg.copy()
+  perf_cfg: dict = in_perf_cfg.copy()
 
   if perf_cfg['direction'] in ('B', 'W'):
+    tmp: str
     tmp = perf_cfg['out_channels']
     perf_cfg['out_channels'] = perf_cfg['in_channels']
     perf_cfg['in_channels'] = tmp

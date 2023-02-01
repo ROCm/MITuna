@@ -41,7 +41,7 @@ def buildSchema(){
     def create_sql = $/ "CREATE DATABASE ${db_name};"/$
     sh "${cmd} -e ${drop_sql}"
     sh "${cmd} -e ${create_sql}"
-    sh "./tuna/db_tables.py"
+    sh "./tuna/miopen/db_tables.py"
 }
 
 def cleanup() {
@@ -316,6 +316,37 @@ def loadJobTest() {
     }
 }
 
+def solverAnalyticsTest(){
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+        checkout scm
+        // enviornment setup
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.PYTHONPATH = env.WORKSPACE
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.PATH = "${env.WORKSPACE}/tuna:${env.PATH}"
+
+        // install SolverAnalytics
+        sh "rm -rf SolverAnalytics"
+        sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
+
+        // run SolverAnalytics tests
+        sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/cli_test.py"
+        sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
+        sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/df_tools_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/fdb_key_utils_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/helpers_test.py"
+        sh "python3 ./SolverAnalytics/tests/utils_test/logging_test.py"
+    }
+}
+
 def perfCompile() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
@@ -437,6 +468,9 @@ def pytestSuite1() {
            sh "pytest tests/test_fin_utils.py -s"
            sh "pytest tests/test_add_session.py -s"
            sh "pytest tests/test_merge_db.py -s"
+           sh "pytest tests/test_merge_db_functions.py -s"
+           sh "pytest tests/test_utility.py -s"
+           sh "pytest tests/test_example.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -507,7 +541,9 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "cd tuna && pylint -f parseable --max-args=8 --indent-string='  ' *.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
+            sh "cd tuna && mypy analyze_parse_db.py"
+            sh "cd tuna && mypy build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }
@@ -801,8 +837,4 @@ def doxygen() {
           }
     }
 }
-
-
-
-
 

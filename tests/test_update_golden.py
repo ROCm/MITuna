@@ -25,7 +25,7 @@
 ###############################################################################
 
 import sys
-from tuna.update_golden import merge_golden_entries, get_fdb_query
+from tuna.update_golden import merge_golden_entries, get_fdb_entries, create_perf_table, verify_no_duplicates, latest_golden_v
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.config_type import ConfigType
@@ -37,41 +37,83 @@ sys.path.append("../tuna")
 sys.path.append("tuna")
 
 
-def add_fdb_entry(session_id):
-  with DbSession() as session:
-    fdb_entry = ConvolutionFindDB()
-    fdb_entry.config = 1
-    fdb_entry.solver = 1
-    fdb_entry.session = session_id
-    fdb_entry.opencl = False
+def build_fdb_entry(session_id):
+  fdb_entry = ConvolutionFindDB()
+  fdb_entry.config = 1
+  fdb_entry.solver = 1
+  fdb_entry.session = session_id
+  fdb_entry.opencl = False
 
-    fdb_entry.fdb_key = 1
-    fdb_entry.alg_lib = 'Test'
-    fdb_entry.params = 1
-    fdb_entry.workspace_sz = 0
-    fdb_entry.valid = True
-    fdb_entry.kernel_time = 11111
-    fdb_entry.kernel_group = 1
+  fdb_entry.fdb_key = 'key'
+  fdb_entry.alg_lib = 'Test'
+  fdb_entry.params = 'param'
+  fdb_entry.workspace_sz = 0
+  fdb_entry.valid = True
+  fdb_entry.kernel_time = 11111
+  fdb_entry.kernel_group = 1
 
-    session.add(fdb_entry)
-    session.commit()
+  return fdb_entry
 
 
 def test_update_golden():
   session_id = add_test_session()
-  add_fdb_entry(session_id)
+  fdb_entry = build_fdb_entry(session_id)
+  with DbSession() as session:
+    session.add(fdb_entry)
+    session.commit()
 
   res = None
   args = DummyArgs()
   args.session_id = session_id
   args.config_type = ConfigType.convolution
-  args.golden_v = 1
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
-  entries = get_fdb_query(dbt).all()
+
+  args.golden_v = latest_golden_v(dbt) + 1
+
+  entries = get_fdb_entries(dbt)
   assert entries
+  assert len(entries) == 1
+  fdb_obj = entries[0]
+  assert fdb_obj.config == 1
+  assert fdb_obj.solver == 1
+  assert fdb_obj.session == session_id
+  assert fdb_obj.params == 'param'
+  assert fdb_obj.fdb_key == 'key'
 
   with DbSession() as session:
     assert merge_golden_entries(session, dbt, args.golden_v, entries)
-    query = session.query(ConvolutionGolden)
+    query = session.query(ConvolutionGolden)\
+                    .filter(ConvolutionGolden.golden_miopen_v == args.golden_v)\
+                    .filter(ConvolutionGolden.session == session_id)
     res = query.all()
-  assert len(res) is not None
+    assert len(res) == 1
+    assert res[0].params == 'param'
+
+  assert verify_no_duplicates(entries)
+
+  fdb_entry2 = build_fdb_entry(session_id)
+  fdb_entry2.config = 2
+  entries.append(fdb_entry2)
+  assert verify_no_duplicates(entries)
+
+  fdb_entry3 = build_fdb_entry(session_id)
+  fdb_entry3.solver = 2
+  entries.append(fdb_entry3)
+  assert verify_no_duplicates(entries)
+
+  session_id2 = add_test_session(arch='gfx90a', num_cu=110)
+  fdb_entry4 = build_fdb_entry(session_id2)
+  entries.append(fdb_entry4)
+  assert verify_no_duplicates(entries)
+
+  fdb_entry5 = build_fdb_entry(session_id)
+  fdb_entry5.params = 'something'
+  entries.append(fdb_entry5)
+  assert verify_no_duplicates(entries) == False
+
+  args.create_perf_table = True
+  assert create_perf_table(args)
+
+
+def copy(dest, src):
+  dest.__dict__ = src.__dict__.copy()

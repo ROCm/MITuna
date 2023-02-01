@@ -41,6 +41,7 @@ from tuna.find_db import ConvolutionFindDB, BNFindDB
 from tuna.config_type import ConfigType
 from tuna.miopen.session import Session
 from tuna.metadata import DIR_MAP
+from tuna.miopen.benchmark import Model, Framework
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
@@ -309,6 +310,7 @@ class FusionConfigTags(BASE, ConfigTagMixin):
 class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
+  # pylint: disable=duplicate-code
   new = 1
   started = 2
   running = 3
@@ -524,44 +526,48 @@ class BNGolden(BASE, GoldenMixin):
   kernel_group = Column(Integer, nullable=True)
 
 
-class BenchmarkTable(BASE):
+class BenchmarkMixin():
+  """Mixin class for bechmark tables"""
+
+  @declared_attr
+  def framework(self):
+    """Framework Fkey"""
+    return Column(Integer, ForeignKey("framework.id"), nullable=False)
+
+  @declared_attr
+  def model(self):
+    """Model Fkey"""
+    return Column(Integer, ForeignKey("model.id"), nullable=False)
+
+  batchsize = Column(Integer, nullable=False, server_default="32")
+  gpu_number = Column(Integer, nullable=True, server_default="1")
+  driver_cmd = Column(String(length=512), nullable=False)
+
+
+class ConvolutionBenchmark(BASE, BenchmarkMixin):
   """benchmark table for framework and model parameters"""
-  __tablename__ = "benchmark_table"
+  __tablename__ = "conv_benchmark"
   __table_args__ = (UniqueConstraint("framework",
                                      "model",
                                      "batchsize",
                                      "gpu_number",
-                                     "driver_cmd",
-                                     name="uq_idx"),)
-
-  framework = Column(String(length=128), nullable=False)
-  model = Column(String(length=128), nullable=False)
-  batchsize = Column(Integer, nullable=False, server_default="32")
-  gpu_number = Column(Integer, nullable=True, server_default="1")
-  driver_cmd = Column(String(length=128), nullable=False)
-
-
-class ConvBenchPerfTable(BASE):
-  """benchmark table for performance parameters"""
-  __tablename__ = "conv_benchmark_perf_table"
-  __table_args__ = (UniqueConstraint("config",
-                                     "benchmark",
-                                     "solver",
-                                     "rocm_v",
-                                     "miopen_v",
+                                     "config",
                                      name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-  benchmark = Column(Integer, ForeignKey("benchmark_table.id"), nullable=False)
-  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
-  solver = Column(Integer,
-                  ForeignKey("solver.id",
-                             onupdate="CASCADE",
-                             ondelete="CASCADE"),
-                  nullable=False)
-  workspace_sz = Column(BigInteger, nullable=False)
-  rocm_v = Column(String(length=64), nullable=False)
-  miopen_v = Column(String(length=64), nullable=False)
+
+
+class BNBenchmark(BASE, BenchmarkMixin):
+  """benchmark table for framework and model parameters"""
+  __tablename__ = "bn_benchmark"
+  __table_args__ = (UniqueConstraint("framework",
+                                     "model",
+                                     "batchsize",
+                                     "gpu_number",
+                                     "config",
+                                     name="uq_idx"),)
+
+  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
 def add_conv_tables(miopen_tables):
@@ -575,6 +581,7 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvFinJobCache())
   miopen_tables.append(ConvolutionFindDB())
   miopen_tables.append(ConvolutionGolden())
+  miopen_tables.append(ConvolutionBenchmark())
   return miopen_tables
 
 
@@ -598,6 +605,7 @@ def add_bn_tables(miopen_tables):
   miopen_tables.append(BNFinJobCache())
   miopen_tables.append(BNFindDB())
   miopen_tables.append(BNGolden())
+  miopen_tables.append(BNBenchmark())
   return miopen_tables
 
 
@@ -606,13 +614,16 @@ def get_miopen_tables():
   miopen_tables = []
   miopen_tables.append(Solver())
   miopen_tables.append(Session())
+  miopen_tables.append(Framework())
+  miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))
   miopen_tables.append(TensorTable())
-  miopen_tables.append(BenchmarkTable())
-  miopen_tables.append(ConvBenchPerfTable())
 
   miopen_tables = add_conv_tables(miopen_tables)
   miopen_tables = add_fusion_tables(miopen_tables)
   miopen_tables = add_bn_tables(miopen_tables)
+
+  miopen_tables.append(ConvolutionBenchmark())
+  miopen_tables.append(BNBenchmark())
 
   return miopen_tables

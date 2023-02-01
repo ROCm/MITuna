@@ -36,12 +36,10 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.utility import check_qts
-from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT, CONV_CONFIG_COLS, TENSOR_PRECISION
-from tuna.metadata import BN_DEFAULTS, BN_CONFIG_COLS
+from tuna.metadata import MYSQL_LOCK_WAIT_TIMEOUT
+from tuna.metadata import BN_DEFAULTS
 from tuna.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.metadata import NUM_SQL_RETRIES
-from tuna.miopen.miopen_tables import TensorTable, Session
-from tuna.config_type import ConfigType
 
 LOGGER = setup_logger('helper')
 
@@ -188,172 +186,6 @@ def handle_op_error(logger, error):
     raise error
 
 
-#DEPRECATED
-def get_conv_dict(c_dict, fds):
-  """Compose db cols for conv_config table"""
-  for col in CONV_CONFIG_COLS:
-    if col in fds.keys():
-      c_dict[col] = fds[col]
-
-  c_dict['input_tensor'] = get_input_t_id(fds)
-  c_dict['weight_tensor'] = get_weight_t_id(fds)
-
-  return c_dict
-
-
-#DEPRECATED
-def get_bn_dict(c_dict, fds):
-  """Compose db cols for BN table"""
-  for col in BN_CONFIG_COLS:
-    if col in fds.keys():
-      c_dict[col] = fds[col]
-
-  c_dict['input_tensor'] = get_input_t_id(fds)
-
-  return c_dict
-
-
-#DEPRECATED
-def compose_tensors(fds, args, keep_id=False):
-  """Get tensors needed for DB table based on config type"""
-  c_dict = {}
-  if args.config_type is ConfigType.batch_norm:
-    get_bn_dict(c_dict, fds)
-  else:
-    c_dict = get_conv_dict(c_dict, fds)
-
-  if keep_id:
-    c_dict['id'] = fds['id']
-
-  return c_dict
-
-
-#DEPRECATED
-def insert_tensor(fds, tensor_dict):
-  """Insert new row into tensor table and return primary key"""
-
-  set_tensor_defaults(fds, tensor_dict)
-
-  ret_id = None
-  with DbSession() as session:
-    try:
-      tid = TensorTable(**tensor_dict)
-      session.add(tid)
-      session.commit()
-      ret_id = tid.id
-    except IntegrityError:
-      session.rollback()
-      ret_id = get_tid(session, tensor_dict)
-
-  return ret_id
-
-
-#DEPRECATED
-def get_tid(session, tensor_dict):
-  """Return tensor id based on dict"""
-
-  query = session.query(TensorTable.id).filter_by(**tensor_dict)
-  ret_id = None
-  try:
-    res = session.execute(query).one()
-    ret_id = res[0]
-  except IntegrityError as err:
-    LOGGER.error("Error occurred: %s \n", err)
-    raise ValueError(
-        'Something went wrong with getting input tensor id from tensor table'
-    ) from err
-  except IndexError as err:
-    raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
-
-  return ret_id
-
-
-#DEPRECATED
-def get_input_t_id(fds):
-  """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
-  i_dict = compose_input_t(fds, {})
-
-  return insert_tensor(fds, i_dict)
-
-
-#DEPRECATED
-def get_weight_t_id(fds):
-  """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
-  w_dict = compose_weight_t(fds, {})
-
-  return insert_tensor(fds, w_dict)
-
-
-#DEPRECATED
-def compose_weight_t(fds, w_dict):
-  """Build weight_tensor dict from fds"""
-
-  if 'fil_layout' not in fds.keys():
-    fds['fil_layout'] = 'NCHW'
-
-  if fds['fil_layout'] == 'NCHW':
-    w_dict['dim0'] = fds['out_channels']
-    w_dict['dim1'] = fds['in_channels']
-    w_dict['dim2'] = fds['fil_d']
-    w_dict['dim3'] = fds['fil_h']
-    w_dict['dim4'] = fds['fil_w']
-    w_dict['layout'] = 'NCHW'
-  elif fds['fil_layout'] == 'NHWC':
-    w_dict['dim0'] = fds['out_channels']
-    w_dict['dim1'] = fds['in_channels']
-    w_dict['dim2'] = fds['fil_d']
-    w_dict['dim3'] = fds['fil_h']
-    w_dict['dim4'] = fds['fil_w']
-    w_dict['layout'] = 'NHWC'
-  if 'cmd' in fds:
-    w_dict['data_type'] = TENSOR_PRECISION[fds['cmd']]
-
-  return w_dict
-
-
-#DEPRECATED
-def compose_input_t(fds, i_dict):
-  """Build input_tensor dict from fds"""
-
-  i_dict['dim0'] = 1
-
-  if 'in_layout' not in fds.keys():
-    fds['in_layout'] = 'NCHW'
-
-  if fds['in_layout'] == 'NCHW':
-    i_dict['dim1'] = fds['in_channels']
-    i_dict['dim2'] = fds['in_d']
-    i_dict['dim3'] = fds['in_h']
-    i_dict['dim4'] = fds['in_w']
-    i_dict['layout'] = 'NCHW'
-  elif fds['in_layout'] == 'NHWC':
-    i_dict['dim1'] = fds['in_d']
-    i_dict['dim2'] = fds['in_h']
-    i_dict['dim3'] = fds['in_w']
-    i_dict['dim4'] = fds['in_channels']
-    i_dict['layout'] = 'NHWC'
-  if 'cmd' in fds:
-    i_dict['data_type'] = TENSOR_PRECISION[fds['cmd']]
-
-  return i_dict
-
-
-#DEPRECATED
-def set_tensor_defaults(fds, tensor_dict):
-  """Set tensor num_dims and data_type"""
-  if 'spatial_dim' in fds.keys():
-    tensor_dict['num_dims'] = fds['spatial_dim']
-  else:
-    tensor_dict['num_dims'] = 2
-
-  if 'data_type' not in tensor_dict:
-    tensor_dict['data_type'] = 'FP32'
-
-  return tensor_dict
-
-
 def get_db_id(db_elems, config_table):
   """Return unique DB id for config dict"""
   cid = None
@@ -369,30 +201,3 @@ def get_db_id(db_elems, config_table):
     if res:
       cid = res[0][0]
   return cid
-
-
-def add_new_session(args, worker):
-  """Add new session entry"""
-  new_sesh_id = None
-  session_entry = Session()
-  session_entry.arch = args.arch
-  session_entry.num_cu = args.num_cu
-  session_entry.rocm_v = worker.get_rocm_v()
-  session_entry.miopen_v = worker.get_miopen_v()
-  session_entry.reason = args.label
-  if args.ticket:
-    session_entry.ticket = args.ticket
-  session_entry.docker = args.docker_name
-
-  with DbSession() as session:
-    try:
-      session.add(session_entry)
-      session.commit()
-      session.flush(session_entry)
-      new_sesh_id = session_entry.id
-      LOGGER.info('Added new session id: %s', session_entry.id)
-    except IntegrityError as err:
-      LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
-                     session_entry)
-
-  return new_sesh_id

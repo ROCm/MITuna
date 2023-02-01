@@ -36,7 +36,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.fin_class import FinClass
-from tuna.db_tables import connect_db
+from tuna.utils.db_utility import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
@@ -49,7 +49,7 @@ from tuna.utils.db_utility import get_solver_ids
 def add_cfgs():
   #import configs
   args = CfgImportArgs()
-  args.tag = 'test_fin_builder'
+  args.tag = 'tuna_pytest_fin_builder'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
@@ -62,7 +62,7 @@ def add_fin_find_compile_job(session_id, dbt):
   #load jobs
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_builder'
-  args.tag = 'test_fin_builder'
+  args.tag = 'tuna_pytest_fin_builder'
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
   args.session_id = session_id
 
@@ -83,44 +83,44 @@ def add_fin_find_compile_job(session_id, dbt):
 
 
 def test_fin_builder():
-  args = GoFishArgs()
-  machine_lst = load_machines(args)
+  miopen = MIOpen()
+  miopen.args = GoFishArgs()
+  machine_lst = load_machines(miopen.args)
   machine = machine_lst[0]
-
-  args.session_id = add_test_session()
+  miopen.args.label = 'tuna_pytest_fin_builder'
+  miopen.args.session_id = add_test_session(label='tuna_pytest_fin_builder')
 
   #update solvers
-  kwargs = get_worker_args(args, machine)
+  kwargs = get_worker_args(miopen.args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
   #get applicability
   dbt = add_cfgs()
-  args.update_applicability = True
-  args.label = 'test_fin_builder'
-  miopen = MIOpen()
-  worker_lst = miopen.compose_worker_list(machine_lst, args)
+  miopen.args.update_applicability = True
+  worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
 
   #load jobs
-  num_jobs = add_fin_find_compile_job(args.session_id, dbt)
+  miopen.args.label = 'tuna_pytest_fin_builder'
+  num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
 
   #compile
-  args.update_applicability = False
-  args.fin_steps = ["miopen_find_compile"]
-  args.label = ''
-  worker_lst = miopen.compose_worker_list(machine_lst, args)
+  miopen.args.update_applicability = False
+  miopen.args.fin_steps = ["miopen_find_compile"]
+  miopen.args.label = 'tuna_pytest_fin_builder'
+  worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
 
   with DbSession() as session:
-    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='errored')\
                                          .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
                                          .count()
     #ommiting valid Fin/MIOpen errors
     num_jobs = (num_jobs - valid_fin_err)
-    count = session.query(dbt.job_table).filter(dbt.job_table.session==args.session_id)\
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='compiled').count()
     assert (count == num_jobs)
