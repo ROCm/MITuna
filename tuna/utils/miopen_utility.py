@@ -30,6 +30,7 @@ from sqlalchemy.exc import InterfaceError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 from tuna.utils.logger import setup_logger
+from tuna.utils.db_utility import session_retry
 
 LOGGER = setup_logger('miopen_utility')
 
@@ -56,7 +57,7 @@ def load_machines(args, logger=LOGGER):
       if args.local_machine:
         query = query.filter(Machine.remarks == hostname)
 
-      res = query.all()
+      res = session_retry(session, query.all, lambda x: x(), logger)
 
       if args.local_machine:
         if res:
