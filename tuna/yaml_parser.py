@@ -49,10 +49,10 @@ def parse_yaml(filename, lib):
       print(exc)
 
   #if Library not specified here, no custom parsing function will be used
-  if lib == Library.MIOPEN:
+  if lib == Library.MIOPEN or lib.value == 'miopen':
     yaml_files = get_yaml_files(yaml_dict, MIOPEN_TUNING_STEPS,
                                 MIOPEN_SINGLE_OP)
-  elif lib == Library.EXAMPLE:
+  elif lib == Library.EXAMPLE or lib.value == 'example':
     yaml_files = get_yaml_files(yaml_dict, EXAMPLE_TUNING_STEPS,
                                 EXAMPLE_SINGLE_OP)
   else:

@@ -1,9 +1,8 @@
 ---
 # common script arguments
-# yamllint disable rule:line-length
-arch: 'gfx908'              # choices: ['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a']
+arch: 'gfx908'
 num_cu: 120
-config_type: 'convolution'  # choices: ['convolution', 'batch_norm']
+config_type: 'convolution'
 session_id: 1
 remote_machine: false
 label: 'Example'

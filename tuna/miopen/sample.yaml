@@ -1,9 +1,9 @@
 ---
 # common script arguments
-# yamllint disable rule:line-length
-arch: 'gfx908'              # choices: ['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a']
+# yamllint disable rule:key-duplicates
+arch: 'gfx908'
 num_cu: 120
-config_type: 'convolution'  # choices: ['convolution', 'batch_norm']
+config_type: 'convolution'
 session_id: 1
 remote_machine: false
 label: 'Example'
@@ -12,17 +12,17 @@ docker_name: 'my_docker_name'
 
 
 add_tables:
-  enabled: false 
+  enabled: false
 
-init_session: 
+init_session:
   enabled: false
 
 update_applicability:
-  enabled: true 
+  enabled: true
   session_id: 1
 
 list_solvers:
-  enabled: false 
+  enabled: false
 
 load_job:
   enabled: true
@@ -31,14 +31,14 @@ load_job:
   all_configs: true
 
 fin_steps:
-  enabled: false 
+  enabled: false
   all_configs: true
   fin_steps: 'miopen_find_compile'
   label: 'fin_find_compile'
   session_id: 4
 
 fin_steps:
-  enabled: false 
+  enabled: false
   all_configs: true
   fin_steps: 'miopen_find_eval'
   label: 'fin_find_compile'

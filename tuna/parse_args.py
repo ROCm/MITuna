@@ -47,9 +47,7 @@ class TunaArgs(Enum):
   DOCKER_NAME = 'docker_name'
 
 
-def setup_arg_parser(desc: str,
-                     arg_list: List[TunaArgs],
-                     parser=None):
+def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
   """ function to aggregate common command line args """
   if parser is not None:
     parser = jsonargparse.ArgumentParser(description=desc,
