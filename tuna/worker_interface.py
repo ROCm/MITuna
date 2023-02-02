@@ -98,13 +98,6 @@ class WorkerInterface(Process):
     #initialize tables
     self.set_db_tables()
 
-    #add cache directories
-    self.envmt.append(
-        f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
-    )
-    self.envmt.append(
-        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
-
     self.hostname = self.machine.hostname
     self.claim_num = self.num_procs.value
     self.last_reset = datetime.now()

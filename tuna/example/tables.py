@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,34 +24,27 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates the DB representation for a library"""
-
-from tuna.dbBase.sql_alchemy import DbSession
+"""Module that encapsulates the DB representation"""
+from tuna.tables_interface import DBTablesInterface
+from tuna.example.example_tables import Job
+from tuna.example.session import SessionExample
 
 
 #pylint: disable=too-few-public-methods
-class DBTablesInterface():
-  """Represents db tables interface class"""
+class ExampleDBTables(DBTablesInterface):
+  """Represents db tables for example lib"""
 
   def __init__(self, **kwargs):
     """Constructor"""
-    super().__init__()
-    allowed_keys = set(['session_id'])
-    self.__dict__.update((key, None) for key in allowed_keys)
+    super().__init__(**kwargs)
 
     #for pylint
     self.job_table = None
-    self.session_id = None
-    self.session = None
+    self.session_table = SessionExample
 
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+    self.set_tables()
 
-  def set_tables(self, sess_class):
+  def set_tables(self, sess_class=SessionExample):
     """Set appropriate tables based on requirements"""
-    if self.session_id is not None:
-      with DbSession() as session:
-        query = session.query(sess_class).filter(
-            sess_class.id == self.session_id)
-        self.session = query.one()
-    return True
+    super().set_tables(sess_class)
+    self.job_table = Job
