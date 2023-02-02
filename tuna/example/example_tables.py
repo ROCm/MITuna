@@ -26,7 +26,7 @@
 ###############################################################################
 """ Module for creating DB tables"""
 import enum
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -42,7 +42,6 @@ class JobEnum(enum.Enum):
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
   new = 1
-  started = 2
   running = 3
   completed = 4
   error = 5
@@ -51,6 +50,7 @@ class JobEnum(enum.Enum):
 class Job(BASE):
   """Represents class for job table"""
   __tablename__ = "job"
+  __table_args__ = (UniqueConstraint('reason', 'session', name="uq_idx"),)
 
   @declared_attr
   def session(self):
