@@ -30,12 +30,13 @@ from sqlalchemy.sql.expression import func as sqlfunc
 from sqlalchemy.exc import OperationalError
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.utils.logger import setup_logger
-from tuna.miopen.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import session_retry
+from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.session import Session
+from tuna.utils.db_utility import session_retry
+from tuna.utils.logger import setup_logger
 from tuna.utils.utility import split_packets
+from tuna.utils.utility import SimpleDict
 from tuna.db_engine import ENGINE
 
 # Setup logging
@@ -109,10 +110,6 @@ def get_fdb_query(dbt):
   return query
 
 
-class Dummy:  # pylint: disable=too-few-public-methods
-  """empty object"""
-
-
 def get_fdb_entries(dbt):
   """! Compose query to get all fdb entries for the session, performs better than get_fdb_query"""
   with DbSession() as session:
@@ -126,7 +123,7 @@ def get_fdb_entries(dbt):
     ret = session.execute(query)
     entries = []
     for row in ret:
-      entry = Dummy()
+      entry = SimpleDict()
       for i, col in enumerate(fdb_attr):
         setattr(entry, col, row[i])
       entries.append(entry)
@@ -142,6 +139,28 @@ def get_golden_query(dbt, golden_version):
             .filter(dbt.golden_table.valid == 1)
 
   return query
+
+
+def get_golden_entries(dbt, golden_version):
+  """! Compose query to get all golden db entries for the session,
+        performs better than get_golden_query"""
+  with DbSession() as session:
+    fdb_attr = [
+        "config", "solver", "session", "fdb_key", "params", "kernel_time",
+        "workspace_sz", "alg_lib", "opencl", "kernel_group"
+    ]
+    attr_str = ','.join(fdb_attr)
+    query = f"select {attr_str} from {dbt.golden_table.__tablename__}"\
+            f" where valid=1 and golden_miopen_v={golden_version};"
+    ret = session.execute(query)
+    entries = []
+    for row in ret:
+      entry = SimpleDict()
+      for i, col in enumerate(fdb_attr):
+        setattr(entry, col, row[i])
+      entries.append(entry)
+
+  return entries
 
 
 def latest_golden_v(dbt):
@@ -214,7 +233,9 @@ def copy_gold_data(gold_entry, entry):
   gold_entry.session = entry.session
 
   gold_entry.fdb_key = entry.fdb_key
-  gold_entry.params = entry.params
+  #if new entry has no params (is from a find tuning), then don't overwrite
+  if entry.params:
+    gold_entry.params = entry.params
   gold_entry.kernel_time = entry.kernel_time
   gold_entry.workspace_sz = entry.workspace_sz
   gold_entry.alg_lib = entry.alg_lib
@@ -356,7 +377,8 @@ def main():
     )
 
   if args.base_golden_v is not None:
-    base_gold_db = get_golden_query(dbt, args.base_golden_v).all()
+    base_gold_db = get_golden_entries(dbt, args.base_golden_v)
+    LOGGER.info("Base Golden Version entries %s", len(base_gold_db))
     if not base_gold_db:
       ver = latest_golden_v(dbt)
       if ver == -1:
@@ -367,17 +389,18 @@ def main():
     else:
       process_merge_golden(dbt, args.golden_v, base_gold_db, s_copy=True)
 
-  entries = get_fdb_entries(dbt)
-  LOGGER.info("Prepped %s entries", len(entries))
+  if args.overwrite:
+    entries = get_fdb_entries(dbt)
+    LOGGER.info("Import Session entries %s", len(entries))
+    success = verify_no_duplicates(entries)
+    if not success:
+      return False
 
-  success = verify_no_duplicates(entries)
-  if not success:
-    return False
-  total = process_merge_golden(dbt, args.golden_v, entries)
+    total = process_merge_golden(dbt, args.golden_v, entries)
+    LOGGER.info("Merged: %s", total)
 
-  LOGGER.info("Merged: %s", total)
-  LOGGER.info('Updating conv perf DB table')
   if args.create_perf_table:
+    LOGGER.info('Updating conv perf DB table')
     create_perf_table(args)
 
   return True
