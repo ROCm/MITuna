@@ -69,7 +69,7 @@ class MIOpen(MITunaInterface):
         type=int,
         default=1,
         help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
-        choices=map(str, [1, 3]))
+        choices=['1', '3'])
     parser.add_argument('--ticket',
                         dest='ticket',
                         type=str,

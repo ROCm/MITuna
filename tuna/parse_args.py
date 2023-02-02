@@ -69,7 +69,7 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
                         default=None,
                         required=False,
                         help='Number of CUs on GPU',
-                        choices=map(str, [36, 56, 60, 64, 104, 110, 120]))
+                        choices=['36', '56', '60', '64', '104', '110', '120'])
   if TunaArgs.DIRECTION in arg_list:
     parser.add_argument(
         '-d',
