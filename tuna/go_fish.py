@@ -44,7 +44,7 @@ def parse_args():
                       nargs='?',
                       default=Library.MIOPEN,
                       type=Library,
-                      help="Specify library to run, defaults to MIOpen",
+                      help="Specify library to run",
                       choices=Library)
 
   parser.add_argument('--yaml',
