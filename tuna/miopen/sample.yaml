@@ -12,10 +12,10 @@ docker_name: 'my_docker_name'
 
 
 add_tables:
-  enabled: true 
+  enabled: true
 
 init_session:
-  enabled: true 
+  enabled: true
 
 update_applicability:
   enabled: false
@@ -25,7 +25,7 @@ list_solvers:
   enabled: false
 
 load_job:
-  enabled: false 
+  enabled: false
   fin_steps: 'miopen_find_compile, miopen_find_eval'
   session_id: 1
   all_configs: true
