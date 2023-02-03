@@ -31,7 +31,7 @@ from tuna.miopen.miopen_tables import ConvolutionConfig, BNConfig
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.config_type import ConfigType
-from test2_0_fin_builder import CfgImportArgs
+from test_x_fin_builder import CfgImportArgs
 
 
 def test_driver():
