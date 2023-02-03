@@ -35,9 +35,9 @@ from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden, Convolutio
 from tuna.miopen.miopen_tables import BNBenchmark
 from tuna.miopen.miopen_tables import ConvSolverAnalyticsAggregated, ConvSolverAnalyticsDetailed
 from tuna.miopen.benchmark import Framework, Model
-from tuna.config_type import ConfigType
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.session import Session
+
+from tuna.config_type import ConfigType
 from tuna.tables_interface import DBTablesInterface
 
 
@@ -66,23 +66,20 @@ class MIOpenDBTables(DBTablesInterface):
     self.config_type = None
     self.solver_analytics_aggregated = None
     self.solver_analytics_detailed = None
+    self.session_table = Session
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
     self.set_tables()
 
-  def set_tables(self):
+  def set_tables(self, sess_class=Session):
     """Set appropriate tables based on config type"""
 
     self.solver_table = Solver
     self.model = Model
     self.framework = Framework
 
-    if self.session_id is not None:
-      with DbSession() as session:
-        query = session.query(Session).filter(Session.id == self.session_id)
-        self.session = query.one()
-
+    super().set_tables(sess_class)
     if self.config_type == ConfigType.batch_norm:
       self.job_table = BNJob
       self.config_table = BNConfig

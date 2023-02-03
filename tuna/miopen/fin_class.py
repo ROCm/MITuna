@@ -88,8 +88,14 @@ class FinClass(WorkerInterface):
 
     self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
 
-    #call to set_db_tables in super must come after config_type is set
     super().__init__(**kwargs)
+
+    #add cache directories
+    self.envmt.append(
+        f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
+    )
+    self.envmt.append(
+        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
 
     self.config = SimpleDict()
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
@@ -241,7 +247,7 @@ class FinClass(WorkerInterface):
       if ret_code > 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
         self.logger.warning(out)
-        raise Exception(
+        raise ValueError(
             f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 
       result = self.__parse_out()
