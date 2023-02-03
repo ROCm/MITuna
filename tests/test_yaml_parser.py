@@ -55,9 +55,11 @@ def parse_miopen_yaml(miopen_yaml, miopen):
   for yfile in yaml_files:
     with open(yfile, encoding="utf8") as stream:
       yaml_dict = yaml.safe_load(stream)
+      print(yaml_dict)
       yaml_dicts.append(yaml_dict)
 
   dict1 = {
+      'add_tables': True,
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
@@ -65,15 +67,14 @@ def parse_miopen_yaml(miopen_yaml, miopen):
       'num_cu': 120,
       'remote_machine': False,
       'restart_machine': False,
-      'session_id': 1,
-      'update_applicability': True
+      'session_id': 1
   }
+
   dict2 = {
-      'all_configs': True,
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
-      'fin_steps': 'miopen_find_compile, miopen_find_eval',
+      'init_session': True,
       'label': 'Example',
       'num_cu': 120,
       'remote_machine': False,
