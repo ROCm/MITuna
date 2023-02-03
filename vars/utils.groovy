@@ -463,6 +463,8 @@ def coverageReport() {
         sh "./tuna/import_configs.py -t recurrent_${branch_id}_bn --mark_recurrent -f utils/configs/batch_norm.txt -C batch_norm"
         sh "./tuna/go_fish.py miopen --update_applicability --session_id ${sesh2} -C batch_norm"
         //fin evaluators
+        def sesh1 = runsql("select id from session order by id asc limit 1")
+        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
         sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
