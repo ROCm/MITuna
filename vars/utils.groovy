@@ -454,6 +454,8 @@ def coverageReport() {
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         sshagent (credentials: ['bastion-ssh-key']) {                 
            //sh "python3 -m coverage run -m pytest -s"
+           sh "ls"
+           sh "echo $PATH"
            sh "./tests/covscripts/coverage_script.sh -s"
         }
     }
