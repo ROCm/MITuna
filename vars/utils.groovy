@@ -456,6 +456,7 @@ def coverageReport() {
            //sh "python3 -m coverage run -m pytest -s"
            sh "ls"
            sh "echo $PATH"
+           sh "rm -rf SolverAnalytics"
            sh "./tests/covscripts/coverage_script.sh -s"
         }
     }
