@@ -110,7 +110,6 @@ def parse_args():
       '--session_id',
       action='store',
       required=True,
-      type=int,
       dest='session_id',
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
