@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,50 +24,27 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""! @brief Script to launch tuning jobs, or execute commands on available machines"""
-import argparse
-import sys
-from tuna.utils.logger import setup_logger
-from tuna.libraries import Library
-from tuna.lib_utils import get_library
-
-# Setup logging
-LOGGER = setup_logger('go_fish')
+"""Module that encapsulates the DB representation"""
+from tuna.tables_interface import DBTablesInterface
+from tuna.example.example_tables import Job
+from tuna.example.session import SessionExample
 
 
-def parse_args():
-  """Function to parse arguments"""
-  parser = argparse.ArgumentParser()
+#pylint: disable=too-few-public-methods
+class ExampleDBTables(DBTablesInterface):
+  """Represents db tables for example lib"""
 
-  parser.add_argument('lib',
-                      type=Library,
-                      help="Specify library to run",
-                      choices=Library)
+  def __init__(self, **kwargs):
+    """Constructor"""
+    super().__init__(**kwargs)
 
-  args, _ = parser.parse_known_args()
-  return vars(args)
+    #for pylint
+    self.job_table = None
+    self.session_table = SessionExample
 
+    self.set_tables()
 
-def main():
-  """Main function to start Tuna"""
-  LOGGER.info(sys.argv)
-  args = parse_args()
-  library = get_library(args)
-
-  try:
-    #returns a list of workers/processes it started
-    worker_lst = library.run()
-    if worker_lst is None:
-      return True
-
-    for worker in worker_lst:
-      worker.join()
-      LOGGER.warning('Process finished')
-  except KeyboardInterrupt:
-    LOGGER.warning('Interrupt signal caught')
-
-  return True
-
-
-if __name__ == '__main__':
-  main()
+  def set_tables(self, sess_class=SessionExample):
+    """Set appropriate tables based on requirements"""
+    super().set_tables(sess_class)
+    self.job_table = Job
