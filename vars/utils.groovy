@@ -462,6 +462,12 @@ def coverageReport() {
         sh "./tuna/import_configs.py -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id}_bn --mark_recurrent -f utils/configs/batch_norm.txt -C batch_norm"
         sh "./tuna/go_fish.py miopen --update_applicability --session_id ${sesh2} -C batch_norm"
+        //fin evaluators
+        sh "echo ${num_evaluated_jobs} == ${num_jobs}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
+        sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
+        sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         sshagent (credentials: ['bastion-ssh-key']) {                 
            //sh "python3 -m coverage run -m pytest -s"
