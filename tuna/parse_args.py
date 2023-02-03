@@ -91,8 +91,8 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
   if TunaArgs.SESSION_ID in arg_list:
     parser.add_argument(
         '--session_id',
-        action='store',
         dest='session_id',
+        type=int,
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
     )

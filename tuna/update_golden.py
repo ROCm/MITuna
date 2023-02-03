@@ -50,21 +50,18 @@ def parse_args():
   parser.add_argument(
       '--session_id',
       dest='session_id',
-      action='store',
       type=int,
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
   parser.add_argument('--golden_v',
                       dest='golden_v',
-                      action='store',
                       type=int,
                       default=None,
                       required=True,
                       help='target golden miopen version to write')
   parser.add_argument('--base_golden_v',
                       dest='base_golden_v',
-                      action='store',
                       type=int,
                       default=None,
                       required=False,
