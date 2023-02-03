@@ -86,7 +86,7 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
                         dest='config_type',
                         help='Specify configuration type',
                         default=ConfigType.convolution,
-                        choices=ConfigType,
+                        choices=[cft.value for cft in ConfigType],
                         type=ConfigType)
   if TunaArgs.SESSION_ID in arg_list:
     parser.add_argument(
