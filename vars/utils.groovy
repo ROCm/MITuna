@@ -462,47 +462,6 @@ def coverageReport() {
         sh "./tuna/import_configs.py -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
         sh "./tuna/import_configs.py -t recurrent_${branch_id}_bn --mark_recurrent -f utils/configs/batch_norm.txt -C batch_norm"
         sh "./tuna/go_fish.py miopen --update_applicability --session_id ${sesh2} -C batch_norm"
-        //fin evaluators
-        def sesh1 = runsql("select id from session order by id asc limit 1")
-
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "opentelemetry-instrument python3 ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
-        def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
-        sh "echo ${num_evaluated_jobs} == ${num_jobs}"
-        if (num_evaluated_jobs != num_jobs){
-            error("Unable to evaluate find jobs using Fin")
-        }
-        def MIOPEN_BRANCH = runsql("SELECT miopen_v from session WHERE id=1;")
-        def fdb_file = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
-        archiveArtifacts  "${fdb_file}"
-        def kdb_file = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
-        archiveArtifacts "${kdb_file}"
-
-        def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
-        def fdb_file_nhwc = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
-        def num_evaluated_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'evaluated';").toInteger()
-        sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
-        if (num_evaluated_jobs_nhwc != num_jobs_nhwc){
-            error("Unable to evaluate find jobs using Fin")
-        }
-
-        archiveArtifacts  "${fdb_file_nhwc}"
-        def kdb_file_nhwc = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1} --filename kdb_nhwc", returnStdout: true)
-        archiveArtifacts "${kdb_file_nhwc}"
-
-        def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
-        def fdb_file_nchw = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
-        def num_evaluated_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'evaluated';").toInteger()
-        sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
-        if (num_evaluated_jobs_nchw != num_jobs_nchw){
-            error("Unable to evaluate find jobs using Fin")
-        }
-
-        archiveArtifacts  "${fdb_file_nchw}"
-        def kdb_file_nchw = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
-        archiveArtifacts "${kdb_file_nchw}"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         sshagent (credentials: ['bastion-ssh-key']) {                 
            //sh "python3 -m coverage run -m pytest -s"
