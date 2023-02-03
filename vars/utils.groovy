@@ -461,8 +461,6 @@ def coverageReport() {
            sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
            sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt"
            sh "./tuna/import_configs.py -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
-           sh "opentelemetry-instrument python3 ./tuna/import_configs.py -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt"
-           sh "opentelemetry-instrument python3 ./tuna/go_fish.py miopen --update_applicability --session_id ${sesh1}"
            sh "./tuna/import_configs.py -t recurrent_${branch_id}_bn --mark_recurrent -f utils/configs/batch_norm.txt -C batch_norm"
            sh "./tuna/go_fish.py miopen --update_applicability --session_id ${sesh2} -C batch_norm"
            sh "ls"
