@@ -88,6 +88,8 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
                         default=ConfigType.convolution,
                         choices=[cft.value for cft in ConfigType],
                         type=ConfigType)
+  # pylint: disable=duplicate-code
+  #To be removed when export_db is executed through miopen_lib
   if TunaArgs.SESSION_ID in arg_list:
     parser.add_argument(
         '--session_id',
@@ -96,6 +98,7 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
     )
+  # pylint: enable=duplicate-code
   if TunaArgs.MACHINES in arg_list:
     parser.add_argument('-m',
                         '--machines',
