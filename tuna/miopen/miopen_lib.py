@@ -43,6 +43,7 @@ from tuna.libraries import Library
 from tuna.miopen.db_tables import create_tables, recreate_triggers
 from tuna.miopen.miopen_db_helpers import drop_miopen_triggers, get_miopen_triggers
 from tuna.config_type import ConfigType
+from tuna.load_job import load_job
 
 
 class MIOpen(MITunaInterface):
@@ -310,6 +311,9 @@ class MIOpen(MITunaInterface):
     if self.args.add_tables:
       self.add_tables()
       return None
+    if self.args.loadjob():
+          self.loadjob()
+          return None
     machines = load_machines(self.args)
     res = self.compose_worker_list(machines)
     return res
