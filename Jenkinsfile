@@ -65,14 +65,6 @@ pipeline {
             }
             } 
         }
-        stage("Coverage") {
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-           script {
-           utils.coverageReport()
-           }
-           }
-        }
         stage("fin applicability"){
         //init_session called here
         agent{  label utils.rocmnode("tunatest") }
@@ -105,6 +97,14 @@ pipeline {
             utils.pytestSuite3()
             }
             }
+        }
+        stage("Coverage") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+           script {
+           utils.coverageReport()
+           }
+           }
         }
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
