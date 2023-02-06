@@ -42,6 +42,7 @@ pipeline {
            }
            }
         }
+        /*
         stage("approx coverage"){
         //coverage report
         agent{  label utils.rocmnode("tunatest") }
@@ -54,7 +55,8 @@ pipeline {
                     }
             }
             }
-        } 
+        }
+        */
         stage("fin get solver"){
         agent{  label utils.rocmnode("tunatest") }
         steps {
