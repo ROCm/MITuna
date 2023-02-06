@@ -439,38 +439,8 @@ def perfEval_gfx908() {
 }
 
 def coverageReport() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_coverage", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8") {
-        env.TUNA_DB_HOSTNAME = "${db_host}"
-        env.TUNA_DB_NAME="${db_name}"
-        env.TUNA_DB_USER_NAME="${db_user}"
-        env.TUNA_DB_PASSWORD="${db_password}"
-        env.gateway_ip = "${gateway_ip}"
-        env.gateway_port = "${gateway_port}"
-        env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_coverage"
-        env.PYTHONPATH=env.WORKSPACE
-        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        buildSchema()
-        sh "./tuna/go_fish.py miopen --update_solvers" //update solver step
-        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch gfx908 --num_cu 120"
-        //def sesh1 = 1
-        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch gfx908 --num_cu 120"
-        def sesh2 = 2 
-        sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt"
-        sh "./tuna/import_configs.py -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt"
-        sh "./tuna/import_configs.py -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt"
-        sh "./tuna/import_configs.py -t recurrent_${branch_id}_bn --mark_recurrent -f utils/configs/batch_norm.txt -C batch_norm"
-        sh "./tuna/go_fish.py miopen --update_applicability --session_id ${sesh2} -C batch_norm"
-        addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
-        sshagent (credentials: ['bastion-ssh-key']) {                 
-           //sh "python3 -m coverage run -m pytest -s"
-           sh "ls"
-           sh "echo $PATH"
-           sh "pwd"
-           sh "rm -rf SolverAnalytics"
-           sh "./tests/covscripts/coverage_script.sh -s"
-        }
+  sshagent (credentials: ['bastion-ssh-key']) { 
+      sh "coverage report --include=./tests/"
     }
 }
 

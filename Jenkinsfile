@@ -65,6 +65,14 @@ pipeline {
             }
             } 
         }
+        stage("Coverage") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+           script {
+           utils.coverageReport()
+           }
+           }
+        }
         stage("fin applicability"){
         //init_session called here
         agent{  label utils.rocmnode("tunatest") }
