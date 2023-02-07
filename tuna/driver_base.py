@@ -25,6 +25,9 @@
 #
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
+
+from typing import Any, List, Union, Dict, Optional
+from abc import abstractmethod
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query
 from tuna.dbBase.sql_alchemy import DbSession
@@ -42,7 +45,7 @@ LOGGER = setup_logger('driver_base')
 class DriverBase():
   """Represents db tables based on ConfigType"""
 
-  def __init__(self, line=None, db_obj=None):
+  def __init__(self, line: Optional[int] = None, db_obj: Any = None) -> None:
     if line:
       if not self.construct_driver(line):
         raise ValueError(f"Error creating Driver from line: '{line}'")
@@ -54,12 +57,39 @@ class DriverBase():
       raise ValueError(
           "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
+  def parse_fdb_key(self, line):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  def parse_row(self, db_obj):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  def set_cmd(self, data_type):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  @abstractmethod
+  def compose_weight_t(self):
+    """Overloaded method.Defined in conv&br driver child class"""
+
   @staticmethod
-  def get_common_cols():
+  def test_skip_arg(tok1):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  @staticmethod
+  def get_params(tok1):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  @staticmethod
+  def get_check_valid(tok1, tok2):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  @staticmethod
+  def get_common_cols() -> List[str]:
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
 
-  def construct_driver(self, line):
+  line = Union[Any, int]
+
+  def construct_driver(self, line) -> bool:
     """Takes a MIOpenDriver cmd or PDB key"""
 
     LOGGER.info('Processing line: %s', line)
@@ -71,11 +101,9 @@ class DriverBase():
       LOGGER.warning('Skipping line: %s', line)
       return False
 
-    self.config_set_defaults()
-
     return True
 
-  def construct_driver_from_db(self, db_obj):
+  def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
@@ -84,13 +112,20 @@ class DriverBase():
 
     return True
 
+  session: Union[int, None]
+  tensor_dict: List[int]
+
   @staticmethod
-  def get_tensor_id(session, tensor_dict):
+  def get_tensor_id(session, tensor_dict) -> Union[Any, None]:
     """Return tensor id based on dict"""
 
+    query: Any
+    ret_id: Union[Any, None]
+    row: Any
     query = Query(TensorTable.id).filter_by(**tensor_dict)
-    ret_id = None
+    ret_id = Union[Any, None]
     try:
+      res: List[Any]
       res = session.execute(query).fetchall()
       if len(res) > 1:
         LOGGER.error(tensor_dict)
@@ -111,10 +146,11 @@ class DriverBase():
 
     return ret_id
 
-  def insert_tensor(self, tensor_dict):
+  def insert_tensor(self, tensor_dict) -> Union[Any, None]:
     """Insert new row into tensor table and return primary key"""
 
-    ret_id = None
+    ret_id: Union[Any, None] = None
+
     with DbSession() as session:
       try:
         tid = TensorTable(**tensor_dict)
@@ -130,14 +166,18 @@ class DriverBase():
 
     return ret_id
 
-  def get_input_t_id(self):
+  def get_input_t_id(self) -> Optional[Any]:
     """Build 1 row in tensor table based on layout from fds param
        Details are mapped in metadata LAYOUT"""
+    ret_id: Union[Any, None] = None
+    i_dict: Dict[str, Any]
+
     i_dict = self.compose_input_t()
+    ret_id = self.insert_tensor(i_dict)
 
-    return self.insert_tensor(i_dict)
+    return ret_id
 
-  def compose_input_t(self):
+  def compose_input_t(self) -> Dict[str, Any]:
     """Build input_tensor"""
     i_dict = {}
     i_dict['data_type'] = TENSOR_PRECISION[self.cmd]
@@ -159,7 +199,7 @@ class DriverBase():
 
     return i_dict
 
-  def decompose_input_t(self, db_obj):
+  def decompose_input_t(self, db_obj) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
 
@@ -180,12 +220,15 @@ class DriverBase():
 
     return True
 
-  def get_weight_t_id(self):
+  def get_weight_t_id(self) -> Optional[Any]:
     """Build 1 row in tensor table based on layout from fds param
      Details are mapped in metadata LAYOUT"""
-    w_dict = self.compose_weight_t()
+    ret_id: Union[Any, None] = None
+    w_dict: Union[Any, None] = None
 
-    return self.insert_tensor(w_dict)
+    w_dict = self.compose_weight_t()
+    ret_id = self.insert_tensor(w_dict)
+    return ret_id
 
   def parse_driver_line(self, line):
     """Parse line and set attributes"""
@@ -197,7 +240,7 @@ class DriverBase():
 
     self.compose_fds(tok, line)
 
-  def compose_fds(self, tok, line):
+  def compose_fds(self, tok, line) -> bool:
     """Compose fds from driver line"""
 
     for (tok1, tok2) in zip(tok[2::2], tok[3::2]):
@@ -219,7 +262,7 @@ class DriverBase():
 
     return True
 
-  def to_dict(self):
+  def to_dict(self) -> Dict[str, Any]:
     """Return class to dictionary"""
     copy_dict = {}
     for key, value in vars(self).items():
@@ -229,7 +272,7 @@ class DriverBase():
         copy_dict[key] = value
     return copy_dict
 
-  def __eq__(self, other):
+  def __eq__(self, other) -> bool:
     """Defining equality functionality"""
     if self.__class__ != other.__class__:
       return False

@@ -76,6 +76,9 @@ class DriverBatchNorm(DriverBase):
            Supported cmds are: {SUPPORTED_BN_CMDS}')
     self._cmd = value
 
+  def compose_weight_t(self):
+    """ Overridden Method """
+
   def parse_driver_line(self, line):
     super().parse_driver_line(line)
 
