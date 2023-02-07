@@ -1,4 +1,9 @@
 [run]
-source = 
-omit = *\__init__.py \
-       */usr/local/lib*
+source = ./tests
+omit = /usr/local/lib* 
+
+[report]
+exclude_lines =
+       def __repr __
+       raise NotImplementedError
+       if __name__ == .__main__.:
