@@ -460,7 +460,8 @@ def pytestSuite1() {
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
-        sshagent (credentials: ['bastion-ssh-key']) {                 
+        sshagent (credentials: ['bastion-ssh-key']) {   
+           sh "coverage erase"              
            sh "python3 -m coverage run -a -m pytest tests/test_abort_file.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_analyze_parse_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_connection.py -s"
@@ -504,7 +505,7 @@ def pytestSuite2() {
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
            sh "python3 -m coverage run -a -m pytest tests/test_worker.py -s"
-           sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
            sh "coverage report"
         }
     }
