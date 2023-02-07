@@ -25,11 +25,16 @@
 #
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
+
+from typing import Any, List, Union, Dict, Optional
+from abc import abstractmethod
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import Query
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.miopen_tables import TensorTable
+from tuna.miopen.db.miopen_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import TENSOR_PRECISION
 from tuna.miopen.utils.parsing import parse_line
 
@@ -42,7 +47,9 @@ LOGGER = setup_logger('driver_base')
 class DriverBase():
   """Represents db tables based on ConfigType"""
 
-  def __init__(self, line=None, db_obj=None):
+  def __init__(self,
+               line: str = str(),
+               db_obj: ConvolutionConfig = None) -> None:
     if line:
       if not self.construct_driver(line):
         raise ValueError(f"Error creating Driver from line: '{line}'")
@@ -54,12 +61,40 @@ class DriverBase():
       raise ValueError(
           "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
+  def parse_fdb_key(self, line):
+    """Overloaded method.Defined in conv&bn driver child class"""
+
+  def parse_row(self, db_obj):
+    """Overloaded method.Defined in conv&bn driver child class"""
+
+  def set_cmd(self, data_type):
+    """Overloaded method.Defined in conv&bn driver child class"""
+
+  def config_set_defaults(self):
+    """Overloaded method.Defined in conv&bn driver child class"""
+
+  @abstractmethod
+  def compose_weight_t(self):
+    """Overloaded method.Defined in conv&br driver child class"""
+
   @staticmethod
-  def get_common_cols():
+  def test_skip_arg(tok1):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  @staticmethod
+  def get_params(tok1):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  @staticmethod
+  def get_check_valid(tok1, tok2):
+    """Overloaded method.Defined in conv&br driver child class"""
+
+  @staticmethod
+  def get_common_cols() -> List[str]:
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
 
-  def construct_driver(self, line):
+  def construct_driver(self, line: str) -> bool:
     """Takes a MIOpenDriver cmd or PDB key"""
 
     LOGGER.info('Processing line: %s', line)
@@ -72,10 +107,9 @@ class DriverBase():
       return False
 
     self.config_set_defaults()
-
     return True
 
-  def construct_driver_from_db(self, db_obj):
+  def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
@@ -85,12 +119,15 @@ class DriverBase():
     return True
 
   @staticmethod
-  def get_tensor_id(session, tensor_dict):
+  def get_tensor_id(session: Session, tensor_dict: dict) -> Optional[int]:
     """Return tensor id based on dict"""
 
+    query: Query
+    ret_id: Optional[int]
+    row: str
     query = Query(TensorTable.id).filter_by(**tensor_dict)
-    ret_id = None
     try:
+      res: list
       res = session.execute(query).fetchall()
       if len(res) > 1:
         LOGGER.error(tensor_dict)
@@ -111,13 +148,14 @@ class DriverBase():
 
     return ret_id
 
-  def insert_tensor(self, tensor_dict):
+  def insert_tensor(self, tensor_dict: dict) -> Optional[int]:
     """Insert new row into tensor table and return primary key"""
+    ret_id: Optional[int] = 0
+    session: Session
 
-    ret_id = None
     with DbSession() as session:
       try:
-        tid = TensorTable(**tensor_dict)
+        tid: TensorTable = TensorTable(**tensor_dict)
         session.add(tid)
         session.commit()
         ret_id = tid.id
@@ -127,19 +165,22 @@ class DriverBase():
         session.rollback()
         ret_id = self.get_tensor_id(session, tensor_dict)
         LOGGER.info("Get Tensor: %s", ret_id)
+    return ret_id
+
+  def get_input_t_id(self) -> Optional[int]:
+    """Build 1 row in tensor table based on layout from fds param
+       Details are mapped in metadata LAYOUT"""
+    ret_id: Optional[int] = 0
+    i_dict: Dict[str, int]
+
+    i_dict = self.compose_input_t()
+    ret_id = self.insert_tensor(i_dict)
 
     return ret_id
 
-  def get_input_t_id(self):
-    """Build 1 row in tensor table based on layout from fds param
-       Details are mapped in metadata LAYOUT"""
-    i_dict = self.compose_input_t()
-
-    return self.insert_tensor(i_dict)
-
-  def compose_input_t(self):
+  def compose_input_t(self) -> Dict[str, int]:
     """Build input_tensor"""
-    i_dict = {}
+    i_dict: Dict[str, int] = {}
     i_dict['data_type'] = TENSOR_PRECISION[self.cmd]
     i_dict['num_dims'] = self.num_dims
     i_dict['dim0'] = 1
@@ -159,7 +200,7 @@ class DriverBase():
 
     return i_dict
 
-  def decompose_input_t(self, db_obj):
+  def decompose_input_t(self, db_obj) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
 
@@ -180,48 +221,60 @@ class DriverBase():
 
     return True
 
-  def get_weight_t_id(self):
+  def get_weight_t_id(self) -> Optional[int]:
     """Build 1 row in tensor table based on layout from fds param
      Details are mapped in metadata LAYOUT"""
+    ret_id: Optional[int] = 0
+    w_dict: dict = {}
+
     w_dict = self.compose_weight_t()
+    ret_id = self.insert_tensor(w_dict)
+    return ret_id
 
-    return self.insert_tensor(w_dict)
-
-  def parse_driver_line(self, line):
+  def parse_driver_line(self, line: str):
     """Parse line and set attributes"""
-    line = parse_line(line)
-    tok = line.split()
+
+    tok: list
+    tmp_line: str = parse_line(line)
+
+    tok = tmp_line.split()
     #pylint: disable=attribute-defined-outside-init
     self.cmd = tok[1]
     assert tok[1] != ''
 
     self.compose_fds(tok, line)
 
-  def compose_fds(self, tok, line):
+  def compose_fds(self, tok: list, line: str) -> bool:
     """Compose fds from driver line"""
-
+    tok1: str
+    tok2: str
+    f_digi_v: Union[int, str]
     for (tok1, tok2) in zip(tok[2::2], tok[3::2]):
       # the following would not work for a full name argument
       if tok1[0] == '-':
-        tok1 = tok1[1:]
-      if self.test_skip_arg(tok1):
+        flag_type: str = tok1[1:]
+      if self.test_skip_arg(flag_type):
         continue
-      tok2 = tok2.strip()
-      if tok2.isdigit():
-        tok2 = int(tok2)
-      tok1 = self.get_params(tok1)
-      if self.get_check_valid(tok1[0], tok2):
-        setattr(self, tok1[0], tok2)
+      flag_value: str = tok2.strip()
+      if flag_value.isdigit():
+        f_digi_v = int(flag_value)
+      else:
+        f_digi_v = flag_value
+
+      flag_sh_value = self.get_params(flag_type)
+      if self.get_check_valid(flag_sh_value[0], f_digi_v):
+        setattr(self, flag_sh_value[0], f_digi_v)
       else:
         raise ValueError(
             f'Invalid command line arg for {self.cmd}: {tok1[0]} - {tok2} line: {line}'
         )
-
     return True
 
-  def to_dict(self):
+  def to_dict(self) -> Dict[str, int]:
     """Return class to dictionary"""
-    copy_dict = {}
+    copy_dict: Dict[str, int] = {}
+    key: str
+    value: int
     for key, value in vars(self).items():
       if key == "_cmd":
         copy_dict["cmd"] = value
@@ -229,7 +282,7 @@ class DriverBase():
         copy_dict[key] = value
     return copy_dict
 
-  def __eq__(self, other):
+  def __eq__(self, other) -> bool:
     """Defining equality functionality"""
     if self.__class__ != other.__class__:
       return False

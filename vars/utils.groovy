@@ -551,6 +551,7 @@ def runLint() {
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/*.yaml"
             sh "yamllint tuna/example/*.yaml"
+            sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }
