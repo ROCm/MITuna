@@ -2,8 +2,8 @@
 source = ./tuna
 omit = 
       /usr/local/lib* 
-      ./tuna/__init__.py
-      
+      */__init__.py
+
 [report]
 exclude_lines =
        def __repr __
