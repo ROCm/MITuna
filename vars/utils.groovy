@@ -476,7 +476,7 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_merge_db_functions.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_utility.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_example.py -s"
-           sh "coverage report --omit='*__init__*','*/usr/local/lib*' "
+           sh "coverage report --omit=*/usr/local/lib* "
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
