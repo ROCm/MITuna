@@ -477,7 +477,7 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_merge_db_functions.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_utility.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_example.py -s"
-           sh "coverage report --omit='/usr/local/lib*' "
+           sh "coverage report -m "
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -506,7 +506,7 @@ def pytestSuite2() {
            // test fin builder and test fin builder conv in sequence
            sh "python3 -m coverage run -a -m pytest tests/test_worker.py -s"
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
-           sh "coverage report"
+           sh "coverage report -m"
         }
     }
 }
@@ -530,7 +530,7 @@ def pytestSuite3() {
            // test fin builder and test fin builder conv in sequence
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
-           sh "coverage report"
+           sh "coverage report -m"
         }
     }
 }
