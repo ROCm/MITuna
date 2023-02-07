@@ -52,7 +52,6 @@ def test_import_benchmark():
   for key, value in models.items():
     args.add_model = key.value
     args.version = value
-    args.md_version = 1
     add_model(args)
   print_models()
   update_frameworks()

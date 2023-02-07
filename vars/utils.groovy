@@ -438,12 +438,6 @@ def perfEval_gfx908() {
     }
 }
 
-def coverageReport() {
-  sshagent (credentials: ['bastion-ssh-key']) { 
-      sh "coverage report --include=./tests/"
-    }
-}
-
 def pytestSuite1() {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
