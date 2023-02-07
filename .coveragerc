@@ -1,5 +1,6 @@
 [run]
-source = ./tests
+source = ./tests \
+         ./tuna
 omit = /usr/local/lib* 
 
 [report]
