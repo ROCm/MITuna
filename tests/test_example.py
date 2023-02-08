@@ -37,6 +37,9 @@ from utils import ExampleArgs
 from tuna.utils.miopen_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.example.session import SessionExample
+from tuna.example.example_tables import Job
+from tuna.example.load_job import add_jobs
+from tuna.example.tables import ExampleDBTables
 
 
 def test_example():
@@ -50,5 +53,23 @@ def test_example():
     query = session.query(SessionExample)
     res = query.all()
     assert len(res) is not None
+
+  #test load_job
+  dbt = ExampleDBTables(session_id=None)
+  example.args.init_session = False
+  example.args.session_id = 1
+  example.args.execute = True
+  example.args.label = 'test_example'
+  num_jobs = add_jobs(example.args, dbt)
+  assert num_jobs
+
+  #testing execute rocminfo
+  res = load_machines(example.args)
+  res = example.compose_worker_list(res)
+  with DbSession() as session:
+    query = session.query(Job).filter(Job.session==1)\
+                              .filter(Job.state=='completed')
+    res = query.all()
+    assert res
 
   return True
