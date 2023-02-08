@@ -33,6 +33,7 @@ from tuna.miopen.miopen_tables import ConvSolverApplicability, BNSolverApplicabi
 from tuna.miopen.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
 from tuna.miopen.miopen_tables import TensorTable, ConvolutionGolden, ConvolutionBenchmark
 from tuna.miopen.miopen_tables import BNBenchmark
+from tuna.miopen.miopen_tables import ConvSolverAnalyticsAggregated, ConvSolverAnalyticsDetailed
 from tuna.miopen.benchmark import Framework, Model
 from tuna.miopen.session import Session
 
@@ -63,6 +64,8 @@ class MIOpenDBTables(DBTablesInterface):
     self.tensor_table = TensorTable
     self.golden_table = None
     self.config_type = None
+    self.solver_analytics_aggregated = None
+    self.solver_analytics_detailed = None
     self.session_table = Session
 
     self.__dict__.update(
@@ -98,3 +101,5 @@ class MIOpenDBTables(DBTablesInterface):
       self.kernel_cache = ConvolutionKernelCache
       self.golden_table = ConvolutionGolden
       self.benchmark = ConvolutionBenchmark
+      self.solver_analytics_aggregated = ConvSolverAnalyticsAggregated
+      self.solver_analytics_detailed = ConvSolverAnalyticsDetailed

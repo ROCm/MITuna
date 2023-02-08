@@ -570,6 +570,78 @@ class BNBenchmark(BASE, BenchmarkMixin):
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
 
+class SolverAnalyticsMixin():
+  """common columns in aggregated & detailed solver analytics tables"""
+  # software state description
+  golden_miopen_v = Column(Integer, nullable=False)
+  # hardware description
+  arch = Column(String(20), nullable=False)
+  num_cu = Column(Integer, nullable=False)
+  opencl = Column(Boolean, nullable=False)
+  # convolution problem description
+  filter = Column(String(32), nullable=False)
+  padding = Column(String(32), nullable=False)
+  stride = Column(String(32), nullable=False)
+  dilation = Column(String(32), nullable=False)
+  layout = Column(String(8), nullable=False)
+  precision = Column(String(8), nullable=False)
+  direction = Column(String(1), nullable=False)
+  # fastest solvers stats
+  sf = Column(String(128), nullable=False)  # fastest solver name
+  tf = Column(Float, nullable=False)  # fastest solver runtime
+  count = Column(Integer, nullable=False)  # fastest solver count
+
+
+class ConvSolverAnalyticsAggregated(BASE, SolverAnalyticsMixin):
+  """Table to store aggregated results from SolverAnalytics"""
+  __tablename__ = "conv_solver_analytics_aggregated"
+
+  __table_args__ = (UniqueConstraint("golden_miopen_v",
+                                     "arch",
+                                     "num_cu",
+                                     "opencl",
+                                     "filter",
+                                     "padding",
+                                     "stride",
+                                     "dilation",
+                                     "layout",
+                                     "precision",
+                                     "direction",
+                                     "sf",
+                                     name="uq_idx"),)
+
+  # additional stats (null if no alternate solver is available)
+  ta = Column(Float, nullable=True)  # alternate solver runtime
+  difference = Column(Float, nullable=True)  # runtime difference
+  ratio = Column(Float, nullable=True)  # runtime ratio (null if infinity)
+
+
+class ConvSolverAnalyticsDetailed(BASE, SolverAnalyticsMixin):
+  """Table to store detailed results from SolverAnalytics"""
+  __tablename__ = "conv_solver_analytics_detailed"
+
+  __table_args__ = (UniqueConstraint("golden_miopen_v",
+                                     "arch",
+                                     "num_cu",
+                                     "opencl",
+                                     "filter",
+                                     "padding",
+                                     "stride",
+                                     "dilation",
+                                     "layout",
+                                     "precision",
+                                     "direction",
+                                     "sf",
+                                     "sa",
+                                     name="uq_idx"),)
+
+  # additional stats
+  sa = Column(String(128), nullable=False)  # alternate solver
+  ta = Column(Float, nullable=True)  # alternate solver runtime
+  difference = Column(Float, nullable=True)  # runtime difference
+  ratio = Column(Float, nullable=True)  # runtime ratio (null if infinity)
+
+
 def add_conv_tables(miopen_tables):
   """Append Convolution specific MIOpen DB tables"""
   miopen_tables.append(ConvolutionConfig())
@@ -581,6 +653,8 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvFinJobCache())
   miopen_tables.append(ConvolutionFindDB())
   miopen_tables.append(ConvolutionGolden())
+  miopen_tables.append(ConvSolverAnalyticsAggregated())
+  miopen_tables.append(ConvSolverAnalyticsDetailed())
   miopen_tables.append(ConvolutionBenchmark())
   return miopen_tables
 
