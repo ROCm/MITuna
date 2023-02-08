@@ -53,6 +53,10 @@ def parse_args():
                       help='Path to yaml input file')
 
   args, _ = parser.parse_known_args()
+
+  if '--yaml' in sys.argv and len(sys.argv) > 4:
+    parser.error('Command line arguments not accepted with yaml file')
+
   return vars(args)
 
 
@@ -61,9 +65,6 @@ def main():
   LOGGER.info(sys.argv)
   LOGGER.info(len(sys.argv))
   args = parse_args()
-  if '--yaml' in sys.argv and len(sys.argv) > 4:
-    LOGGER.error('Command like arguments not accepted with yaml file')
-    return False
 
   #case no yaml file
   libraries = []

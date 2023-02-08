@@ -84,9 +84,10 @@ def dump_yaml(new_yaml):
   return local_file
 
 
-def get_yaml_files(yaml_dict, tuning_steps, single_op):
+def get_yaml_files(original_yaml_dict, tuning_steps, single_op):
   """Split initial YAML file to multiple files and return list of files"""
   yaml_files = []
+  yaml_dict = original_yaml_dict.copy()
   common_yaml_part = get_common_yaml(yaml_dict)
 
   for key in yaml_dict:

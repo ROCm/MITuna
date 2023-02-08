@@ -24,12 +24,6 @@ update_applicability:
 list_solvers:
   enabled: false
 
-load_job:
-  enabled: false
-  fin_steps: 'miopen_find_compile, miopen_find_eval'
-  session_id: 1
-  all_configs: true
-
 fin_steps:
   enabled: false
   all_configs: true
