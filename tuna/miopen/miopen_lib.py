@@ -180,11 +180,13 @@ class MIOpen(MITunaInterface):
     if self.args.fin_steps:
       has_fin = all(x in fin_session_steps for x in self.args.fin_steps)
 
-    if (self.args.subcommand == 'update_applicability' or
-        has_fin) and not self.args.session_id:
+    if (self.args.update_applicability or has_fin) and not self.args.session_id:
       parser.error("session_id must be specified with this operation")
 
+  def set_import_cfg_batches(self):
+    """Setting batches for import_configs subcommands"""
     #import configs
+    print(self.args)
     if self.args.import_configs.batches is not None:
       self.args.import_configs.batch_list = [
           int(x) for x in self.args.import_configs.batches.split(',')
@@ -327,7 +329,8 @@ class MIOpen(MITunaInterface):
       self.add_tables()
       return None
 
-    if self.args.subcommand == 'import_configs':
+    if self.args.subcommand is not None and self.args.subcommand == 'import_configs':
+      self.set_import_cfg_batches()
       run_import_configs(self.args, self.logger)
       return None
 

@@ -74,6 +74,10 @@ def parse_miopen_yaml(miopen_yaml, miopen):
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
+      'import_configs': {
+          'file_name': '../utils/configs/conv_configs_NCHW.txt',
+          'tag': 'someTag'
+      },
       'init_session': True,
       'label': 'Example',
       'num_cu': 120,

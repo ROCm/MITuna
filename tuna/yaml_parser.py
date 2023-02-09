@@ -31,7 +31,7 @@ import tempfile
 import yaml
 from tuna.libraries import Library
 from tuna.parse_args import TunaArgs
-from tuna.miopen.metadata import MIOPEN_TUNING_STEPS, MIOPEN_SINGLE_OP
+from tuna.miopen.metadata import MIOPEN_TUNING_STEPS, MIOPEN_SINGLE_OP, MIOPEN_SUBCOMMANDS
 from tuna.example.metadata import EXAMPLE_TUNING_STEPS, EXAMPLE_SINGLE_OP
 
 
@@ -51,7 +51,7 @@ def parse_yaml(filename, lib):
   #if Library not specified here, no custom parsing function will be used
   if lib == Library.MIOPEN or lib.value == 'miopen':
     yaml_files = get_yaml_files(yaml_dict, MIOPEN_TUNING_STEPS,
-                                MIOPEN_SINGLE_OP)
+                                MIOPEN_SINGLE_OP, MIOPEN_SUBCOMMANDS)
   elif lib == Library.EXAMPLE or lib.value == 'example':
     yaml_files = get_yaml_files(yaml_dict, EXAMPLE_TUNING_STEPS,
                                 EXAMPLE_SINGLE_OP)
@@ -84,25 +84,34 @@ def dump_yaml(new_yaml):
   return local_file
 
 
-def get_yaml_files(original_yaml_dict, tuning_steps, single_op):
+def get_yaml_files(original_yaml_dict,
+                   tuning_steps,
+                   single_op,
+                   subcommands=None):
   """Split initial YAML file to multiple files and return list of files"""
   yaml_files = []
   yaml_dict = original_yaml_dict.copy()
   common_yaml_part = get_common_yaml(yaml_dict)
 
   for key in yaml_dict:
-    #only look at enabled items
+    new_yaml = common_yaml_part.copy()
     if key in tuning_steps and yaml_dict.get(key).get('enabled'):
-      #append common args
-      new_yaml = common_yaml_part.copy()
+      #only look at enabled items
       yaml_dict[key].pop('enabled', None)
 
-      #append nested dicts
+      #append nested dicts for non-subcommand items
       for key2, value2 in yaml_dict.get(key).items():
         new_yaml[key2] = value2
 
       if key in single_op:
         new_yaml[key] = True
+      yaml_files.append(dump_yaml(new_yaml))
+    elif subcommands is not None and key in subcommands and yaml_dict.get(
+        key).get('enabled'):
+      #only look at enabled items
+      yaml_dict[key].pop('enabled', None)
+      #append subcommands as they are
+      new_yaml[key] = yaml_dict.get(key)
       yaml_files.append(dump_yaml(new_yaml))
 
   return yaml_files

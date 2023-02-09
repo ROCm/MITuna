@@ -66,22 +66,19 @@ def main():
   args = parse_args()
 
   #case no yaml file
-  libraries = []
-  libraries.append(get_library(args))
+  library = get_library(args)
   yaml_files = [args['yaml']]
 
   #case with yaml file
   if args['yaml']:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
-    libraries = []
-    for _ in range(len(yaml_files)):
-      libraries.append(get_library(args))
 
   try:
-    for library, yaml_file in zip(libraries, yaml_files):
+    for yaml_file in yaml_files:
       args['yaml_file'] = yaml_file
       if args['yaml_file']:
         sys.argv[3] = yaml_file
+        LOGGER.info("Executing with yaml file: %s", yaml_file)
 
       #returns a list of workers/processes it started
       worker_lst = library.run()

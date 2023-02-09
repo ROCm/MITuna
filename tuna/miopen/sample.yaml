@@ -12,10 +12,15 @@ docker_name: 'my_docker_name'
 
 
 add_tables:
-  enabled: true
+  enabled: false
 
 init_session:
+  enabled: false
+
+import_configs:
   enabled: true
+  tag: 'someTag'
+  file_name: '../utils/configs/conv_configs_NCHW.txt'
 
 update_applicability:
   enabled: false
