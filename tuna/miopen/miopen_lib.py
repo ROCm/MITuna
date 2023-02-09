@@ -312,8 +312,8 @@ class MIOpen(MITunaInterface):
       self.add_tables()
       return None
     if self.args.loadjob():
-          self.loadjob()
-          return None
+      self.loadjob()
+      return None
     machines = load_machines(self.args)
     res = self.compose_worker_list(machines)
     return res
