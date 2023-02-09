@@ -105,7 +105,7 @@ class MIOpen(MITunaInterface):
 
     subcommands = parser.add_subcommands()
     subcommands.add_subcommand('import_configs', get_import_cfg_parser())
-    subcommands.add_subcommand('add_tables', jsonargparse.ArgumentParser(help='123'))
+    subcommands.add_subcommand('add_tables', jsonargparse.ArgumentParser())
     subcommands.add_subcommand('init_session', jsonargparse.ArgumentParser())
     subcommands.add_subcommand('fin_steps', jsonargparse.ArgumentParser())
     subcommands.add_subcommand('list_solvers', jsonargparse.ArgumentParser())
@@ -113,6 +113,7 @@ class MIOpen(MITunaInterface):
     subcommands.add_subcommand('update_applicability', jsonargparse.ArgumentParser())
     subcommands.add_subcommand('status', jsonargparse.ArgumentParser())
     subcommands.add_subcommand('exec', jsonargparse.ArgumentParser())
+    
 
     """
     group = parser.add_mutually_exclusive_group()
@@ -164,6 +165,8 @@ class MIOpen(MITunaInterface):
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
+    if self.args.help:
+      parser.print_help()
 
     if self.args.subcommand == 'list_solvers':
       print_solvers()

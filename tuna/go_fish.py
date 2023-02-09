@@ -38,7 +38,7 @@ LOGGER = setup_logger('go_fish')
 
 def parse_args():
   """Function to parse arguments"""
-  parser = argparse.ArgumentParser()
+  parser = argparse.ArgumentParser(add_help=False)
 
   parser.add_argument('lib',
                       nargs='?',
@@ -63,7 +63,6 @@ def parse_args():
 def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
-  LOGGER.info(len(sys.argv))
   args = parse_args()
 
   #case no yaml file
