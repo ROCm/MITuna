@@ -26,9 +26,9 @@
 ###############################################################################
 """ Module to centralize command line argument parsing """
 import sys
-import jsonargparse
 from enum import Enum
 from typing import List
+import jsonargparse
 from tuna.miopen.utils.config_type import ConfigType
 
 
