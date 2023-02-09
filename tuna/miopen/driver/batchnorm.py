@@ -37,6 +37,7 @@ from tuna.config_type import ConfigType
 
 LOGGER = setup_logger('driver_bn')
 
+
 #pylint: disable=too-many-instance-attributes
 class DriverBatchNorm(DriverBase):
   """Represents db tables based on ConfigType"""
