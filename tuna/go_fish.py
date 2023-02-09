@@ -63,6 +63,7 @@ def parse_args():
 def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
+  LOGGER.info(len(sys.argv))
   args = parse_args()
 
   #case no yaml file
