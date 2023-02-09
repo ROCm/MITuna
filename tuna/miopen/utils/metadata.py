@@ -29,7 +29,7 @@
 
 import os
 
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 DOCKER_CMD = "sudo docker run --device='/dev/kfd' --device='/dev/dri' -w /tmp/miopenpdb \
              -v /tmp/miopenpdb:/tmp/miopenpdb --user=root --group-add video --privileged=true \

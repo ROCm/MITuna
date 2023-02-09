@@ -31,7 +31,7 @@ from tuna.miopen.utils.metadata import NCHW_LAYOUT, NHWC_LAYOUT, NCDHW_LAYOUT, N
 from tuna.miopen.utils.metadata import PREC_TO_CMD, INVERS_DIR_MAP
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import arch2targetid
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 LOGGER = setup_logger('fin_utils')
 

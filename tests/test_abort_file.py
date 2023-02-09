@@ -37,7 +37,7 @@ this_path = os.path.dirname(__file__)
 from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from utils import CfgImportArgs
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.modules.import_configs import import_cfgs

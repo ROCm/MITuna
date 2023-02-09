@@ -34,7 +34,7 @@ from tuna.miopen.utils.metadata import INVERS_DIR_MAP, FDS_3D, FDS_2D, DIR_MAP
 from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.helper import config_set_defaults
 from tuna.miopen.utils.metadata import CMD_TO_PREC, PREC_TO_CMD
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 LOGGER = setup_logger()
 

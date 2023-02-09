@@ -38,7 +38,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
 from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.session import Session
 from tuna.miopen.utils.metadata import DIR_MAP
 from tuna.miopen.db.benchmark import Model, Framework

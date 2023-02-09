@@ -37,7 +37,7 @@ from tuna.miopen.db.miopen_tables import ConvSolverAnalyticsAggregated, ConvSolv
 from tuna.miopen.db.benchmark import Framework, Model
 from tuna.miopen.db.session import Session
 
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from tuna.tables_interface import DBTablesInterface
 
 

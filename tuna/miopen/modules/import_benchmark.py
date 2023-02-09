@@ -34,7 +34,7 @@ from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.benchmark import Framework, Model, FrameworkEnum, ModelEnum
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.driver.batchnorm import DriverBatchNorm
 

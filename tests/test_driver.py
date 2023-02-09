@@ -30,7 +30,7 @@ from tuna.miopen.modules.import_configs import insert_config
 from tuna.miopen.db.miopen_tables import ConvolutionConfig, BNConfig
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from test_fin_builder import CfgImportArgs
 
 

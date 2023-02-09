@@ -39,7 +39,7 @@ from tuna.miopen.modules.import_benchmark import add_benchmark
 from tuna.miopen.db.benchmark import Framework, ModelEnum, FrameworkEnum
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.db.miopen_tables import ConvolutionBenchmark
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 
 def test_import_benchmark():

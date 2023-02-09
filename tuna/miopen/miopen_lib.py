@@ -42,7 +42,7 @@ from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 
 class MIOpen(MITunaInterface):

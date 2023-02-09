@@ -29,7 +29,7 @@ import argparse
 import sys
 from enum import Enum
 from typing import List
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 
 class TunaArgs(Enum):

@@ -35,7 +35,7 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.db.session import Session
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.modules.import_configs import insert_config
 from tuna.miopen.utils.metadata import PREC_TO_CMD

@@ -29,7 +29,7 @@ from multiprocessing import Value
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.machine import Machine
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.miopen_lib import MIOpen
 

@@ -33,7 +33,7 @@ from tuna.miopen.utils.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
 from tuna.miopen.db.miopen_tables import BNConfig
 from tuna.miopen.utils.parsing import get_fd_name, arg_valid
 from tuna.miopen.utils.helper import get_db_id
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 LOGGER = setup_logger('driver_bn')
 

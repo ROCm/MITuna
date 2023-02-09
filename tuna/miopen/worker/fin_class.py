@@ -46,7 +46,7 @@ from tuna.miopen.utils.metadata import INVERS_DIR_MAP
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import compose_config_obj
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
