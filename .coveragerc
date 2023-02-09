@@ -3,9 +3,24 @@ source = ./tuna
 omit = 
       /usr/local/lib* 
       */__init__.py
-
+      tuna/corrupt_configs.py
+      tuna/data_migration_updated_layouts.py
+      tuna/export_configs.py
+      tuna/flask.py
+      tuna/flask_example.py
+      tuna/miopen/analyze_fdb.py
+      tuna/prune_db.py
+      tuna/query_db.py
+      tuna/rm_dup_cfgs.py
+      tuna/rm_dup_jobs.py
+      tuna/sqlite_2txt.py
+      tuna/utils/dupe_resolve.py
+      tuna/build_driver_cmd.py
+      tuna/solver_res.py   
+      
 [report]
 exclude_lines =
        def __repr __
        raise NotImplementedError
        if __name__ == .__main__.:
+       
