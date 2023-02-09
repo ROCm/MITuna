@@ -51,6 +51,7 @@ def parse_args():
   #To be removed when export_db is executed through miopen_lib
   parser.add_argument(
       '--session_id',
+      required=True,
       dest='session_id',
       type=int,
       help=

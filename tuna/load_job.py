@@ -108,9 +108,9 @@ def parse_args():
   parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
   parser.add_argument(
       '--session_id',
-      action='store',
       required=True,
       dest='session_id',
+      type=int,
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
