@@ -36,13 +36,13 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.utils.miopen_utility import load_machines
-from tuna.miopen.fin_class import FinClass
+from tuna.miopen.worker.fin_class import FinClass
 from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.config_type import ConfigType
 from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
-from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.utils.db_utility import connect_db
 from import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs

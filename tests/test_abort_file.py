@@ -34,15 +34,15 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.miopen.fin_builder import FinBuilder
+from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
 from tuna.config_type import ConfigType
 from utils import CfgImportArgs, LdJobArgs
-from tuna.miopen.tables import MIOpenDBTables
-from tuna.import_configs import import_cfgs
+from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.miopen.modules.import_configs import import_cfgs
 from tuna.utils.db_utility import connect_db
-from tuna.miopen.miopen_tables import ConvolutionJob
+from tuna.miopen.db.miopen_tables import ConvolutionJob
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import add_test_session
 from tuna.dbBase.sql_alchemy import DbSession

@@ -39,7 +39,7 @@ from tuna.utils.merge_db import update_master_list, write_merge_results
 from tuna.utils.merge_db import merge_text_file
 from tuna.utils.merge_db import get_sqlite_table
 from tuna.utils.merge_db import get_sqlite_row, get_sqlite_data, load_master_list
-from tuna.helper import prune_cfg_dims
+from tuna.miopen.utils.helper import prune_cfg_dims
 
 
 def test_parse_jobline():

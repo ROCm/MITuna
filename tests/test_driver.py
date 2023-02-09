@@ -24,12 +24,12 @@
 # SOFTWARE.
 #
 ###############################################################################
-from tuna.driver_conv import DriverConvolution
-from tuna.driver_bn import DriverBatchNorm
-from tuna.import_configs import insert_config
-from tuna.miopen.miopen_tables import ConvolutionConfig, BNConfig
+from tuna.miopen.driver.convolution import DriverConvolution
+from tuna.miopen.driver.batchnorm import DriverBatchNorm
+from tuna.miopen.modules.import_configs import insert_config
+from tuna.miopen.db.miopen_tables import ConvolutionConfig, BNConfig
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.config_type import ConfigType
 from test_fin_builder import CfgImportArgs
 
