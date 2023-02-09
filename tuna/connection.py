@@ -156,7 +156,7 @@ class Connection():
     """
     # pylint: disable=broad-except
     if not self.test_cmd_str(cmd):
-      raise Exception('Machine {self.id} failed, missing binary: {cmd}')
+      raise ValueError('Machine {self.id} failed, missing binary: {cmd}')
 
     if self.local_machine:
       #universal_newlines corrects output format to utf-8
@@ -278,8 +278,8 @@ class Connection():
         return False
 
       try:
-        self.ssh.connect(
-            self.hostname,  #type: ignore
+        self.ssh.connect(  #type: ignore
+            self.hostname,
             username=self.user,
             password=self.password,
             port=self.port,

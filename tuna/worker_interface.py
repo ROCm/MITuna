@@ -37,14 +37,17 @@ import socket
 import random
 import string
 from time import sleep
-from sqlalchemy.exc import IntegrityError, OperationalError  #pylint: disable=wrong-import-order
+from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
+from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.abort import chk_abort_file
 from tuna.metadata import TUNA_LOG_DIR
 from tuna.metadata import NUM_SQL_RETRIES
 from tuna.tables_interface import DBTablesInterface
+from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
+from tuna.utils.utility import SimpleDict
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -95,16 +98,7 @@ class WorkerInterface(Process):
     #initialize tables
     self.set_db_tables()
 
-    #add cache directories
-    self.envmt.append(
-        f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
-    )
-    self.envmt.append(
-        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
-
     self.hostname = self.machine.hostname
-    self.job = None
-    self.config = None
     self.claim_num = self.num_procs.value
     self.last_reset = datetime.now()
 
@@ -116,6 +110,14 @@ class WorkerInterface(Process):
     logger_name = os.path.join(dir_name, str(self.gpu_id))
     self.set_logger(logger_name)
     connect_db()
+
+    self.job = SimpleDict()
+    try:
+      self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+      self.job_attr.remove("insert_ts")
+      self.job_attr.remove("update_ts")
+    except NoInspectionAvailable as error:
+      self.logger.warning("Ignoring error for init_session: %s", error)
 
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly
@@ -149,35 +151,30 @@ class WorkerInterface(Process):
     self.machine.restart_server()
     self.last_reset = datetime.now()
 
-  def base_job_query(self, session):
-    """select tables for job query, return query must include self.dbt.job_table"""
-    query = session.query(self.dbt.job_table)
-    return query
-
-  def compose_work_query(self, query):
+  def compose_work_objs(self, session, conds):
     """default job description"""
-    return query
+    cond_str = ' AND '.join(conds)
+    if cond_str:
+      cond_str = f"WHERE {cond_str}"
+    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
+    entries = gen_select_objs(session, self.job_attr,
+                              self.dbt.job_table.__tablename__, cond_str)
 
-  def compose_job_query(self, find_state, session):
+    return entries
+
+  def get_job_objs(self, session, find_state):
     """Helper function to compose query"""
-    # pylint: disable=comparison-with-callable
-    query = self.base_job_query(session)\
-                .filter(self.dbt.job_table.session == self.dbt.session.id)\
-                .filter(self.dbt.job_table.valid == 1)
-    # pylint: enable=comparison-with-callable
+    conds = [f"session={self.dbt.session.id}", "valid=1"]
 
     if self.label:
-      query = query.filter(self.dbt.job_table.reason == self.label)
+      conds.append(f"reason='{self.label}'")
 
-    query = query.filter(self.dbt.job_table.retries < MAX_JOB_RETRIES)\
-      .filter(self.dbt.job_table.state == find_state)
+    conds.append(f"retries<{MAX_JOB_RETRIES}")
+    conds.append(f"state='{find_state}'")
 
-    query = self.compose_work_query(query)
+    entries = self.compose_work_objs(session, conds)
 
-    query = query.order_by(self.dbt.job_table.retries.asc()).limit(
-        self.claim_num).with_for_update()
-
-    return query
+    return entries
 
   def queue_end_reset(self):
     """resets end queue flag"""
@@ -198,23 +195,23 @@ class WorkerInterface(Process):
 
   def get_job_from_tuple(self, job_tuple):
     """find job table in a job tuple"""
-    if isinstance(job_tuple, self.dbt.job_table):  #pylint: disable=W1116
+    if has_attr_set(job_tuple, self.job_attr):
       return job_tuple
 
     for tble in job_tuple:
-      if isinstance(tble, self.dbt.job_table):  #pylint: disable=W1116
+      if has_attr_set(tble, self.job_attr):
         return tble
 
     return None
 
   def get_job_tables(self, job_rows):
     """find job tables in query results"""
-    if isinstance(job_rows[0], self.dbt.job_table):  #pylint: disable=W1116
+    if has_attr_set(job_rows[0], self.job_attr):
       job_tables = job_rows
     else:
       job_i = 0
       for i, tble in enumerate(job_rows[0]):
-        if isinstance(tble, self.dbt.job_table):  #pylint: disable=W1116
+        if has_attr_set(tble, self.job_attr):
           job_i = i
           break
       job_tables = [row[job_i] for row in job_rows]
@@ -254,7 +251,7 @@ class WorkerInterface(Process):
             return False
           if self.job_queue.empty():
             with DbSession() as session:
-              job_rows = self.compose_job_query(find_state, session).all()
+              job_rows = self.get_job_objs(session, find_state)
 
               if not self.check_jobs_found(job_rows, find_state, imply_end):
                 return False
@@ -271,8 +268,11 @@ class WorkerInterface(Process):
                 else:
                   job.machine_id = self.machine.id
 
+                query = gen_update_query(job, self.job_attr,
+                                         self.dbt.job_table.__tablename__)
+                session.execute(query)
+
               session.commit()
-              self.refresh_query_objects(session, job_rows)
               self.job_queue_push(job_rows)
 
           #also in job_queue_lock
@@ -303,9 +303,6 @@ class WorkerInterface(Process):
     for idx in range(NUM_SQL_RETRIES):
       with DbSession() as session:
         try:
-          #refresh job data
-          self.job = session.query(self.dbt.job_table)\
-              .filter(self.dbt.job_table.id == self.job.id).one()
           self.job.state = state
           if result:
             self.job.result = result
@@ -319,8 +316,10 @@ class WorkerInterface(Process):
             cache_loc = cache + blurr
             self.job.cache_loc = cache_loc
 
+          query = gen_update_query(self.job, self.job_attr,
+                                   self.dbt.job_table.__tablename__)
+          session.execute(query)
           session.commit()
-          session.refresh(self.job)
           return True
         except OperationalError as error:
           self.logger.warning('%s, Db contention, attempt %s, sleeping ...',
