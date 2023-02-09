@@ -127,7 +127,8 @@ pipeline {
         agent{  label "tunatest" }
         steps {
           script {
-            utils.solverAnalyticsTest()
+            //utils.solverAnalyticsTest()
+            echo "Need to update paths in SolverAnalytics repo"
             }
             }
         }
