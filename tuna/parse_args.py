@@ -25,8 +25,8 @@
 #
 ###############################################################################
 """ Module to centralize command line argument parsing """
-import argparse
 import sys
+import jsonargparse
 from enum import Enum
 from typing import List
 from tuna.miopen.utils.config_type import ConfigType
@@ -34,27 +34,23 @@ from tuna.miopen.utils.config_type import ConfigType
 
 class TunaArgs(Enum):
   """ Enumeration of all the common argument supported by setup_arg_parser """
-  ARCH = 0
-  NUM_CU = 1
-  DIRECTION = 2
-  VERSION = 3
-  CONFIG_TYPE = 4
-  SESSION_ID = 5
-  MACHINES = 6
-  REMOTE_MACHINE = 7
-  LABEL = 8
-  RESTART_MACHINE = 9
-  DOCKER_NAME = 10
+  ARCH = 'arch'
+  NUM_CU = 'num_cu'
+  DIRECTION = 'direction'
+  VERSION = 'version'
+  CONFIG_TYPE = 'config_type'
+  SESSION_ID = 'session_id'
+  MACHINES = 'machines'
+  REMOTE_MACHINE = 'remote_machine'
+  LABEL = 'label'
+  RESTART_MACHINE = 'restart_machine'
+  DOCKER_NAME = 'docker_name'
 
 
 def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
   """ function to aggregate common command line args """
-  if parser is not None:
-    parser = argparse.ArgumentParser(description=desc,
-                                     parents=parser,
-                                     conflict_handler='resolve')
-  else:
-    parser = argparse.ArgumentParser(description=desc)
+  parser = jsonargparse.ArgumentParser(description=desc)
+  parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
   if TunaArgs.ARCH in arg_list:
     parser.add_argument(
         '-a',
@@ -73,7 +69,7 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
                         default=None,
                         required=False,
                         help='Number of CUs on GPU',
-                        choices=[36, 56, 60, 64, 104, 110, 120])
+                        choices=['36', '56', '60', '64', '104', '110', '120'])
   if TunaArgs.DIRECTION in arg_list:
     parser.add_argument(
         '-d',
@@ -90,17 +86,19 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
                         dest='config_type',
                         help='Specify configuration type',
                         default=ConfigType.convolution,
-                        choices=ConfigType,
+                        choices=[cft.value for cft in ConfigType],
                         type=ConfigType)
+  # pylint: disable=duplicate-code
+  #To be removed when export_db is executed through miopen_lib
   if TunaArgs.SESSION_ID in arg_list:
     parser.add_argument(
         '--session_id',
-        action='store',
-        type=int,
         dest='session_id',
+        type=int,
         help=
         'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
     )
+  # pylint: enable=duplicate-code
   if TunaArgs.MACHINES in arg_list:
     parser.add_argument('-m',
                         '--machines',

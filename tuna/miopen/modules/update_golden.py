@@ -47,24 +47,25 @@ def parse_args():
   """! Function to parse arguments"""
   parser = setup_arg_parser('Populate golden table based on session_id',
                             [TunaArgs.CONFIG_TYPE])
+  # pylint: disable=duplicate-code
+  #To be removed when export_db is executed through miopen_lib
   parser.add_argument(
       '--session_id',
+      required=True,
       dest='session_id',
-      action='store',
       type=int,
       help=
       'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
   )
+  # pylint: enable=duplicate-code
   parser.add_argument('--golden_v',
                       dest='golden_v',
-                      action='store',
                       type=int,
                       default=None,
                       required=True,
                       help='target golden miopen version to write')
   parser.add_argument('--base_golden_v',
                       dest='base_golden_v',
-                      action='store',
                       type=int,
                       default=None,
                       required=False,
