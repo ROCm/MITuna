@@ -471,6 +471,7 @@ def pytestSuite1() {
            sh "pytest tests/test_merge_db_functions.py -s"
            sh "pytest tests/test_utility.py -s"
            sh "pytest tests/test_example.py -s"
+           sh "pytest tests/test_yaml_parser.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -544,6 +545,8 @@ def runLint() {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
             sh "cd tuna && mypy analyze_parse_db.py"
             sh "cd tuna && mypy build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
+            sh "yamllint tuna/miopen/*.yaml"
+            sh "yamllint tuna/example/*.yaml"
           }
     }
 }
