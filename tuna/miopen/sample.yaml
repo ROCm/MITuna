@@ -12,10 +12,10 @@ docker_name: 'my_docker_name'
 
 
 add_tables:
-  enabled: false
+  enabled: true
 
 init_session:
-  enabled: false
+  enabled: true
 
 import_configs:
   enabled: true

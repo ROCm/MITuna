@@ -52,12 +52,6 @@ def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
   parser = jsonargparse.ArgumentParser(description=desc)
   parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
 
-  #parser.add_argument('--help',
-  #                    '-h',
-  #                    dest='help',
-  #                    action='store_true',
-  #                    default=False,
-  #                    help='Print help message')
   if TunaArgs.ARCH in arg_list:
     parser.add_argument(
         '-a',
