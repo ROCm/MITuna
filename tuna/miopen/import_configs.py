@@ -30,68 +30,11 @@ from sqlalchemy.exc import IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import connect_db, ENGINE
 from tuna.miopen.tables import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.driver_bn import DriverBatchNorm
 from tuna.miopen.tables import MIOpenDBTables
-
-LOGGER = setup_logger('import_configs')
-
-
-def parse_args():
-  """Parsing arguments"""
-  parser = setup_arg_parser(
-      'Import MIOpenDriver commands and MIOpen performance DB entries.',
-      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
-  parser.add_argument(
-      '-c',
-      '--command',
-      type=str,
-      dest='command',
-      default=None,
-      help='Command override: run a different command on the imported configs',
-      choices=[None, 'conv', 'convfp16', 'convbfp16'])
-  parser.add_argument('-b',
-                      '--batches',
-                      type=str,
-                      dest='batches',
-                      help='Batch sizes to iterate over in the given configs')
-  parser.add_argument('-f',
-                      '--file_name',
-                      type=str,
-                      dest='file_name',
-                      help='File to import')
-  parser.add_argument(
-      '--mark_recurrent',
-      dest='mark_recurrent',
-      action="store_true",
-      help='Indicate whether you want the configs to be marked as recurrent')
-  parser.add_argument('-t',
-                      '--tag',
-                      type=str,
-                      required=True,
-                      dest='tag',
-                      help='Tag to mark the origin of this \
-                      config, if config not present it will insert. No wildcard columns for \
-                      tagging.')
-  parser.add_argument(
-      '-T',
-      '--tag_only',
-      action='store_true',
-      dest='tag_only',
-      help=
-      'Tag to mark the origin of this config but skips the insert new config \
-                      step in case the config does not exist in the table. Wildcard columns \
-                      allowed for tagging')
-
-  args = parser.parse_args()
-  if args.batches is not None:
-    args.batch_list = [int(x) for x in args.batches.split(',')]
-  else:
-    args.batch_list = []
-  return args
 
 
 def create_query(tag, mark_recurrent, config_id):
@@ -106,7 +49,7 @@ def create_query(tag, mark_recurrent, config_id):
   return query_dict
 
 
-def tag_config_v2(driver, counts, dbt, args, new_cf=None):
+def tag_config_v2(driver, counts, dbt, args, logger, new_cf=None):
   """Adds tag for a config formatted from the fds structure.
         If mark_recurrent is ussed then it also marks it as such.
         Updates counter for tagged configs"""
@@ -118,7 +61,7 @@ def tag_config_v2(driver, counts, dbt, args, new_cf=None):
 
   with DbSession() as session:
     try:
-      query_dict = create_query(args.tag, args.mark_recurrent, c_id)
+      query_dict = create_query(args.import_configs.tag, args.import_configs.mark_recurrent, c_id)
       session.merge(dbt.config_tags_table(**query_dict))
       session.commit()
       counts['cnt_tagged_configs'].add(c_id)
@@ -134,15 +77,15 @@ def tag_config_v2(driver, counts, dbt, args, new_cf=None):
               (dbt.config_tags_table.tag == query_dict["tag"])).values(
                   recurrent="1"))
       if "Duplicate" in str(err):
-        LOGGER.warning("Config/tag already present in %s\n",
+        logger.warning("Config/tag already present in %s\n",
                        dbt.config_tags_table.__tablename__)
       else:
-        LOGGER.error('Err occurred: %s', str(err))
+        logger.error('Err occurred: %s', str(err))
 
   return True
 
 
-def insert_config(driver, counts, dbt, args):
+def insert_config(driver, counts, dbt, args, logger):
   """Inserts new config in the DB computed from the fds structure.
         Tags the newly inserted config. It config already exists,
         it will only tag it and log a warning for duplication."""
@@ -156,87 +99,86 @@ def insert_config(driver, counts, dbt, args):
         counts['cnt_configs'] += 1
         session.refresh(new_cf)
       except IntegrityError as err:
-        LOGGER.warning("Err occurred: %s", err)
+        logger.warning("Err occurred: %s", err)
         session.rollback()
     else:
       try:
-        if args.mark_recurrent or args.tag:
-          new_cf_tag = dbt.config_tags_table(tag=args.tag,
-                                             recurrent=args.mark_recurrent,
+        if args.import_configs.mark_recurrent or args.import_configs.tag:
+          new_cf_tag = dbt.config_tags_table(tag=args.import_configs.tag,
+                                             recurrent=args.import_configs.mark_recurrent,
                                              config=new_cf.id)
           session.add(new_cf_tag)
           session.commit()
           counts['cnt_tagged_configs'].add(new_cf.id)
       except IntegrityError as err:
-        LOGGER.warning("Err occurred: %s", err)
+        logger.warning("Err occurred: %s", err)
         session.rollback()
-    if args.mark_recurrent or args.tag:
-      _ = tag_config_v2(driver, counts, dbt, args, new_cf)
+    if args.import_configs.mark_recurrent or args.import_configs.tag:
+      _ = tag_config_v2(driver, counts, dbt, args, logger, new_cf)
 
   return new_cf.id
 
 
-def process_config_line_v2(driver, args, counts, dbt):
+def process_config_line_v2(driver, args, counts, dbt, logger):
   """Assumes config passed already exists and will skip the insert step
         if tag_only present. Otherwise it will first try and insert and
         then tag."""
-  if args.tag_only:
-    _ = tag_config_v2(driver, counts, dbt, args, new_cf=None)
+  if args.import_configs.tag_only:
+    _ = tag_config_v2(driver, counts, dbt, args, logger, new_cf=None)
     return False
 
-  _ = insert_config(driver, counts, dbt, args)
+  _ = insert_config(driver, counts, dbt, args, logger)
   return True
 
 
-def parse_line(args, line, counts, dbt):
+def parse_line(args, line, counts, dbt, logger):
   """parse a driver line or fdb line from an input file and insert the config"""
   if args.config_type == ConfigType.batch_norm:
-    driver = DriverBatchNorm(line, args.command)
+    driver = DriverBatchNorm(line, args.import_configs.command)
   else:
-    driver = DriverConvolution(line, args.command)
+    driver = DriverConvolution(line, args.import_configs.command)
 
-  if not args.batch_list:
-    process_config_line_v2(driver, args, counts, dbt)
+  if not args.import_configs.batch_list:
+    process_config_line_v2(driver, args, counts, dbt, logger)
   else:
-    for bsz in args.batch_list:
-      LOGGER.info('Batchsize: %s', bsz)
+    for bsz in args.import_configs.batch_list:
+      logger.info('Batchsize: %s', bsz)
       driver.batchsize = bsz
-      process_config_line_v2(driver, args, counts, dbt)
+      process_config_line_v2(driver, args, counts, dbt, logger)
 
   return True
 
 
-def import_cfgs(args, dbt):
+def import_cfgs(args, dbt, logger):
   """import configs to mysql from file with driver invocations"""
   connect_db()
 
   counts = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
-  with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+  with open(os.path.expanduser(args.import_configs.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
     for line in infile:
       try:
-        parse_line(args, line, counts, dbt)
+        parse_line(args, line, counts, dbt, logger)
       except ValueError as err:
-        LOGGER.warning(err)
+        logger.warning(err)
         continue
 
   return counts
 
 
-def main():
+def run_import_configs(args, logger):
   """Main function"""
-  args = parse_args()
   counts = {}
 
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
 
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, logger)
 
-  LOGGER.info('New configs added: %u', counts['cnt_configs'])
-  if args.tag or args.tag_only:
-    LOGGER.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
+  logger.info('New configs added: %u', counts['cnt_configs'])
+  if args.import_configs.tag or args.import_configs.tag_only:
+    logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
 
 
 if __name__ == '__main__':
-  main()
+  run_import_configs()

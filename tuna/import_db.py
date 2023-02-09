@@ -37,7 +37,7 @@ from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.session import Session
 from tuna.config_type import ConfigType
 from tuna.driver_conv import DriverConvolution
-from tuna.import_configs import insert_config
+from tuna.miopen.import_configs import insert_config
 from tuna.metadata import PREC_TO_CMD
 from tuna.utils.db_utility import get_solver_ids
 from tuna.parsing import parse_fdb_line

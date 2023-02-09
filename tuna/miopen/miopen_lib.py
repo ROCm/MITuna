@@ -27,6 +27,7 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
+import jsonargparse
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.helper import print_solvers
@@ -43,6 +44,8 @@ from tuna.libraries import Library
 from tuna.miopen.db_tables import create_tables, recreate_triggers
 from tuna.miopen.miopen_db_helpers import drop_miopen_triggers, get_miopen_triggers
 from tuna.config_type import ConfigType
+from tuna.miopen.import_configs import run_import_configs
+from tuna.miopen.parse_miopen_args import get_import_cfg_parser
 
 
 class MIOpen(MITunaInterface):
@@ -100,6 +103,18 @@ class MIOpen(MITunaInterface):
                         required=False,
                         help='Restart interval for job in hours.')
 
+    subcommands = parser.add_subcommands()
+    subcommands.add_subcommand('import_configs', get_import_cfg_parser())
+    subcommands.add_subcommand('add_tables', jsonargparse.ArgumentParser(help='123'))
+    subcommands.add_subcommand('init_session', jsonargparse.ArgumentParser())
+    subcommands.add_subcommand('fin_steps', jsonargparse.ArgumentParser())
+    subcommands.add_subcommand('list_solvers', jsonargparse.ArgumentParser())
+    subcommands.add_subcommand('update_solvers', jsonargparse.ArgumentParser())
+    subcommands.add_subcommand('update_applicability', jsonargparse.ArgumentParser())
+    subcommands.add_subcommand('status', jsonargparse.ArgumentParser())
+    subcommands.add_subcommand('exec', jsonargparse.ArgumentParser())
+
+    """
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--add_tables',
                        dest='add_tables',
@@ -141,6 +156,8 @@ class MIOpen(MITunaInterface):
                        type=str,
                        default=None,
                        help='execute on each machine')
+    """
+
 
     clean_args()
     self.args = parser.parse_args()
@@ -148,11 +165,11 @@ class MIOpen(MITunaInterface):
       parser.print_help()
       sys.exit(-1)
 
-    if self.args.list_solvers:
+    if self.args.subcommand == 'list_solvers':
       print_solvers()
       raise ValueError('Printing solvers...')
 
-    if self.args.fin_steps:
+    if self.args.subcommand == 'fin_steps':
       self.check_fin_args(parser)
 
     if self.args.find_mode is None and not (self.args.check_status or
@@ -170,11 +187,20 @@ class MIOpen(MITunaInterface):
         'miopen_perf_eval', 'get_applicability', 'find_compile', 'find_eval'
     ]
     has_fin = False
-    if self.args.fin_steps:
+    if self.args.subcommand == 'fin_steps':
       has_fin = all(x in fin_session_steps for x in self.args.fin_steps)
 
-    if (self.args.update_applicability or has_fin) and not self.args.session_id:
+    if (self.args.subcommand == 'update_applicability' or has_fin) and not self.args.session_id:
       parser.error("session_id must be specified with this operation")
+
+    #import configs
+    """
+    if self.args.import_configs.batches is not None:
+      self.args.import_configs.batch_list = [int(x) for x in self.args.import_configs.batches.split(',')]
+    else:
+      self.args.import_configs.batch_list = []
+    """
+
 
   def check_fin_args(self, parser):
     """! Helper function for fin args
@@ -307,9 +333,15 @@ class MIOpen(MITunaInterface):
     """Main function to launch library"""
     res = None
     self.parse_args()
+    print(self.args)
     if self.args.add_tables:
       self.add_tables()
       return None
+
+    if self.args.import_configs:
+      run_import_configs(self.args, self.logger)
+      return None
+
     machines = load_machines(self.args)
     res = self.compose_worker_list(machines)
     return res
