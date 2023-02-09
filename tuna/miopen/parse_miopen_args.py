@@ -29,9 +29,10 @@ import jsonargparse
 
 
 def get_import_cfg_parser():
-  """Return parser for import_configs functionality"""
+  """Return parser for import_configs subcommand"""
 
-  parser = jsonargparse.ArgumentParser(description='Import configurations into MIOpen DB')
+  parser = jsonargparse.ArgumentParser(
+      description='Import configurations into MIOpen DB')
   parser.add_argument(
       '-c',
       '--command',
@@ -72,6 +73,5 @@ def get_import_cfg_parser():
       'Tag to mark the origin of this config but skips the insert new config \
                       step in case the config does not exist in the table. Wildcard columns \
                       allowed for tagging')
-
 
   return parser

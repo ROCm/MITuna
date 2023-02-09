@@ -37,7 +37,7 @@ from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.fin_class import FinClass
 from tuna.utils.db_utility import connect_db
-from import_configs import import_cfgs
+from tuna.miopen.import_configs import import_cfgs
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
@@ -49,12 +49,12 @@ from tuna.utils.db_utility import get_solver_ids
 def add_cfgs():
   #import configs
   args = CfgImportArgs()
-  args.tag = 'tuna_pytest_fin_builder'
-  args.mark_recurrent = True
-  args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
+  args.import_configs.tag = 'tuna_pytest_fin_builder'
+  args.import_configs.mark_recurrent = True
+  args.import_configs.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
   dbt = MIOpenDBTables(config_type=args.config_type)
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, setup_logger('test_fin_builder'))
   return dbt
 
 

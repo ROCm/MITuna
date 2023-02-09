@@ -29,7 +29,6 @@ import os
 from sqlalchemy.exc import IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db, ENGINE
 from tuna.miopen.tables import ConfigType
 from tuna.driver_conv import DriverConvolution
@@ -61,7 +60,8 @@ def tag_config_v2(driver, counts, dbt, args, logger, new_cf=None):
 
   with DbSession() as session:
     try:
-      query_dict = create_query(args.import_configs.tag, args.import_configs.mark_recurrent, c_id)
+      query_dict = create_query(args.import_configs.tag,
+                                args.import_configs.mark_recurrent, c_id)
       session.merge(dbt.config_tags_table(**query_dict))
       session.commit()
       counts['cnt_tagged_configs'].add(c_id)
@@ -104,9 +104,10 @@ def insert_config(driver, counts, dbt, args, logger):
     else:
       try:
         if args.import_configs.mark_recurrent or args.import_configs.tag:
-          new_cf_tag = dbt.config_tags_table(tag=args.import_configs.tag,
-                                             recurrent=args.import_configs.mark_recurrent,
-                                             config=new_cf.id)
+          new_cf_tag = dbt.config_tags_table(
+              tag=args.import_configs.tag,
+              recurrent=args.import_configs.mark_recurrent,
+              config=new_cf.id)
           session.add(new_cf_tag)
           session.commit()
           counts['cnt_tagged_configs'].add(new_cf.id)
@@ -178,7 +179,3 @@ def run_import_configs(args, logger):
   logger.info('New configs added: %u', counts['cnt_configs'])
   if args.import_configs.tag or args.import_configs.tag_only:
     logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
-
-
-if __name__ == '__main__':
-  run_import_configs()

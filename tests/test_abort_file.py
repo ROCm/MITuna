@@ -40,8 +40,9 @@ from tuna.sql import DbCursor
 from tuna.config_type import ConfigType
 from utils import CfgImportArgs, LdJobArgs
 from tuna.miopen.tables import MIOpenDBTables
-from tuna.import_configs import import_cfgs
+from tuna.miopen.import_configs import import_cfgs
 from tuna.utils.db_utility import connect_db
+from tuna.utils.logger import setup_logger
 from tuna.miopen.miopen_tables import ConvolutionJob
 from load_job import test_tag_name as tag_name_test, add_jobs
 from utils import add_test_session
@@ -50,14 +51,15 @@ from tuna.dbBase.sql_alchemy import DbSession
 
 def test_abort():
   #import configs
+  logger = setup_logger('test_abort_file')
   session_id = add_test_session()
   args = CfgImportArgs()
-  args.tag = 'test_builder'
-  args.mark_recurrent = True
-  args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
+  args.import_configs.tag = 'test_builder'
+  args.import_configs.mark_recurrent = True
+  args.import_configs.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
   dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, logger)
 
   #load jobs
   job_list = []

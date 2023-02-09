@@ -113,7 +113,7 @@ def get_sql_cfg_id_map(dbt, cnx, args):
     sqlite_cfg = valid_cfg_dims(sqlite_cfg)
 
     driver = get_cfg_driver(sqlite_cfg)
-    ins_id = insert_config(driver, counts, dbt, args)
+    ins_id = insert_config(driver, counts, dbt, args, LOGGER)
     cvrt[sqlite_id] = ins_id
 
     if (total / 10) % (i + 1) == 0:
@@ -212,7 +212,8 @@ def record_fdb(dbt, args):
     with DbSession() as session:
       num_line = 0
       for line in infile:
-        ins_id = insert_config(DriverConvolution(line), counts, dbt, args)
+        ins_id = insert_config(DriverConvolution(line), counts, dbt, args,
+                               LOGGER)
 
         fdb_data = parse_fdb_line(line)
         for fdb_key, algs in fdb_data.items():
