@@ -59,6 +59,12 @@ class Example(MITunaInterface):
                        action='store_true',
                        help='Add Example library specific tables')
 
+    group.add_argument('-l',
+                       '--load_job',
+                       dest='load_job',
+                       action='store_true',
+                       help='Run the load job for worker and machines')
+
     group.add_argument(
         '-e',
         '--execute',

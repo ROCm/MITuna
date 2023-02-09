@@ -142,6 +142,12 @@ class MIOpen(MITunaInterface):
                        type=str,
                        default=None,
                        help='execute on each machine')
+    group.add_argument('-l',
+                       '--load_job',
+                       dest='load_job',
+                       type=str,
+                       default=None,
+                       help='Run the load job for worker and machines')
 
     clean_args()
     self.args = parser.parse_args()
