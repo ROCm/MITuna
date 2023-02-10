@@ -25,14 +25,15 @@
 #
 ###############################################################################
 """Module to represent MIOpen subcommands parsers"""
-import jsonargparse
+from tuna.parse_args import TunaArgs, setup_arg_parser
 
 
 def get_import_cfg_parser():
   """Return parser for import_configs subcommand"""
 
-  parser = jsonargparse.ArgumentParser(
-      description='Import configurations into MIOpen DB')
+  parser = setup_arg_parser(
+      'Import MIOpenDriver commands and MIOpen performance DB entries.',
+      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
   parser.add_argument(
       '-c',
       '--command',
