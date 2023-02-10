@@ -245,7 +245,8 @@ def add_jobs(args, dbt):
 
 def load_job():
   """ load job function """
-  pass
+  load_job
+  return load_job
 
 
 def main():
