@@ -38,6 +38,7 @@ from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
 from tuna.load_job import load_job
 
+
 class Example(MITunaInterface):
   """Class to support an example of 'romcinfo' run"""
 
