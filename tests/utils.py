@@ -58,9 +58,19 @@ def get_sqlite_table(cnx, table_name):
   return rows, columns
 
 
+class DummyArgs(object):
+  """Dummy args object class to be used for testing"""
+
+  # pylint: disable=too-many-instance-attributes
+
+  def __init__(self, **kwargs):
+    """Constructor"""
+    pass
+
+
 class CfgImportArgs():
   config_type = ConfigType.convolution
-  #subcommand = import_configs
+  import_configs = DummyArgs()
   import_configs.command = None
   import_configs.batches = None
   import_configs.batch_list = []
@@ -121,16 +131,6 @@ class ExampleArgs():
   docker_name = 'miopentuna'
   init_session = True
   ticket = 'N/A'
-
-
-class DummyArgs(object):
-  """Dummy args object class to be used for testing"""
-
-  # pylint: disable=too-many-instance-attributes
-
-  def __init__(self, **kwargs):
-    """Constructor"""
-    pass
 
 
 def get_worker_args(args, machine, miopen):

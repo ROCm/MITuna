@@ -151,6 +151,11 @@ class MIOpen(MITunaInterface):
 
     clean_args()
     self.args = parser.parse_args()
+
+    #overwritte common lib args with subcommand args value
+    if self.args.subcommand is not None:
+      self.overwrite_common_args()
+
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
@@ -182,6 +187,14 @@ class MIOpen(MITunaInterface):
 
     if (self.args.update_applicability or has_fin) and not self.args.session_id:
       parser.error("session_id must be specified with this operation")
+
+  def overwrite_common_args(self):
+    """Overwrite common MIOpen_lib args with subcommand args"""
+    if self.args.subcommand is not None:
+      subc_dict = vars(self.args.get(self.args.subcommand))
+      for sub_key in subc_dict:
+        if sub_key in vars(self.args):
+          self.args[sub_key] = subc_dict.get(sub_key)
 
   def set_import_cfg_batches(self):
     """Setting batches for import_configs subcommands"""
