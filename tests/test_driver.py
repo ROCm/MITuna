@@ -26,7 +26,7 @@
 ###############################################################################
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.driver.batchnorm import DriverBatchNorm
-from tuna.miopen.modules.import_configs import insert_config
+from tuna.miopen.subcmd.import_configs import insert_config
 from tuna.miopen.db.miopen_tables import ConvolutionConfig, BNConfig
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables

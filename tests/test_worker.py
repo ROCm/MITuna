@@ -44,8 +44,8 @@ from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.utils.db_utility import connect_db
-from tuna.miopen.modules.import_configs import import_cfgs
-from tuna.miopen.modules.load_job import test_tag_name as tag_name_test, add_jobs
+from tuna.miopen.subcmd.import_configs import import_cfgs
+from tuna.miopen.subcmd.load_job import test_tag_name as tag_name_test, add_jobs
 from miopen.miopen_lib import MIOpen
 
 

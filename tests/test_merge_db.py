@@ -27,7 +27,7 @@
 import sys
 import os
 
-from tuna.miopen.modules.merge_db import merge_files
+from tuna.miopen.subcmd.merge_db import merge_files
 
 sys.path.append("../tuna")
 sys.path.append("tuna")

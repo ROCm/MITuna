@@ -33,7 +33,7 @@ from tuna.miopen.utils.parsing import parse_fdb_line
 from tuna.miopen.utils.analyze_parse_db import get_sqlite_table
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.utils.helper import valid_cfg_dims
-from tuna.miopen.modules.import_db import get_cfg_driver
+from tuna.miopen.subcmd.import_db import get_cfg_driver
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
