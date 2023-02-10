@@ -105,6 +105,9 @@ def test_driver():
     assert driver2 == driver_2_row
 
   cmd3 = "./bin/MIOpenDriver bnormfp16 -n 256 -c 64 -H 56 -W 56 -m 1 --forw 1 -b 0 -s 1 -r 1"
+  args.import_configs.config_type = ConfigType.batch_norm
+  dbt2 = MIOpenDBTables(session_id=None,
+                       config_type=args.import_configs.config_type)
   driver3 = DriverBatchNorm(cmd3)
   d3_str = driver3.to_dict()
   assert d3_str
@@ -122,7 +125,7 @@ def test_driver():
   assert c_dict3["input_tensor"]
   assert c_dict3
 
-  cmd3_id = insert_config(driver3, counts, dbt, args, logger)
+  cmd3_id = insert_config(driver3, counts, dbt2, args, logger)
   with DbSession() as session:
     row3 = session.query(BNConfig).filter(BNConfig.id == cmd3_id).one()
     driver_3_row = DriverBatchNorm(db_obj=row3)

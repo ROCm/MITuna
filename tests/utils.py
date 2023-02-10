@@ -78,6 +78,7 @@ class CfgImportArgs():
   import_configs.mark_recurrent = False
   import_configs.tag = None
   import_configs.tag_only = False
+  import_configs.config_type = ConfigType.convolution
 
 
 class LdJobArgs():
