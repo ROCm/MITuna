@@ -107,7 +107,7 @@ def test_driver():
   cmd3 = "./bin/MIOpenDriver bnormfp16 -n 256 -c 64 -H 56 -W 56 -m 1 --forw 1 -b 0 -s 1 -r 1"
   args.import_configs.config_type = ConfigType.batch_norm
   dbt2 = MIOpenDBTables(session_id=None,
-                       config_type=args.import_configs.config_type)
+                        config_type=args.import_configs.config_type)
   driver3 = DriverBatchNorm(cmd3)
   d3_str = driver3.to_dict()
   assert d3_str
