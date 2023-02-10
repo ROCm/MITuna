@@ -84,6 +84,7 @@ def test_import_conv():
 def test_import_batch_norm():
   dbt = MIOpenDBTables(config_type=ConfigType.batch_norm)
   res = None
+  logger = setup_logger('test_importconfigs')
   clean_tags = "TRUNCATE table bn_config_tags;"
   find_tags = "SELECT count(*) FROM bn_config_tags WHERE tag='bn_config_test';"
   find_configs = "SELECT count(*) FROM bn_config;"
