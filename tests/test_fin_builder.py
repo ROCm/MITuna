@@ -53,7 +53,7 @@ def add_cfgs():
   args.import_configs.mark_recurrent = True
   args.import_configs.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = MIOpenDBTables(config_type=args.config_type)
+  dbt = MIOpenDBTables(config_type=args.import_configs.config_type)
   counts = import_cfgs(args, dbt, setup_logger('test_fin_builder'))
   return dbt
 

@@ -81,9 +81,9 @@ def test_abort():
 
   connect_db()
   dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
-  if args.tag:
+  if args.import_configs.tag:
     try:
-      tag_name_test(args.tag, dbt)
+      tag_name_test(args.import_configs.tag, dbt)
     except ValueError as terr:
       print(terr)
 

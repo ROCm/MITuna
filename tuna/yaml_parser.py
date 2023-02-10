@@ -112,6 +112,12 @@ def get_yaml_files(original_yaml_dict,
       yaml_dict[key].pop('enabled', None)
       #append subcommands as they are
       new_yaml[key] = yaml_dict.get(key)
+
+      #overwrite common arg with subcommand arg value
+      for subc_k in yaml_dict.get(key):
+        if subc_k in yaml_dict.keys():
+          new_yaml[subc_k] = yaml_dict.get(key).get(subc_k)
+
       yaml_files.append(dump_yaml(new_yaml))
 
   return yaml_files

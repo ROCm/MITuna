@@ -57,7 +57,8 @@ def add_job(w):
   args.import_configs.mark_recurrent = True
   args.import_configs.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = MIOpenDBTables(session_id=w.session_id, config_type=args.config_type)
+  dbt = MIOpenDBTables(session_id=w.session_id,
+                       config_type=args.import_configs.config_type)
   counts = import_cfgs(args, dbt, setup_logger('test_worker'))
 
   args = GoFishArgs()
@@ -87,9 +88,9 @@ def add_job(w):
   args.session_id = w.session_id
 
   connect_db()
-  if args.tag:
+  if args.import_configs.tag:
     try:
-      tag_name_test(args.tag, dbt)
+      tag_name_test(args.import_configs.tag, dbt)
     except ValueError as terr:
       print(terr)
 
