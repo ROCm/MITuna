@@ -88,9 +88,9 @@ def add_job(w):
   args.session_id = w.session_id
 
   connect_db()
-  if args.import_configs.tag:
+  if args.tag:
     try:
-      tag_name_test(args.import_configs.tag, dbt)
+      tag_name_test(args.tag, dbt)
     except ValueError as terr:
       print(terr)
 
