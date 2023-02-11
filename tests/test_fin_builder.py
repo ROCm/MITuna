@@ -44,6 +44,7 @@ from utils import get_worker_args, add_test_session
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.metadata import ALG_SLV_MAP
 from tuna.utils.db_utility import get_solver_ids
+from tuna.utils.logger import setup_logger
 
 
 def add_cfgs():
