@@ -48,7 +48,7 @@ def test_yaml_parser():
 
 def parse_miopen_yaml(miopen_yaml, miopen):
   yaml_files = parse_yaml(miopen_yaml, miopen)
-  assert len(yaml_files) == 2
+  assert len(yaml_files) == 3
 
   yaml_dicts = []
   #reading in initial yaml file split in 2 yaml files
@@ -74,11 +74,22 @@ def parse_miopen_yaml(miopen_yaml, miopen):
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
+      'init_session': True,
+      'label': 'Example',
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
+
+  dict3 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
       'import_configs': {
           'file_name': '../utils/configs/conv_configs_NCHW.txt',
           'tag': 'someTag'
       },
-      'init_session': True,
       'label': 'Example',
       'num_cu': 120,
       'remote_machine': False,
@@ -88,6 +99,7 @@ def parse_miopen_yaml(miopen_yaml, miopen):
 
   assert (yaml_dicts[0] == dict1)
   assert (yaml_dicts[1] == dict2)
+  assert (yaml_dicts[2] == dict3)
 
 
 def parse_example_yaml(example_yaml, example):
