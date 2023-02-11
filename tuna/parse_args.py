@@ -154,7 +154,7 @@ def args_check(args, parser):
 
   args.local_machine = not args.remote_machine
 
-  if args.subcommand == 'init_session' and not args.label:
+  if args.subcommand is not None and args.subcommand == 'init_session' and not args.label:
     parser.error(
         "When setting up a new tunning session the following must be specified: "\
         "label.")

@@ -199,7 +199,6 @@ class MIOpen(MITunaInterface):
   def set_import_cfg_batches(self):
     """Setting batches for import_configs subcommands"""
     #import configs
-    print(self.args)
     if self.args.import_configs.batches is not None:
       self.args.import_configs.batch_list = [
           int(x) for x in self.args.import_configs.batches.split(',')
