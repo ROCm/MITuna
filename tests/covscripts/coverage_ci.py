@@ -33,6 +33,7 @@ file_path_json = os.path.join(root_dir, "./coverage.json")
 coverage_file = open(file_path_json)
 coverage_data = json.load(coverage_file)
 percent_covered = coverage_data['totals']['percent_covered']
-percent_covered = '{:.2f}'.format(percent_covered)
-
+percent_covered = int(percent_covered)
 print(percent_covered)
+if percent_covered < 43: 
+    raise ValueError('Coverage Tests dropped below an acceptable treshold')
