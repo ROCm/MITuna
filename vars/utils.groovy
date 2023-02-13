@@ -474,6 +474,8 @@ def pytestSuite1() {
            sh "coverage report -m "
            sh "python3 -m coverage json"
            sh "ls"
+           sh "pwd"
+           sh "python3 tests/covscripts/coverage_ci.py"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
