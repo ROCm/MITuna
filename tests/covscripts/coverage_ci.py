@@ -31,6 +31,6 @@ root_dir = os.path.dirname(
 file_path_json = os.path.join(root_dir, "./coverage.json")
 
 coverage_file = open(file_path_json)
-coverage_data =  json.load(coverage_file)
+coverage_data = json.load(coverage_file)
 percent_covered = coverage_data['totals']['percent_covered']
 percent_covered = '{:.2f}'.format(percent_covered)
