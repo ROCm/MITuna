@@ -12,15 +12,22 @@ docker_name: 'my_docker_name'
 
 
 add_tables:
-  enabled: true
+  enabled: false
 
 init_session:
-  enabled: true
+  enabled: false
 
 import_configs:
-  enabled: true
+  enabled: false
   tag: 'someTag'
   file_name: '../utils/configs/conv_configs_NCHW.txt'
+
+import_benchmark:
+  enabled: true
+  model: 'Alexnet'
+  framework: 'Pytorch'
+  gpu_count: 8
+  file_name: '../utils/configs/reccurent_cfgs/alexnet.txt'
 
 update_applicability:
   enabled: false

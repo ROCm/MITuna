@@ -44,7 +44,8 @@ from tuna.miopen.db_tables import create_tables, recreate_triggers
 from tuna.miopen.miopen_db_helpers import drop_miopen_triggers, get_miopen_triggers
 from tuna.config_type import ConfigType
 from tuna.miopen.import_configs import run_import_configs
-from tuna.miopen.parse_miopen_args import get_import_cfg_parser
+from tuna.miopen.import_benchmark import run_import_benchmark
+from tuna.miopen.parse_miopen_args import get_import_cfg_parser, get_import_benchmark_parser
 
 
 class MIOpen(MITunaInterface):
@@ -105,6 +106,9 @@ class MIOpen(MITunaInterface):
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
                                get_import_cfg_parser(),
+                               required=False)
+    subcommands.add_subcommand('import_benchmark',
+                               get_import_benchmark_parser(),
                                required=False)
 
     group = parser.add_mutually_exclusive_group()
@@ -205,6 +209,23 @@ class MIOpen(MITunaInterface):
       ]
     else:
       self.args.import_configs.batch_list = []
+
+  def check_import_benchmark_args(self):
+    """Checking args for import_benchmark subcommand"""
+    if self.args.import_benchmark.add_model and not self.args.import_benchmark.md_version:
+      raise ValueError('Version needs to be specified with model')
+    if self.args.import_benchmark.add_benchmark and not (
+        self.args.import_benchmark.model and
+        self.args.import_benchmark.framework and
+        self.args.import_benchmark.gpu_count and
+        self.args.import_benchmark.batchsize and
+        self.args.import_benchmark.md_version and
+        self.args.import_benchmark.fw_version and
+        (self.args.import_benchmark.driver or
+         self.args.import_benchmark.file_name)):
+      raise ValueError(
+          """Model, md_version, framework, fw_version, driver(or filename), batchsize \n
+           and gpus need to all be specified to add a new benchmark""")
 
   def check_fin_args(self, parser):
     """! Helper function for fin args
@@ -345,6 +366,10 @@ class MIOpen(MITunaInterface):
       self.set_import_cfg_batches()
       run_import_configs(self.args, self.logger)
       return None
+
+    if self.args.subcommand is not None and self.args.subcommand == 'import_benchmark':
+      self.check_import_benchmark_args()
+      run_import_benchmark(self.args, self.logger)
 
     machines = load_machines(self.args)
     res = self.compose_worker_list(machines)

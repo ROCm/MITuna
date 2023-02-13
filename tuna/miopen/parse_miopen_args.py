@@ -26,6 +26,7 @@
 ###############################################################################
 """Module to represent MIOpen subcommands parsers"""
 from tuna.parse_args import TunaArgs, setup_arg_parser
+from tuna.miopen.benchmark import FrameworkEnum, ModelEnum
 
 
 def get_import_cfg_parser():
@@ -74,5 +75,78 @@ def get_import_cfg_parser():
       'Tag to mark the origin of this config but skips the insert new config \
                       step in case the config does not exist in the table. Wildcard columns \
                       allowed for tagging')
+
+  return parser
+
+
+def get_import_benchmark_parser():
+  """Return parser for import_benchmark subcommand"""
+  parser = setup_arg_parser('Import benchmark performance related items',
+                            [TunaArgs.CONFIG_TYPE])
+  group1 = parser.add_mutually_exclusive_group()
+  group2 = parser.add_mutually_exclusive_group()
+  group3 = parser.add_mutually_exclusive_group()
+  group1.add_argument('--update_framework',
+                      action="store_true",
+                      dest='update_framework',
+                      help='Populate framework table with all framework enums')
+  group2.add_argument('--add_model',
+                      dest='add_model',
+                      type=ModelEnum,
+                      choices=ModelEnum,
+                      help='Populate table with new model and version')
+  group3.add_argument('--print_models',
+                      dest='print_models',
+                      action='store_true',
+                      help='Print models from table')
+  parser.add_argument('--add_benchmark',
+                      dest='add_benchmark',
+                      action='store_true',
+                      help='Insert new benchmark')
+  parser.add_argument('-m',
+                      '--model',
+                      dest='model',
+                      type=ModelEnum,
+                      choices=ModelEnum,
+                      required=False,
+                      help='Specify model')
+  parser.add_argument('-F',
+                      '--framework',
+                      dest='framework',
+                      type=FrameworkEnum,
+                      choices=FrameworkEnum,
+                      help='Specify framework.')
+  parser.add_argument('-d',
+                      '--driver',
+                      dest='driver',
+                      type=str,
+                      default=None,
+                      required=False,
+                      help='Specify driver cmd')
+  parser.add_argument('-g',
+                      '--gpu_count',
+                      dest='gpu_count',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify number of gpus the benchmark runs on')
+  parser.add_argument('--md_version',
+                      dest='md_version',
+                      type=str,
+                      default=None,
+                      required=False,
+                      help='Specify model version')
+  parser.add_argument('--fw_version',
+                      dest='fw_version',
+                      type=str,
+                      default=None,
+                      required=False,
+                      help='Specify framework version')
+  parser.add_argument('--batchsize',
+                      dest='batchsize',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model batchsize')
 
   return parser
