@@ -30,10 +30,12 @@ from sqlalchemy.exc import IntegrityError
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db, ENGINE
+from tuna.utils.logger import setup_logger
 from tuna.miopen.tables import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.driver_bn import DriverBatchNorm
 from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.parse_miopen_args import get_import_cfg_parser
 
 
 def create_query(tag, mark_recurrent, config_id):
@@ -60,8 +62,7 @@ def tag_config_v2(driver, counts, dbt, args, logger, new_cf=None):
 
   with DbSession() as session:
     try:
-      query_dict = create_query(args.import_configs.tag,
-                                args.import_configs.mark_recurrent, c_id)
+      query_dict = create_query(args.tag, args.mark_recurrent, c_id)
       session.merge(dbt.config_tags_table(**query_dict))
       session.commit()
       counts['cnt_tagged_configs'].add(c_id)
@@ -103,18 +104,17 @@ def insert_config(driver, counts, dbt, args, logger):
         session.rollback()
     else:
       try:
-        if args.import_configs.mark_recurrent or args.import_configs.tag:
-          new_cf_tag = dbt.config_tags_table(
-              tag=args.import_configs.tag,
-              recurrent=args.import_configs.mark_recurrent,
-              config=new_cf.id)
+        if args.mark_recurrent or args.tag:
+          new_cf_tag = dbt.config_tags_table(tag=args.tag,
+                                             recurrent=args.mark_recurrent,
+                                             config=new_cf.id)
           session.add(new_cf_tag)
           session.commit()
           counts['cnt_tagged_configs'].add(new_cf.id)
       except IntegrityError as err:
         logger.warning("Err occurred: %s", err)
         session.rollback()
-    if args.import_configs.mark_recurrent or args.import_configs.tag:
+    if args.mark_recurrent or args.tag:
       _ = tag_config_v2(driver, counts, dbt, args, logger, new_cf)
 
   return new_cf.id
@@ -124,7 +124,7 @@ def process_config_line_v2(driver, args, counts, dbt, logger):
   """Assumes config passed already exists and will skip the insert step
         if tag_only present. Otherwise it will first try and insert and
         then tag."""
-  if args.import_configs.tag_only:
+  if args.tag_only:
     _ = tag_config_v2(driver, counts, dbt, args, logger, new_cf=None)
     return False
 
@@ -135,14 +135,14 @@ def process_config_line_v2(driver, args, counts, dbt, logger):
 def parse_line(args, line, counts, dbt, logger):
   """parse a driver line or fdb line from an input file and insert the config"""
   if args.config_type == ConfigType.batch_norm:
-    driver = DriverBatchNorm(line, args.import_configs.command)
+    driver = DriverBatchNorm(line, args.command)
   else:
-    driver = DriverConvolution(line, args.import_configs.command)
+    driver = DriverConvolution(line, args.command)
 
-  if not args.import_configs.batch_list:
+  if not args.batch_list:
     process_config_line_v2(driver, args, counts, dbt, logger)
   else:
-    for bsz in args.import_configs.batch_list:
+    for bsz in args.batch_list:
       logger.info('Batchsize: %s', bsz)
       driver.batchsize = bsz
       process_config_line_v2(driver, args, counts, dbt, logger)
@@ -157,7 +157,7 @@ def import_cfgs(args, dbt, logger):
   counts = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
-  with open(os.path.expanduser(args.import_configs.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+  with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
     for line in infile:
       try:
         parse_line(args, line, counts, dbt, logger)
@@ -168,8 +168,18 @@ def import_cfgs(args, dbt, logger):
   return counts
 
 
+def set_import_cfg_batches(args):
+  """Setting batches for import_configs subcommands"""
+  #import configs
+  if args.batches is not None:
+    args.batch_list = [int(x) for x in args.batches.split(',')]
+  else:
+    args.batch_list = []
+
+
 def run_import_configs(args, logger):
   """Main function"""
+  set_import_cfg_batches(args)
   counts = {}
 
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
@@ -177,5 +187,16 @@ def run_import_configs(args, logger):
   counts = import_cfgs(args, dbt, logger)
 
   logger.info('New configs added: %u', counts['cnt_configs'])
-  if args.import_configs.tag or args.import_configs.tag_only:
+  if args.tag or args.tag_only:
     logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
+
+
+def main():
+  """ main """
+  parser = get_import_cfg_parser(with_yaml=False)
+  args = parser.parse_args()
+  run_import_configs(args, setup_logger('import_configs'))
+
+
+if __name__ == '__main__':
+  main()

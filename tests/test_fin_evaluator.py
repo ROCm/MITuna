@@ -51,7 +51,7 @@ def test_fin_evaluator():
 
   args = CfgImportArgs()
   config_type = ConfigType.convolution
-  dbt = MIOpenDBTables(config_type=args.import_configs.config_type)
+  dbt = MIOpenDBTables(config_type=args.config_type)
   with DbSession() as session:
     dbt.session_id = session.query(dbt.job_table.session).filter(dbt.job_table.state=='compiled')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').first().session

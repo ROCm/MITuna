@@ -27,6 +27,7 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
+import jsonargparse
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.helper import print_solvers
@@ -64,6 +65,7 @@ class MIOpen(MITunaInterface):
             TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
             TunaArgs.DOCKER_NAME
         ])
+    parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
 
     parser.add_argument(
         '--find_mode',
@@ -195,16 +197,6 @@ class MIOpen(MITunaInterface):
       for sub_key in subc_dict:
         if sub_key in vars(self.args):
           self.args[sub_key] = subc_dict.get(sub_key)
-
-  def set_import_cfg_batches(self):
-    """Setting batches for import_configs subcommands"""
-    #import configs
-    if self.args.import_configs.batches is not None:
-      self.args.import_configs.batch_list = [
-          int(x) for x in self.args.import_configs.batches.split(',')
-      ]
-    else:
-      self.args.import_configs.batch_list = []
 
   def check_fin_args(self, parser):
     """! Helper function for fin args
@@ -342,8 +334,7 @@ class MIOpen(MITunaInterface):
       return None
 
     if self.args.subcommand is not None and self.args.subcommand == 'import_configs':
-      self.set_import_cfg_batches()
-      run_import_configs(self.args, self.logger)
+      run_import_configs(self.args.import_configs, self.logger)
       return None
 
     machines = load_machines(self.args)

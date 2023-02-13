@@ -28,12 +28,13 @@
 from tuna.parse_args import TunaArgs, setup_arg_parser
 
 
-def get_import_cfg_parser():
+def get_import_cfg_parser(with_yaml=True):
   """Return parser for import_configs subcommand"""
 
   parser = setup_arg_parser(
       'Import MIOpenDriver commands and MIOpen performance DB entries.',
-      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
+      with_yaml=with_yaml)
   parser.add_argument(
       '-c',
       '--command',
