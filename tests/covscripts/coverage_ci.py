@@ -34,3 +34,5 @@ coverage_file = open(file_path_json)
 coverage_data = json.load(coverage_file)
 percent_covered = coverage_data['totals']['percent_covered']
 percent_covered = '{:.2f}'.format(percent_covered)
+
+print(percent_covered)
