@@ -29,20 +29,20 @@
 import sys
 
 from tuna.mituna_interface import MITunaInterface
-from tuna.helper import print_solvers
+from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args, args_check
-from tuna.miopen.miopen_tables import FinStep, get_miopen_tables
-from tuna.metadata import MIOPEN_ALG_LIST
-from tuna.miopen.fin_class import FinClass
-from tuna.miopen.fin_builder import FinBuilder
-from tuna.miopen.fin_eval import FinEvaluator
+from tuna.miopen.db.miopen_tables import FinStep, get_miopen_tables
+from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
+from tuna.miopen.worker.fin_class import FinClass
+from tuna.miopen.worker.fin_builder import FinBuilder
+from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
-from tuna.miopen.session import Session
+from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
-from tuna.miopen.db_tables import create_tables, recreate_triggers
-from tuna.miopen.miopen_db_helpers import drop_miopen_triggers, get_miopen_triggers
-from tuna.config_type import ConfigType
+from tuna.miopen.db.build_schema import create_tables, recreate_triggers
+from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
+from tuna.miopen.utils.config_type import ConfigType
 
 
 class MIOpen(MITunaInterface):
@@ -69,7 +69,7 @@ class MIOpen(MITunaInterface):
         type=int,
         default=1,
         help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
-        choices=[1, 3])
+        choices=['1', '3'])
     parser.add_argument('--ticket',
                         dest='ticket',
                         type=str,

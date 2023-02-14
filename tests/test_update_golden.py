@@ -25,12 +25,12 @@
 ###############################################################################
 
 import sys
-from tuna.update_golden import merge_golden_entries, get_fdb_entries, create_perf_table, verify_no_duplicates, latest_golden_v
-from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.subcmd.update_golden import merge_golden_entries, get_fdb_entries, create_perf_table, verify_no_duplicates, latest_golden_v
+from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.config_type import ConfigType
-from tuna.miopen.miopen_tables import ConvolutionGolden
-from tuna.find_db import ConvolutionFindDB
+from tuna.miopen.utils.config_type import ConfigType
+from tuna.miopen.db.miopen_tables import ConvolutionGolden
+from tuna.miopen.db.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs
 
 sys.path.append("../tuna")
