@@ -65,8 +65,6 @@ class MIOpen(MITunaInterface):
             TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
             TunaArgs.DOCKER_NAME
         ])
-    parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
-
     parser.add_argument(
         '--find_mode',
         dest='find_mode',

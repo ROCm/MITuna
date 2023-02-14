@@ -70,14 +70,13 @@ class DummyArgs(object):
 
 class CfgImportArgs():
   config_type = ConfigType.convolution
-  args.command = None
-  args.batches = None
-  args.batch_list = []
-  args.file_name = None
-  args.mark_recurrent = False
-  args.tag = None
-  args.tag_only = False
-  args.config_type = ConfigType.convolution
+  command = None
+  batches = None
+  batch_list = []
+  file_name = None
+  mark_recurrent = False
+  tag = None
+  tag_only = False
 
 
 class LdJobArgs():
