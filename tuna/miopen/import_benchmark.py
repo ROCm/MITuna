@@ -35,6 +35,8 @@ from tuna.miopen.tables import MIOpenDBTables
 from tuna.config_type import ConfigType
 from tuna.driver_conv import DriverConvolution
 from tuna.driver_bn import DriverBatchNorm
+from tuna.miopen.parse_miopen_args import get_import_benchmark_parser
+from tuna.utils.logger import setup_logger
 
 
 def print_models(logger):
@@ -49,13 +51,12 @@ def print_models(logger):
 def add_model(args, logger):
   """Add new model and version to the db table"""
   with DbSession() as session:
-    new_model = Model(model=args.import_configs.add_model,
-                      version=args.import_configs.md_version)
+    new_model = Model(model=args.add_model, version=args.md_version)
     try:
       session.add(new_model)
       session.commit()
-      logger.info('Added model %s with version %s ',
-                  args.import_configs.add_model, str(args.md_version))
+      logger.info('Added model %s with version %s ', args.add_model,
+                  str(args.md_version))
     except IntegrityError as err:
       logger.error(err)
       return False
@@ -110,24 +111,22 @@ def get_database_id(framework, fw_version, model, md_version, dbt, logger):
 
 def add_benchmark(args, dbt, logger):
   """Add new benchmark"""
-  mid, fid = get_database_id(args.import_configs.framework,
-                             args.import_configs.fw_version,
-                             args.import_configs.model,
-                             args.import_configs.md_version, dbt, logger)
+  mid, fid = get_database_id(args.framework, args.fw_version, args.model,
+                             args.md_version, dbt, logger)
   print(mid, fid)
   if mid is None:
-    logger.error('Could not find DB entry for model:%s, version:%s',
-                 args.import_configs.model, args.import_configs.md_version)
+    logger.error('Could not find DB entry for model:%s, version:%s', args.model,
+                 args.md_version)
     return False
   if fid is None:
     logger.error('Could not find DB entry for framework:%s, version:%s',
-                 args.import_configs.framework, args.import_configs.fw_version)
+                 args.framework, args.fw_version)
     return False
   commands = []
-  if args.import_configs.driver:
-    commands.append(args.import_configs.driver)
+  if args.driver:
+    commands.append(args.driver)
   else:
-    with open(os.path.expanduser(args.import_configs.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+    with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
       for line in infile:
         commands.append(line)
 
@@ -149,9 +148,9 @@ def add_benchmark(args, dbt, logger):
         benchmark.framework = fid
         benchmark.model = mid
         benchmark.config = db_obj.id
-        benchmark.gpu_number = args.import_configs.gpu_count
+        benchmark.gpu_number = args.gpu_count
         benchmark.driver_cmd = str(driver)
-        benchmark.batchsize = args.import_configs.batchsize
+        benchmark.batchsize = args.batchsize
         session.add(benchmark)
         session.commit()
         count += 1
@@ -163,14 +162,38 @@ def add_benchmark(args, dbt, logger):
   return True
 
 
+def check_import_benchmark_args(args):
+  """Checking args for import_benchmark subcommand"""
+  if args.add_model and not args.md_version:
+    raise ValueError('Version needs to be specified with model')
+  if args.add_benchmark and not (args.model and args.framework and
+                                 args.gpu_count and args.batchsize and
+                                 args.md_version and args.fw_version and
+                                 (args.driver or args.file_name)):
+    raise ValueError(
+        """Model, md_version, framework, fw_version, driver(or filename), batchsize \n
+         and gpus need to all be specified to add a new benchmark""")
+
+
 def run_import_benchmark(args, logger):
   """Main function"""
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
-  if args.import_benchmark.print_models:
+  if args.print_models:
     print_models(logger)
-  if args.import_benchmark.add_model:
+  if args.add_model:
     add_model(args, logger)
-  if args.import_benchmark.update_framework:
+  if args.update_framework:
     update_frameworks(logger)
-  if args.import_benchmark.add_benchmark:
+  if args.add_benchmark:
     add_benchmark(args, dbt, logger)
+
+
+def main():
+  """ main """
+  parser = get_import_benchmark_parser(with_yaml=False)
+  args = parser.parse_args()
+  run_import_benchmark(args, setup_logger('import_benchmark'))
+
+
+if __name__ == '__main__':
+  main()

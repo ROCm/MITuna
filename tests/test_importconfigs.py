@@ -64,8 +64,8 @@ def test_import_conv():
   add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution".format(
       this_path)
   args = CfgImportArgs
-  args.import_configs.file_name = cfg_file
-  args.import_configs.tag = "conv_config_test"
+  args.file_name = cfg_file
+  args.tag = "conv_config_test"
   args.version = '1.0.0'
   counts = import_cfgs(args, dbt, logger)
   os.system(add_cfg_NHWC)
@@ -101,8 +101,8 @@ def test_import_batch_norm():
   add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm".format(
       this_path)
   args = CfgImportArgs
-  args.import_configs.file_name = cfg_file
-  args.import_configs.tag = "bn_config_test"
+  args.file_name = cfg_file
+  args.tag = "bn_config_test"
   args.version = '1.0.0'
   args.config_type = ConfigType.batch_norm
   counts = import_cfgs(args, dbt, logger)

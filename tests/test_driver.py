@@ -38,8 +38,7 @@ from test_fin_builder import CfgImportArgs
 def test_driver():
   args = CfgImportArgs()
   logger = setup_logger('test_driver')
-  dbt = MIOpenDBTables(session_id=None,
-                       config_type=args.import_configs.config_type)
+  dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
   cmd0 = "./bin/MIOpenDriver conv --pad_h 1 --pad_w 1 --out_channels 128 --fil_w 3 --fil_h 3 --dilation_w 1 --dilation_h 1 --conv_stride_w 1 --conv_stride_h 1 --in_channels 128 --in_w 28 --in_h 28 --in_h 28 --batchsize 256 --group_count 1 --in_d 1 --fil_d 1 --in_layout NHWC --fil_layout NHWC --out_layout NHWC -V 0"
   try:
     driver0 = DriverConvolution(cmd0)
@@ -105,9 +104,8 @@ def test_driver():
     assert driver2 == driver_2_row
 
   cmd3 = "./bin/MIOpenDriver bnormfp16 -n 256 -c 64 -H 56 -W 56 -m 1 --forw 1 -b 0 -s 1 -r 1"
-  args.import_configs.config_type = ConfigType.batch_norm
-  dbt2 = MIOpenDBTables(session_id=None,
-                        config_type=args.import_configs.config_type)
+  args.config_type = ConfigType.batch_norm
+  dbt2 = MIOpenDBTables(session_id=None, config_type=args.config_type)
   driver3 = DriverBatchNorm(cmd3)
   d3_str = driver3.to_dict()
   assert d3_str

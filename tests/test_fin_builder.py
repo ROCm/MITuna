@@ -50,11 +50,11 @@ from tuna.utils.logger import setup_logger
 def add_cfgs():
   #import configs
   args = CfgImportArgs()
-  args.import_configs.tag = 'tuna_pytest_fin_builder'
-  args.import_configs.mark_recurrent = True
-  args.import_configs.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
+  args.tag = 'tuna_pytest_fin_builder'
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
-  dbt = MIOpenDBTables(config_type=args.import_configs.config_type)
+  dbt = MIOpenDBTables(config_type=args.config_type)
   counts = import_cfgs(args, dbt, setup_logger('test_fin_builder'))
   return dbt
 

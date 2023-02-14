@@ -65,7 +65,6 @@ class MIOpen(MITunaInterface):
             TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
             TunaArgs.DOCKER_NAME
         ])
-
     parser.add_argument(
         '--find_mode',
         dest='find_mode',
@@ -199,33 +198,6 @@ class MIOpen(MITunaInterface):
       for sub_key in subc_dict:
         if sub_key in vars(self.args):
           self.args[sub_key] = subc_dict.get(sub_key)
-
-  def set_import_cfg_batches(self):
-    """Setting batches for import_configs subcommands"""
-    #import configs
-    if self.args.import_configs.batches is not None:
-      self.args.import_configs.batch_list = [
-          int(x) for x in self.args.import_configs.batches.split(',')
-      ]
-    else:
-      self.args.import_configs.batch_list = []
-
-  def check_import_benchmark_args(self):
-    """Checking args for import_benchmark subcommand"""
-    if self.args.import_benchmark.add_model and not self.args.import_benchmark.md_version:
-      raise ValueError('Version needs to be specified with model')
-    if self.args.import_benchmark.add_benchmark and not (
-        self.args.import_benchmark.model and
-        self.args.import_benchmark.framework and
-        self.args.import_benchmark.gpu_count and
-        self.args.import_benchmark.batchsize and
-        self.args.import_benchmark.md_version and
-        self.args.import_benchmark.fw_version and
-        (self.args.import_benchmark.driver or
-         self.args.import_benchmark.file_name)):
-      raise ValueError(
-          """Model, md_version, framework, fw_version, driver(or filename), batchsize \n
-           and gpus need to all be specified to add a new benchmark""")
 
   def check_fin_args(self, parser):
     """! Helper function for fin args
@@ -363,13 +335,11 @@ class MIOpen(MITunaInterface):
       return None
 
     if self.args.subcommand is not None and self.args.subcommand == 'import_configs':
-      self.set_import_cfg_batches()
-      run_import_configs(self.args, self.logger)
+      run_import_configs(self.args.import_configs, self.logger)
       return None
 
     if self.args.subcommand is not None and self.args.subcommand == 'import_benchmark':
-      self.check_import_benchmark_args()
-      run_import_benchmark(self.args, self.logger)
+      run_import_benchmark(self.args.import_benchmark, self.logger)
 
     machines = load_machines(self.args)
     res = self.compose_worker_list(machines)

@@ -54,9 +54,9 @@ def test_abort():
   logger = setup_logger('test_abort_file')
   session_id = add_test_session()
   args = CfgImportArgs()
-  args.import_configs.tag = 'test_builder'
-  args.import_configs.mark_recurrent = True
-  args.import_configs.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
+  args.tag = 'test_builder'
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
   dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt, logger)
@@ -81,9 +81,9 @@ def test_abort():
 
   connect_db()
   dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
-  if args.import_configs.tag:
+  if args.tag:
     try:
-      tag_name_test(args.import_configs.tag, dbt)
+      tag_name_test(args.tag, dbt)
     except ValueError as terr:
       print(terr)
 

@@ -33,9 +33,9 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.logger import setup_logger
 from utils import DummyArgs
-from tuna.import_benchmark import add_model, update_frameworks, print_models
-from tuna.import_benchmark import add_benchmark
+from tuna.miopen.import_benchmark import add_model, update_frameworks, print_models, add_benchmark
 from tuna.miopen.benchmark import Framework, ModelEnum, FrameworkEnum
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.miopen_tables import ConvolutionBenchmark
@@ -44,6 +44,7 @@ from tuna.config_type import ConfigType
 
 def test_import_benchmark():
   args = DummyArgs
+  logger = setup_logger('utest_import_benchmark')
   models = {
       ModelEnum.ALEXNET: 1.0,
       ModelEnum.GOOGLENET: 2.0,
@@ -52,9 +53,10 @@ def test_import_benchmark():
   for key, value in models.items():
     args.add_model = key.value
     args.version = value
-    add_model(args)
-  print_models()
-  update_frameworks()
+    args.md_version = 1
+    add_model(args, logger)
+  print_models(logger)
+  update_frameworks(logger)
   with DbSession() as session:
     frmks = session.query(Framework).all()
     assert len(frmks) > 0
