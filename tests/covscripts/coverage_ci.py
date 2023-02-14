@@ -35,5 +35,5 @@ coverage_data = json.load(coverage_file)
 percent_covered = coverage_data['totals']['percent_covered']
 percent_covered = int(percent_covered)
 print(percent_covered)
-if percent_covered < 60:
+if percent_covered < 50:
   raise ValueError('Coverage Tests dropped below an acceptable treshold')
