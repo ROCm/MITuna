@@ -35,7 +35,7 @@ this_path = os.path.dirname(__file__)
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from utils import DummyArgs
-from tuna.miopen.import_benchmark import add_model, update_frameworks, print_models, add_benchmark
+from tuna.miopen.import_benchmark import add_model, add_frameworks, print_models, add_benchmark
 from tuna.miopen.benchmark import Framework, ModelEnum, FrameworkEnum
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.miopen.miopen_tables import ConvolutionBenchmark
@@ -56,7 +56,17 @@ def test_import_benchmark():
     args.md_version = 1
     add_model(args, logger)
   print_models(logger)
-  update_frameworks(logger)
+
+  frameworks = {
+      FrameworkEnum.PYTORCH: 1.0,
+      FrameworkEnum.TENSORFLOW: 1.0,
+      FrameworkEnum.MIGRAPH: 1.0
+  }
+  for key, value in frameworks.items():
+    args.add_framework = key.value
+    args.version = value
+    args.fw_version = 1
+    add_frameworks(args, logger)
   with DbSession() as session:
     frmks = session.query(Framework).all()
     assert len(frmks) > 0

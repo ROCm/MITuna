@@ -88,14 +88,14 @@ def get_import_benchmark_parser(with_yaml=True):
   group1 = parser.add_mutually_exclusive_group()
   group2 = parser.add_mutually_exclusive_group()
   group3 = parser.add_mutually_exclusive_group()
-  group1.add_argument('--update_framework',
-                      action="store_true",
-                      dest='update_framework',
-                      help='Populate framework table with all framework enums')
+  group1.add_argument(
+      '--add_framework',
+      dest='add_framework',
+      choices=[frm.value for frm in FrameworkEnum],
+      help='Populate framework table with new framework and version')
   group2.add_argument('--add_model',
                       dest='add_model',
                       choices=[model.value for model in ModelEnum],
-                      type=ModelEnum,
                       help='Populate table with new model and version')
   group3.add_argument('--print_models',
                       dest='print_models',

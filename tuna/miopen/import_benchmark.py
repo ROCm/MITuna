@@ -30,7 +30,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen.benchmark import Framework, Model, FrameworkEnum
+from tuna.miopen.benchmark import Framework, Model
 from tuna.miopen.tables import MIOpenDBTables
 from tuna.config_type import ConfigType
 from tuna.driver_conv import DriverConvolution
@@ -64,19 +64,19 @@ def add_model(args, logger):
   return True
 
 
-def update_frameworks(logger):
+def add_frameworks(args, logger):
   """Bring DB table up to speed with enums defined in FrameworkEnum"""
   with DbSession() as session:
-    for elem in FrameworkEnum:
-      try:
-        new_fmk = Framework(framework=elem)
-        session.add(new_fmk)
-        session.commit()
-        logger.info('Added new framework %s', elem)
-      except IntegrityError as ierr:
-        logger.warning(ierr)
-        session.rollback()
-        continue
+    new_framework = Framework(framework=args.add_framework,
+                              version=args.fw_version)
+    try:
+      session.add(new_framework)
+      session.commit()
+      logger.info('Added framework %s with version %s ', args.add_framework,
+                  str(args.fw_version))
+    except IntegrityError as err:
+      logger.error(err)
+      return False
 
   return True
 
@@ -95,7 +95,7 @@ def get_database_id(framework, fw_version, model, md_version, dbt, logger):
     except NoResultFound as dberr:
       logger.error(dberr)
       logger.error(
-          'Framework not present in the DB. Please run --update_framework to populate the DB table'
+          'Framework not present in the DB. Please run --add_framework to populate the DB table'
       )
     try:
       res = session.query(dbt.model.id).filter(dbt.model.model == model)\
@@ -182,8 +182,8 @@ def run_import_benchmark(args, logger):
     print_models(logger)
   if args.add_model:
     add_model(args, logger)
-  if args.update_framework:
-    update_frameworks(logger)
+  if args.add_framework:
+    add_frameworks(args, logger)
   if args.add_benchmark:
     add_benchmark(args, dbt, logger)
 
