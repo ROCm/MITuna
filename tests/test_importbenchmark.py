@@ -81,7 +81,7 @@ def test_import_benchmark():
   args.batchsize = 512
   args.file_name = "{0}/../utils/configs/conv_configs_NHWC.txt".format(
       this_path)
-  add_benchmark(args, dbt)
+  add_benchmark(args, dbt, logger)
   with DbSession() as session:
     bk_entries = session.query(ConvolutionBenchmark).all()
     assert len(bk_entries) > 0
