@@ -27,7 +27,6 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
-import jsonargparse
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.helper import print_solvers
