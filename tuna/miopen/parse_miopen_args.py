@@ -130,13 +130,13 @@ def get_import_benchmark_parser(with_yaml=True):
                       help='Specify number of gpus the benchmark runs on')
   parser.add_argument('--md_version',
                       dest='md_version',
-                      type=str,
+                      type=int,
                       default=None,
                       required=False,
                       help='Specify model version')
   parser.add_argument('--fw_version',
                       dest='fw_version',
-                      type=str,
+                      type=int,
                       default=None,
                       required=False,
                       help='Specify framework version')

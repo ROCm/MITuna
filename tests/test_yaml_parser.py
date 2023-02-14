@@ -48,14 +48,13 @@ def test_yaml_parser():
 
 def parse_miopen_yaml(miopen_yaml, miopen):
   yaml_files = parse_yaml(miopen_yaml, miopen)
-  assert len(yaml_files) == 3
+  assert len(yaml_files) == 4
 
   yaml_dicts = []
   #reading in initial yaml file split in 2 yaml files
   for yfile in yaml_files:
     with open(yfile, encoding="utf8") as stream:
       yaml_dict = yaml.safe_load(stream)
-      print(yaml_dict)
       yaml_dicts.append(yaml_dict)
 
   dict1 = {
@@ -97,9 +96,26 @@ def parse_miopen_yaml(miopen_yaml, miopen):
       'session_id': 1
   }
 
+  dict4 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'import_benchmark': {
+          'add_model': 'Alexnet',
+          'file_name': '../utils/configs/reccurent_cfgs/alexnet.txt',
+          'md_version': 1
+      },
+      'label': 'Example',
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
+
   assert (yaml_dicts[0] == dict1)
   assert (yaml_dicts[1] == dict2)
   assert (yaml_dicts[2] == dict3)
+  assert (yaml_dicts[3] == dict4)
 
 
 def parse_example_yaml(example_yaml, example):

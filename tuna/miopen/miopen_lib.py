@@ -340,6 +340,7 @@ class MIOpen(MITunaInterface):
 
     if self.args.subcommand is not None and self.args.subcommand == 'import_benchmark':
       run_import_benchmark(self.args.import_benchmark, self.logger)
+      return None
 
     machines = load_machines(self.args)
     res = self.compose_worker_list(machines)
