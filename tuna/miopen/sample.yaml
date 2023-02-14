@@ -1,0 +1,39 @@
+---
+# common script arguments
+# yamllint disable rule:key-duplicates
+arch: 'gfx908'
+num_cu: 120
+config_type: 'convolution'
+session_id: 1
+remote_machine: false
+label: 'Example'
+restart_machine: false
+docker_name: 'my_docker_name'
+
+
+add_tables:
+  enabled: true
+
+init_session:
+  enabled: true
+
+update_applicability:
+  enabled: false
+  session_id: 1
+
+list_solvers:
+  enabled: false
+
+fin_steps:
+  enabled: false
+  all_configs: true
+  fin_steps: 'miopen_find_compile'
+  label: 'fin_find_compile'
+  session_id: 4
+
+fin_steps:
+  enabled: false
+  all_configs: true
+  fin_steps: 'miopen_find_eval'
+  label: 'fin_find_compile'
+  session_id: 1

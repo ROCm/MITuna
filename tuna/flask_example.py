@@ -31,7 +31,7 @@ from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.utility import get_env_vars
 from tuna.grafana_dict import EXAMPLE_TABLE
-from tuna.find_db import ConvolutionFindDB
+from tuna.miopen.db.find_db import ConvolutionFindDB
 
 LOGGER = setup_logger('flask')
 ENV_VARS = get_env_vars()
