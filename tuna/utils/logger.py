@@ -27,7 +27,7 @@
 """logger file"""
 import logging
 import os
-from tuna.metadata import TUNA_LOG_DIR
+from tuna.miopen.utils.metadata import TUNA_LOG_DIR
 
 
 def setup_logger(logger_name='Tuna',

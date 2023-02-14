@@ -33,12 +33,12 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.miopen.fin_eval import FinEvaluator
+from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.db.tables import MIOpenDBTables
 from dummy_machine import DummyMachine
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from utils import CfgImportArgs
 
 

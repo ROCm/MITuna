@@ -34,7 +34,8 @@ this_path = os.path.dirname(__file__)
 
 from tuna.sql import DbCursor
 from tuna.utils.logger import setup_logger
-from tuna.find_db import ConvolutionFindDB
+from tuna.miopen.db.find_db import ConvolutionFindDB
+from utils import CfgImportArgs, LdJobArgs
 
 
 def parsing(find_db):

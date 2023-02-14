@@ -41,7 +41,7 @@ def buildSchema(){
     def create_sql = $/ "CREATE DATABASE ${db_name};"/$
     sh "${cmd} -e ${drop_sql}"
     sh "${cmd} -e ${create_sql}"
-    sh "./tuna/miopen/db_tables.py"
+    sh "./tuna/miopen/db/build_schema.py"
 }
 
 def cleanup() {
@@ -167,7 +167,7 @@ def finFindCompile(){
         println "Count(*) conv_config table: ${num_cfg}"
         runsql("delete from conv_job;")
         runsql("alter table conv_job AUTO_INCREMENT=1;")
-        sh "./tuna/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
+        sh "./tuna/miopen/subcmd/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         sh "opentelemetry-instrument python3 ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
@@ -181,7 +181,7 @@ def finFindCompile(){
         println "Count(*) conv_config table: ${num_cfg_nhwc}"
         //runsql("delete from conv_job;")
         //runsql("alter table conv_job AUTO_INCREMENT=1;")
-        sh "./tuna/load_job.py -l finFind_${branch_id}_nhwc -t recurrent_${branch_id}_nhwc --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
+        sh "./tuna/miopen/subcmd/load_job.py -l finFind_${branch_id}_nhwc -t recurrent_${branch_id}_nhwc --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
         def num_compiled_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
@@ -192,7 +192,7 @@ def finFindCompile(){
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt"
         def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg_nchw}"
-        sh "./tuna/load_job.py -l finFind_${branch_id}_nchw -t recurrent_${branch_id}_nchw --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
+        sh "./tuna/miopen/subcmd/load_job.py -l finFind_${branch_id}_nchw -t recurrent_${branch_id}_nchw --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nchw --session_id ${sesh1}"
         def num_compiled_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
@@ -226,14 +226,14 @@ def finFindEval(){
             error("Unable to evaluate find jobs using Fin")
         }
         def MIOPEN_BRANCH = runsql("SELECT miopen_v from session WHERE id=1;")
-        def fdb_file = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
+        def fdb_file = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts  "${fdb_file}"
-        def kdb_file = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
+        def kdb_file = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts "${kdb_file}"
 
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
-        def fdb_file_nhwc = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
+        def fdb_file_nhwc = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
         def num_evaluated_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
         if (num_evaluated_jobs_nhwc != num_jobs_nhwc){
@@ -241,12 +241,12 @@ def finFindEval(){
         }
 
         archiveArtifacts  "${fdb_file_nhwc}"
-        def kdb_file_nhwc = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1} --filename kdb_nhwc", returnStdout: true)
+        def kdb_file_nhwc = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1} --filename kdb_nhwc", returnStdout: true)
         archiveArtifacts "${kdb_file_nhwc}"
 
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
-        def fdb_file_nchw = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
+        def fdb_file_nchw = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
         def num_evaluated_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
         if (num_evaluated_jobs_nchw != num_jobs_nchw){
@@ -254,7 +254,7 @@ def finFindEval(){
         }
 
         archiveArtifacts  "${fdb_file_nchw}"
-        def kdb_file_nchw = sh(script: "./tuna/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
+        def kdb_file_nchw = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts "${kdb_file_nchw}"
     }
 }
@@ -292,7 +292,7 @@ def loadJobTest() {
 
         //reset job table
         runsql("DELETE FROM conv_job;")
-        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} --session_id ${sesh1} ${job_lim}"
+        sh "./tuna/miopen/subcmd/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} --session_id ${sesh1} ${job_lim}"
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and session=${sesh1} ;")
         assert out.toInteger() > 0
 
@@ -300,7 +300,7 @@ def loadJobTest() {
         // dump the added jobs for version 2
         def out_bn = runsql("SELECT count(*) FROM bn_config_tags WHERE tag='batch_norm_test' ;")
         assert out_bn.toInteger() > 0
-        sh "./tuna/load_job.py -t batch_norm_test -l batch_norm_test -C batch_norm --session_id ${sesh2}"
+        sh "./tuna/miopen/subcmd/load_job.py -t batch_norm_test -l batch_norm_test -C batch_norm --session_id ${sesh2}"
         out_bn = runsql("SELECT count(*) FROM bn_job WHERE reason='batch_norm_test' and session=${sesh2} ;")
         assert out_bn.toInteger() > 0
 
@@ -310,7 +310,7 @@ def loadJobTest() {
         runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 1, 1, 26, 1);")
         runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 2, 1, 26, 1);")
         runsql("INSERT IGNORE INTO conv_solver_applicability(valid, applicable, config, solver, session) VALUES (1, 3, 1, 26, 1);")
-        sh "./tuna/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} -s ConvHipImplicitGemmV4R1Fwd --session_id ${sesh1}"
+        sh "./tuna/miopen/subcmd/load_job.py -t recurrent_${branch_id} -l recurrent_${branch_id} -s ConvHipImplicitGemmV4R1Fwd --session_id ${sesh1}"
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and solver='ConvHipImplicitGemmV4R1Fwd' and session=${sesh1};")
         assert out.toInteger() > 0
     }
@@ -426,7 +426,7 @@ def perfEval_gfx908() {
 
         def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
         def next_gold_v = last_gold_v.toInteger() + 1
-        sh "./tuna/update_golden.py --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
+        sh "./tuna/miopen/subcmd/update_golden.py --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())
@@ -543,8 +543,8 @@ def runLint() {
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
-            sh "cd tuna && mypy analyze_parse_db.py"
-            sh "cd tuna && mypy build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
+            sh "cd tuna && mypy miopen/utils/analyze_parse_db.py --ignore-missing-imports"
+            sh "cd tuna && mypy miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/*.yaml"
             sh "yamllint tuna/example/*.yaml"
           }
@@ -618,8 +618,8 @@ def LoadJobs()
       env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
       env.TUNA_LOGLEVEL="${tuna_loglevel}" 
 
-      echo "/tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}"
-      sh "python3 /tuna/tuna/load_job.py --session_id ${params.session_id} ${script_args}"
+      echo "/tuna/tuna/miopen/subcmd/load_job.py --session_id ${params.session_id} ${script_args}"
+      sh "python3 /tuna/tuna/miopen/subcmd/load_job.py --session_id ${params.session_id} ${script_args}"
   }
   tuna_docker.push()
 }

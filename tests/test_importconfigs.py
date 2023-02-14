@@ -32,10 +32,10 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.miopen.import_configs import import_cfgs
-from tuna.sql import DbCursor
-from tuna.miopen.tables import MIOpenDBTables, ConfigType
 from tuna.utils.logger import setup_logger
+from tuna.miopen.subcmd.import_configs import import_cfgs
+from tuna.sql import DbCursor
+from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from utils import CfgImportArgs
 
 
