@@ -37,8 +37,8 @@ from sqlalchemy import create_engine
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
-from tuna.miopen.miopen_tables import Solver
-from tuna.metadata import NUM_SQL_RETRIES
+from tuna.miopen.db.miopen_tables import Solver
+from tuna.miopen.utils.metadata import NUM_SQL_RETRIES
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 from tuna.utils.utility import SimpleDict
