@@ -26,7 +26,10 @@
 ###############################################################################
 """ Module for tagging and importing configs """
 import os
+import logging
+import argparse
 from sqlalchemy.exc import IntegrityError
+from typeing import Any, Optional
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db, ENGINE
@@ -36,11 +39,13 @@ from tuna.miopen.db.tables import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.driver.batchnorm import DriverBatchNorm
 from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.miopen.driver.batchnorm import DriverBatchNorm
+from tuna.miopen.driver.convolution import DriverConvolution
 
 
-def create_query(tag, mark_recurrent, config_id):
+def create_query(tag: str, mark_recurrent: bool, config_id: int) -> dict:
   """Helper function to build query to add tag"""
-  query_dict = {}
+  query_dict: dict
   if tag is None and mark_recurrent:
     query_dict = {"config": config_id, "recurrent": 1}
   elif tag is not None and not mark_recurrent:
@@ -50,7 +55,12 @@ def create_query(tag, mark_recurrent, config_id):
   return query_dict
 
 
-def tag_config_v2(driver, counts, dbt, args, logger, new_cf=None):
+def tag_config_v2(driver: Any[DriverConvolution, DriverBatchNorm],
+                  counts: dict,
+                  dbt: MIOpenDBTables,
+                  args: argparse.Namespace,
+                  logger: logging.Logger,
+                  new_cf: Any[bool, None] = None) -> bool:
   """Adds tag for a config formatted from the fds structure.
         If mark_recurrent is ussed then it also marks it as such.
         Updates counter for tagged configs"""
@@ -86,7 +96,9 @@ def tag_config_v2(driver, counts, dbt, args, logger, new_cf=None):
   return True
 
 
-def insert_config(driver, counts, dbt, args, logger):
+def insert_config(driver: Any[DriverConvolution, DriverBatchNorm], counts: dict,
+                  dbt: MIOpenDBTables, args: argparse.Namespace,
+                  logger: logging.Logger) -> Optional[Any]:
   """Inserts new config in the DB computed from the fds structure.
         Tags the newly inserted config. It config already exists,
         it will only tag it and log a warning for duplication."""
@@ -120,7 +132,9 @@ def insert_config(driver, counts, dbt, args, logger):
   return new_cf.id
 
 
-def process_config_line_v2(driver, args, counts, dbt, logger):
+def process_config_line_v2(driver: Any[DriverConvolution, DriverBatchNorm],
+                           args: argparse.Namespace, counts: dict,
+                           dbt: MIOpenDBTables, logger: logging.Logger) -> bool:
   """Assumes config passed already exists and will skip the insert step
         if tag_only present. Otherwise it will first try and insert and
         then tag."""
@@ -132,7 +146,8 @@ def process_config_line_v2(driver, args, counts, dbt, logger):
   return True
 
 
-def parse_line(args, line, counts, dbt, logger):
+def parse_line(args: argparse.Namespace, line: str, counts: dict,
+               dbt: MIOpenDBTables, logger: logging.Logger) -> bool:
   """parse a driver line or fdb line from an input file and insert the config"""
   if args.config_type == ConfigType.batch_norm:
     driver = DriverBatchNorm(line, args.command)
@@ -150,11 +165,12 @@ def parse_line(args, line, counts, dbt, logger):
   return True
 
 
-def import_cfgs(args, dbt, logger):
+def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
+                logger: logging.Logger) -> dict:
   """import configs to mysql from file with driver invocations"""
   connect_db()
 
-  counts = {}
+  counts: dict
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
   with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
@@ -168,7 +184,7 @@ def import_cfgs(args, dbt, logger):
   return counts
 
 
-def set_import_cfg_batches(args):
+def set_import_cfg_batches(args: argparse.Namespace):
   """Setting batches for import_configs subcommands"""
   #import configs
   if args.batches is not None:
@@ -177,7 +193,7 @@ def set_import_cfg_batches(args):
     args.batch_list = []
 
 
-def run_import_configs(args, logger):
+def run_import_configs(args: argparse.Namespace, logger: logging.Logger):
   """Main function"""
   set_import_cfg_batches(args)
   counts = {}

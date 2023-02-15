@@ -25,10 +25,12 @@
 #
 ###############################################################################
 """Module to represent MIOpen subcommands parsers"""
+import jsonargparse
 from tuna.parse_args import TunaArgs, setup_arg_parser
 
 
-def get_import_cfg_parser(with_yaml=True):
+def get_import_cfg_parser(
+    with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """Return parser for import_configs subcommand"""
 
   parser = setup_arg_parser(
