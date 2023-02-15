@@ -545,9 +545,9 @@ def runLint() {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
             sh "mypy tuna/miopen/utils/analyze_parse_db.py --ignore-missing-imports"
             sh "mypy tuna/miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/subcmd/import_configs.py -ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/parse_miopen_args.py -ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/yaml_parser.py -ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/subcmd/import_configs.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/*.yaml"
             sh "yamllint tuna/example/*.yaml"
           }
