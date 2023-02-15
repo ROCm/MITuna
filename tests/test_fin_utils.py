@@ -24,12 +24,12 @@
 # SOFTWARE.
 #
 ###############################################################################
-import tuna.miopen.fin_utils as fu
-from tuna.miopen.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorTable
+import tuna.miopen.worker.fin_utils as fu
+from tuna.miopen.db.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorTable
 from multiprocessing import Value, Lock, Queue
-from tuna.metadata import LOG_TIMEOUT
-from tuna.miopen.session import Session
-from tuna.miopen.tables import MIOpenDBTables, ConfigType
+from tuna.miopen.utils.metadata import LOG_TIMEOUT
+from tuna.miopen.db.session import Session
+from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 
 
 def test_fin_utils():

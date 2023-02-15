@@ -28,19 +28,21 @@
 
 import os
 import tempfile
+from typing import List, Any
 import yaml
+
 from tuna.libraries import Library
 from tuna.parse_args import TunaArgs
 from tuna.miopen.metadata import MIOPEN_TUNING_STEPS, MIOPEN_SINGLE_OP, MIOPEN_SUBCOMMANDS
 from tuna.example.metadata import EXAMPLE_TUNING_STEPS, EXAMPLE_SINGLE_OP
 
 
-def parse_yaml(filename, lib):
+def parse_yaml(filename: str, lib: Library) -> List[str]:
   """Parses input yaml file and returns 1 or multiple yaml files(when library support
      for multiple yaml files is provided).
      Multiple yaml files are returned when more that 1 step per initial yaml file
      are specified."""
-  yaml_dict = None
+  yaml_dict: dict = {}
   yaml_files = []
   with open(os.path.expanduser(filename), encoding="utf8") as stream:
     try:
@@ -57,15 +59,15 @@ def parse_yaml(filename, lib):
                                 EXAMPLE_SINGLE_OP)
   else:
     #return current yaml file without custom parsing
-    return filename
+    yaml_files.append(filename)
 
   return yaml_files
 
 
-def get_common_yaml(yaml_dict):
+def get_common_yaml(yaml_dict: dict) -> dict:
   """Set TunaArgs common yaml fields"""
   common_args = [enum.value for enum in TunaArgs]
-  common_yaml_part = {}
+  common_yaml_part: dict = {}
 
   #extract common TunaArgs
   for key in yaml_dict:
@@ -75,7 +77,7 @@ def get_common_yaml(yaml_dict):
   return common_yaml_part
 
 
-def dump_yaml(new_yaml):
+def dump_yaml(new_yaml: dict) -> str:
   """Dump yaml file to /tmp"""
   _, local_file = tempfile.mkstemp()
   with open(local_file, 'w', encoding="utf8") as outfile:
@@ -84,40 +86,44 @@ def dump_yaml(new_yaml):
   return local_file
 
 
-def get_yaml_files(original_yaml_dict,
-                   tuning_steps,
-                   single_op,
-                   subcommands=None):
+def get_yaml_files(original_yaml_dict: dict,
+                   tuning_steps: List[str],
+                   single_op: List[str],
+                   subcommands: Any[List[str], None] = None) -> List[str]:
   """Split initial YAML file to multiple files and return list of files"""
   yaml_files = []
+  yaml_dict: dict = {}
   yaml_dict = original_yaml_dict.copy()
+  common_yaml_part: dict
   common_yaml_part = get_common_yaml(yaml_dict)
-
   for key in yaml_dict:
+    new_yaml: dict
     new_yaml = common_yaml_part.copy()
-    if key in tuning_steps and yaml_dict.get(key).get('enabled'):
-      #only look at enabled items
-      yaml_dict[key].pop('enabled', None)
+    val = yaml_dict.get(key)
+    if val:
+      if key in tuning_steps and val.get('enabled'):
+        #only look at enabled items
+        yaml_dict[key].pop('enabled', None)
 
-      #append nested dicts for non-subcommand items
-      for key2, value2 in yaml_dict.get(key).items():
-        new_yaml[key2] = value2
+        #append nested dicts for non-subcommand items
+        for key2, value2 in val.items():
+          new_yaml[key2] = value2
 
-      if key in single_op:
-        new_yaml[key] = True
-      yaml_files.append(dump_yaml(new_yaml))
-    elif subcommands is not None and key in subcommands and yaml_dict.get(
-        key).get('enabled'):
-      #only look at enabled items
-      yaml_dict[key].pop('enabled', None)
-      #append subcommands as they are
-      new_yaml[key] = yaml_dict.get(key)
+        if key in single_op:
+          new_yaml[key] = True
+        yaml_files.append(dump_yaml(new_yaml))
+      elif subcommands is not None and key in subcommands and val.get(
+          'enabled'):
+        #only look at enabled items
+        yaml_dict[key].pop('enabled', None)
+        #append subcommands as they are
+        new_yaml[key] = yaml_dict.get(key)
 
-      #overwrite common arg with subcommand arg value
-      for subc_k in yaml_dict.get(key):
-        if subc_k in yaml_dict.keys():
-          new_yaml[subc_k] = yaml_dict.get(key).get(subc_k)
+        #overwrite common arg with subcommand arg value
+        for subc_k in val:
+          if subc_k in yaml_dict.keys():
+            new_yaml[subc_k] = val.get(subc_k)
 
-      yaml_files.append(dump_yaml(new_yaml))
+        yaml_files.append(dump_yaml(new_yaml))
 
   return yaml_files

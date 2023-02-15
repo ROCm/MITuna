@@ -29,7 +29,7 @@ import sys
 from enum import Enum
 from typing import List
 import jsonargparse
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 
 
 class TunaArgs(Enum):
@@ -158,7 +158,7 @@ def args_check(args, parser):
 
   args.local_machine = not args.remote_machine
 
-  if args.subcommand is not None and args.subcommand == 'init_session' and not args.label:
+  if args.init_session and not args.label:
     parser.error(
         "When setting up a new tunning session the following must be specified: "\
         "label.")

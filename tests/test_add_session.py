@@ -37,7 +37,7 @@ this_path = os.path.dirname(__file__)
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
-from tuna.miopen.session import Session
+from tuna.miopen.db.session import Session
 from utils import DummyArgs
 
 
