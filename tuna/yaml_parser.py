@@ -28,7 +28,7 @@
 
 import os
 import tempfile
-from typing import List, Any
+from typing import List, Union
 import yaml
 
 from tuna.libraries import Library
@@ -89,7 +89,7 @@ def dump_yaml(new_yaml: dict) -> str:
 def get_yaml_files(original_yaml_dict: dict,
                    tuning_steps: List[str],
                    single_op: List[str],
-                   subcommands: Any[List[str], None] = None) -> List[str]:
+                   subcommands: Union[List[str], None] = None) -> List[str]:
   """Split initial YAML file to multiple files and return list of files"""
   yaml_files = []
   yaml_dict: dict = {}

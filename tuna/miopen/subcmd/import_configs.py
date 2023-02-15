@@ -29,7 +29,7 @@ import os
 import logging
 import argparse
 from sqlalchemy.exc import IntegrityError
-from typeing import Any, Optional
+from typing import Any, Optional, Union
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db, ENGINE
@@ -55,12 +55,13 @@ def create_query(tag: str, mark_recurrent: bool, config_id: int) -> dict:
   return query_dict
 
 
-def tag_config_v2(driver: Any[DriverConvolution, DriverBatchNorm],
-                  counts: dict,
-                  dbt: MIOpenDBTables,
-                  args: argparse.Namespace,
-                  logger: logging.Logger,
-                  new_cf: Any[bool, None] = None) -> bool:
+def tag_config_v2(
+    driver: Union[DriverConvolution, DriverBatchNorm],
+    counts: dict,
+    dbt: MIOpenDBTables,
+    args: argparse.Namespace,
+    logger: logging.Logger,
+    new_cf: Union[DriverConvolution, DriverBatchNorm, None] = None) -> bool:
   """Adds tag for a config formatted from the fds structure.
         If mark_recurrent is ussed then it also marks it as such.
         Updates counter for tagged configs"""
@@ -96,8 +97,8 @@ def tag_config_v2(driver: Any[DriverConvolution, DriverBatchNorm],
   return True
 
 
-def insert_config(driver: Any[DriverConvolution, DriverBatchNorm], counts: dict,
-                  dbt: MIOpenDBTables, args: argparse.Namespace,
+def insert_config(driver: Union[DriverConvolution, DriverBatchNorm],
+                  counts: dict, dbt: MIOpenDBTables, args: argparse.Namespace,
                   logger: logging.Logger) -> Optional[Any]:
   """Inserts new config in the DB computed from the fds structure.
         Tags the newly inserted config. It config already exists,
@@ -132,7 +133,7 @@ def insert_config(driver: Any[DriverConvolution, DriverBatchNorm], counts: dict,
   return new_cf.id
 
 
-def process_config_line_v2(driver: Any[DriverConvolution, DriverBatchNorm],
+def process_config_line_v2(driver: Union[DriverConvolution, DriverBatchNorm],
                            args: argparse.Namespace, counts: dict,
                            dbt: MIOpenDBTables, logger: logging.Logger) -> bool:
   """Assumes config passed already exists and will skip the insert step
