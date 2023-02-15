@@ -174,6 +174,7 @@ ADD tests /tuna/tests/
 ADD utils /tuna/utils/
 ADD requirements.txt /tuna/
 WORKDIR /tuna
+ENV PYTHONPATH=/tuna
 
 RUN python3 setup.py install
 
