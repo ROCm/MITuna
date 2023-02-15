@@ -1,11 +1,11 @@
 alembic==1.8.1
 asn1crypto==0.24.0
-astroid==2.14.1
+astroid==2.14.2
 attrs==19.3.0
 backcall==0.1.0
 bcrypt==3.1.4
 breathe==4.30.0
-cryptography==3.3.2
+cryptography==39.0.1
 decorator==4.3.0
 docutils<0.17 # sphinx-rtd-theme 0.5.2 requires docutils<0.17
 flask==2.0.1
