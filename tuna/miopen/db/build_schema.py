@@ -24,39 +24,43 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for Flask functionality"""
-
-from sqlalchemy import create_engine
+""" Module for creating DB tables"""
+from sqlalchemy.exc import OperationalError
+from tuna.miopen.db.miopen_tables import get_miopen_tables
+from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
+from tuna.db_engine import ENGINE
 from tuna.utils.logger import setup_logger
-from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.utility import get_env_vars
-from tuna.grafana_dict import EXAMPLE_TABLE
-from tuna.miopen.db.find_db import ConvolutionFindDB
+from tuna.utils.db_utility import create_tables
 
-LOGGER = setup_logger('flask')
-ENV_VARS = get_env_vars()
-ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" +\
-                         f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
+#pylint: disable=too-few-public-methods
+LOGGER = setup_logger('db_tables')
 
 
-def get_table_example(grafana_req, data):
-  """example on how to populate a table for a Grafana dashboard"""
+def recreate_triggers(drop_triggers, create_triggers):
+  """Drop and recreate triggers"""
 
-  LOGGER.info('Request: %s', grafana_req)
-  #Populate the table with dummy data
-  EXAMPLE_TABLE['rows'].append(['val1', 'ex1', '1', '1.05'])
-  EXAMPLE_TABLE['rows'].append(['val2', 'ex2', '2', '1.06'])
-  EXAMPLE_TABLE['rows'].append(['val3', 'ex3', '3', '1.06'])
-  EXAMPLE_TABLE['rows'].append(['val4', 'ex4', '4', '1.08'])
+  with ENGINE.connect() as conn:
+    for dtg in drop_triggers:
+      conn.execute(f"drop trigger if exists {dtg}")
+    for trg in create_triggers:
+      try:
+        conn.execute(trg)
+      except OperationalError as oerr:
+        LOGGER.warning("Operational Error occured while adding trigger: '%s'",
+                       trg)
+        LOGGER.info('%s \n', oerr)
+        continue
 
-  #To populate the table with data from your DB:
-  with DbSession() as session:
-    query = session.query(ConvolutionFindDB.valid,
-                          ConvolutionFindDB.kernel_time).limit(5).all()
-    for res in query:
-      EXAMPLE_TABLE['rows'].append([res[0], res[1], res[2], res[3]])
+  return True
 
-  #The data variable will contain both dummy and db data
 
-  data.append(EXAMPLE_TABLE)
-  return data
+def main():
+  """Main script function"""
+  #setup MIOpen DB
+  ret_t = create_tables(get_miopen_tables())
+  LOGGER.info('DB creation successful: %s', ret_t)
+  recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
+
+
+if __name__ == '__main__':
+  main()

@@ -32,9 +32,9 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.import_configs import import_cfgs
+from tuna.miopen.subcmd.import_configs import import_cfgs
 from tuna.sql import DbCursor
-from tuna.miopen.tables import MIOpenDBTables, ConfigType
+from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from utils import CfgImportArgs
 
 
@@ -59,7 +59,7 @@ def test_import_conv():
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/conv_configs_NHWC.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna/import_configs.py -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution".format(
+  add_cfg_NHWC = "{0}/../tuna.miopen.subcmd.import_configs.py -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file
@@ -95,7 +95,7 @@ def test_import_batch_norm():
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/batch_norm.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna/import_configs.py -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm".format(
+  add_cfg_NHWC = "{0}/../tuna.miopen.subcmd.import_configs.py -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file
