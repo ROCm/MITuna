@@ -529,6 +529,31 @@ def pytestSuite3() {
            sh "coverage report -m"
            sh "python3 -m coverage json"
            sh "python3 tests/covscripts/coverage_branches.py"
+        }
+    }
+}
+
+def CoverageExport() {
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
+    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        //addMachine(arch, num_cu)
+        // download the latest perf db
+        //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
+        sshagent (credentials: ['bastion-ssh-key']) {                 
+           // test fin builder and test fin builder conv in sequence
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
+           sh "coverage report -m"
+           sh "python3 -m coverage json"
            sh "python3 tests/covscripts/coverage_develop.py"
            sh "ls"
         }
