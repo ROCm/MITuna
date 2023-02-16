@@ -171,7 +171,7 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
   """import configs to mysql from file with driver invocations"""
   connect_db()
 
-  counts: dict
+  counts: dict = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
   with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
@@ -197,7 +197,6 @@ def set_import_cfg_batches(args: argparse.Namespace):
 def run_import_configs(args: argparse.Namespace, logger: logging.Logger):
   """Main function"""
   set_import_cfg_batches(args)
-  counts = {}
 
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
 
