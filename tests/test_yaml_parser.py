@@ -100,7 +100,7 @@ def parse_miopen_yaml(miopen_yaml, miopen):
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
-      'import_benchmark': {
+      'import_configs': {
           'add_model': 'Alexnet',
           'file_name': '../utils/configs/reccurent_cfgs/alexnet.txt',
           'md_version': 1

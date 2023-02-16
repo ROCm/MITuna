@@ -32,7 +32,7 @@ MIOPEN_TUNING_STEPS = [
     'check_status', 'execute_cmd'
 ]
 
-MIOPEN_SUBCOMMANDS = ['import_configs', 'import_benchmark']
+MIOPEN_SUBCOMMANDS = ['import_configs']
 
 #tuning steps with 1 argument (possibly also --session_id)
 MIOPEN_SINGLE_OP = [
