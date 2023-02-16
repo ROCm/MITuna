@@ -36,4 +36,4 @@ percent_covered = coverage_data['totals']['percent_covered']
 percent_covered = '{:.2f}'.format(percent_covered)
 
 with open('develop_percent_coverage.txt', 'w') as f:
-    f.write(percent_covered)
+  f.write(percent_covered)
