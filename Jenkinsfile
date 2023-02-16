@@ -75,7 +75,7 @@ pipeline {
             }
             }
         }
-        if (branch == "rk_test_develop"){
+        if(branch == "rk_test_develop"){
             stage("pytest3 and CovExport"){
             agent{  label utils.rocmnode("tunatest") }
             steps{
