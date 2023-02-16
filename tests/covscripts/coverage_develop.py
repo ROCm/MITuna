@@ -28,9 +28,7 @@ import os
 
 root_dir = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-file_path_json = os.path.join(root_dir, "utils/coverage_files/coverage.json")
-file_path_txt = os.path.join(root_dir,
-                             "utils/coverage_files/coverage_percentage.txt")
+file_path_json = os.path.join(root_dir, "./coverage.json")
 
 coverage_file = open(file_path_json)
 coverage_data = json.load(coverage_file)

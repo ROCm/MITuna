@@ -528,7 +528,9 @@ def pytestSuite3() {
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"
            sh "python3 -m coverage json"
-           sh "python3 tests/covscripts/coverage_ci.py"
+           sh "python3 tests/covscripts/coverage_branches.py"
+           sh "python3 tests/covscripts/coverage_develop.py"
+           sh "ls"
         }
     }
 }
