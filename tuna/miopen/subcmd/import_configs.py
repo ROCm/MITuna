@@ -29,7 +29,8 @@ import os
 import logging
 import argparse
 from sqlalchemy.exc import IntegrityError
-from typing import Any, Optional, Union
+from sqlalchemy.orm.exc import NoResultFound
+from typing import Any, Optional, Union, Tuple
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db, ENGINE
@@ -40,6 +41,7 @@ from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.driver.base import DriverBase
 from tuna.miopen.driver.batchnorm import DriverBatchNorm
 from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.miopen.db.benchmark import Framework, Model
 
 
 def create_query(tag: str, mark_recurrent: bool, config_id: int) -> dict:
@@ -192,17 +194,176 @@ def set_import_cfg_batches(args: argparse.Namespace):
     args.batch_list = []
 
 
-def run_import_configs(args: argparse.Namespace, logger: logging.Logger):
-  """Main function"""
-  set_import_cfg_batches(args)
+def print_models(logger: logging.Logger) -> bool:
+  """Display models from the db table"""
+  with DbSession() as session:
+    models = session.query(Model).all()
+    for model in models:
+      logger.info('model %s version %s ', model.model, model.version)
+  return True
 
+
+def add_model(args: argparse.Namespace, logger: logging.Logger) -> bool:
+  """Add new model and version to the db table"""
+  with DbSession() as session:
+    new_model = Model(model=args.add_model, version=args.md_version)
+    try:
+      session.add(new_model)
+      session.commit()
+      logger.info('Added model %s with version %s ', args.add_model,
+                  str(args.md_version))
+    except IntegrityError as err:
+      logger.error(err)
+      return False
+
+  return True
+
+
+def add_frameworks(args: argparse.Namespace, logger: logging.Logger) -> bool:
+  """Bring DB table up to speed with enums defined in FrameworkEnum"""
+  with DbSession() as session:
+    new_framework = Framework(framework=args.add_framework,
+                              version=args.fw_version)
+    try:
+      session.add(new_framework)
+      session.commit()
+      logger.info('Added framework %s with version %s ', args.add_framework,
+                  str(args.fw_version))
+    except IntegrityError as err:
+      logger.error(err)
+      return False
+
+  return True
+
+
+def get_database_id(framework: Framework, fw_version: int, model: int,
+                    md_version: float, dbt: MIOpenDBTables,
+                    logger: logging.Logger) -> Tuple[int, int]:
+  """Get DB id of item"""
+
+  mid = -1
+  fid = -1
+  with DbSession() as session:
+    try:
+      res = session.query(
+          dbt.framework.id).filter(dbt.framework.framework == framework)\
+                           .filter(dbt.framework.version == fw_version).one()
+      fid = res.id
+    except NoResultFound as dberr:
+      logger.error(dberr)
+      logger.error(
+          "Framework not present in the DB. Please run 'import_benchmark.py --add_framework' to populate the DB table"
+      )
+    try:
+      res = session.query(dbt.model.id).filter(dbt.model.model == model)\
+                                       .filter(dbt.model.version == md_version).one()
+      mid = res.id
+    except NoResultFound as dberr:
+      logger.error(
+          "Model not present in the DB. Please run 'import_benchmarks.py --add_model' to populate the DB table"
+      )
+      logger.error(dberr)
+  return mid, fid
+
+
+def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
+                  logger: logging.Logger) -> bool:
+  """Add new benchmark"""
+  mid, fid = get_database_id(args.framework, args.fw_version, args.model,
+                             args.md_version, dbt, logger)
+  print(mid, fid)
+  if mid is None:
+    logger.error('Could not find DB entry for model:%s, version:%s', args.model,
+                 args.md_version)
+    return False
+  if fid is None:
+    logger.error('Could not find DB entry for framework:%s, version:%s',
+                 args.framework, args.fw_version)
+    return False
+  commands = []
+  if args.driver:
+    commands.append(args.driver)
+  else:
+    with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+      for line in infile:
+        commands.append(line)
+
+  count = 0
+
+  with DbSession() as session:
+    for cmd in commands:
+      try:
+        if args.config_type == ConfigType.convolution:
+          driver = DriverConvolution(line=cmd)
+        else:
+          driver = DriverBatchNorm(line=cmd)
+        db_obj = driver.get_db_obj(keep_id=True)
+        if db_obj.id is None:
+          logger.error('Config not present in the DB: %s', str(driver))
+          logger.error('Please use import_configs.py to import configs')
+
+        benchmark = dbt.benchmark()
+        benchmark.framework = fid
+        benchmark.model = mid
+        benchmark.config = db_obj.id
+        benchmark.gpu_number = args.gpu_count
+        benchmark.driver_cmd = str(driver)
+        benchmark.batchsize = args.batchsize
+        session.add(benchmark)
+        session.commit()
+        count += 1
+      except (ValueError, IntegrityError) as verr:
+        logger.warning(verr)
+        session.rollback()
+        continue
+  logger.info('Tagged %s configs', count)
+  return True
+
+
+def check_import_benchmark_args(args: argparse.Namespace) -> None:
+  """Checking args for import_benchmark subcommand"""
+  if args.add_model and not args.md_version:
+    raise ValueError('Version needs to be specified with model')
+  if args.add_benchmark and not (args.model and args.framework and
+                                 args.gpu_count and args.batchsize and
+                                 args.md_version and args.fw_version and
+                                 (args.driver or args.file_name)):
+    raise ValueError(
+        """Model, md_version, framework, fw_version, driver(or filename), batchsize \n
+         and gpus need to all be specified to add a new benchmark""")
+
+
+def run_import_configs(args: argparse.Namespace,
+                       logger: logging.Logger) -> bool:
+  """Main function"""
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
 
+  if args.print_models or args.add_model or args.add_framework or args.add_benchmark:
+    check_import_benchmark_args(args)
+
+  if args.print_models:
+    print_models(logger)
+    return True
+  elif args.add_model:
+    add_model(args, logger)
+    return True
+  elif args.add_framework:
+    add_frameworks(args, logger)
+    return True
+  elif args.add_benchmark:
+    add_benchmark(args, dbt, logger)
+    return True
+
+  if not args.tag:
+    logger.error('Tag argument is required to import configurations')
+    return False
+  set_import_cfg_batches(args)
   counts = import_cfgs(args, dbt, logger)
 
   logger.info('New configs added: %u', counts['cnt_configs'])
   if args.tag or args.tag_only:
     logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
+  return True
 
 
 def main():

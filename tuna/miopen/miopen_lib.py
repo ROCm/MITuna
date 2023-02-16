@@ -40,9 +40,8 @@ from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
-from tuna.miopen.subcmd.import_benchmark import run_import_benchmark
 from tuna.miopen.subcmd.import_configs import run_import_configs
-from tuna.miopen.parse_miopen_args import get_import_cfg_parser, get_import_benchmark_parser
+from tuna.miopen.parse_miopen_args import get_import_cfg_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
@@ -105,9 +104,6 @@ class MIOpen(MITunaInterface):
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
                                get_import_cfg_parser(),
-                               required=False)
-    subcommands.add_subcommand('import_benchmark',
-                               get_import_benchmark_parser(),
                                required=False)
 
     group = parser.add_mutually_exclusive_group()
@@ -336,10 +332,6 @@ class MIOpen(MITunaInterface):
 
     if self.args.subcommand is not None and self.args.subcommand == 'import_configs':
       run_import_configs(self.args.import_configs, self.logger)
-      return None
-
-    if self.args.subcommand is not None and self.args.subcommand == 'import_benchmark':
-      run_import_benchmark(self.args.import_benchmark, self.logger)
       return None
 
     machines = load_machines(self.args)
