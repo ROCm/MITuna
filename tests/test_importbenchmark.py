@@ -35,7 +35,7 @@ this_path = os.path.dirname(__file__)
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from utils import DummyArgs
-from tuna.miopen.subcmd.import_benchmark import add_model, update_frameworks, print_models
+from tuna.miopen.subcmd.import_benchmark import add_model, add_frameworks, print_models
 from tuna.miopen.subcmd.import_benchmark import add_benchmark
 from tuna.miopen.db.benchmark import Framework, ModelEnum, FrameworkEnum
 from tuna.miopen.db.tables import MIOpenDBTables
