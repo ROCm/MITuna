@@ -40,7 +40,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
-from tuna.miopen.import_benchmark import run_import_benchmark
+from tuna.miopen.subcmd.import_benchmark import run_import_benchmark
 from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.parse_miopen_args import get_import_cfg_parser, get_import_benchmark_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
