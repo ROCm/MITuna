@@ -47,10 +47,15 @@ class TunaArgs(Enum):
   DOCKER_NAME = 'docker_name'
 
 
-def setup_arg_parser(desc: str, arg_list: List[TunaArgs], parser=None):
+def setup_arg_parser(desc: str,
+                     arg_list: List[TunaArgs],
+                     parser=None,
+                     with_yaml=True):
   """ function to aggregate common command line args """
   parser = jsonargparse.ArgumentParser(description=desc)
-  parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
+  if with_yaml:
+    parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
+
   if TunaArgs.ARCH in arg_list:
     parser.add_argument(
         '-a',

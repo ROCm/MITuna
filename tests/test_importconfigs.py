@@ -32,6 +32,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
+from tuna.utils.logger import setup_logger
 from tuna.miopen.subcmd.import_configs import import_cfgs
 from tuna.sql import DbCursor
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
@@ -45,6 +46,7 @@ def test_importconfigs():
 
 def test_import_conv():
   dbt = MIOpenDBTables(config_type=ConfigType.convolution)
+  logger = setup_logger('test_importconfigs')
   res = None
   clean_tags = "TRUNCATE table conv_config_tags;"
   find_tags = "SELECT count(*) FROM conv_config_tags WHERE tag='conv_config_test';"
@@ -59,13 +61,13 @@ def test_import_conv():
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/conv_configs_NHWC.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna.miopen.subcmd.import_configs.py -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution".format(
+  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file
   args.tag = "conv_config_test"
   args.version = '1.0.0'
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, logger)
   os.system(add_cfg_NHWC)
 
   with DbCursor() as cur:
@@ -82,6 +84,7 @@ def test_import_conv():
 def test_import_batch_norm():
   dbt = MIOpenDBTables(config_type=ConfigType.batch_norm)
   res = None
+  logger = setup_logger('test_importconfigs')
   clean_tags = "TRUNCATE table bn_config_tags;"
   find_tags = "SELECT count(*) FROM bn_config_tags WHERE tag='bn_config_test';"
   find_configs = "SELECT count(*) FROM bn_config;"
@@ -95,14 +98,14 @@ def test_import_batch_norm():
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/batch_norm.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna.miopen.subcmd.import_configs.py -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm".format(
+  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file
   args.tag = "bn_config_test"
   args.version = '1.0.0'
   args.config_type = ConfigType.batch_norm
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, logger)
   os.system(add_cfg_NHWC)
 
   with DbCursor() as cur:

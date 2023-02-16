@@ -44,6 +44,7 @@ from utils import get_worker_args, add_test_session
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
 from tuna.utils.db_utility import get_solver_ids
+from tuna.utils.logger import setup_logger
 
 
 def add_cfgs():
@@ -54,7 +55,7 @@ def add_cfgs():
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
   dbt = MIOpenDBTables(config_type=args.config_type)
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, setup_logger('test_fin_builder'))
   return dbt
 
 
