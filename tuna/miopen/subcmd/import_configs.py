@@ -37,10 +37,9 @@ from tuna.utils.logger import setup_logger
 from tuna.miopen.parse_miopen_args import get_import_cfg_parser
 from tuna.miopen.db.tables import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
+from tuna.miopen.driver.base import DriverBase
 from tuna.miopen.driver.batchnorm import DriverBatchNorm
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.miopen.driver.batchnorm import DriverBatchNorm
-from tuna.miopen.driver.convolution import DriverConvolution
 
 
 def create_query(tag: str, mark_recurrent: bool, config_id: int) -> dict:
@@ -55,13 +54,12 @@ def create_query(tag: str, mark_recurrent: bool, config_id: int) -> dict:
   return query_dict
 
 
-def tag_config_v2(
-    driver: Union[DriverConvolution, DriverBatchNorm],
-    counts: dict,
-    dbt: MIOpenDBTables,
-    args: argparse.Namespace,
-    logger: logging.Logger,
-    new_cf: Union[DriverConvolution, DriverBatchNorm, None] = None) -> bool:
+def tag_config_v2(driver: DriverBase,
+                  counts: dict,
+                  dbt: MIOpenDBTables,
+                  args: argparse.Namespace,
+                  logger: logging.Logger,
+                  new_cf: Union[DriverBase, None] = None) -> bool:
   """Adds tag for a config formatted from the fds structure.
         If mark_recurrent is ussed then it also marks it as such.
         Updates counter for tagged configs"""
@@ -97,8 +95,8 @@ def tag_config_v2(
   return True
 
 
-def insert_config(driver: Union[DriverConvolution, DriverBatchNorm],
-                  counts: dict, dbt: MIOpenDBTables, args: argparse.Namespace,
+def insert_config(driver: DriverBase, counts: dict, dbt: MIOpenDBTables,
+                  args: argparse.Namespace,
                   logger: logging.Logger) -> Optional[Any]:
   """Inserts new config in the DB computed from the fds structure.
         Tags the newly inserted config. It config already exists,
@@ -133,9 +131,9 @@ def insert_config(driver: Union[DriverConvolution, DriverBatchNorm],
   return new_cf.id
 
 
-def process_config_line_v2(driver: Union[DriverConvolution, DriverBatchNorm],
-                           args: argparse.Namespace, counts: dict,
-                           dbt: MIOpenDBTables, logger: logging.Logger) -> bool:
+def process_config_line_v2(driver: DriverBase, args: argparse.Namespace,
+                           counts: dict, dbt: MIOpenDBTables,
+                           logger: logging.Logger) -> bool:
   """Assumes config passed already exists and will skip the insert step
         if tag_only present. Otherwise it will first try and insert and
         then tag."""
