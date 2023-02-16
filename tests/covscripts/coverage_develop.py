@@ -35,6 +35,5 @@ coverage_data = json.load(coverage_file)
 percent_covered = coverage_data['totals']['percent_covered']
 percent_covered = '{:.2f}'.format(percent_covered)
 
-file = open(file_path_txt, "w")
-file.write(percent_covered)
-file.close()
+with open('develop_percent_coverage.txt', 'w') as f:
+    f.write(percent_covered)
