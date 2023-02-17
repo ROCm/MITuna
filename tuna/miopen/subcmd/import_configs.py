@@ -260,14 +260,14 @@ def get_database_id(framework: Framework, fw_version: int, model: int,
       mid = res.id
     except NoResultFound as dberr:
       logger.error(
-          "Model not present in the DB. Please run 'import_benchmarks.py --add_model' to populate the DB table"
+          "Model not present in the DB. Please run 'import_config.py --add_model' to populate the DB table"
       )
       logger.error(dberr)
   return mid, fid
 
 
 def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
-                  logger: logging.Logger, mid: int, fid: int) -> bool:
+                  logger: logging.Logger) -> bool:
   """Add new benchmark"""
   mid, fid = get_database_id(args.framework, args.fw_version, args.model,
                              args.md_version, dbt, logger)
@@ -353,19 +353,15 @@ def run_import_configs(args: argparse.Namespace,
     add_benchmark(args, dbt, logger)
     return True
   else:
-    if not (args.tag and args.framework and args.fw_version and args.model and
-            args.md_version):
-      logger.error(
-          """Tag, framework & version, model & version arguments is required to \
+    if not (args.tag and args.framework and args.fw_version and args.model and args.md_version):
+      logger.error("""Tag, framework & version, model & version arguments is required to \
                   import configurations""")
       return False
 
     mid, fid = get_database_id(args.framework, args.fw_version, args.model,
                                args.md_version, dbt, logger)
     if mid is None or fid is None:
-      logger.error(
-          'Please use --add_model and --add_framework to add new model and framework'
-      )
+      logger.error('Please use --add_model and --add_framework to add new model and framework')
     return False
 
     set_import_cfg_batches(args)
