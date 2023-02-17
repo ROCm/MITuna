@@ -34,7 +34,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
-from tuna.miopen.subcmd.import_configs import import_cfgs, add_benchmar
+from tuna.miopen.subcmd.import_configs import import_cfgs, add_benchmark
 from tuna.miopen.subcmd.import_configs import add_model, add_frameworks, print_models
 from tuna.sql import DbCursor
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
@@ -45,9 +45,9 @@ from utils import DummyArgs
 
 
 def test_importconfigs():
+  test_import_benchmark()
   test_import_conv()
   test_import_batch_norm()
-  test_import_benchmark()
 
 
 def test_import_conv():
@@ -67,7 +67,7 @@ def test_import_conv():
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/conv_configs_NHWC.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution".format(
+  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution --model Alexnet --md_version 1 --framework Pytorch --fw_version 1".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file
@@ -104,7 +104,7 @@ def test_import_batch_norm():
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/batch_norm.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm".format(
+  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm --model Alexnet --md_version 1 --framework Pytorch --fw_version 1".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file

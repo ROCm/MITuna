@@ -267,11 +267,10 @@ def get_database_id(framework: Framework, fw_version: int, model: int,
 
 
 def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
-                  logger: logging.Logger) -> bool:
+                  logger: logging.Logger, mid: int, fid: int) -> bool:
   """Add new benchmark"""
   mid, fid = get_database_id(args.framework, args.fw_version, args.model,
                              args.md_version, dbt, logger)
-  print(mid, fid)
   if mid is None:
     logger.error('Could not find DB entry for model:%s, version:%s', args.model,
                  args.md_version)
@@ -353,17 +352,30 @@ def run_import_configs(args: argparse.Namespace,
   elif args.add_benchmark:
     add_benchmark(args, dbt, logger)
     return True
+  else:
+    if not (args.tag and args.framework and args.fw_version and args.model and
+            args.md_version):
+      logger.error(
+          """Tag, framework & version, model & version arguments is required to \
+                  import configurations""")
+      return False
 
-  if not args.tag:
-    logger.error('Tag argument is required to import configurations')
+    mid, fid = get_database_id(args.framework, args.fw_version, args.model,
+                               args.md_version, dbt, logger)
+    if mid is None or fid is None:
+      logger.error(
+          'Please use --add_model and --add_framework to add new model and framework'
+      )
     return False
-  set_import_cfg_batches(args)
-  counts = import_cfgs(args, dbt, logger)
 
-  logger.info('New configs added: %u', counts['cnt_configs'])
-  if args.tag or args.tag_only:
-    logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
-  return True
+    set_import_cfg_batches(args)
+    counts = import_cfgs(args, dbt, logger)
+    add_benchmark(args, dbt, logger, mid, fid)
+
+    logger.info('New configs added: %u', counts['cnt_configs'])
+    if args.tag or args.tag_only:
+      logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
+    return True
 
 
 def main():
