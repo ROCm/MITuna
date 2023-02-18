@@ -44,6 +44,7 @@ from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.utils.db_utility import connect_db
+from tuna.utils.logger import setup_logger
 from tuna.miopen.subcmd.import_configs import import_cfgs
 from tuna.miopen.subcmd.load_job import test_tag_name as tag_name_test, add_jobs
 from miopen.miopen_lib import MIOpen
@@ -57,7 +58,7 @@ def add_job(w):
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
   dbt = MIOpenDBTables(session_id=w.session_id, config_type=args.config_type)
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, setup_logger('test_worker'))
 
   args = GoFishArgs()
   machine_lst = load_machines(args)

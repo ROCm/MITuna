@@ -17,6 +17,11 @@ add_tables:
 init_session:
   enabled: true
 
+import_configs:
+  enabled: true
+  tag: 'someTag'
+  file_name: '../utils/configs/conv_configs_NCHW.txt'
+
 update_applicability:
   enabled: false
   session_id: 1

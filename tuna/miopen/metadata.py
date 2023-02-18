@@ -27,10 +27,12 @@
 """ This file contains mappings relevant to launching the MIOpen lib"""
 
 MIOPEN_TUNING_STEPS = [
-    'init_session', 'add_tables', 'import_configs', 'load_job',
-    'update_applicability', 'update_solvers', 'list_solvers', 'fin_steps',
-    'export_db', 'import_db', 'check_status', 'execute_cmd'
+    'init_session', 'add_tables', 'load_job', 'update_applicability',
+    'update_solvers', 'list_solvers', 'fin_steps', 'export_db', 'import_db',
+    'check_status', 'execute_cmd'
 ]
+
+MIOPEN_SUBCOMMANDS = ['import_configs']
 
 #tuning steps with 1 argument (possibly also --session_id)
 MIOPEN_SINGLE_OP = [
