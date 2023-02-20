@@ -85,7 +85,7 @@ pipeline {
                     }
                 }
                 }
-        when (branch != 'rk_test_develop')
+        when (branch != 'rk_test_develop'){
             stage("Pytest 3 Coverage Compare"){
             agent{ label utils.rocmnode("tunatest") }
                 steps {
