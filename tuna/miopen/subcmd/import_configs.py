@@ -366,11 +366,10 @@ def run_import_configs(args: argparse.Namespace,
       logger.error(
           'Please use --add_model and --add_framework to add new model and framework'
       )
-    return False
+      return False
 
     set_import_cfg_batches(args)
     counts = import_cfgs(args, dbt, logger)
-    add_benchmark(args, dbt, logger, mid, fid)
 
     logger.info('New configs added: %u', counts['cnt_configs'])
     if args.tag or args.tag_only:
