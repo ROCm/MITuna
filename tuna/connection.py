@@ -190,8 +190,8 @@ class Connection():
           retry_interval = randrange((int(SSH_TIMEOUT)))
           self.logger.warning(
               'Attempt %s to connect to machine %s (%s p%s) via ssh failed, \
-              sleeping for %s seconds',
-              ssh_idx, self.id, self.hostname, self.port, retry_interval)
+              sleeping for %s seconds', ssh_idx, self.id, self.hostname,
+              self.port, retry_interval)
           sleep(retry_interval)
         else:
           self.logger.info(
