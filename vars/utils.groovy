@@ -116,10 +116,11 @@ def finApplicability(){
         sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch gfx908 --num_cu 120"
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
-        sh "./tuna/go_fish.py miopen import_configs --add_model Alexnet --md_version 1 -f utils/recurrent_cfgs/alexnet_4jobs.txt"
+        sh "./tuna/go_fish.py miopen import_configs --add_model Alexnet --md_version 1"
+        sh "./tuna/go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Alexnet --md_version 1 --framework Pytorch --fw_version 1"
 
-        sh "./tuna/go_fish.py miopen import_configs --add_model Resnet50 --md_version 1 -f utils/recurrent_cfgs/resnet50_4jobs.txt"
+        sh "./tuna/go_fish.py miopen import_configs --add_model Resnet50 --md_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
