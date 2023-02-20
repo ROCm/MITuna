@@ -553,7 +553,7 @@ def runLint() {
             sh "mypy tuna/miopen/subcmd/import_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
-            sh "yamllint tuna/miopen/*.yaml"
+            sh "yamllint tuna/miopen/yaml_files/*.yaml"
             sh "yamllint tuna/example/*.yaml"
           }
     }
