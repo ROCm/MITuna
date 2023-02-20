@@ -76,8 +76,9 @@ pipeline {
             }
         }
         stage("pytest3 Coverage Export"){
-        when (branch == 'rk_test_develop'){
-
+        when{
+            branch == 'rk_test_develop'
+            }
             agent{ label utils.rocmnode("tunatest") }
             steps {
                 script{
@@ -85,16 +86,16 @@ pipeline {
                       }
                     }
                 }
-        }
         stage("Pytest 3 Coverage Compare"){
-        when (branch != 'rk_test_develop'){
+        when{
+            branch != 'rk_test_develop'
+            }
             agent{ label utils.rocmnode("tunatest") }
                 steps {
                 script{
                     utils.pytestSuite3()
                         }
                     }
-                }
                 }
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
