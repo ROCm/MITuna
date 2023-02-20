@@ -75,28 +75,25 @@ pipeline {
             }
             }
         }
-        stage("pytest3"){
-            parallel {
-                stage("Pytest 3 Coverage Export"){
-                    agent{ label utils.rocmnode("tunatest") }
-                    steps {
-                        script{
-                        utils.coverageExport()
-                        }
-                    }
-
-                }
-                stage("Pytest 3 Coverage Compare"){
-                    agent{ label utils.rocmnode("tunatest") }
-                    steps {
-                        script{
-                        utils.pytestSuite3()
-                        }
+        if(branch == 'rk_test_develop'){
+            stage("pytest3 export"){
+            agent{ label utils.rocmnode("tunatest") }
+            steps {
+                script{
+                utils.coverageExport()
+                      }
                     }
                 }
-
-            }
-        }
+                } else {
+            stage("Pytest 3 Coverage Compare"){
+            agent{ label utils.rocmnode("tunatest") }
+                steps {
+                script{
+                    utils.pytestSuite3()
+                        }
+                    }
+                }
+                }
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
