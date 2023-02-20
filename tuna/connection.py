@@ -33,12 +33,10 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 from io import StringIO
 
-from typing import Set, Any, Optional, Union, TextIO, IO
-from paramiko.Channel import ChannelFile, ChannelStderrFile, ChannelStdinFile
+from typing import Set, Any, Optional, Union, TextIO, IO, Tuple
+from paramiko.channel import ChannelFile, ChannelStderrFile, ChannelStdinFile
 from paramiko import SSHClient
 import paramiko
-from typing_extension import Literal
-
 
 from tuna.utils.logger import setup_logger
 from tuna.abort import chk_abort_file
@@ -92,7 +90,7 @@ class Connection():
       return self.inst_bins[bin_str]
 
     cmd: str = f"which {bin_str}"
-    out: Optional[TextIO]
+    out: Union[TextIO, ChannelFile]  #type: ignore
 
     _, out, _ = self.exec_command(cmd)
     if not out:
@@ -150,7 +148,7 @@ class Connection():
     if self.local_machine:  # pylint: disable=no-else-return
       if not self.subp:
         self.logger.error('Checking isAlive when process was not created')
-      return self.subp.poll() is None  
+      return self.subp.poll() is None
     else:
       if not self.out_channel:
         self.logger.error('Checking isAlive when channel does not exist')
@@ -191,7 +189,8 @@ class Connection():
         except (paramiko.ssh_exception.SSHException, socket.error):
           retry_interval = randrange((int(SSH_TIMEOUT)))
           self.logger.warning(
-              'Attempt %s to connect to machine %s (%s p%s) via ssh failed, sleeping for %s seconds',
+              'Attempt %s to connect to machine %s (%s p%s) via ssh failed, \
+              sleeping for %s seconds',
               ssh_idx, self.id, self.hostname, self.port, retry_interval)
           sleep(retry_interval)
         else:
@@ -201,10 +200,10 @@ class Connection():
 
       self.logger.error('SSH retries exhausted machine: %s', self.hostname)
       return False
-    return False  
+    return False
 
   def exec_command_unparsed(self, cmd: str, timeout: int = SSH_TIMEOUT, \
-  abort: Optional[bool]=None) -> Literal[int, TextIO , None]:
+  abort: Optional[bool]=None) -> Tuple[ChannelStdinFile, ChannelFile, ChannelStderrFile]:
     """Function to exec commands
 
     warning: leaky! client code responsible for closing the resources!
@@ -229,7 +228,7 @@ class Connection():
                         close_fds=True,
                         universal_newlines=True)
       stdout, stderr = self.subp.stdout, self.subp.stderr
-      return 0, stdout, stderr
+      return 0, stdout, stderr  #type: ignore
 
     cmd_idx: int
     i_var: ChannelStdinFile
@@ -250,23 +249,23 @@ class Connection():
         sleep(retry_interval)
       else:
         self.out_channel = o_var.channel
-        return i_var, o_var, e_var
+        return i_var, o_var, e_var  #type: ignore
 
       if abort is not None and chk_abort_file(self.id, self.logger):
         self.logger.warning('Machine %s aborted command execution: %s', self.id,
                             cmd)
-        return None, None, None
+        return None, None, None  #type: ignore
 
     self.logger.error('cmd_exec retries exhausted, giving up')
-    return None, None, None
+    return None, None, None  #type: ignore
 
 
   def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort: Optional[bool]=None,\
-  proc_line: Union[Any, None]= None) -> Literal[int, TextIO, None]:
+  proc_line: Union[Any, None]= None) -> Tuple[int, Union[TextIO, ChannelFile], ChannelStderrFile]:
     # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
-    o_var: TextIO
-    e_var: Optional[TextIO] = None
+    o_var: ChannelFile
+    e_var: ChannelStderrFile
     _, o_var, e_var = self.exec_command_unparsed(cmd, timeout, abort)
     try:
       if not o_var:
@@ -276,7 +275,7 @@ class Connection():
         # pylint: disable-next=unnecessary-lambda-assignment ; more readable
         proc_line = lambda x: self.logger.info(line.strip())
       ret_out: Optional[TextIO] = StringIO()
-      ret_err: Optional[TextIO] = e_var
+      ret_err: ChannelStderrFile = e_var
       ret_code: Optional[int] = 0
       try:
         while True:
@@ -296,7 +295,7 @@ class Connection():
             ret_code = 0
           if ret_out is not None:
             ret_out.seek(0)
-            ret_err = StringIO()
+            ret_err = StringIO()  #type: ignore
             err_str: list = ret_out.readlines()
             for line in err_str[-5:]:
               ret_err.write(line)
@@ -310,7 +309,7 @@ class Connection():
         self.logger.warning('Exception occurred %s', exc)
         ret_code = 1
         ret_out = None
-      return ret_code, ret_out, ret_err
+      return ret_code, ret_out, ret_err  #type: ignore
     finally:
       if o_var and hasattr(o_var, "close"):
         o_var.close()
