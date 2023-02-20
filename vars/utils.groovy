@@ -465,7 +465,6 @@ def pytestSuite1() {
            sh "pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
            sh "pytest tests/test_importconfigs.py -s"
-           sh "pytest tests/test_importbenchmark.py -s"
            sh "pytest tests/test_machine.py -s"
            sh "pytest tests/test_dbBase.py -s"
            sh "pytest tests/test_driver.py -s"
