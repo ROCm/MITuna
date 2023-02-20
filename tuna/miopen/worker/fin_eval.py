@@ -241,7 +241,7 @@ class FinEvaluator(FinClass):
         if not ret:
           self.logger.warning('FinEval: Unable to update Database')
           slv_stat['success'] = False
-          slv_stat['result'] = 'FinEval: Unable to update Database'
+          slv_stat['result'] = fdb_obj['reason']
 
         status.append(slv_stat)
 
