@@ -82,14 +82,19 @@ pipeline {
                     when {expression {environment.branch_id == "${rk_test_develop}_${BUILD_ID}"}
                     }
                     steps {
+                        script{
                         utils.coverageExport()
+                        }
                     }
+
                 }
                 stage("Pytest 3 Coverage Compare"){
                     when {expression {environment.branch_id != "${rk_test_develop}_${BUILD_ID}"}
                     }
                     steps {
+                        script{
                         utils.pytest3()
+                        }
                     }
                 }
 
