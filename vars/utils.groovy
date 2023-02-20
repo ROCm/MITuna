@@ -289,8 +289,8 @@ def loadJobTest() {
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.tx --model Alexnet --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.tx --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
+        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Alexnet --md_version 1 --framework Pytorch --fw_version 1"
+        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def out = runsql("SELECT count(*) FROM conv_config_tags WHERE tag='recurrent_${branch_id}' ;")
         assert out.toInteger() > 0
 
