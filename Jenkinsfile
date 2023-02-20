@@ -90,7 +90,7 @@ pipeline {
                     agent{ label utils.rocmnode("tunatest") }
                     steps {
                         script{
-                        utils.pytest3()
+                        utils.pytestSuite3()
                         }
                     }
                 }
