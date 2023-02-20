@@ -77,8 +77,8 @@ pipeline {
         }
         stage("pytest3"){
             parallel {
-                agent{ label utils.rocmnode("tunatest") }
                 stage("Pytest 3 Coverage Export"){
+                    agent{ label utils.rocmnode("tunatest") }
                     when {expression {environment.branch_id == "${rk_test_develop}_${BUILD_ID}"}
                     }
                     steps {
@@ -89,6 +89,7 @@ pipeline {
 
                 }
                 stage("Pytest 3 Coverage Compare"){
+                    agent{ label utils.rocmnode("tunatest") }
                     when {expression {environment.branch_id != "${rk_test_develop}_${BUILD_ID}"}
                     }
                     steps {
