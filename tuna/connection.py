@@ -33,7 +33,7 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 from io import StringIO
 
-from typing import Set, Any, Optional, Union, TextIO, IO, Tuple
+from typing import Set, Any, Optional, Union, TextIO, IO, Tuple, List
 from paramiko.channel import ChannelFile, ChannelStderrFile, ChannelStdinFile
 from paramiko import SSHClient
 import paramiko
@@ -127,13 +127,14 @@ class Connection():
 
   def test_cmd_str(self, cmd: str) -> bool:
     """Function to look for installed binary"""
-    split_cmd: Any
+    split_cmd: str
+    sub_cmd: str
+
     split_cmd = cmd[:]
     split_cmd = split_cmd.replace('|', ';')
-    split_cmd = split_cmd.split(';')
+    cmd_list: List = split_cmd.split(';')
 
-    sub_cmd: str
-    for sub_cmd in split_cmd:
+    for sub_cmd in cmd_list:
       sub_cmd = sub_cmd.strip()
       bin_str: str = self.get_bin_str(sub_cmd)
       installed: bool = self.check_binary(bin_str)
