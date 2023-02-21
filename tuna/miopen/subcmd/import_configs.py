@@ -370,6 +370,8 @@ def run_import_configs(args: argparse.Namespace,
 
     set_import_cfg_batches(args)
     counts = import_cfgs(args, dbt, logger)
+    #tagging imported configs with benchmark
+    add_benchmark(args, dbt, logger)
 
     logger.info('New configs added: %u', counts['cnt_configs'])
     if args.tag or args.tag_only:
