@@ -557,7 +557,7 @@ def coverageExport() {
            sh "python3 tests/covscripts/coverage_develop.py"
            sh "ls"
            sh "pwd"
-           sh "$(cat "./develop_percent_coverage.txt")"
+           sh "$(cat './develop_percent_coverage.txt')"
            sh "sudo mv ./develop_percent_coverage.txt /var/lib/jenkins/workspace"
         }
     }
