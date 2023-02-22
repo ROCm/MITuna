@@ -558,7 +558,7 @@ def coverageExport() {
            sh "ls"
            sh "pwd"
            sh "mv ./develop_percent_coverage.txt /tmp"
-           sh "mv /tmp/develop_percent_coverage.txt /var/lib/jenkins/workspace"
+           sh "sudo mv /tmp/develop_percent_coverage.txt /var/lib/jenkins/workspace"
         }
     }
 }
