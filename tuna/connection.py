@@ -33,7 +33,7 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 from io import StringIO
 
-from typing import Set, Any, Optional, Union, TextIO, IO, Tuple, List
+from typing import Set, Any, Optional, Union, TextIO, IO, Tuple, List, Callable
 from paramiko.channel import ChannelFile, ChannelStderrFile, ChannelStdinFile
 from paramiko import SSHClient
 import paramiko
@@ -90,7 +90,7 @@ class Connection():
       return self.inst_bins[bin_str]
 
     cmd: str = f"which {bin_str}"
-    out: Union[TextIO, ChannelFile]  #type: ignore
+    out: Union[TextIO, ChannelFile]
 
     _, out, _ = self.exec_command(cmd)
     if not out:
@@ -144,7 +144,7 @@ class Connection():
 
     return True
 
-  def is_alive(self) -> Optional[bool]:
+  def is_alive(self) -> bool:
     ''' Check if the launched process is running '''
     if self.local_machine:  # pylint: disable=no-else-return
       if not self.subp:
@@ -162,7 +162,7 @@ class Connection():
     self.ssh.get_transport().is_active() #type: ignore
     return status
 
-  def connect(self, abort: Any = None) -> None:
+  def connect(self, abort: Callable) -> None:
     """Establishing new connecion"""
     if not self.local_machine:
       self.ssh_connect(abort)
@@ -205,6 +205,7 @@ class Connection():
 
   def exec_command_unparsed(self, cmd: str, timeout: int = SSH_TIMEOUT, \
   abort: Optional[bool]=None) -> Tuple[ChannelStdinFile, ChannelFile, ChannelStderrFile]:
+    # pylint: disable-msg=too-many-locals
     """Function to exec commands
 
     warning: leaky! client code responsible for closing the resources!
@@ -238,6 +239,7 @@ class Connection():
 
     for cmd_idx in range(NUM_CMD_RETRIES):
       try:
+
         self.ssh_connect()
         i_var, o_var, e_var = self.ssh.exec_command(cmd, timeout=timeout)
       except Exception as exc:
@@ -250,16 +252,15 @@ class Connection():
         sleep(retry_interval)
       else:
         self.out_channel = o_var.channel
-        return i_var, o_var, e_var  #type: ignore
+        return i_var, o_var, e_var
 
       if abort is not None and chk_abort_file(self.id, self.logger):
         self.logger.warning('Machine %s aborted command execution: %s', self.id,
                             cmd)
-        return None, None, None  #type: ignore
+        return i_var, o_var, e_var
 
     self.logger.error('cmd_exec retries exhausted, giving up')
-    return None, None, None  #type: ignore
-
+    return i_var, o_var, e_var
 
   def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort: Optional[bool]=None,\
   proc_line: Union[Any, None]= None) -> Tuple[int, Union[TextIO, ChannelFile], ChannelStderrFile]:
@@ -275,9 +276,9 @@ class Connection():
       if not proc_line:
         # pylint: disable-next=unnecessary-lambda-assignment ; more readable
         proc_line = lambda x: self.logger.info(line.strip())
-      ret_out: Optional[TextIO] = StringIO()
+      ret_out: Union[TextIO, StringIO] = StringIO()
       ret_err: ChannelStderrFile = e_var
-      ret_code: Optional[int] = 0
+      ret_code: int = 0
       try:
         while True:
           line: str = o_var.readline()
@@ -285,16 +286,14 @@ class Connection():
             break
           if line:
             proc_line(line)
-            if ret_out is not None:
-              ret_out.write(line)
-        if ret_out is not None:
-          ret_out.seek(0)
+            ret_out.write(line)
+        ret_out.seek(0)
         if self.local_machine:
           if self.subp is not None:
             ret_code = self.subp.returncode
           else:
             ret_code = 0
-          if ret_out is not None:
+          if ret_out:
             ret_out.seek(0)
             ret_err = StringIO()  #type: ignore
             err_str: list = ret_out.readlines()
@@ -309,8 +308,7 @@ class Connection():
       except (socket.timeout, socket.error) as exc:
         self.logger.warning('Exception occurred %s', exc)
         ret_code = 1
-        ret_out = None
-      return ret_code, ret_out, ret_err  #type: ignore
+      return ret_code, ret_out, ret_err
     finally:
       if o_var and hasattr(o_var, "close"):
         o_var.close()
