@@ -280,7 +280,7 @@ class WorkerInterface(Process):
 
         return True
       except OperationalError as error:
-        session.rollback()
+        #session.rollback()
         self.logger.warning('%s, Db contention, sleeping ...', error)
         sleep(random.randint(1, 30))
       except IntegrityError as error:
