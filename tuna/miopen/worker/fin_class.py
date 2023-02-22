@@ -309,6 +309,7 @@ class FinClass(WorkerInterface):
         query = query.order_by(self.dbt.config_table.id)
         rows = query.all()
 
+        len_rows = len(rows)
         master_cfg_list = []
         for row in rows:
           r_dict = compose_config_obj(row, self.config_type)
@@ -316,8 +317,23 @@ class FinClass(WorkerInterface):
             r_dict['direction'] = row.get_direction()
           master_cfg_list.append(r_dict)
 
-        block_size = len(rows) // num_blk  #size of the config block
-        extra = len(rows) % num_blk  #leftover configs, don't divide evenly
+        #remove old applicability
+        rm_old = ''
+        if self.label:
+          cfg_ids = [str(row.id) for row in rows]
+          cfg_str = ','.join(cfg_ids)
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0 where session={self.session_id} and config in ({cfg_str});"
+        else:
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0 where session={self.session_id};"
+
+        self.logger.info("Start applic zeroing")
+        session.execute(rm_old)
+        session.commit()
+        self.logger.info("Finished applic zeroing")
+
+
+        block_size = len_rows // num_blk  #size of the config block
+        extra = len_rows % num_blk  #leftover configs, don't divide evenly
         self.logger.info(
             "cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk,
             block_size, extra)
@@ -332,14 +348,14 @@ class FinClass(WorkerInterface):
             start += extra
             end += extra
 
-          if start >= len(rows):
+          if start >= len_rows:
             break
 
           self.logger.info("cfg workdiv: start %s, end %s", start, end)
 
           self.job_queue.put(master_cfg_list[start:end])
     try:
-      self.all_configs = self.job_queue.get(True, 30)
+      self.all_configs = self.job_queue.get(True)
     except queue.Empty:
       self.logger.warning('No jobs found for process %s...', idx)
       self.all_configs = []
@@ -450,12 +466,6 @@ class FinClass(WorkerInterface):
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
             return False
-
-        #remove old applicability
-        not_app_query = app_query.filter(
-            self.dbt.solver_app.solver.notin_(app_slv_ids))
-        not_app_query.update({self.dbt.solver_app.applicable: 0},
-                             synchronize_session='fetch')
 
         for solver_id in app_slv_ids:
           obj = app_query.filter(
