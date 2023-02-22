@@ -316,7 +316,8 @@ class WorkerInterface(Process):
             cache_loc = cache + blurr
             self.job.cache_loc = cache_loc
 
-          query = gen_update_query(self.job, self.job_attr,
+          job_state_attr = ['state', 'result', 'retries', 'cache_loc']
+          query = gen_update_query(self.job, job_state_attr,
                                    self.dbt.job_table.__tablename__)
           session.execute(query)
           session.commit()
