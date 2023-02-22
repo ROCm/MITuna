@@ -261,14 +261,9 @@ class WorkerInterface(Process):
               self.logger.info("%s jobs %s", find_state, ids)
               for job in job_tables:
                 job.state = set_state
-                #note for a compile job gpu_id is an index 0 tuna process number, not a gpu
-                job.gpu_id = self.gpu_id
-                if set_state == "eval_start":
-                  job.eval_mid = self.machine.id
-                else:
-                  job.machine_id = self.machine.id
 
-                query = gen_update_query(job, self.job_attr,
+                job_set_attr = ['state']
+                query = gen_update_query(job, job_set_attr,
                                          self.dbt.job_table.__tablename__)
                 session.execute(query)
 
@@ -278,9 +273,12 @@ class WorkerInterface(Process):
           #also in job_queue_lock
           self.job_queue_pop()
 
+          #note for a compile job gpu_id is an index 0 tuna process number, not a gpu
+          self.job.gpu_id = self.gpu_id
+
         return True
       except OperationalError as error:
-        #session.rollback()
+        session.rollback()
         self.logger.warning('%s, Db contention, sleeping ...', error)
         sleep(random.randint(1, 30))
       except IntegrityError as error:
@@ -317,8 +315,8 @@ class WorkerInterface(Process):
             cache_loc = cache + blurr
             self.job.cache_loc = cache_loc
 
-          job_state_attr = ['state', 'result', 'retries', 'cache_loc']
-          query = gen_update_query(self.job, job_state_attr,
+          job_set_attr = ['state', 'result', 'retries', 'cache_loc', 'gpu_id']
+          query = gen_update_query(self.job, job_set_attr,
                                    self.dbt.job_table.__tablename__)
           session.execute(query)
           session.commit()
