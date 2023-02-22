@@ -315,7 +315,7 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
         logger.warning(verr)
         session.rollback()
         continue
-  logger.info('Tagged %s configs', count)
+  logger.info('Benchmarked %s configs', count)
   return True
 
 
