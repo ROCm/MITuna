@@ -557,7 +557,7 @@ def coverageExport() {
            sh "python3 tests/covscripts/coverage_develop.py"
            sh "ls"
            sh "pwd"
-           sh "mv ./develop_percent_coverage.txt /home/fpadmin"
+           sh "mv ./develop_percent_coverage.txt /tmp"
         }
     }
 }
