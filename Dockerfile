@@ -11,6 +11,7 @@ ARG DEB_ROCM_REPO=http://repo.radeon.com/rocm/apt/.apt_$ROCMVERSION/
 # Add rocm repository
 RUN apt-get update && \
       apt-get -y install sudo
+RUN usermod -aG sudo jenkins
 RUN apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
 RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
