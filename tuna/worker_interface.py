@@ -45,6 +45,7 @@ from tuna.abort import chk_abort_file
 from tuna.miopen.utils.metadata import TUNA_LOG_DIR
 from tuna.miopen.utils.metadata import NUM_SQL_RETRIES
 from tuna.tables_interface import DBTablesInterface
+from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
 from tuna.utils.utility import SimpleDict
@@ -299,44 +300,32 @@ class WorkerInterface(Process):
   def set_job_state(self, state, increment_retries=False, result=None):
     """Interface function to update job state for builder/evaluator"""
     self.logger.info('Setting job id %s state to %s', self.job.id, state)
-    for idx in range(NUM_SQL_RETRIES):
-      with DbSession() as session:
-        try:
-          self.job.state = state
-          if result:
-            self.job.result = result
-          if increment_retries:
-            self.job.retries += 1
+    with DbSession() as session:
+      self.job.state = state
+      if result:
+        self.job.result = result
+      if increment_retries:
+        self.job.retries += 1
 
-          if '_start' in state:
-            cache = '~/.cache/miopen_'
-            blurr = ''.join(
-                random.choice(string.ascii_lowercase) for i in range(10))
-            cache_loc = cache + blurr
-            self.job.cache_loc = cache_loc
+      if '_start' in state:
+        cache = '~/.cache/miopen_'
+        blurr = ''.join(
+            random.choice(string.ascii_lowercase) for i in range(10))
+        cache_loc = cache + blurr
+        self.job.cache_loc = cache_loc
 
-          job_set_attr = ['state', 'result', 'retries', 'cache_loc', 'gpu_id']
-          query = gen_update_query(self.job, job_set_attr,
-                                   self.dbt.job_table.__tablename__)
-          session.execute(query)
-          session.commit()
-          return True
-        except OperationalError as error:
-          session.rollback()
-          self.logger.warning('%s, Db contention, attempt %s, sleeping ...',
-                              error, idx)
-          sleep(random.randint(1, 30))
-        except IntegrityError as error:
-          session.rollback()
-          self.logger.warning(
-              'Attempt to update job state (job_id = %s) failed', self.job.id)
-          self.logger.warning(error)
-          return False
+      job_set_attr = ['state', 'result', 'retries', 'cache_loc', 'gpu_id']
+      query = gen_update_query(self.job, job_set_attr,
+                                self.dbt.job_table.__tablename__)
 
-    self.logger.error(
-        '%s retries exhausted to update job status (host = %s, worker = %s), exiting ... ',
-        NUM_SQL_RETRIES, self.hostname, self.gpu_id)
-    return False
+      def callback():
+        session.execute(query)
+        session.commit()
+        return True
+
+      return session_retry(session, callback,
+                    lambda x: x(), self.logger)
+
 
   def exec_command(self, cmd):
     """execute on native machine"""

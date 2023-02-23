@@ -142,11 +142,11 @@ def session_retry(session, callback, actuator, logger=LOGGER):
     try:
       return actuator(callback)
     except OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
       session.rollback()
       sleep(random.randint(1, 30))
     except pymysql.err.OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
       session.rollback()
       sleep(random.randint(1, 30))
     except IntegrityError as error:
