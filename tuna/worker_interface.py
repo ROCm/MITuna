@@ -166,7 +166,7 @@ class WorkerInterface(Process):
 
       #add explicit ids to condition to narrow table lock on for update
       ret = session.execute(f"select id from {self.dbt.job_table.__tablename__} {cond_str};")
-      id_lst = ','.join([row[0] for row in ret])
+      id_lst = ','.join([str(row[0]) for row in ret])
       #if there are no matching entries, then should quit
       if not id_lst:
         break
