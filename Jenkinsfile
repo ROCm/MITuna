@@ -153,7 +153,7 @@ pipeline {
     }
     post{
         always{
-            copyArtifacts projectnName: "Develop-Percent", selector: lastSuccessful(), filter: 'coverage-percent', fingerprintArtifacts: true
+            copyArtifacts projectName: "Develop-Percent", selector: lastSuccessful(), filter: 'coverage-percent', fingerprintArtifacts: true
         }
         }
     }
