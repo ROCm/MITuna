@@ -153,18 +153,36 @@ class WorkerInterface(Process):
     self.last_reset = datetime.now()
 
   def compose_work_objs(self, session, conds):
-    """default job description"""
-    cond_str = ' AND '.join(conds)
-    if cond_str:
-      cond_str = f"WHERE {cond_str}"
-    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
-    entries = gen_select_objs(session, self.job_attr,
-                              self.dbt.job_table.__tablename__, cond_str)
+    """Query a job list for update"""
+    entries = []
+
+    #if selected jobs are claimed before "FOR UPDATE", then should retry
+    while not entries:
+      cond_str = ''
+      cond_lst = ' AND '.join(conds)
+      if cond_lst:
+        cond_str = f"WHERE {cond_lst}"
+      cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num}"
+
+      #add explicit ids to condition to narrow table lock on for update
+      ret = session.execute(f"select id from {self.dbt.job_table.__tablename__} {cond_str};")
+      id_lst = ','.join([row[0] for row in ret])
+      #if there are no matching entries, then should quit
+      if not id_lst:
+        break
+
+      cond_str = ''
+      if cond_lst:
+        cond_str = f"WHERE id in ({id_lst}) AND {cond_lst}"
+      cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
+
+      entries = gen_select_objs(session, self.job_attr,
+                                self.dbt.job_table.__tablename__, cond_str)
 
     return entries
 
   def get_job_objs(self, session, find_state):
-    """Helper function to compose query"""
+    """Get list of job objects"""
     conds = [f"session={self.dbt.session.id}", "valid=1"]
 
     if self.label:

@@ -142,7 +142,7 @@ class FinClass(WorkerInterface):
                               config_type=self.config_type)
 
   def compose_work_objs(self, session, conds):
-    """query for fin command and config"""
+    """query for job and config tuple"""
     ret = []
     if self.fin_steps:
       conds.append(f"fin_step like '%{self.fin_steps[0]}%'")
