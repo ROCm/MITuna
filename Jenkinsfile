@@ -88,6 +88,12 @@ pipeline {
             }
 
         }
+        stage("Stash") {
+            steps{
+                stash name: 'coverage-percent', includes: 'develop_percent_coverage.txt'
+                archive includes: 'coverage-percent'
+            }
+        }
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
@@ -145,7 +151,14 @@ pipeline {
            }
         }
     }
+    post{
+        always{
+            copyArtifacts projectnName: "Develop-Percent", selector: lastSuccessful(), filter: 'coverage-percent', fingerprintArtifacts: true
+        }
+        }
+    }
 }
+
 
 
 

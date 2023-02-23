@@ -556,9 +556,9 @@ def coverageExport() {
            sh "python3 -m coverage json"
            sh "python3 tests/covscripts/coverage_develop.py"
            sh "ls"
-           sh "git status"
+           //sh "git status"
            sh "pwd"
-           sh "sudo mv ./develop_percent_coverage.txt /var/lib/jenkins/workspace"
+           //sh "sudo mv ./develop_percent_coverage.txt /var/lib/jenkins/workspace"
         }
     }
 }
