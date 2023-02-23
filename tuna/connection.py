@@ -263,7 +263,8 @@ class Connection():
     return i_var, o_var, e_var
 
   def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort: Optional[bool]=None,\
-  proc_line: Union[Any, None]= None) -> Tuple[int, Union[TextIO, ChannelFile], ChannelStderrFile]:
+  proc_line: Union[Any, None]= None) -> Tuple[Union[int, Any], Union[TextIO, StringIO, \
+  ChannelFile],Union[ChannelStderrFile, StringIO]]:
     # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
     o_var: ChannelFile
@@ -277,7 +278,7 @@ class Connection():
         # pylint: disable-next=unnecessary-lambda-assignment ; more readable
         proc_line = lambda x: self.logger.info(line.strip())
       ret_out: Union[TextIO, StringIO] = StringIO()
-      ret_err: ChannelStderrFile = e_var
+      ret_err: Union[ChannelStderrFile, StringIO] = e_var
       ret_code: int = 0
       try:
         while True:
@@ -289,25 +290,22 @@ class Connection():
             ret_out.write(line)
         ret_out.seek(0)
         if self.local_machine:
-          if self.subp is not None:
-            ret_code = self.subp.returncode
-          else:
-            ret_code = 0
+          ret_code = self.subp.returncode
           if ret_out:
             ret_out.seek(0)
-            ret_err = StringIO()  #type: ignore
+            ret_err = StringIO()
             err_str: list = ret_out.readlines()
             for line in err_str[-5:]:
               ret_err.write(line)
             ret_err.seek(0)
             ret_out.seek(0)
         else:
-          if self.out_channel is not None and ret_code is not None:
-            ret_code = self.out_channel.recv_exit_status()
+          ret_code = self.out_channel.recv_exit_status()
 
       except (socket.timeout, socket.error) as exc:
         self.logger.warning('Exception occurred %s', exc)
         ret_code = 1
+        ret_out.seek(0)
       return ret_code, ret_out, ret_err
     finally:
       if o_var and hasattr(o_var, "close"):
