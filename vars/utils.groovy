@@ -552,9 +552,9 @@ def runLint() {
             sh "yamllint tuna/miopen/*.yaml"
             sh "yamllint tuna/example/*.yaml"
             // we have the percentage file
-            sh " echo 50 > percent.txt"
+            sh "echo 50 > percent.txt"
             if(env.BRANCH_NAME== "jd/archive_test") { 
-                archiveArtifacs artifacts: "percent.txt", allwEmptyArchive: true, fingerprint: true
+                archiveArtifacts artifacts: "percent.txt", allwEmptyArchive: true, fingerprint: true
             }
           }
     }
