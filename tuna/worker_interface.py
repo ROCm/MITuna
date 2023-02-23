@@ -154,30 +154,12 @@ class WorkerInterface(Process):
 
   def compose_work_objs(self, session, conds):
     """Query a job list for update"""
-    entries = []
-
-    #if selected jobs are claimed before "FOR UPDATE", then should retry
-    while not entries:
-      cond_str = ''
-      cond_lst = ' AND '.join(conds)
-      if cond_lst:
-        cond_str = f"WHERE {cond_lst}"
-      cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num}"
-
-      #add explicit ids to condition to narrow table lock on for update
-      ret = session.execute(f"select id from {self.dbt.job_table.__tablename__} {cond_str};")
-      id_lst = ','.join([str(row[0]) for row in ret])
-      #if there are no matching entries, then should quit
-      if not id_lst:
-        break
-
-      cond_str = ''
-      if cond_lst:
-        cond_str = f"WHERE id in ({id_lst}) AND {cond_lst}"
-      cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
-
-      entries = gen_select_objs(session, self.job_attr,
-                                self.dbt.job_table.__tablename__, cond_str)
+    cond_str = ' AND '.join(conds)
+    if cond_str:
+      cond_str = f"WHERE {cond_str}"
+    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
+    entries = gen_select_objs(session, self.job_attr,
+                              self.dbt.job_table.__tablename__, cond_str)
 
     return entries
 
@@ -341,7 +323,7 @@ class WorkerInterface(Process):
         session.commit()
         return True
 
-      return session_retry(session, callback,
+      assert session_retry(session, callback,
                     lambda x: x(), self.logger)
 
 
