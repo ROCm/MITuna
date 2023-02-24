@@ -140,7 +140,8 @@ class FinEvaluator(FinClass):
 
       find_compile_res = []
       # Enumerate all solvers for this config
-      for fdb_rec in fdb_query.all():
+      res = session_retry(session, fdb_query.all, lambda x: x(), self.logger)
+      for fdb_rec in res:
         slv_name = self.id_solver_map[fdb_rec.solver]
         if not self.job.solver or slv_name == self.job.solver:
           compile_entry = {
@@ -152,7 +153,8 @@ class FinEvaluator(FinClass):
           kernel_objects = []
           blobs = session.query(self.dbt.kernel_cache).filter(
               self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
-          for obj in blobs.all():
+          res = session_retry(session, blobs.all, lambda x: x(), self.logger)
+          for obj in res:
             kernel_objects.append({
                 'blob': obj.kernel_blob.decode('utf-8'),
                 'comp_options': obj.kernel_args,
@@ -239,7 +241,7 @@ class FinEvaluator(FinClass):
         if not ret:
           self.logger.warning('FinEval: Unable to update Database')
           slv_stat['success'] = False
-          slv_stat['result'] = 'FinEval: Unable to update Database'
+          slv_stat['result'] = fdb_obj['reason']
 
         status.append(slv_stat)
 
