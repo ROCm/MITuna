@@ -34,6 +34,7 @@ file_path_prev = os.path.join(root_dir, "./develop_percent_coverage.txt")
 coverage_file = open(file_path_json)
 coverage_data = json.load(coverage_file)
 percent_covered = coverage_data['totals']['percent_covered']
+percent_covered = '{:.2f}'.format(percent_covered)
 percent_covered = float(percent_covered)
 
 with open(file_path_prev, 'r') as f:
