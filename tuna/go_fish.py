@@ -30,6 +30,7 @@ import sys
 from tuna.utils.logger import setup_logger
 from tuna.libraries import Library
 from tuna.lib_utils import get_library
+from tuna.yaml_parser import parse_yaml
 
 # Setup logging
 LOGGER = setup_logger('go_fish')
@@ -37,35 +38,57 @@ LOGGER = setup_logger('go_fish')
 
 def parse_args():
   """Function to parse arguments"""
-  parser = argparse.ArgumentParser()
+  parser = argparse.ArgumentParser(add_help=False)
 
   parser.add_argument('lib',
                       nargs='?',
                       default=Library.MIOPEN,
                       type=Library,
-                      help="Specify library to run, defaults to MIOpen",
+                      help="Specify library to run",
                       choices=Library)
 
+  parser.add_argument('--yaml',
+                      dest='yaml',
+                      default=None,
+                      help='Path to yaml input file')
+
   args, _ = parser.parse_known_args()
+
+  if '--yaml' in sys.argv and len(sys.argv) > 4:
+    parser.error('Command line arguments not accepted with yaml file')
+
   return vars(args)
 
 
 def main():
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
+  LOGGER.info(len(sys.argv))
   args = parse_args()
+
+  #case no yaml file
   library = get_library(args)
+  yaml_files = [args['yaml']]
+
+  #case with yaml file
+  if args['yaml']:
+    yaml_files = parse_yaml(args['yaml'], args['lib'])
 
   try:
+    for yaml_file in yaml_files:
+      args['yaml_file'] = yaml_file
+      if args['yaml_file']:
+        sys.argv[3] = yaml_file
+        LOGGER.info("Executing with yaml file: %s", yaml_file)
 
-    #returns a list of workers/processes it started
-    worker_lst = library.run()
-    if worker_lst is None:
-      return True
+      #returns a list of workers/processes it started
+      worker_lst = library.run()
+      if worker_lst is None:
+        return True
 
-    for worker in worker_lst:
-      worker.join()
-      LOGGER.warning('Process finished')
+      for worker in worker_lst:
+        worker.join()
+        LOGGER.warning('Process finished')
   except KeyboardInterrupt:
     LOGGER.warning('Interrupt signal caught')
 

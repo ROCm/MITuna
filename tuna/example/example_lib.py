@@ -59,6 +59,14 @@ class Example(MITunaInterface):
                        action='store_true',
                        help='Add Example library specific tables')
 
+    group.add_argument(
+        '-e',
+        '--execute',
+        dest='execute',
+        action='store_true',
+        help='Run jobs from the job tables based on arch, num_cu and session_id'
+    )
+
     group.add_argument('--init_session',
                        action='store_true',
                        dest='init_session',

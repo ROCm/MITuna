@@ -42,8 +42,8 @@ from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.abort import chk_abort_file
-from tuna.metadata import TUNA_LOG_DIR
-from tuna.metadata import NUM_SQL_RETRIES
+from tuna.miopen.utils.metadata import TUNA_LOG_DIR
+from tuna.miopen.utils.metadata import NUM_SQL_RETRIES
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
@@ -97,13 +97,6 @@ class WorkerInterface(Process):
 
     #initialize tables
     self.set_db_tables()
-
-    #add cache directories
-    self.envmt.append(
-        f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
-    )
-    self.envmt.append(
-        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
 
     self.hostname = self.machine.hostname
     self.claim_num = self.num_procs.value
@@ -441,8 +434,8 @@ class WorkerInterface(Process):
   def reset_job_state(self):
     """Helper function to reset job state during signal interrupt"""
     #also filter pending states eg compiled_pend
-    if self.job and self.job.state.name in ("compile_start", "compiling",
-                                            "eval_start", "evaluating"):
+    if self.job and self.job.state in ("compile_start", "compiling",
+                                       "eval_start", "evaluating"):
       self.logger.warning('resetting job state to %s', self.fetch_state[0])
       if "new" in self.fetch_state:
         self.set_job_state("new")
