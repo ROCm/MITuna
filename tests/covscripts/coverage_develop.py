@@ -25,7 +25,7 @@
 ###############################################################################
 import json
 import os
-from os import path
+
 
 root_dir = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -41,8 +41,9 @@ print(f"Current Testing Coverage for develop branch is: {percent_covered}%")
 with open('develop_percent_coverage.txt', 'w') as f:
   f.write(percent_covered)
 
-check_export = path.exists("develop_percent_coverage.tx")
+check_export = os.path.exists('develop_percent_coverage.txt')
 
+print(check_export)
 if check_export is True:
   print(f"Coverage artifact file is exported successfully")
 else:
