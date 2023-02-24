@@ -316,16 +316,14 @@ class WorkerInterface(Process):
 
       job_set_attr = ['state', 'result', 'retries', 'cache_loc', 'gpu_id']
       query = gen_update_query(self.job, job_set_attr,
-                                self.dbt.job_table.__tablename__)
+                               self.dbt.job_table.__tablename__)
 
       def callback():
         session.execute(query)
         session.commit()
         return True
 
-      assert session_retry(session, callback,
-                    lambda x: x(), self.logger)
-
+      assert session_retry(session, callback, lambda x: x(), self.logger)
 
   def exec_command(self, cmd):
     """execute on native machine"""

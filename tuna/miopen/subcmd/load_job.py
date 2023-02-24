@@ -234,7 +234,8 @@ def add_jobs(args, dbt):
 
           if job.config in pre_ex:
             if job.solver in pre_ex[job.config]:
-              LOGGER.warning("Job exists (skip): %s : %s", job.config, job.solver)
+              LOGGER.warning("Job exists (skip): %s : %s", job.config,
+                             job.solver)
               continue
 
           session.add(job)

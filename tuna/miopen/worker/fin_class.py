@@ -331,7 +331,6 @@ class FinClass(WorkerInterface):
         session.commit()
         self.logger.info("Finished applic zeroing")
 
-
         block_size = len_rows // num_blk  #size of the config block
         extra = len_rows % num_blk  #leftover configs, don't divide evenly
         self.logger.info(
