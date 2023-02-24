@@ -585,7 +585,6 @@ def runLint() {
             sh "yamllint tuna/example/*.yaml"
             stash includes: 'develop_percent_coverage.txt', name: 'coverage_percent'
             sh "ls"
-"
           }
     }
 }
