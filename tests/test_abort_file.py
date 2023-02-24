@@ -37,6 +37,7 @@ this_path = os.path.dirname(__file__)
 from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.machine import Machine
 from tuna.sql import DbCursor
+from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.config_type import ConfigType
 from utils import CfgImportArgs
 from tuna.miopen.db.tables import MIOpenDBTables
@@ -50,6 +51,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 
 def test_abort():
   #import configs
+  logger = setup_logger('test_abort_file')
   session_id = add_test_session()
   args = CfgImportArgs()
   args.tag = 'test_builder'
@@ -57,7 +59,7 @@ def test_abort():
   args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
   dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
-  counts = import_cfgs(args, dbt)
+  counts = import_cfgs(args, dbt, logger)
 
   #load jobs
   job_list = []

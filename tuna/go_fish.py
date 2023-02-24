@@ -38,7 +38,7 @@ LOGGER = setup_logger('go_fish')
 
 def parse_args():
   """Function to parse arguments"""
-  parser = argparse.ArgumentParser()
+  parser = argparse.ArgumentParser(add_help=False)
 
   parser.add_argument('lib',
                       nargs='?',
@@ -79,6 +79,7 @@ def main():
       args['yaml_file'] = yaml_file
       if args['yaml_file']:
         sys.argv[3] = yaml_file
+        LOGGER.info("Executing with yaml file: %s", yaml_file)
 
       #returns a list of workers/processes it started
       worker_lst = library.run()

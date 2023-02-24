@@ -27,18 +27,18 @@
 """Corrupt config module"""
 import sys
 import logging
-
+from typing import Optional, List, Tuple, Union, Dict
+from io import TextIOWrapper
+import mysql.connector
 from tuna.sql import DbCursor
 from tuna.miopen.utils.metadata import TABLE_COLS_FUSION_MAP
 from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP
 
-LOGGER = get_logger()
 
-
-def get_logger():
+def get_logger() -> logging.Logger:
   """Setting up logger"""
-  logger = logging.getLogger('CorruptConfigs')
-  hdlr = logging.FileHandler('corrupt_configs.log')
+  logger: logging.Logger = logging.getLogger('CorruptConfigs')
+  hdlr: logging.FileHandler = logging.FileHandler('corrupt_configs.log')
   formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
   hdlr.setFormatter(formatter)
   logger.addHandler(hdlr)
@@ -47,31 +47,52 @@ def get_logger():
   return logger
 
 
-def main():
+LOGGER = get_logger()
+
+
+# pylint: disable-msg=too-many-locals
+def main() -> None:
   """Main module function"""
-  file_name = None
-  arch = None
+  file_name: Optional[str] = None
+  arch: Optional[str] = None
+
   if len(sys.argv) == 3:
     file_name = sys.argv[1]
     arch = sys.argv[2]
   else:
     sys.exit("Usage: " + sys.argv[0] + " <output_file> <arch>")
 
-  table_cols_conv_invmap = {v: k for k, v in TABLE_COLS_CONV_MAP.items()}
-  table_cols_fusion_invmap = {v: k for k, v in TABLE_COLS_FUSION_MAP.items()}
+  col_tup: Tuple[str, Union[int, str]]
+  short_arg: str
 
+  table_cols_conv_invmap: Dict[str, str] = {
+      col_tup[0]: short_arg
+      for short_arg, col_tup in TABLE_COLS_CONV_MAP.items()
+  }
+
+  table_cols_fusion_invmap: Dict[str, str] = {
+      col_tup[0]: short_arg
+      for short_arg, col_tup in TABLE_COLS_FUSION_MAP.items()
+  }
+
+  outfile: TextIOWrapper
+  cur: mysql.connector.cursor.MySQLCursor
+  count: int = 0
+  sub_cmd: str = ""
+  row: List
   with open(file_name, "w") as outfile:  # pylint: disable=unspecified-encoding
-    sub_cmd_idx = None
     with DbCursor() as cur:
       cur.execute(
-          "select config.* from job inner join config on config.id = job.config where \
-              job.arch = %s and reason = 'corrupt';", (arch,))
-      sub_cmd_idx = cur.column_names.index('cmd')
-      count = 0
-
+          "select conv_config.* from job inner join conv_config on conv_config.id = \
+          job.conv_config  where job.arch = %s and reason = 'corrupt';",
+          (arch,))
+      sub_cmd_idx: int = cur.column_names.index('cmd')
       for row in cur:
         sub_cmd = row[sub_cmd_idx]
-        bash_cmd = f'echo {row[0]}; ./bin/MIOpenDriver {sub_cmd} -V 0 '
+        bash_cmd: str = f'echo {row[0]}; ./bin/MIOpenDriver {sub_cmd} -V 0 '
+        idx: int = 0
+        fds: str = ""
+        arg_name: str = ""
         for idx, fds in enumerate(row):
           if cur.column_names[idx] in ['id', 'cmd']:
             continue
@@ -85,7 +106,7 @@ def main():
         outfile.write(bash_cmd + '\n')
         count += 1
 
-  LOGGER.warning(f"Added {count} entries")
+  LOGGER.warning("Entries added = %d", count)
 
 
 if __name__ == '__main__':
