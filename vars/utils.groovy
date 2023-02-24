@@ -583,7 +583,7 @@ def runLint() {
             sh "cd tuna && mypy miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/*.yaml"
             sh "yamllint tuna/example/*.yaml"
-            stash includes: 'develop_percent_coverage.txt', name: 'coverage_percent'
+            stash includes: 'develop_percent_coverage.txt', name: 'develop_percent_coverage.txt'
             sh "ls"
           }
     }
