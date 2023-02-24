@@ -41,7 +41,7 @@ with open(file_path_prev, 'r') as f:
   prev_coverage = f.readline().strip()
   prev_coverage_int = float(prev_coverage)
 
-print(percent_covered)
-print(prev_coverage_int)
+print(f"Current Testing Coverage for current branch is: {percent_covered}%")
+print(f"Current Testing Coverage for develop branch is: {prev_coverage_int}%")
 if percent_covered < prev_coverage_int:
-  raise ValueError('Coverage Tests dropped below an acceptable treshold')
+  raise ValueError('Code Coverage Decreased')

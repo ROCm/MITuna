@@ -80,7 +80,7 @@ pipeline {
         agent{ label utils.rocmnode("tunatest") }
         steps{
             script{
-                if (branch == environment.dev) { 
+                if (branch == environment.branch_dev) { 
                 utils.coverageExport()
                 } else {
                 utils.pytestSuite3()
