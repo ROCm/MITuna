@@ -39,28 +39,25 @@ def get_import_cfg_parser(
       [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
       with_yaml=with_yaml)
 
-  group1 = parser.add_mutually_exclusive_group()
-  group2 = parser.add_mutually_exclusive_group()
-  group3 = parser.add_mutually_exclusive_group()
-  group4 = parser.add_mutually_exclusive_group()
+  group = parser.add_mutually_exclusive_group()
 
-  group1.add_argument(
+  group.add_argument(
       '--add_framework',
       dest='add_framework',
       choices=[frm.value for frm in FrameworkEnum],
       help='Populate framework table with new framework and version')
-  group2.add_argument('--add_model',
-                      dest='add_model',
-                      choices=[model.value for model in ModelEnum],
-                      help='Populate table with new model and version')
-  group3.add_argument('--print_models',
-                      dest='print_models',
-                      action='store_true',
-                      help='Print models from table')
-  group4.add_argument('--add_benchmark',
-                      dest='add_benchmark',
-                      action='store_true',
-                      help='Insert new benchmark')
+  group.add_argument('--add_model',
+                     dest='add_model',
+                     choices=[model.value for model in ModelEnum],
+                     help='Populate table with new model and version')
+  group.add_argument('--print_models',
+                     dest='print_models',
+                     action='store_true',
+                     help='Print models from table')
+  group.add_argument('--add_benchmark',
+                     dest='add_benchmark',
+                     action='store_true',
+                     help='Insert new benchmark')
 
   parser.add_argument('-b',
                       '--batches',
