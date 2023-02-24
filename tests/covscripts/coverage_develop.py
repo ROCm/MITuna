@@ -26,7 +26,6 @@
 import json
 import os
 
-
 root_dir = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 file_path_json = os.path.join(root_dir, "./coverage.json")
