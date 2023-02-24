@@ -42,7 +42,6 @@ with open('develop_percent_coverage.txt', 'w') as f:
 
 check_export = os.path.exists('develop_percent_coverage.txt')
 
-print(check_export)
 if check_export is True:
   print(f"Coverage artifact file is exported successfully")
 else:
