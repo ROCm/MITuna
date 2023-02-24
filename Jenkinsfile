@@ -7,7 +7,7 @@ pipeline {
         branch =  sh(script: "echo ${scm.branches[0].name} | sed 's/[^a-zA-Z0-9]/_/g' ", returnStdout: true).trim()
         branch_id = "${branch}_${BUILD_ID}"
         branch_dev = "develop" //will change to develop
-        branch_dev_artif = "rk_coverage_auto/lastSuccessfulBuild/artifact/"
+        branch_dev_artif = "rk_coverage_auto/lastSuccessfulBuild/artifact"
         jenkin_url = "http://localhost:8080/job/Test_mb/job"
         db_name = "${TUNA_DB_NAME}_${branch}_${BUILD_ID}"
         docker_args = '--privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw -v /var/lib/docker/:/var/lib/docker --group-add video'

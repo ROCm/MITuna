@@ -528,7 +528,6 @@ def pytestSuite3() {
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"
            sh "python3 -m coverage json"
-           //sh "wget http://localhost:8080/job/Test_mb/job/rk_coverage_auto/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
            sh "wget ${jenkin_url}/${branch_dev_artif}/develop_percent_coverage.txt"
            sh "python3 tests/covscripts/coverage_branches.py"
         }
@@ -584,7 +583,6 @@ def runLint() {
             sh "cd tuna && mypy miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/*.yaml"
             sh "yamllint tuna/example/*.yaml"
-            sh "wget ${jenkin_url}/${branch_dev_artif}/develop_percent_coverage.txt"
           }
     }
 }
