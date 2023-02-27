@@ -37,9 +37,9 @@ import socket
 import random
 import string
 from time import sleep
+from typing import List, Tuple, Union
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
-from typing import List, Tuple, Union
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.abort import chk_abort_file
@@ -163,7 +163,7 @@ class WorkerInterface(Process):
     entries = gen_select_objs(session, self.job_attr,
                               self.dbt.job_table.__tablename__, cond_str)
 
-    return [(job) for job in entries]
+    return [(job,) for job in entries]
 
   def get_job_objs(self, session: DbSession,
                    find_state: str) -> List[Tuple[SimpleDict, ...]]:
