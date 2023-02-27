@@ -24,6 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
+from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.driver.batchnorm import DriverBatchNorm
 from tuna.miopen.subcmd.import_configs import insert_config
@@ -36,6 +37,7 @@ from test_fin_builder import CfgImportArgs
 
 def test_driver():
   args = CfgImportArgs()
+  logger = setup_logger('test_driver')
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
   cmd0 = "./bin/MIOpenDriver conv --pad_h 1 --pad_w 1 --out_channels 128 --fil_w 3 --fil_h 3 --dilation_w 1 --dilation_h 1 --conv_stride_w 1 --conv_stride_h 1 --in_channels 128 --in_w 28 --in_h 28 --in_h 28 --batchsize 256 --group_count 1 --in_d 1 --fil_d 1 --in_layout NHWC --fil_layout NHWC --out_layout NHWC -V 0"
   try:
@@ -66,7 +68,7 @@ def test_driver():
   counts = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
-  cmd1_id = insert_config(driver1, counts, dbt, args)
+  cmd1_id = insert_config(driver1, counts, dbt, args, logger)
   with DbSession() as session:
     row1 = session.query(ConvolutionConfig).filter(
         ConvolutionConfig.id == cmd1_id).one()
@@ -93,7 +95,7 @@ def test_driver():
   assert c_dict2["weight_tensor"]
   assert c_dict2
 
-  cmd2_id = insert_config(driver2, counts, dbt, args)
+  cmd2_id = insert_config(driver2, counts, dbt, args, logger)
   with DbSession() as session:
     row2 = session.query(ConvolutionConfig).filter(
         ConvolutionConfig.id == cmd2_id).one()
@@ -102,6 +104,8 @@ def test_driver():
     assert driver2 == driver_2_row
 
   cmd3 = "./bin/MIOpenDriver bnormfp16 -n 256 -c 64 -H 56 -W 56 -m 1 --forw 1 -b 0 -s 1 -r 1"
+  args.config_type = ConfigType.batch_norm
+  dbt2 = MIOpenDBTables(session_id=None, config_type=args.config_type)
   driver3 = DriverBatchNorm(cmd3)
   d3_str = driver3.to_dict()
   assert d3_str
@@ -119,7 +123,7 @@ def test_driver():
   assert c_dict3["input_tensor"]
   assert c_dict3
 
-  cmd3_id = insert_config(driver3, counts, dbt, args)
+  cmd3_id = insert_config(driver3, counts, dbt2, args, logger)
   with DbSession() as session:
     row3 = session.query(BNConfig).filter(BNConfig.id == cmd3_id).one()
     driver_3_row = DriverBatchNorm(db_obj=row3)
