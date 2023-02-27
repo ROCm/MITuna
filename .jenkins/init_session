@@ -30,9 +30,13 @@ def initSession(){
   if(params.arch != '' && params.num_cu != '')
   {
     margs = "-a ${params.arch} -n ${params.num_cu}"
+    sh "docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs}"
+  }
+  else
+  {
+    sh "srun --no-kill -p ${slurm_partition} -N 1 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs}'"
   }
 
-  sh "srun --no-kill -p ${slurm_partition} -N 1 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs}'"
   def num_session2 = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
   println "Number of ${job_label} sessions: ${num_session2}"
   if(num_session.toInteger() <= num_session2.toInteger()){
