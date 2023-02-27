@@ -14,4 +14,5 @@ Steps. Navigate to a clone of Tuna and run:
 4. git clone https://github.com/ROCmSoftwarePlatform/MITuna.git
 5. cd Tuna/tuna
 6. ./go_fish.py miopen --update_solver
-7. ./go_fish.py miopen --update_applicability
+7. ./go_fish.py miopen --init_session -l someReason -a gfx908 -n 120
+8. ./go_fish.py miopen --update_applicability --session_id 1

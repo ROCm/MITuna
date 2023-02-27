@@ -46,15 +46,35 @@ including the prerequisites are detailed below.
 
 **Add Network Configurations(1)**
 
+Before a configuration gets tagged, a model and framework need to be added. This allows for
+benchmarking of a certain model, post tuning.
+
+```
+./go_fish.py --add_model Resnet50 --md_version 1
+./go_fish.py --add_framework Pytorch --fw_version 1
+--add_model - model name
+--md_version - model version
+--add_framework - framework name
+--fw_version - framework version
+```
+
 The config table contains network configurations. If provided with a text file of MIOpenDriver
 commands, the import script can translate those commands and populate the config table. 
 Additionally the user may provide a name to tag a configuration for easier recall later. 
 A tag will be required when adding a tuning job. Tags are stored in the config_tags table.
 
 ```
-./import_configs.py -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt</p>
+./go_fish.py --add_model Resnet50 --md_version 1
+./go_fish.py --add_framework Pytorch --fw_version 1
+./go_fish.py miopen import_configs -t resnet50 --model Resnet50 --md_version 1
+ --framework Pytroch --fw_version 1 -f ../utils/recurrent_cfgs/resnet50.txt
 -t - tag
 -f - filepath 
+--model - model name
+--md_version - model version
+--framework - framework name
+--fw_version - framework version
+-
 ```
 
 **Add Solvers (2)**
