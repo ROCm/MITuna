@@ -159,6 +159,13 @@ def add_jobs(
           job.solver = slv.solver
           job.fin_step = args.fin_steps
           job.session = args.session_id
+
+          if job.config in pre_ex:
+            if job.solver in pre_ex[job.config]:
+              LOGGER.warning("Job exists (skip): %s : %s", job.config,
+                             job.solver)
+              continue
+
           session.add(job)
           if do_commit:
             session.commit()
