@@ -85,10 +85,11 @@ def parse_args():
   args = parser.parse_args()
 
   if args.overwrite:
-    if args.session_id is None:
-      parser.error('--session_id must be set with --overwrite')
-    if args.base_golden_v is not None:
-      parser.error('--base_golden_v must not be set with --overwrite')
+    pass
+  #  if args.session_id is None:
+  #    parser.error('--session_id must be set with --overwrite')
+  #  if args.base_golden_v is not None:
+  #    parser.error('--base_golden_v must not be set with --overwrite')
   elif args.base_golden_v is None:
     dbt = MIOpenDBTables(session_id=args.session_id,
                          config_type=args.config_type)
@@ -120,7 +121,7 @@ def get_fdb_entries(dbt):
     ]
     attr_str = ','.join(fdb_attr)
     query = f"select {attr_str} from {dbt.find_db_table.__tablename__}"\
-            f" where valid=1 and session={dbt.session_id};"
+            f" where valid=1 and session={dbt.session_id} and kernel_time>0;"
     ret = session.execute(query)
     entries = []
     for row in ret:
@@ -388,9 +389,9 @@ def main():
         raise ValueError(
             f'Base golden version {args.base_golden_v} does not exist.')
     else:
-      process_merge_golden(dbt, args.golden_v, base_gold_db, s_copy=True)
+      process_merge_golden(dbt, args.golden_v, base_gold_db, s_copy=(not args.overwrite))
 
-  if args.overwrite:
+  if args.overwrite and args.session_id:
     entries = get_fdb_entries(dbt)
     LOGGER.info("Import Session entries %s", len(entries))
     success = verify_no_duplicates(entries)
