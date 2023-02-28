@@ -100,7 +100,7 @@ class WorkerInterface(Process):
     self.set_db_tables()
 
     self.hostname = self.machine.hostname
-    self.claim_num = self.num_procs.value
+    self.claim_num = self.num_procs.value * 3
     self.last_reset = datetime.now()
 
     dir_name = os.path.join(TUNA_LOG_DIR,
