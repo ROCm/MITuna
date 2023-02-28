@@ -39,14 +39,18 @@ from tuna.libraries import Library
 
 
 def test_yaml_parser():
-  miopen_yaml = "{0}/../tuna/miopen/sample.yaml".format(this_path)
+  miopen_yaml1 = "{0}/../tuna/miopen/yaml_files/sample1.yaml".format(this_path)
+  miopen_yaml2 = "{0}/../tuna/miopen/yaml_files/sample2.yaml".format(this_path)
+  miopen_yaml3 = "{0}/../tuna/miopen/yaml_files/sample3.yaml".format(this_path)
   example_yaml = "{0}/../tuna/example/sample.yaml".format(this_path)
 
-  parse_miopen_yaml(miopen_yaml, Library('miopen'))
+  parse_miopen_yaml1(miopen_yaml1, Library('miopen'))
+  parse_miopen_yaml2(miopen_yaml2, Library('miopen'))
+  parse_miopen_yaml3(miopen_yaml3, Library('miopen'))
   parse_example_yaml(example_yaml, Library('example'))
 
 
-def parse_miopen_yaml(miopen_yaml, miopen):
+def parse_miopen_yaml1(miopen_yaml, miopen):
   yaml_files = parse_yaml(miopen_yaml, miopen)
   assert len(yaml_files) == 3
 
@@ -55,7 +59,6 @@ def parse_miopen_yaml(miopen_yaml, miopen):
   for yfile in yaml_files:
     with open(yfile, encoding="utf8") as stream:
       yaml_dict = yaml.safe_load(stream)
-      print(yaml_dict)
       yaml_dicts.append(yaml_dict)
 
   dict1 = {
@@ -88,6 +91,10 @@ def parse_miopen_yaml(miopen_yaml, miopen):
       'docker_name': 'my_docker_name',
       'import_configs': {
           'file_name': '../utils/configs/conv_configs_NCHW.txt',
+          'framework': 'Pytorch',
+          'fw_version': 1,
+          'md_version': 1,
+          'model': 'Alexnet',
           'tag': 'someTag'
       },
       'label': 'Example',
@@ -100,6 +107,60 @@ def parse_miopen_yaml(miopen_yaml, miopen):
   assert (yaml_dicts[0] == dict1)
   assert (yaml_dicts[1] == dict2)
   assert (yaml_dicts[2] == dict3)
+
+
+def parse_miopen_yaml2(miopen_yaml, miopen):
+  yaml_files = parse_yaml(miopen_yaml, miopen)
+  assert len(yaml_files) == 1
+
+  yaml_dicts = []
+  for yfile in yaml_files:
+    with open(yfile, encoding="utf8") as stream:
+      yaml_dict = yaml.safe_load(stream)
+      yaml_dicts.append(yaml_dict)
+
+  dict1 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'import_configs': {
+          'add_model': 'Alexnet',
+          'md_version': 1
+      },
+      'label': 'Example',
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
+  assert (yaml_dicts[0] == dict1)
+
+
+def parse_miopen_yaml3(miopen_yaml, miopen):
+  yaml_files = parse_yaml(miopen_yaml, miopen)
+  assert len(yaml_files) == 1
+
+  yaml_dicts = []
+  for yfile in yaml_files:
+    with open(yfile, encoding="utf8") as stream:
+      yaml_dict = yaml.safe_load(stream)
+      yaml_dicts.append(yaml_dict)
+
+  dict1 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'import_configs': {
+          'add_framework': 'Pytorch',
+          'fw_version': 1
+      },
+      'label': 'Example',
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
+  assert (yaml_dicts[0] == dict1)
 
 
 def parse_example_yaml(example_yaml, example):

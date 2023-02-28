@@ -45,10 +45,11 @@ setup(
     name='MITuna',
     python_requires='>=3.9',
     #some version number you may wish to add - increment this after every update
-    version='0.1',
+    version='1.0',
     description="Tuna is a distributed tuning infrastructure that provides pre-compiled kernels "\
                 "for MIOpen customers through automated Jenkins pipelines and SLURM scalable "\
-                "architecture.",
+                "architecture. MITuna also provides a scalable task management infrastructure "\
+                "ready to integrate with external libaries.",
     long_description=readme,
     license='MIT',
     url='https://github.com/ROCmSoftwarePlatform/MITuna.git',
