@@ -119,15 +119,7 @@ def finApplicability(){
         sh "./tuna/go_fish.py miopen import_configs --add_model Alexnet --md_version 1"
         sh "./tuna/go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Alexnet --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs --add_model Alexnet --md_version 1"
-        sh "./tuna/go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Alexnet --md_version 1 --framework Pytorch --fw_version 1"
 
-        sh "./tuna/go_fish.py miopen import_configs --add_model Resnet50 --md_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs --add_model Resnet50 --md_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/resnet50_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
 
@@ -146,7 +138,6 @@ def finApplicability(){
             error("Unable to get applicability from Fin for convolution")
         }
 
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_bn --mark_recurrent -f utils/configs/batch_norm.txt -C batch_norm --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_bn --mark_recurrent -f utils/configs/batch_norm.txt -C batch_norm --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         runsql("TRUNCATE table bn_solver_applicability")
         def num_bn = runsql("SELECT count(*) from bn_config;")
@@ -176,7 +167,6 @@ def finFindCompile(){
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def num_cfg = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg}"
         runsql("delete from conv_job;")
@@ -192,7 +182,6 @@ def finFindCompile(){
         }
         
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def num_cfg_nhwc = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg_nhwc}"
         //runsql("delete from conv_job;")
@@ -206,7 +195,6 @@ def finFindCompile(){
         if (num_compiled_jobs_nhwc != num_jobs_nhwc){
             error("Unable to compile find jobs using Fin")
         }
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg_nchw}"
@@ -306,8 +294,6 @@ def loadJobTest() {
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Alexnet --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Alexnet --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def out = runsql("SELECT count(*) FROM conv_config_tags WHERE tag='recurrent_${branch_id}' ;")
         assert out.toInteger() > 0
 
@@ -318,7 +304,6 @@ def loadJobTest() {
         out = runsql("SELECT count(*) FROM conv_job WHERE reason='recurrent_${branch_id}' and session=${sesh1} ;")
         assert out.toInteger() > 0
 
-        sh "./tuna/go_fish.py miopen import_configs -t batch_norm_test -f utils/configs/batch_norm.txt -C batch_norm --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t batch_norm_test -f utils/configs/batch_norm.txt -C batch_norm --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         // dump the added jobs for version 2
         def out_bn = runsql("SELECT count(*) FROM bn_config_tags WHERE tag='batch_norm_test' ;")
@@ -399,6 +384,8 @@ def perfCompile() {
             error("Unable to compile any jobs for alexnet")
         }
 
+        sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
+        sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/miopen/subcmd/load_job.py -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
@@ -578,10 +565,6 @@ def runLint() {
             sh "mypy tuna/miopen/subcmd/import_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/yaml_files/*.yaml"
             sh "yamllint tuna/example/*.yaml"
             sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
