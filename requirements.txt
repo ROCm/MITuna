@@ -17,7 +17,7 @@ jedi==0.13.1
 lazy-object-proxy==1.7.1
 markdown-it-py==2.2.0
 mccabe==0.6.1
-myst-parser==0.15.1
+myst-parser==0.18.1
 more-itertools==8.3.0
 numpy==1.19.5
 opentelemetry-api==1.12.0rc2
