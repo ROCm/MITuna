@@ -204,7 +204,7 @@ class Connection():
     return False
 
   def exec_command_unparsed(self, cmd: str, timeout: int = SSH_TIMEOUT, \
-  abort: Optional[bool]=None) -> Tuple[ChannelStdinFile, ChannelFile, ChannelStderrFile]:
+  abort: Optional[bool]=None) -> Tuple[ChannelStdinFile , ChannelFile, ChannelStderrFile]:
     # pylint: disable-msg=too-many-locals
     """Function to exec commands
 
@@ -263,8 +263,8 @@ class Connection():
     return i_var, o_var, e_var
 
   def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort: Optional[bool]=None,\
-  proc_line: Union[Any, None]= None) -> Tuple[Union[int, Any], Union[TextIO, StringIO, \
-  ChannelFile],Union[ChannelStderrFile, StringIO]]:
+  proc_line: Union[Any, None]= None) -> Tuple[ Union[int, Any], Union[ChannelFile, StringIO], \
+  Union[ChannelStderrFile, StringIO]]:
     # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
     o_var: ChannelFile
@@ -277,7 +277,7 @@ class Connection():
       if not proc_line:
         # pylint: disable-next=unnecessary-lambda-assignment ; more readable
         proc_line = lambda x: self.logger.info(line.strip())
-      ret_out: Union[TextIO, StringIO] = StringIO()
+      ret_out: StringIO = StringIO()
       ret_err: Union[ChannelStderrFile, StringIO] = e_var
       ret_code: int = 0
       try:
