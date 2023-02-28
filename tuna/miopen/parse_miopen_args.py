@@ -28,7 +28,6 @@
 import jsonargparse
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.db.benchmark import FrameworkEnum, ModelEnum
-from tuna.miopen.utils.metadata import ALG_SLV_MAP
 
 
 def get_import_cfg_parser(
@@ -39,6 +38,38 @@ def get_import_cfg_parser(
       'Import MIOpenDriver commands and MIOpen performance DB entries.',
       [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
       with_yaml=with_yaml)
+
+  group = parser.add_mutually_exclusive_group()
+
+  group.add_argument(
+      '--add_framework',
+      dest='add_framework',
+      choices=[frm.value for frm in FrameworkEnum],
+      help='Populate framework table with new framework and version')
+  group.add_argument('--add_model',
+                     dest='add_model',
+                     choices=[model.value for model in ModelEnum],
+                     help='Populate table with new model and version')
+  group.add_argument('--print_models',
+                     dest='print_models',
+                     action='store_true',
+                     help='Print models from table')
+  group.add_argument('--add_benchmark',
+                     dest='add_benchmark',
+                     action='store_true',
+                     help='Insert new benchmark')
+
+  parser.add_argument('-b',
+                      '--batches',
+                      type=str,
+                      dest='batches',
+                      help='Batch sizes to iterate over in the given configs')
+  parser.add_argument('--batchsize',
+                      dest='batchsize',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model batchsize')
 
   group = parser.add_mutually_exclusive_group()
 
@@ -82,7 +113,12 @@ def get_import_cfg_parser(
   parser.add_argument('-d',
                       '--driver',
                       dest='driver',
+  parser.add_argument('-d',
+                      '--driver',
+                      dest='driver',
                       type=str,
+                      default=None,
+                      help='Specify driver cmd')
                       default=None,
                       help='Specify driver cmd')
   parser.add_argument('-f',
@@ -108,11 +144,40 @@ def get_import_cfg_parser(
                       default=None,
                       required=False,
                       help='Specify number of gpus the benchmark runs on')
+  parser.add_argument('-F',
+                      '--framework',
+                      dest='framework',
+                      choices=[frm.value for frm in FrameworkEnum],
+                      help='Specify framework.')
+  parser.add_argument('--fw_version',
+                      dest='fw_version',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify framework version')
+  parser.add_argument('-g',
+                      '--gpu_count',
+                      dest='gpu_count',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify number of gpus the benchmark runs on')
   parser.add_argument(
       '--mark_recurrent',
       dest='mark_recurrent',
       action="store_true",
       help='Indicate whether you want the configs to be marked as recurrent')
+  parser.add_argument('-m',
+                      '--model',
+                      dest='model',
+                      choices=[model.value for model in ModelEnum],
+                      help='Specify model')
+  parser.add_argument('--md_version',
+                      dest='md_version',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model version')
   parser.add_argument('-m',
                       '--model',
                       dest='model',
