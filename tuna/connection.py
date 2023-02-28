@@ -278,7 +278,7 @@ class Connection():
         # pylint: disable-next=unnecessary-lambda-assignment ; more readable
         proc_line = lambda x: self.logger.info(line.strip())
       ret_out: StringIO = StringIO()
-      ret_err: Union[ChannelStderrFile, StringIO] = e_var
+      ret_err: StringIO = StringIO()
       ret_code: int = 0
       try:
         while True:
