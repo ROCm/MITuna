@@ -70,7 +70,8 @@ benchmark performance post-tuning.
 ```
 ./go_fish.py miopen import_configs --add_model Resnet50 --md_version 1
 ./go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1
-./go_fish.py miopen import_configs -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1</p>
+./go_fish.py miopen import_configs -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt 
+--model Resnet50 --md_version 1 --framework Pytorch --fw_version 1</p>
 -t - tag
 -f - filepath 
 --model - model name
