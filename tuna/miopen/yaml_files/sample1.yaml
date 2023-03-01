@@ -21,6 +21,10 @@ import_configs:
   enabled: true
   tag: 'someTag'
   file_name: '../utils/configs/conv_configs_NCHW.txt'
+  model: 'Alexnet'
+  md_version: 1
+  framework: 'Pytorch'
+  fw_version: 1
 
 update_applicability:
   enabled: false

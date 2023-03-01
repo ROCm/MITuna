@@ -62,12 +62,14 @@ The config table contains network configurations. If provided with a text file o
 commands, the import script can translate those commands and populate the config table. 
 Additionally the user may provide a name to tag a configuration for easier recall later. 
 A tag will be required when adding a tuning job. Tags are stored in the config_tags table.
+A model and framework name and version are also required. This enables MITuna to track
+benchmark performance post-tuning.
 
 ```
-./go_fish.py --add_model Resnet50 --md_version 1
-./go_fish.py --add_framework Pytorch --fw_version 1
-./go_fish.py miopen import_configs -t resnet50 --model Resnet50 --md_version 1
- --framework Pytroch --fw_version 1 -f ../utils/recurrent_cfgs/resnet50.txt
+./go_fish.py miopen import_configs --add_model Resnet50 --md_version 1
+./go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1
+./go_fish.py miopen import_configs -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt 
+--model Resnet50 --md_version 1 --framework Pytorch --fw_version 1</p>
 -t - tag
 -f - filepath 
 --model - model name
