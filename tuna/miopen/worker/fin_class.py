@@ -174,7 +174,7 @@ class FinClass(WorkerInterface):
       cfg_map = {cfg.id: cfg for cfg in cfg_entries}
 
       for job in job_entries:
-        ret.append([job[0], cfg_map[job.config]])
+        ret.append((job[0], cfg_map[job.config]))
 
     return ret
 
