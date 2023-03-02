@@ -240,7 +240,7 @@ class WorkerInterface(Process):
 
   def job_queue_pop(self):
     """load job from top of job queue"""
-    self.job = self.job_queue.get(True, 1)
+    self.job = self.job_queue.get(True, 1)[0]
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                      self.job.reason)
 
