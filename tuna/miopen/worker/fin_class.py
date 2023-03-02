@@ -357,7 +357,7 @@ class FinClass(WorkerInterface):
 
           self.job_queue.put(master_cfg_list[start:end])
     try:
-      self.all_configs = self.job_queue.get(True)
+      self.all_configs = self.job_queue.get(True, 180)
     except queue.Empty:
       self.logger.warning('No jobs found for process %s...', idx)
       self.all_configs = []
