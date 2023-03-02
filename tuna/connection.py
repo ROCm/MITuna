@@ -263,16 +263,13 @@ class Connection():
     return i_var, o_var, e_var
 
   def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort: Optional[bool]=None,\
-  proc_line: Union[Any, None]= None) -> Tuple[ Union[int, Any], Union[ChannelFile, StringIO], \
-  Union[ChannelStderrFile, StringIO]]:
+  proc_line: Union[Any, None]= None) -> Tuple[int, StringIO, StringIO]:
     # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
     o_var: ChannelFile
     e_var: ChannelStderrFile
     _, o_var, e_var = self.exec_command_unparsed(cmd, timeout, abort)
     try:
-      if not o_var:
-        return 1, o_var, e_var
 
       if not proc_line:
         # pylint: disable-next=unnecessary-lambda-assignment ; more readable
