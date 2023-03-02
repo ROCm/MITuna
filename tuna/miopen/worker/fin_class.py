@@ -322,12 +322,14 @@ class FinClass(WorkerInterface):
 
         #remove old applicability
         rm_old = ''
-        if self.label:
+        if self.label and rows:
           cfg_ids = [str(row.id) for row in rows]
           cfg_str = ','.join(cfg_ids)
-          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0 where session={self.session_id} and config in ({cfg_str});"
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+                   f" where session={self.session_id} and config in ({cfg_str});"
         else:
-          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0 where session={self.session_id};"
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+                   f" where session={self.session_id};"
 
         self.logger.info("Start applic zeroing")
         session.execute(rm_old)
