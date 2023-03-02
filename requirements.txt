@@ -50,6 +50,7 @@ traitlets==4.3.2
 typed-ast==1.5.4
 types-PyYAML==6.0.12.6
 types-paramiko==3.0.0.4
+types-PyMySQL==1.0.19.5
 wcwidth==0.1.7
 wrapt==1.14.1
 yamllint==1.29.0
