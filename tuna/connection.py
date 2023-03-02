@@ -204,7 +204,7 @@ class Connection():
     return False
 
   def exec_command_unparsed(self, cmd: str, timeout: int = SSH_TIMEOUT, \
-  abort: Optional[bool]=None) -> Tuple[ChannelStdinFile , ChannelFile, ChannelStderrFile]:
+  abort: Optional[bool]=None) -> Tuple[ChannelStdinFile, ChannelFile, ChannelStderrFile]:
     # pylint: disable-msg=too-many-locals
     """Function to exec commands
 
@@ -262,8 +262,8 @@ class Connection():
     self.logger.error('cmd_exec retries exhausted, giving up')
     return i_var, o_var, e_var
 
-  def exec_command(self, cmd: str, timeout: int=int(SSH_TIMEOUT), abort: Optional[bool]=None,\
-  proc_line: Union[Any, None]= None) -> Tuple[int, StringIO, StringIO]:
+  def exec_command(self, cmd: str, timeout: int = SSH_TIMEOUT, abort: Optional[bool]=None,\
+  proc_line: Callable = None) -> Tuple[int, StringIO, StringIO]:
     # pylint: disable=too-many-nested-blocks, too-many-branches
     """Function to exec commands"""
     o_var: ChannelFile
