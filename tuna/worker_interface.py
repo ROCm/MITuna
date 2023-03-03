@@ -307,20 +307,23 @@ class WorkerInterface(Process):
     """Interface function to update job state for builder/evaluator"""
     self.logger.info('Setting job id %s state to %s', self.job.id, state)
     with DbSession() as session:
+      job_set_attr = ['state', 'gpu_id']
       self.job.state = state
       if result:
+        job_set_attr.append('result')
         self.job.result = result
       if increment_retries:
+        job_set_attr.append('retries')
         self.job.retries += 1
 
       if '_start' in state:
+        job_set_attr.append('cache_loc')
         cache = '~/.cache/miopen_'
         blurr = ''.join(
             random.choice(string.ascii_lowercase) for i in range(10))
         cache_loc = cache + blurr
         self.job.cache_loc = cache_loc
 
-      job_set_attr = ['state', 'result', 'retries', 'cache_loc', 'gpu_id']
       query = gen_update_query(self.job, job_set_attr,
                                self.dbt.job_table.__tablename__)
 
