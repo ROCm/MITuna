@@ -82,7 +82,7 @@ def get_import_cfg_parser(
   return parser
 
 
-def get_load_jobs_parser():
+def get_load_job_parser():
   "Return parser for load_job subcommand"
 
   #pylint: disable=duplicate-code

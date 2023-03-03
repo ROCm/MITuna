@@ -181,7 +181,7 @@ def add_jobs(
   return counts
 
 
-def run_load_jobs(args: argparse.Namespace, logger: logging.Logger):
+def run_load_job(args: argparse.Namespace, logger: logging.Logger):
   """trigger the script run in miopen lib"""
 
   connect_db()
@@ -201,7 +201,7 @@ def main():
   """ main """
   parser = get_load_jobs_parser()
   args = parser.parse_args()
-  run_load_jobs(args, setup_logger('load_jobs'))
+  run_load_job(args, setup_logger('load_jobs'))
 
 
 if __name__ == '__main__':
