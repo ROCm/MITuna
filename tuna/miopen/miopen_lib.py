@@ -170,7 +170,7 @@ class MIOpen(MITunaInterface):
       print_solvers()
       raise ValueError('Printing solvers...')
 
-    if self.args.subcommand is None:
+    if self.args.fin_steps:
       self.check_fin_args(parser)
 
     if self.args.find_mode is None and not (self.args.check_status or
@@ -207,7 +207,7 @@ class MIOpen(MITunaInterface):
        @param parser The command line argument parser
     """
     valid_fin_steps = list(k for k in FinStep.__members__)
-    if ',' in self.args.fin_steps:
+    if ',' in self.args.fin_steps and self.args.subcommand !='load_job':
       parser.error('Multiple fin_steps currently not supported')
     f_steps = self.args.fin_steps.split(',')
     self.args.fin_steps = f_steps
