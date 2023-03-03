@@ -32,8 +32,8 @@ from enum import Enum
 class ConfigType(Enum):
   """Enumerate supported configuration types"""
   # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  convolution = "convolution"
-  batch_norm = "batch_norm"
+  convolution: str = "convolution"
+  batch_norm: str = "batch_norm"
 
   def __str__(self):
     return self.value
