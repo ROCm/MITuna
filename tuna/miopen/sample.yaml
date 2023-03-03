@@ -22,7 +22,7 @@ import_configs:
   tag: 'someTag'
   file_name: '../utils/configs/conv_configs_NCHW.txt'
 
-load_jobs:
+load_job:
   enabled: true
 
 update_applicability:

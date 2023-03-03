@@ -42,7 +42,7 @@ from tuna.miopen.db.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.miopen.parse_miopen_args import get_load_jobs_parser
+from tuna.miopen.parse_miopen_args import get_load_job_parser
 
 
 def arg_fin_steps(args: argparse.Namespace):
@@ -199,9 +199,9 @@ def run_load_job(args: argparse.Namespace, logger: logging.Logger):
 
 def main():
   """ main """
-  parser = get_load_jobs_parser()
+  parser = get_load_job_parser()
   args = parser.parse_args()
-  run_load_job(args, setup_logger('load_jobs'))
+  run_load_job(args, setup_logger('load_job'))
 
 
 if __name__ == '__main__':

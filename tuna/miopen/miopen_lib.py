@@ -341,7 +341,7 @@ class MIOpen(MITunaInterface):
       run_import_configs(self.args.import_configs, self.logger)
       return None
 
-    if self.args.subcommand is not None and self.args.subcommand == 'load_jobs':
+    if self.args.subcommand is not None and self.args.subcommand == 'load_job':
       run_load_job(self.args.import_configs, self.logger)
       return None
 
