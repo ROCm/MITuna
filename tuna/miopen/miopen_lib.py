@@ -170,7 +170,7 @@ class MIOpen(MITunaInterface):
       print_solvers()
       raise ValueError('Printing solvers...')
 
-    if self.args.subcommand == None:
+    if self.args.subcommand is None:
       self.check_fin_args(parser)
 
     if self.args.find_mode is None and not (self.args.check_status or
