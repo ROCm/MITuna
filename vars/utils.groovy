@@ -167,7 +167,8 @@ def finFindCompile(){
         println "Count(*) conv_config table: ${num_cfg}"
         runsql("delete from conv_job;")
         runsql("alter table conv_job AUTO_INCREMENT=1;")
-        sh "./tuna/miopen/subcmd/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
+        sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
+        //sh "./tuna/miopen/subcmd/load_job.py -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile, miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()

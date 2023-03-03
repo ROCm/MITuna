@@ -27,6 +27,8 @@
 """
 Script for adding jobs to the MySQL database
 """
+import logging
+import argparse
 
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
@@ -42,10 +44,6 @@ from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.parse_miopen_args import get_load_jobs_parser
 
-#to be removed
-"""
-"""
-
 
 def arg_fin_steps(args: argparse.Namespace):
   """fin steps for load jobs"""
@@ -54,7 +52,10 @@ def arg_fin_steps(args: argparse.Namespace):
     args.fin_steps = set(steps)
 
 
-def arg_solvers(args: argparse.Namespace):
+def arg_solvers(
+    args: argparse.Namespace,
+    logger: logging.Logger,
+):
   """solvers """
   solver_id_map = get_solver_ids()
   solver_arr = None
@@ -68,7 +69,7 @@ def arg_solvers(args: argparse.Namespace):
     for solver in solver_arr:
       sid = solver_id_map.get(solver, None)
       if not sid:
-        parser.error(f'Invalid solver: {solver}')
+        logger.error(f'Invalid solver: {solver}')
       solver_ids.append((solver, sid))
     args.solvers = solver_ids
   else:
@@ -132,7 +133,11 @@ def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
   return query
 
 
-def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables):
+def add_jobs(
+    args: argparse.Namespace,
+    dbt: MIOpenDBTables,
+    logger: logging.Logger,
+):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
   counts = 0
@@ -141,7 +146,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables):
     query = compose_query(args, session, dbt, cfg_query)
     res = query.all()
     if not res:
-      LOGGER.error('No applicable solvers found for args %s', args.__dict__)
+      logger.error('No applicable solvers found for args %s', args.__dict__)
     do_commit = False
     while True:
       for solv_app, slv in res:
@@ -160,7 +165,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables):
           counts += 1
         except IntegrityError as err:
           session.rollback()
-          LOGGER.warning('Integrity Error: %s', err)
+          logger.warning('Integrity Error: %s', err)
       if not do_commit:
         try:
           session.commit()
@@ -168,7 +173,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables):
           session.rollback()
           counts = 0
           do_commit = True
-          LOGGER.warning(
+          logger.warning(
               'Quick update failed, rolling back to add one by one : %s', err)
           continue
       break
@@ -186,7 +191,7 @@ def run_load_jobs(args: argparse.Namespace, logger: logging.Logger):
     try:
       test_tag_name(args.tag, dbt)
     except ValueError as terr:
-      LOGGER.error(terr)
+      logger.error(terr)
 
   cnt = add_jobs(args, dbt)
   print(f"New jobs added: {cnt}")
