@@ -41,7 +41,9 @@ from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
+from tuna.miopen.subcmd.load_job import run_load_jobs
 from tuna.miopen.parse_miopen_args import get_import_cfg_parser
+from tuna.miopen.parse_miopen_args import get_load_jobs_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
@@ -106,11 +108,16 @@ class MIOpen(MITunaInterface):
                                get_import_cfg_parser(),
                                required=False)
 
+    subcommands.add_subcommand('load_jobs',
+                               get_load_jobs_parser(),
+                               required=False)
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',
                        help='Add MIOpen library specific tables')
+
     group.add_argument('--init_session',
                        action='store_true',
                        dest='init_session',
@@ -332,6 +339,10 @@ class MIOpen(MITunaInterface):
 
     if self.args.subcommand is not None and self.args.subcommand == 'import_configs':
       run_import_configs(self.args.import_configs, self.logger)
+      return None
+
+    if self.args.subcommand is not None and self.args.subcommand == 'load_jobs':
+      run_load_jobs(self.args.import_configs, self.logger)
       return None
 
     machines = load_machines(self.args)

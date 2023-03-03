@@ -79,3 +79,78 @@ def get_import_cfg_parser(
                       allowed for tagging')
 
   return parser
+
+
+def get_load_jobs_parser():
+  "Return parser for load_job subcommand"
+
+  #pylint: disable=duplicate-code
+  parser = setup_arg_parser(
+      'Insert jobs into MySQL db by tag from" \
+      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+  config_filter = parser.add_mutually_exclusive_group(required=True)
+  solver_filter = parser.add_mutually_exclusive_group()
+  config_filter.add_argument(
+      '-t',
+      '--tag',
+      type=str,
+      dest='tag',
+      default=None,
+      help='All configs with this tag will be added to the job table. \
+                        By default adds jobs with no solver specified (all solvers).'
+  )
+  config_filter.add_argument('--all_configs',
+                             dest='all_configs',
+                             action='store_true',
+                             help='Add all convolution jobs')
+  solver_filter.add_argument(
+      '-A',
+      '--algo',
+      type=str,
+      dest='algo',
+      default=None,
+      help='Add job for each applicable solver+config in Algorithm.',
+      choices=ALG_SLV_MAP.keys())
+  solver_filter.add_argument('-s',
+                           '--solvers',
+                           type=str,
+                           dest='solvers',
+                           default=None,
+                           help='add jobs with only these solvers '\
+                             '(can be a comma separated list)')
+  parser.add_argument(
+      '-d',
+      '--only_dynamic',
+      dest='only_dynamic',
+      action='store_true',
+      help='Use with --tag to create a job for dynamic solvers only.')
+  parser.add_argument('--tunable',
+                      dest='tunable',
+                      action='store_true',
+                      help='Use to add only tunable solvers.')
+  parser.add_argument('-c',
+                      '--cmd',
+                      type=str,
+                      dest='cmd',
+                      default=None,
+                      required=False,
+                      help='Command precision for config',
+                      choices=['conv', 'convfp16', 'convbfp16'])
+  parser.add_argument('-l',
+                      '--label',
+                      type=str,
+                      dest='label',
+                      required=True,
+                      help='Label to annontate the jobs.',
+                      default='new')
+  parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
+  parser.add_argument(
+      '--session_id',
+      required=True,
+      dest='session_id',
+      type=int,
+      help=
+      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
+  )
+
+  return parser

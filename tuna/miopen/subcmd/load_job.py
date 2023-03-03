@@ -40,87 +40,22 @@ from tuna.miopen.db.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.miopen.parse_miopen_args import get_load_jobs_parser
 
-LOGGER = setup_logger('load_jobs')
+#to be removed
+"""
+"""
 
 
-def parse_args():
-  """ Argument input for the module """
-  #pylint: disable=duplicate-code
-  parser = setup_arg_parser(
-      'Insert jobs into MySQL db by tag from" \
-      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
-  config_filter = parser.add_mutually_exclusive_group(required=True)
-  solver_filter = parser.add_mutually_exclusive_group()
-  config_filter.add_argument(
-      '-t',
-      '--tag',
-      type=str,
-      dest='tag',
-      default=None,
-      help='All configs with this tag will be added to the job table. \
-                        By default adds jobs with no solver specified (all solvers).'
-  )
-  config_filter.add_argument('--all_configs',
-                             dest='all_configs',
-                             action='store_true',
-                             help='Add all convolution jobs')
-  solver_filter.add_argument(
-      '-A',
-      '--algo',
-      type=str,
-      dest='algo',
-      default=None,
-      help='Add job for each applicable solver+config in Algorithm.',
-      choices=ALG_SLV_MAP.keys())
-  solver_filter.add_argument('-s',
-                             '--solvers',
-                             type=str,
-                             dest='solvers',
-                             default=None,
-                             help='add jobs with only these solvers '\
-                               '(can be a comma separated list)')
-  parser.add_argument(
-      '-d',
-      '--only_dynamic',
-      dest='only_dynamic',
-      action='store_true',
-      help='Use with --tag to create a job for dynamic solvers only.')
-  parser.add_argument('--tunable',
-                      dest='tunable',
-                      action='store_true',
-                      help='Use to add only tunable solvers.')
-  parser.add_argument('-c',
-                      '--cmd',
-                      type=str,
-                      dest='cmd',
-                      default=None,
-                      required=False,
-                      help='Command precision for config',
-                      choices=['conv', 'convfp16', 'convbfp16'])
-  parser.add_argument('-l',
-                      '--label',
-                      type=str,
-                      dest='label',
-                      required=True,
-                      help='Label to annontate the jobs.',
-                      default='new')
-  parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
-  parser.add_argument(
-      '--session_id',
-      required=True,
-      dest='session_id',
-      type=int,
-      help=
-      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
-  )
-
-  args = parser.parse_args()
-
+def arg_fin_steps(args: argparse.Namespace):
+  """fin steps for load jobs"""
   if args.fin_steps:
     steps = [x.strip() for x in args.fin_steps.split(',')]
     args.fin_steps = set(steps)
 
+
+def arg_solvers(args: argparse.Namespace):
+  """solvers """
   solver_id_map = get_solver_ids()
   solver_arr = None
   if args.solvers:
@@ -139,10 +74,8 @@ def parse_args():
   else:
     args.solvers = [('', None)]
 
-  return args
 
-
-def test_tag_name(tag, dbt):
+def test_tag_name(tag: str, dbt: MIOpenDBTables):
   """ test if a tag name is in config_tags table """
   with DbSession() as session:
     query = session.query(dbt.config_tags_table.tag)\
@@ -155,7 +88,7 @@ def test_tag_name(tag, dbt):
   return True
 
 
-def config_query(args, session, dbt):
+def config_query(args: argparse.Namespace, session, dbt: MIOpenDBTables):
   """ Produce config query for new style config table"""
   cfg_query = session.query(dbt.config_table)\
       .filter(dbt.config_table.valid == 1)
@@ -172,7 +105,8 @@ def config_query(args, session, dbt):
   return cfg_query
 
 
-def compose_query(args, session, dbt, cfg_query):
+def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
+                  cfg_query):
   """Compose query based on args"""
   query = session.query(dbt.solver_app, Solver)\
     .filter(dbt.solver_app.session == args.session_id)\
@@ -198,7 +132,7 @@ def compose_query(args, session, dbt, cfg_query):
   return query
 
 
-def add_jobs(args, dbt):
+def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
   counts = 0
@@ -242,9 +176,9 @@ def add_jobs(args, dbt):
   return counts
 
 
-def main():
-  """ main """
-  args = parse_args()
+def run_load_jobs(args: argparse.Namespace, logger: logging.Logger):
+  """trigger the script run in miopen lib"""
+
   connect_db()
 
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
@@ -255,8 +189,14 @@ def main():
       LOGGER.error(terr)
 
   cnt = add_jobs(args, dbt)
-
   print(f"New jobs added: {cnt}")
+
+
+def main():
+  """ main """
+  parser = get_load_jobs_parser()
+  args = parser.parse_args()
+  run_load_jobs(args, setup_logger('load_jobs'))
 
 
 if __name__ == '__main__':
