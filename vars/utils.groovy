@@ -564,7 +564,7 @@ def coverageExport() {
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"
            sh "python3 -m coverage json"
-           sh "sh python3 tests/covscripts/coverage.py develop"
+           sh "python3 tests/covscripts/coverage.py develop"
         }
         archiveArtifacts artifacts: "develop_percent_coverage.txt", allwEmptyArchive: true, fingerprint: true
     }
