@@ -37,7 +37,7 @@ from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
+from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite
 from tuna.miopen.worker.fin_utils import compose_config_obj
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
@@ -413,9 +413,6 @@ def create_sqlite_tables(arch, num_cu, filename=None):
 def get_cfg_dict(cfg_entry, tensor_entry):
   """compose config_dict"""
   cfg_dict = compose_config_obj(cfg_entry)
-
-  if cfg_entry.valid == 1:
-    cfg_dict = mysql_to_sqlite_cfg(cfg_dict)
 
   ext_dict = tensor_entry.to_dict(ommit_valid=True)
   ext_dict.pop('id')

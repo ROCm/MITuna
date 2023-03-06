@@ -150,9 +150,9 @@ def get_tensor(tensor_type, tensor_dict):
     layout = NDHWC_LAYOUT[tensor_type]
   else:
     LOGGER.error('unsupported layout: %s', tensor_dict['layout'])
+  ret_dict[tensor_type] = tensor_dict['layout']
   for key, value in tensor_dict.items():
     if key in layout.keys():
       ret_dict[layout[key]] = value
-    ret_dict[tensor_type] = tensor_dict['layout']
 
   return ret_dict
