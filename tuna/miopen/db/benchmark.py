@@ -26,14 +26,14 @@
 ###############################################################################
 """ Module for defining benchmark and model enums """
 
-import enum
+from enum import Enum as pyenum
 from sqlalchemy import Column, UniqueConstraint
 from sqlalchemy import Enum, Float
 from tuna.dbBase.base_class import BASE
 
 
 #pylint: disable=too-few-public-methods
-class FrameworkEnum(enum.Enum):
+class FrameworkEnum(pyenum):
   """Represents framework enums"""
   PYTORCH = 'Pytorch'
   TENSORFLOW = 'Tensorflow'
@@ -52,7 +52,7 @@ class Framework(BASE):
   version = Column(Float, nullable=False)
 
 
-class ModelEnum(enum.Enum):
+class ModelEnum(pyenum):
   """Represents model enums"""
   RESNET50 = 'Resnet50'
   RESNEXT101 = 'Resnext101'
