@@ -119,17 +119,3 @@ cd MITuna/tuna
 pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
 pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' miopen/*.py example/*.py *.py
 ```
-## Code Coverage 
-
-To manually extract coverage percentage using the command line:
-
-```
-//run the docker image and mount the MITuna repo folder
-docker run -it -v "/path/on/host:/path/on/container" Tuna 
-
-//change directory to the mounted folder inside the docker containter
-cd ./path/on/container/MITuna 
-
-//run the code coverage scripts from MITuna root folder inside the docker container
-./tests/covscripts/coverage_script.sh
-```
