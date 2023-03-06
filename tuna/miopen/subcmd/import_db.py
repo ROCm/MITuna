@@ -30,7 +30,7 @@ import sqlite3
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
-from tuna.miopen.utils.analyze_parse_db import get_sqlite_data, parse_pdb_filename
+from tuna.miopen.utils.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg, parse_pdb_filename
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
@@ -82,7 +82,7 @@ def parse_args():
 def get_cfg_driver(sqlite_cfg):
   """Takes in a dict containing a sqlite config row
   and returns convolution driver object"""
-  mysql_cfg = sqlite_cfg.copy()
+  mysql_cfg = sqlite_to_mysql_cfg(sqlite_cfg)
 
   #constructing a conv_config entry (dict)
   mysql_cfg['in_layout'] = mysql_cfg['layout']
