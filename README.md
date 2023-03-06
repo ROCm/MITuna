@@ -1,9 +1,10 @@
 TUNA 
 ====
 
-Tuna is a distributed tuning infrastructure that provides tuning through automated 
-Jenkins pipelines and SLURM scalable architecture. For MIOpen customers we provide
-pre-compiled kernels.
+Tuna is a distributed tuning infrastructure that provides pre-compiled kernels
+for MIOpen customers through automated Jenkins pipelines and SLURM scalable
+architecture. MITuna also provides a scalable task management infrastructure
+ready to integrate with external libaries.
 
 Prerequisites
 -------------
@@ -94,7 +95,7 @@ export PYTHONPATH=/<path_to_MITuna>/:$PYTHONPATH
 
 To create the database run the following script:
 ```
-./tuna/miopen/db_tables.py
+./tuna/miopen/db/build_schema.py
 ```
 
 The installation and setup are now complete. To start a tuning cycle, please follow the steps
@@ -116,6 +117,7 @@ In order for a PR to be accepted the following pylint command needs to result in
 ```
 cd MITuna/tuna
 pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' *.py
+pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' miopen/*.py example/*.py *.py
 ```
 ## Code Coverage 
 
@@ -131,4 +133,3 @@ cd ./path/on/container/MITuna
 //run the code coverage scripts from MITuna root folder inside the docker container
 ./tests/covscripts/coverage_script.sh
 ```
-
