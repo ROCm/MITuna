@@ -6,7 +6,7 @@ pipeline {
     environment {
         branch =  sh(script: "echo ${scm.branches[0].name} | sed 's/[^a-zA-Z0-9]/_/g' ", returnStdout: true).trim()
         branch_id = "${branch}_${BUILD_ID}"
-        branch_dev = "develop"
+        branch_dev = "rk_coverage_auto"
         branch_dev_artif = "rk_coverage_auto/lastSuccessfulBuild/artifact"
         jenkin_url = "http://localhost:8080/job/Test_mb/job"
         db_name = "${TUNA_DB_NAME}_${branch}_${BUILD_ID}"
