@@ -536,7 +536,7 @@ def pytestSuite3() {
         }
         try {
            sh "wget ${jenkin_url}/${branch_dev_artif}/develop_percent_coverage.txt"
-           sh "python tests/covscripts/coverage.py branch"
+           sh "python3 tests/covscripts/coverage.py branch"
         } catch (Exception err) {
            currentBuild.result = 'SUCCESS'
         }
@@ -564,7 +564,7 @@ def coverageExport() {
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"
            sh "python3 -m coverage json"
-           sh "sh python tests/covscripts/coverage.py develop"
+           sh "sh python3 tests/covscripts/coverage.py develop"
         }
         archiveArtifacts artifacts: "develop_percent_coverage.txt", allwEmptyArchive: true, fingerprint: true
     }
