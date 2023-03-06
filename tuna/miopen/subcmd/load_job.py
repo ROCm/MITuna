@@ -36,6 +36,7 @@ from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db
+from tuna.utils.utility import SimpleDict
 from tuna.miopen.db.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
@@ -162,8 +163,9 @@ def config_query(args, session, dbt):
 
   if args.tag:
     tag_query = session.query(dbt.config_tags_table.config)\
-      .filter(dbt.config_tags_table.tag == args.tag).subquery()
-    cfg_query = cfg_query.filter(dbt.config_table.id.in_(tag_query))
+      .filter(dbt.config_tags_table.tag == args.tag)
+    cfg_ids = [tag.config for tag in tag_query.all()]
+    cfg_query = cfg_query.filter(dbt.config_table.id.in_(cfg_ids))
 
   if args.cmd:
     cfg_query = cfg_query.filter(
@@ -171,8 +173,39 @@ def config_query(args, session, dbt):
 
   return cfg_query
 
+def get_config_ids(args, session, dbt):
+  """! Compose query to get all config ids to load for this job set"""
+  conds = []
+  conds.append("valid=1")
 
-def compose_query(args, session, dbt, cfg_query):
+  if args.tag:
+    tag_query = f"select config from {dbt.config_tags_table.__tablename__}"\
+                f" where valid=1 and tag='{args.tag}';"
+    ret = session.execute(tag_query)
+    cfgs = [str(val[0]) for val in ret]
+    cfg_str = ','.join(cfgs)
+    conds.append(f"id in ({cfg_str})")
+
+  if args.cmd:
+    prec = TENSOR_PRECISION[args.cmd]
+    tensor_query = f"select id from {dbt.tensor_table.__tablename__}"\
+                   f" where valid=1 and data_type='{prec}';"
+    ret = session.execute(tensor_query)
+    ids = [str(val[0]) for val in ret]
+    id_str = ','.join(ids)
+    conds.append(f"input_tensor in ({id_str})")
+
+
+  cond_str = " and ".join(conds)
+  cfg_query = f"select id from {dbt.config_table.__tablename__}"\
+              f" where {cond_str};"
+  LOGGER.info(cfg_query)
+  ret = session.execute(cfg_query)
+  cfg_ids = [int(val[0]) for val in ret]
+  return cfg_ids
+
+
+def compose_query(args, session, dbt, cfg_ids):
   """Compose query based on args"""
   query = session.query(dbt.solver_app, Solver)\
     .filter(dbt.solver_app.session == args.session_id)\
@@ -192,10 +225,56 @@ def compose_query(args, session, dbt, cfg_query):
   if args.only_dynamic:
     query = query.filter(Solver.is_dynamic == true())
 
-  cfg_ids = [config.id for config in cfg_query.all()]
+  #cfg_ids = [config.id for config in cfg_query.all()]
+  LOGGER.info("possible config ids %s", cfg_ids)
   query = query.filter(dbt.solver_app.config.in_(cfg_ids))
 
   return query
+
+def get_applic_entres(args, session, dbt, cfg_ids):
+  """! Compose query and create object for applicable entries"""
+  conds=[]
+  conds.append(f"sa.session={args.session_id}")
+  conds.append("sa.applicable=1")
+  conds.append("s.valid=1")
+  conds.append("sa.valid=1")
+
+  if args.solvers[0][1]:  #check none
+    solver_ids = [str(x) for _, x in args.solvers]
+    id_str = ','.join(solver_ids)
+    conds.append(f"sa.solver in ({id_str})")
+  if args.tunable:
+    conds.append("sa.tunable=1")
+
+  cfgtype = ConfigType('convolution').name
+  if args.config_type is ConfigType.batch_norm:
+    cfgtype = ConfigType('batch_norm').name
+
+  conds.append(f"s.config_type='{cfgtype}'")
+
+  if args.only_dynamic:
+    conds.append("s.is_dynamic=1")
+
+  cfg_id_str = ','.join([str(val) for val in cfg_ids])
+  conds.append(f"sa.config in ({cfg_id_str})")
+
+  cond_str = ' and '.join(conds)
+
+  with DbSession() as session:
+    app_attr = ["solver", "config"]
+    query = f"select s.solver, sa.config from {dbt.solver_app.__tablename__} as sa"\
+            f" inner join {dbt.solver_table.__tablename__} as s on sa.solver=s.id"\
+            f" where {cond_str};"
+    LOGGER.info(query)
+    ret = session.execute(query)
+    entries = []
+    for row in ret:
+      entry = SimpleDict()
+      for i, col in enumerate(app_attr):
+        setattr(entry, col, row[i])
+      entries.append(entry)
+
+  return entries
 
 
 def add_jobs(args, dbt):
@@ -203,9 +282,8 @@ def add_jobs(args, dbt):
       query specified"""
   counts = 0
   with DbSession() as session:
-    cfg_query = config_query(args, session, dbt)
-    query = compose_query(args, session, dbt, cfg_query)
-    res = query.all()
+    cfg_ids = get_config_ids(args, session, dbt)
+    res = get_applic_entres(args, session, dbt, cfg_ids)
     if not res:
       LOGGER.error('No applicable solvers found for args %s', args.__dict__)
 
@@ -221,14 +299,14 @@ def add_jobs(args, dbt):
 
     do_commit = False
     while True:
-      for solv_app, slv in res:
+      for slv_app in res:
         try:
           job = dbt.job_table()
-          job.config = solv_app.config
+          job.config = slv_app.config
           job.state = 'new'
           job.valid = 1
           job.reason = args.label
-          job.solver = slv.solver
+          job.solver = slv_app.solver
           job.fin_step = args.fin_steps
           job.session = args.session_id
 
