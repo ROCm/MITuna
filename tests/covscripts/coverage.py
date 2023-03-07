@@ -35,7 +35,7 @@ file_path_prevcov_txt = os.path.join(root_dir, "./develop_percent_coverage.txt")
 
 
 def check_export(filename):
-  """check if the path was successfully exported"""
+  """check if the file was successfully exported"""
   status = os.path.exists(filename)
   return status
 
