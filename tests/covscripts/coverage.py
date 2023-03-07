@@ -75,7 +75,7 @@ def branch():
 
   curcov_percentage_ftdt = curcov()
 
-  with open(file_path_prevcov_txt, 'r') as f:
+  with open('develop_percent_coverage.txt', 'r') as f:
     prevcov_file = f.readline().strip()
     prevcov_percentage_ftdt = float(prevcov_file)
 
