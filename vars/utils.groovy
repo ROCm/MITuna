@@ -536,7 +536,7 @@ def pytestSuite3() {
         }
         try {
            //sh "wget ${jenkin_url}/${branch_dev_artif}/develop_percent_coverage.txt"
-           sh "wget ${dev_coverage_artifact}"
+           sh "wget http://localhost:${port}/job/${job_name}/job/${branch_master}/${latest_succes_build}/artifact/${cov_file}"
            sh "python3 tests/covscripts/coverage.py branch"
         } catch (Exception err) {
            currentBuild.result = 'SUCCESS'
