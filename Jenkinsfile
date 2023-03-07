@@ -28,10 +28,7 @@ pipeline {
         job_name = "Test_mb"
         latest_succes_build = "lastSuccessfulBuild"
         cov_file = "develop_percent_coverage.txt"
-        branch_dev_artif = "rk_coverage_auto/lastSuccessfulBuild/artifact"
         jenkin_port = "8080"
-        dev_coverage_artifact = "http://localhost:${port}/job/${job_name}/job/${branch_master}/${latest_succes_build}/artifact/${cov_file}"
-
     } 
     stages {
         stage("code Format") {
