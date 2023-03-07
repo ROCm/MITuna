@@ -60,7 +60,7 @@ def develop():
   )
 
   with open('develop_percent_coverage.txt', 'w') as f:
-    f.write(curcov_percentage_ftdt)
+    f.write(str(curcov_percentage_ftdt))
 
   check_txt_export = check_export('develop_percent_coverage.txt')
 
