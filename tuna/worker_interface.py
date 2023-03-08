@@ -29,7 +29,7 @@ from multiprocessing import Process, Lock
 try:
   import queue
 except ImportError:
-  import Queue as queue
+  import Queue as queue  #type: ignore
 import logging
 import os
 from datetime import datetime
@@ -37,6 +37,7 @@ import socket
 import random
 import string
 from time import sleep
+from typing import List, Tuple, Union
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -152,7 +153,8 @@ class WorkerInterface(Process):
     self.machine.restart_server()
     self.last_reset = datetime.now()
 
-  def compose_work_objs(self, session, conds):
+  def compose_work_objs(self, session: DbSession,
+                        conds: List[str]) -> List[Tuple[SimpleDict, ...]]:
     """Query a job list for update"""
     cond_str = ' AND '.join(conds)
     if cond_str:
@@ -161,9 +163,10 @@ class WorkerInterface(Process):
     entries = gen_select_objs(session, self.job_attr,
                               self.dbt.job_table.__tablename__, cond_str)
 
-    return entries
+    return [(job,) for job in entries]
 
-  def get_job_objs(self, session, find_state):
+  def get_job_objs(self, session: DbSession,
+                   find_state: str) -> List[Tuple[SimpleDict, ...]]:
     """Get list of job objects"""
     conds = [f"session={self.dbt.session.id}", "valid=1"]
 
@@ -237,7 +240,7 @@ class WorkerInterface(Process):
 
   def job_queue_pop(self):
     """load job from top of job queue"""
-    self.job = self.job_queue.get(True, 1)
+    self.job = self.job_queue.get(True, 1)[0]
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                      self.job.reason)
 
@@ -297,24 +300,30 @@ class WorkerInterface(Process):
     return False
 
   # JD: This should take a session obj as an input to remove the creation of an extraneous session
-  def set_job_state(self, state, increment_retries=False, result=None):
+  def set_job_state(self,
+                    state: str,
+                    increment_retries: bool = False,
+                    result: Union[str, None] = None) -> None:
     """Interface function to update job state for builder/evaluator"""
     self.logger.info('Setting job id %s state to %s', self.job.id, state)
     with DbSession() as session:
+      job_set_attr = ['state', 'gpu_id']
       self.job.state = state
       if result:
+        job_set_attr.append('result')
         self.job.result = result
       if increment_retries:
+        job_set_attr.append('retries')
         self.job.retries += 1
 
       if '_start' in state:
+        job_set_attr.append('cache_loc')
         cache = '~/.cache/miopen_'
         blurr = ''.join(
             random.choice(string.ascii_lowercase) for i in range(10))
         cache_loc = cache + blurr
         self.job.cache_loc = cache_loc
 
-      job_set_attr = ['state', 'result', 'retries', 'cache_loc', 'gpu_id']
       query = gen_update_query(self.job, job_set_attr,
                                self.dbt.job_table.__tablename__)
 

@@ -5,8 +5,8 @@ ARG ROCM_PRE=0
 
 FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION=5.1
-ARG OSDB_BKC_VERSION
+ARG ROCMVERSION=
+ARG OSDB_BKC_VERSION=11650
 ARG DEB_ROCM_REPO=http://repo.radeon.com/rocm/apt/.apt_$ROCMVERSION/
 # Add rocm repository
 RUN apt-get update
@@ -103,7 +103,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=4e8d0830374c50bec6be2d762cc200f42e8250fd
+ARG MIOPEN_BRANCH=282d383b519620deb11c0b3d4c6db6aec652370f
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
