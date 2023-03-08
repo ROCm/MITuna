@@ -24,7 +24,7 @@ pipeline {
         port = "${port}"
         TUNA_ROCM_VERSION = '4.5'
         //main branch artifacts variables
-        branch_master = "rk_coverage_auto"
+        branch_master = "develop"
         job_name = "Test_mb"
         latest_succes_build = "lastSuccessfulBuild"
         cov_file = "develop_percent_coverage.txt"
@@ -84,7 +84,7 @@ pipeline {
         agent{ label utils.rocmnode("tunatest") }
         steps{
             script{
-                if (branch == "branch_master") { 
+                if (branch == branch_master) { 
                 utils.coverageExport()
                 } else {
                 utils.pytestSuite3()
