@@ -48,6 +48,7 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import compose_config_obj
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.config_type import ConfigType
+from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
@@ -688,6 +689,21 @@ class FinClass(WorkerInterface):
     kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
     return kernel_obj
 
+  def __check_layout_mismatch(self, fdb_entry, status):
+    """Check that the fdb key returned by fin matches the config being tuned, states to error if not"""
+    fdb_key = fdb_entry.fdb_key
+    fds, vals, _, _ = parse_pdb_key(fdb_key)
+    key_layout = vals[fds.index('out_layout')]
+    cfg_layout = self.config.out_layout
+
+    if cfg_layout != key_layout:
+        status['success'] = False
+        status['result'] = f"fdb_key layout mismatch with config {key_layout} != {cfg_layout}"
+        fdb_entry.valid = False
+        return False
+
+    return True
+
   def __update_fdb_w_kernels(self,
                              session,
                              fin_json,
@@ -703,6 +719,7 @@ class FinClass(WorkerInterface):
         if fdb_obj[check_str]:
           #returned entry is added to the table
           fdb_entry = self.__compose_fdb_entry(session, fin_json, fdb_obj)
+          self.__check_layout_mismatch(fdb_entry, slv_stat)
           if not self.pending:
             query = gen_update_query(fdb_entry, self.fdb_attr,
                                      self.dbt.find_db_table.__tablename__)
