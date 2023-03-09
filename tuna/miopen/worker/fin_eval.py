@@ -32,6 +32,7 @@ import functools
 import json
 
 from sqlalchemy.exc import OperationalError
+from typing import List, Dict
 
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_utils import fin_job
@@ -120,7 +121,7 @@ class FinEvaluator(FinClass):
     fjob = [fjob]
     return fjob
 
-  def fin_fdb_input(self, _fjob):
+  def fin_fdb_input(self, _fjob: Dict) -> List[Dict]:
     """prepare find db command input for fin"""
     fjob = _fjob.copy()
     with DbSession() as session:
@@ -167,8 +168,7 @@ class FinEvaluator(FinClass):
 
       assert find_compile_res
       fjob['miopen_find_compile_result'] = find_compile_res
-    fjob = [fjob]
-    return fjob
+    return [fjob]
 
   def get_fin_input(self):
     """ Populate the input for fin and write to a tempfile on machine
@@ -222,7 +222,10 @@ class FinEvaluator(FinClass):
 
     return True
 
-  def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
+  def process_fdb_eval(
+      self,
+      fin_json: Dict,
+      result_str: str = 'miopen_find_eval_result') -> List[Dict]:
     """process find db eval json results"""
     status = []
     fdb_obj = None

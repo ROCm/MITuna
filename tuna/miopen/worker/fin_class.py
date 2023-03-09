@@ -34,10 +34,11 @@ import paramiko
 try:
   import queue
 except ImportError:
-  import Queue as queue
+  import Queue as queue  #type: ignore
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
+from typing import List, Dict, Tuple
 
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
@@ -141,7 +142,9 @@ class FinClass(WorkerInterface):
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 
-  def compose_work_objs(self, session, conds):
+  def compose_work_objs(
+      self, session: DbSession,
+      conds: List[str]) -> List[Tuple[SimpleDict, SimpleDict]]:
     """query for job and config tuple"""
     ret = []
     if self.fin_steps:
@@ -152,7 +155,7 @@ class FinClass(WorkerInterface):
     job_entries = super().compose_work_objs(session, conds)
 
     if job_entries:
-      id_str = ','.join([str(job.config) for job in job_entries])
+      id_str = ','.join([str(job[0].config) for job in job_entries])
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
       cfg_entries = gen_select_objs(session, self.cfg_attr,
                                     self.dbt.config_table.__tablename__,
@@ -171,7 +174,7 @@ class FinClass(WorkerInterface):
       cfg_map = {cfg.id: cfg for cfg in cfg_entries}
 
       for job in job_entries:
-        ret.append([job, cfg_map[job.config]])
+        ret.append((job[0], cfg_map[job[0].config]))
 
     return ret
 
@@ -294,7 +297,7 @@ class FinClass(WorkerInterface):
 
     return True
 
-  def __set_all_configs(self, idx=0, num_blk=1):
+  def __set_all_configs(self, idx: int = 0, num_blk: int = 1) -> bool:
     """Gathering all configs from Tuna DB to set up fin input file"""
     if idx == 0:
       with DbSession() as session:
@@ -319,12 +322,14 @@ class FinClass(WorkerInterface):
 
         #remove old applicability
         rm_old = ''
-        if self.label:
+        if self.label and rows:
           cfg_ids = [str(row.id) for row in rows]
           cfg_str = ','.join(cfg_ids)
-          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0 where session={self.session_id} and config in ({cfg_str});"
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+                   f" where session={self.session_id} and config in ({cfg_str});"
         else:
-          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0 where session={self.session_id};"
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+                   f" where session={self.session_id};"
 
         self.logger.info("Start applic zeroing")
         session.execute(rm_old)
@@ -354,7 +359,7 @@ class FinClass(WorkerInterface):
 
           self.job_queue.put(master_cfg_list[start:end])
     try:
-      self.all_configs = self.job_queue.get(True)
+      self.all_configs = self.job_queue.get(True, 180)
     except queue.Empty:
       self.logger.warning('No jobs found for process %s...', idx)
       self.all_configs = []
@@ -441,7 +446,8 @@ class FinClass(WorkerInterface):
 
     return ret
 
-  def __insert_applicability(self, session, json_in):
+  def __insert_applicability(self, session: DbSession,
+                             json_in: List[Dict]) -> bool:
     """write applicability to sql"""
     inserts = []
     for elem in json_in:
