@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
 
-from typing import Any, List, Union, Dict, Optional
+from typing import List, Union, Dict
 from abc import abstractmethod
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -41,9 +41,6 @@ from tuna.miopen.utils.parsing import parse_line
 LOGGER = setup_logger('driver_base')
 
 
-#pylint: disable=no-member
-#pylint: disable=too-many-instance-attributes
-#NOTE:remove pylint flag after driver implementation throughout code
 class DriverBase():
   """Represents db tables based on ConfigType"""
 
@@ -61,33 +58,41 @@ class DriverBase():
       raise ValueError(
           "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
-  def parse_fdb_key(self, line):
+  def parse_fdb_key(self, line: str):
     """Overloaded method.Defined in conv&bn driver child class"""
+    raise NotImplementedError("Not implemented")
 
-  def parse_row(self, db_obj):
+  def parse_row(self, db_obj: ConvolutionConfig):
     """Overloaded method.Defined in conv&bn driver child class"""
+    raise NotImplementedError("Not implemented")
 
-  def set_cmd(self, data_type):
+  def set_cmd(self, data_type: str):
     """Overloaded method.Defined in conv&bn driver child class"""
+    raise NotImplementedError("Not implemented")
 
   def config_set_defaults(self):
     """Overloaded method.Defined in conv&bn driver child class"""
+    raise NotImplementedError("Not implemented")
 
   @abstractmethod
   def compose_weight_t(self):
     """Overloaded method.Defined in conv&br driver child class"""
+    raise NotImplementedError("Not implemented")
 
   @staticmethod
-  def test_skip_arg(tok1):
+  def test_skip_arg(tok1: str):
     """Overloaded method.Defined in conv&br driver child class"""
+    raise NotImplementedError("Not implemented")
 
   @staticmethod
-  def get_params(tok1):
+  def get_params(tok1: str):
     """Overloaded method.Defined in conv&br driver child class"""
+    raise NotImplementedError("Not implemented")
 
   @staticmethod
-  def get_check_valid(tok1, tok2):
+  def get_check_valid(tok1: str, tok2: Union[str, int]):
     """Overloaded method.Defined in conv&br driver child class"""
+    raise NotImplementedError("Not implemented")
 
   @staticmethod
   def get_common_cols() -> List[str]:
@@ -109,7 +114,7 @@ class DriverBase():
     self.config_set_defaults()
     return True
 
-  def construct_driver_from_db(self, db_obj: Any) -> bool:
+  def construct_driver_from_db(self, db_obj: ConvolutionConfig) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
@@ -119,11 +124,11 @@ class DriverBase():
     return True
 
   @staticmethod
-  def get_tensor_id(session: Session, tensor_dict: dict) -> Optional[int]:
+  def get_tensor_id(session: Session, tensor_dict: dict) -> int:
     """Return tensor id based on dict"""
 
     query: Query
-    ret_id: Optional[int]
+    ret_id: int = -1
     row: str
     query = Query(TensorTable.id).filter_by(**tensor_dict)
     try:
@@ -148,9 +153,9 @@ class DriverBase():
 
     return ret_id
 
-  def insert_tensor(self, tensor_dict: dict) -> Optional[int]:
+  def insert_tensor(self, tensor_dict: dict) -> int:
     """Insert new row into tensor table and return primary key"""
-    ret_id: Optional[int] = 0
+    ret_id: int = -1
     session: Session
 
     with DbSession() as session:
@@ -167,10 +172,10 @@ class DriverBase():
         LOGGER.info("Get Tensor: %s", ret_id)
     return ret_id
 
-  def get_input_t_id(self) -> Optional[int]:
+  def get_input_t_id(self) -> int:
     """Build 1 row in tensor table based on layout from fds param
        Details are mapped in metadata LAYOUT"""
-    ret_id: Optional[int] = 0
+    ret_id: int = -1
     i_dict: Dict[str, int]
 
     i_dict = self.compose_input_t()
@@ -200,7 +205,7 @@ class DriverBase():
 
     return i_dict
 
-  def decompose_input_t(self, db_obj) -> bool:
+  def decompose_input_t(self, db_obj: ConvolutionConfig) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
 
@@ -221,10 +226,10 @@ class DriverBase():
 
     return True
 
-  def get_weight_t_id(self) -> Optional[int]:
+  def get_weight_t_id(self) -> int:
     """Build 1 row in tensor table based on layout from fds param
      Details are mapped in metadata LAYOUT"""
-    ret_id: Optional[int] = 0
+    ret_id: int = -1
     w_dict: dict = {}
 
     w_dict = self.compose_weight_t()
@@ -282,8 +287,10 @@ class DriverBase():
         copy_dict[key] = value
     return copy_dict
 
-  def __eq__(self, other) -> bool:
+  def __eq__(self, other: object) -> bool:
     """Defining equality functionality"""
+    if not isinstance(other, DriverBase):
+      return NotImplemented
     if self.__class__ != other.__class__:
       return False
     return vars(self) == vars(other)
