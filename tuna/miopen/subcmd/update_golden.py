@@ -389,7 +389,10 @@ def main():
         raise ValueError(
             f'Base golden version {args.base_golden_v} does not exist.')
     else:
-      process_merge_golden(dbt, args.golden_v, base_gold_db, s_copy=(not args.overwrite))
+      process_merge_golden(dbt,
+                           args.golden_v,
+                           base_gold_db,
+                           s_copy=(not args.overwrite))
 
   if args.overwrite and args.session_id:
     entries = get_fdb_entries(dbt)

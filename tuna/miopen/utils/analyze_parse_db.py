@@ -201,17 +201,20 @@ def mysql_to_sqlite_cfg(in_perf_cfg: dict) -> dict:
     perf_cfg['out_channels'] = perf_cfg['in_channels']
     perf_cfg['in_channels'] = tmp
 
-    perf_cfg['in_w'] = int(1 + (perf_cfg['in_w'] - perf_cfg['fil_w'] +
+    perf_cfg['in_w'] = int(1 +
+                           (perf_cfg['in_w'] - perf_cfg['fil_w'] +
                             2 * perf_cfg['pad_w']) / perf_cfg['conv_stride_w'])
     perf_cfg['in_w'] = perf_cfg['in_w'] if perf_cfg['in_w'] > 0 else 1
 
-    perf_cfg['in_h'] = int(1 + (perf_cfg['in_h'] - perf_cfg['fil_h'] +
+    perf_cfg['in_h'] = int(1 +
+                           (perf_cfg['in_h'] - perf_cfg['fil_h'] +
                             2 * perf_cfg['pad_h']) / perf_cfg['conv_stride_h'])
     perf_cfg['in_h'] = perf_cfg['in_h'] if perf_cfg['in_h'] > 0 else 1
 
     if perf_cfg['spatial_dim'] == 3:
-      perf_cfg['in_d'] = int(1 + (perf_cfg['in_d'] - perf_cfg['fil_d'] +
-                              2 * perf_cfg['pad_d']) / perf_cfg['conv_stride_d'])
+      perf_cfg['in_d'] = int(
+          1 + (perf_cfg['in_d'] - perf_cfg['fil_d'] + 2 * perf_cfg['pad_d']) /
+          perf_cfg['conv_stride_d'])
       perf_cfg['in_d'] = perf_cfg['in_d'] if perf_cfg['in_d'] > 0 else 1
 
   return perf_cfg

@@ -173,6 +173,7 @@ def config_query(args, session, dbt):
 
   return cfg_query
 
+
 def get_config_ids(args, session, dbt):
   """! Compose query to get all config ids to load for this job set"""
   conds = []
@@ -194,7 +195,6 @@ def get_config_ids(args, session, dbt):
     ids = [str(val[0]) for val in ret]
     id_str = ','.join(ids)
     conds.append(f"input_tensor in ({id_str})")
-
 
   cond_str = " and ".join(conds)
   cfg_query = f"select id from {dbt.config_table.__tablename__}"\
@@ -231,9 +231,10 @@ def compose_query(args, session, dbt, cfg_ids):
 
   return query
 
+
 def get_applic_entres(args, session, dbt, cfg_ids):
   """! Compose query and create object for applicable entries"""
-  conds=[]
+  conds = []
   conds.append(f"sa.session={args.session_id}")
   conds.append("sa.applicable=1")
   conds.append("s.valid=1")

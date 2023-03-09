@@ -697,10 +697,11 @@ class FinClass(WorkerInterface):
     cfg_layout = self.config.out_layout
 
     if cfg_layout != key_layout:
-        status['success'] = False
-        status['result'] = f"fdb_key layout mismatch with config {key_layout} != {cfg_layout}"
-        fdb_entry.valid = False
-        return False
+      status['success'] = False
+      status[
+          'result'] = f"fdb_key layout mismatch with config {key_layout} != {cfg_layout}"
+      fdb_entry.valid = False
+      return False
 
     return True
 
