@@ -38,6 +38,7 @@ from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
+from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.miopen.worker.fin_utils import compose_config_obj
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
@@ -456,6 +457,13 @@ def export_pdb(dbt, args):
       ins_cfg_id = cfg_map[cfg_entry.id]
     else:
       cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
+
+      #override cfg layout with fdb key layout
+      if perf_db_entry.fdb_key:
+        fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
+        key_layout = vals[fds.index('out_layout')]
+        cfg_dict['layout'] = key_layout
+
       #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
       ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
       cfg_map[cfg_entry.id] = ins_cfg_id
