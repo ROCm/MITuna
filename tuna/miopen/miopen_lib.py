@@ -342,7 +342,7 @@ class MIOpen(MITunaInterface):
       return None
 
     if self.args.subcommand is not None and self.args.subcommand == 'load_job':
-      run_load_job(self.args.import_configs, self.logger)
+      run_load_job(self.args.load_job, self.logger)
       return None
 
     machines = load_machines(self.args)
