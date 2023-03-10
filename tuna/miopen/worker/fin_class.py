@@ -63,8 +63,10 @@ class FinClass(WorkerInterface):
 
   def __init__(self, **kwargs):
     """Constructor"""
-    allowed_keys = set(
-        ['fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type'])
+    allowed_keys = set([
+        'fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type',
+        'dynamic_solvers_only'
+    ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
     self.supported_fin_steps = ["get_solvers", "applicability"]
@@ -82,6 +84,7 @@ class FinClass(WorkerInterface):
     self.multiproc = False
     self.pending = []
     self.first_pass = True
+    self.dynamic_solvers_only = False
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
