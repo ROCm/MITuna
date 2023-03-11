@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that a convolution MIOpenDriver cmd"""
 
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, List, Callable
 from re import search
 
 from tuna.utils.logger import setup_logger
@@ -63,37 +63,37 @@ class DriverConvolution(DriverBase):
         'in_channels', 'out_channels', 'direction', 'cmd'
     ])
 
-    self.batchsize: Optional[str] = None
-    self.spatial_dim: Optional[str] = None
-    self.pad_h: Optional[str] = None
-    self.pad_w: Optional[str] = None
-    self.pad_d: Optional[str] = None
-    self.conv_stride_h: Optional[str] = None
-    self.conv_stride_w: Optional[str] = None
-    self.conv_stride_d: Optional[str] = None
-    self.dilation_h: Optional[str] = None
-    self.dilation_w: Optional[str] = None
-    self.dilation_d: Optional[str] = None
-    self.group_count: Optional[str] = None
-    self.mode: Optional[str] = None
-    self.pad_mode: Optional[str] = None
-    self.trans_output_pad_h: Optional[str] = None
-    self.trans_output_pad_w: Optional[str] = None
-    self.trans_output_pad_d: Optional[str] = None
-    self.out_layout: Optional[str] = None
-    self.in_layout: Optional[str] = None
-    self.fil_layout: Optional[str] = None
-    self.in_d: Optional[str] = None
-    self.in_h: Optional[str] = None
-    self.in_w: Optional[str] = None
-    self.fil_d: Optional[str] = None
-    self.fil_h: Optional[str] = None
-    self.fil_w: Optional[str] = None
-    self.in_channels: Optional[str] = None
-    self.out_channels: Optional[str] = None
-    self.num_dims: Optional[int] = None
-    self.direction: Optional[str] = None
-    self._cmd: Optional[str] = 'conv'
+    self.batchsize: int = 32
+    self.spatial_dim: int = 2
+    self.pad_h: int = 0
+    self.pad_w: int = 0
+    self.pad_d: int = 0
+    self.conv_stride_h: int = 1
+    self.conv_stride_w: int = 1
+    self.conv_stride_d: int = 0
+    self.dilation_h: int = 1
+    self.dilation_w: int = 1
+    self.dilation_d: int = 0
+    self.group_count: int = 1
+    self.mode: str = 'conv'
+    self.pad_mode: str = 'default'
+    self.trans_output_pad_h: int = 0
+    self.trans_output_pad_w: int = 0
+    self.trans_output_pad_d: int = 0
+    self.out_layout: str = 'NCHW'
+    self.in_layout: str = 'NCHW'
+    self.fil_layout: str = 'NCHW'
+    self.in_d: int = 1
+    self.in_h: int = 32
+    self.in_w: int = 32
+    self.fil_d: int = 1
+    self.fil_h: int = 3
+    self.fil_w: int = 3
+    self.in_channels: int = 3
+    self.out_channels: int = 32
+    self.num_dims: int = 2
+    self.direction: List[str] = ['F', 'B', 'W']
+    self._cmd: str = 'conv'
 
     if kwargs:
       self.__dict__.update(
@@ -107,7 +107,7 @@ class DriverConvolution(DriverBase):
       self._cmd = cmd
 
   @property
-  def cmd(self) -> Optional[str]:
+  def cmd(self) -> str:
     """Setting 'private' variable"""
     return self._cmd
 
@@ -206,16 +206,16 @@ class DriverConvolution(DriverBase):
                          k, self.spatial_dim)
 
   @staticmethod
-  def get_params(tok1: str) -> str:
+  def get_params(tok1: str) -> Callable[[str, str], bool]:
     """Get full arg name"""
     return get_fd_name(tok1, TABLE_COLS_CONV_MAP)
 
   @staticmethod
-  def get_check_valid(tok1: str, tok2: str) -> str:
+  def get_check_valid(tok1: str, tok2: str) -> Callable[[str, str], bool]:
     """Check if valid conv arg"""
     return conv_arg_valid(tok1, tok2)
 
-  def get_db_obj(self, keep_id: bool = False) -> dict:
+  def get_db_obj(self, keep_id: bool = False) -> ConvolutionConfig:
     """Return the DB representation of this object"""
     return ConvolutionConfig(**self.compose_tensors(keep_id))
 
