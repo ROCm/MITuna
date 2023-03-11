@@ -25,7 +25,7 @@
 #
 ###############################################################################
 """Module that encapsulates the DB representation of a batch_normDriver cmd"""
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 
 from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import DriverBase
@@ -45,8 +45,8 @@ class DriverBatchNorm(DriverBase):
   """Represents db tables based on ConfigType"""
 
   def __init__(self,
-               line: str = None,
-               cmd: str = None,
+               line: str = str(),
+               cmd: str = str(),
                db_obj: BNConfig = None) -> None:
     self.batchsize: int = 0
     self.alpha: int = 1
@@ -101,7 +101,7 @@ class DriverBatchNorm(DriverBase):
 
   def parse_row(self, db_obj: BNConfig) -> None:
     """Overwritting base class function for batch_norm"""
-    return self.parse_bn_row(db_obj)
+    self.parse_bn_row(db_obj)
 
   def parse_bn_row(self, db_obj: BNConfig) -> None:
     """Compose obj from bn_config row"""
@@ -146,11 +146,11 @@ class DriverBatchNorm(DriverBase):
     return get_fd_name(tok1, TABLE_COLS_BN_MAP)
 
   @staticmethod
-  def get_check_valid(tok1: str, tok2: str) -> str:
+  def get_check_valid(tok1: str, tok2: str) -> Callable[[str, str], bool]:
     """Check if valid BN arg"""
     return arg_valid(tok1, tok2)
 
-  def get_db_obj(self, keep_id: bool = False) -> dict:
+  def get_db_obj(self, keep_id: bool = False) -> BNConfig:
     """Return the DB representation of this object"""
     return BNConfig(**self.compose_tensors(keep_id))
 
