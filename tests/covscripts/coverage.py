@@ -28,10 +28,12 @@ import json
 import os
 import argparse
 
+COVERAGE_FILE_NAME_TXT = 'develop_percent_coverage.txt'
+
 root_dir = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 file_path_curcov_json = os.path.join(root_dir, "./coverage.json")
-file_path_prevcov_txt = os.path.join(root_dir, "./develop_percent_coverage.txt")
+file_path_prevcov_txt = os.path.join(root_dir, COVERAGE_FILE_NAME_TXT)
 
 
 def check_export(filename):
@@ -59,10 +61,10 @@ def develop():
       f"Current Testing Coverage for develop branch is: {curcov_percentage_ftdt}%"
   )
 
-  with open('develop_percent_coverage.txt', 'w') as f:
+  with open(COVERAGE_FILE_NAME_TXT, 'w') as f:
     f.write(str(curcov_percentage_ftdt))
 
-  check_txt_export = check_export('develop_percent_coverage.txt')
+  check_txt_export = check_export(COVERAGE_FILE_NAME_TXT)
 
   if check_txt_export is True:
     print(f"Coverage artifact file is exported successfully")
@@ -75,7 +77,7 @@ def branch():
 
   curcov_percentage_ftdt = curcov()
 
-  with open('develop_percent_coverage.txt', 'r') as f:
+  with open(COVERAGE_FILE_NAME_TXT, 'r') as f:
     prevcov_file = f.readline().strip()
     prevcov_percentage_ftdt = float(prevcov_file)
 
