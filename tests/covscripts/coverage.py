@@ -29,10 +29,11 @@ import os
 import argparse
 
 COVERAGE_FILE_NAME_TXT = 'develop_percent_coverage.txt'
+COVERAGE_FILE_NAME_JSON = 'coverage.json'
 
 root_dir = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-file_path_curcov_json = os.path.join(root_dir, "./coverage.json")
+file_path_curcov_json = os.path.join(root_dir, COVERAGE_FILE_NAME_JSON)
 file_path_prevcov_txt = os.path.join(root_dir, COVERAGE_FILE_NAME_TXT)
 
 
