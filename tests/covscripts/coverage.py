@@ -67,9 +67,9 @@ def develop():
   check_txt_export = check_export(COVERAGE_FILE_NAME_TXT)
 
   if check_txt_export is True:
-    print(f"Coverage artifact file is exported successfully")
+    print(f'Coverage artifact file {COVERAGE_FILE_NAME_TXT} is exported successfully')
   else:
-    raise ValueError('Failed to save coverage artifacts')
+    raise ValueError(f'Failed to save coverage {COVERAGE_FILE_NAME_TXT} for artifact exports')
 
 
 def branch():
