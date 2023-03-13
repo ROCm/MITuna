@@ -238,7 +238,7 @@ class DriverConvolution(DriverBase):
       w_dict['dim3'] = self.fil_h
       w_dict['dim4'] = self.fil_w
       w_dict['layout'] = self.fil_layout
-    elif self.fil_layout == 'NHWC':
+    elif self.fil_layout in ('NHWC', 'NDHWC'):
       w_dict['dim0'] = self.out_channels
       w_dict['dim1'] = self.in_channels
       w_dict['dim2'] = self.fil_d
@@ -254,13 +254,13 @@ class DriverConvolution(DriverBase):
     self.num_dims = db_obj.weight_t.num_dims
     self.fil_layout = db_obj.weight_t.layout
 
-    if self.fil_layout == 'NCHW':
+    if self.fil_layout in ('NCHW', 'NCDHW'):
       self.out_channels = db_obj.weight_t.dim0
       self.in_channels = db_obj.weight_t.dim1
       self.fil_d = db_obj.weight_t.dim2
       self.fil_h = db_obj.weight_t.dim3
       self.fil_w = db_obj.weight_t.dim4
-    elif self.fil_layout == 'NHWC':
+    elif self.fil_layout in ('NHWC', 'NDHWC'):
       self.out_channels = db_obj.weight_t.dim0
       self.in_channels = db_obj.weight_t.dim1
       self.fil_d = db_obj.weight_t.dim2
