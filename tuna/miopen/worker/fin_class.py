@@ -713,7 +713,7 @@ class FinClass(WorkerInterface):
                              session: DbSession,
                              fin_json: dict,
                              result_str: str = 'miopen_find_compile_result',
-                             check_str: str = 'find_compiled') -> dict:
+                             check_str: str = 'find_compiled') -> list:
     """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:
