@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
 
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Any
 from abc import abstractmethod
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -35,7 +35,6 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
-from tuna.miopen.db.miopen_tables import BNConfig
 from tuna.miopen.utils.metadata import TENSOR_PRECISION
 from tuna.miopen.utils.parsing import parse_line
 
@@ -115,8 +114,7 @@ class DriverBase():
     self.config_set_defaults()
     return True
 
-  def construct_driver_from_db(
-      self, db_obj: Union[BNConfig, ConvolutionConfig]) -> bool:
+  def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
@@ -207,8 +205,7 @@ class DriverBase():
 
     return i_dict
 
-  def decompose_input_t(self, db_obj: Union[BNConfig,
-                                            ConvolutionConfig]) -> bool:
+  def decompose_input_t(self, db_obj: Any) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
 
