@@ -34,10 +34,11 @@ import paramiko
 try:
   import queue
 except ImportError:
-  import Queue as queue
+  import Queue as queue  #type: ignore
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
+from typing import List, Dict, Tuple
 
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
@@ -144,8 +145,10 @@ class FinClass(WorkerInterface):
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 
-  def compose_work_objs(self, session, conds):
-    """query for fin command and config"""
+  def compose_work_objs(
+      self, session: DbSession,
+      conds: List[str]) -> List[Tuple[SimpleDict, SimpleDict]]:
+    """query for job and config tuple"""
     ret = []
     if self.fin_steps:
       conds.append(f"fin_step like '%{self.fin_steps[0]}%'")
@@ -155,7 +158,7 @@ class FinClass(WorkerInterface):
     job_entries = super().compose_work_objs(session, conds)
 
     if job_entries:
-      id_str = ','.join([str(job.config) for job in job_entries])
+      id_str = ','.join([str(job[0].config) for job in job_entries])
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
       cfg_entries = gen_select_objs(session, self.cfg_attr,
                                     self.dbt.config_table.__tablename__,
@@ -174,7 +177,7 @@ class FinClass(WorkerInterface):
       cfg_map = {cfg.id: cfg for cfg in cfg_entries}
 
       for job in job_entries:
-        ret.append([job, cfg_map[job.config]])
+        ret.append((job[0], cfg_map[job[0].config]))
 
     return ret
 
@@ -297,7 +300,7 @@ class FinClass(WorkerInterface):
 
     return True
 
-  def __set_all_configs(self, idx=0, num_blk=1):
+  def __set_all_configs(self, idx: int = 0, num_blk: int = 1) -> bool:
     """Gathering all configs from Tuna DB to set up fin input file"""
     if idx == 0:
       with DbSession() as session:
@@ -312,6 +315,7 @@ class FinClass(WorkerInterface):
         query = query.order_by(self.dbt.config_table.id)
         rows = query.all()
 
+        len_rows = len(rows)
         master_cfg_list = []
         for row in rows:
           r_dict = compose_config_obj(row, self.config_type)
@@ -319,8 +323,24 @@ class FinClass(WorkerInterface):
             r_dict['direction'] = row.get_direction()
           master_cfg_list.append(r_dict)
 
-        block_size = len(rows) // num_blk  #size of the config block
-        extra = len(rows) % num_blk  #leftover configs, don't divide evenly
+        #remove old applicability
+        rm_old = ''
+        if self.label and rows:
+          cfg_ids = [str(row.id) for row in rows]
+          cfg_str = ','.join(cfg_ids)
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+                   f" where session={self.session_id} and config in ({cfg_str});"
+        else:
+          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+                   f" where session={self.session_id};"
+
+        self.logger.info("Start applic zeroing")
+        session.execute(rm_old)
+        session.commit()
+        self.logger.info("Finished applic zeroing")
+
+        block_size = len_rows // num_blk  #size of the config block
+        extra = len_rows % num_blk  #leftover configs, don't divide evenly
         self.logger.info(
             "cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk,
             block_size, extra)
@@ -335,14 +355,14 @@ class FinClass(WorkerInterface):
             start += extra
             end += extra
 
-          if start >= len(rows):
+          if start >= len_rows:
             break
 
           self.logger.info("cfg workdiv: start %s, end %s", start, end)
 
           self.job_queue.put(master_cfg_list[start:end])
     try:
-      self.all_configs = self.job_queue.get(True, 30)
+      self.all_configs = self.job_queue.get(True, 180)
     except queue.Empty:
       self.logger.warning('No jobs found for process %s...', idx)
       self.all_configs = []
@@ -429,7 +449,8 @@ class FinClass(WorkerInterface):
 
     return ret
 
-  def __insert_applicability(self, session, json_in):
+  def __insert_applicability(self, session: DbSession,
+                             json_in: List[Dict]) -> bool:
     """write applicability to sql"""
     inserts = []
     for elem in json_in:
@@ -453,12 +474,6 @@ class FinClass(WorkerInterface):
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
             return False
-
-        #remove old applicability
-        not_app_query = app_query.filter(
-            self.dbt.solver_app.solver.notin_(app_slv_ids))
-        not_app_query.update({self.dbt.solver_app.applicable: 0},
-                             synchronize_session='fetch')
 
         for solver_id in app_slv_ids:
           obj = app_query.filter(
