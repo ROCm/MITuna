@@ -95,7 +95,7 @@ def test_fin_evaluator():
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').count()
-    assert (count == 0)
+    assert (count == get_num - 1)
 
   # test check gpu with "good" GPU
   # the job state will remain 'evaluated'
@@ -109,8 +109,11 @@ def test_fin_evaluator():
     assert (count == 1)
 
   with DbSession() as session:
-    count = session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
+    session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
                                          .filter(dbt.job_table.state=='evaluated')\
+                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').delete()
+    session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
+                                         .filter(dbt.job_table.state=='evaluating')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').delete()
 
   #test get_job false branch
