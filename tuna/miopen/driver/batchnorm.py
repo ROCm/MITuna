@@ -25,7 +25,7 @@
 #
 ###############################################################################
 """Module that encapsulates the DB representation of a batch_normDriver cmd"""
-from typing import Optional, Union, Callable
+from typing import Union
 
 from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import DriverBase
@@ -60,8 +60,8 @@ class DriverBatchNorm(DriverBase):
     self.in_w: int = 1
     self.in_channels: int = 1
     self.in_layout: str = 'NCHW'
-    self.num_dims: Optional[str] = None
-    self.direction: Union[str, int, None] = None
+    self.num_dims: int = 2
+    self.direction: Union[str, int] = 'F'
     self.save: int = 0
     self.verify: int = 1
     self._cmd: str = 'bnorm'
@@ -146,7 +146,7 @@ class DriverBatchNorm(DriverBase):
     return get_fd_name(tok1, TABLE_COLS_BN_MAP)
 
   @staticmethod
-  def get_check_valid(tok1: str, tok2: str) -> Callable[[str, str], bool]:
+  def get_check_valid(tok1: str, tok2: str) -> bool:
     """Check if valid BN arg"""
     return arg_valid(tok1, tok2)
 
