@@ -34,23 +34,18 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.miopen.worker.fin_eval import FinEvaluator
-from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables
 from dummy_machine import DummyMachine
-from tuna.miopen.utils.config_type import ConfigType
 from utils import CfgImportArgs
 
 
 def test_fin_evaluator():
-  res = None
-
   num_gpus = Value('i', 1)
   v = Value('i', 0)
   e = Value('i', 0)
 
   args = CfgImportArgs()
-  config_type = ConfigType.convolution
   dbt = MIOpenDBTables(config_type=args.config_type)
   with DbSession() as session:
     dbt.session_id = session.query(dbt.job_table.session).filter(dbt.job_table.state=='compiled')\
@@ -75,15 +70,20 @@ def test_fin_evaluator():
       'session_id': dbt.session_id
   }
 
+  with DbSession() as session:
+    c_count = session.query(dbt.job_table).filter(dbt.job_table.state=='compiled')\
+                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').count()
+
   # test get_job true branch
   fin_eval = FinEvaluator(**kwargs)
+  get_num = min(c_count, fin_eval.claim_num)
   ans = fin_eval.get_job('compiled', 'evaluating', False)
   assert (ans is True)
 
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').count()
-    assert (count == 1)
+    assert (count == get_num)
 
   # test get_fin_input
   file_name = fin_eval.get_fin_input()
