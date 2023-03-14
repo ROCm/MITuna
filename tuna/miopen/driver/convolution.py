@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that a convolution MIOpenDriver cmd"""
 
-from typing import Dict, Set, Optional, List, Callable
+from typing import Dict, Set, Optional
 from re import search
 
 from tuna.utils.logger import setup_logger
@@ -92,7 +92,7 @@ class DriverConvolution(DriverBase):
     self.in_channels: int = 3
     self.out_channels: int = 32
     self.num_dims: int = 2
-    self.direction: List[str] = ['F', 'B', 'W']
+    self.direction: str = 'F'
     self._cmd: str = 'conv'
 
     if kwargs:
@@ -206,12 +206,12 @@ class DriverConvolution(DriverBase):
                          k, self.spatial_dim)
 
   @staticmethod
-  def get_params(tok1: str) -> Callable[[str, str], bool]:
+  def get_params(tok1: str) -> str:
     """Get full arg name"""
     return get_fd_name(tok1, TABLE_COLS_CONV_MAP)
 
   @staticmethod
-  def get_check_valid(tok1: str, tok2: str) -> Callable[[str, str], bool]:
+  def get_check_valid(tok1: str, tok2: str) -> bool:
     """Check if valid conv arg"""
     return conv_arg_valid(tok1, tok2)
 
