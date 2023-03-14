@@ -70,8 +70,7 @@ class WorkerInterface(Process):
     allowed_keys = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'end_jobs',
-        'dynamic_solvers_only', 'session_id'
+        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
@@ -91,7 +90,6 @@ class WorkerInterface(Process):
     self.envmt = []
     self.fetch_state = ['new']
     self.label = None
-    self.dynamic_solvers_only = False
     self.session_id = None
 
     self.__dict__.update(
@@ -159,7 +157,7 @@ class WorkerInterface(Process):
     cond_str = ' AND '.join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
-    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
+    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE SKIP LOCKED"
     entries = gen_select_objs(session, self.job_attr,
                               self.dbt.job_table.__tablename__, cond_str)
 
