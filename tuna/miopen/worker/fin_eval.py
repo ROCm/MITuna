@@ -32,6 +32,7 @@ import functools
 import json
 
 from sqlalchemy.exc import OperationalError
+from typing import List, Dict
 
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_utils import fin_job
@@ -120,7 +121,7 @@ class FinEvaluator(FinClass):
     fjob = [fjob]
     return fjob
 
-  def fin_fdb_input(self, _fjob):
+  def fin_fdb_input(self, _fjob: Dict) -> List[Dict]:
     """prepare find db command input for fin"""
     fjob = _fjob.copy()
     with DbSession() as session:
@@ -140,7 +141,8 @@ class FinEvaluator(FinClass):
 
       find_compile_res = []
       # Enumerate all solvers for this config
-      for fdb_rec in fdb_query.all():
+      res = session_retry(session, fdb_query.all, lambda x: x(), self.logger)
+      for fdb_rec in res:
         slv_name = self.id_solver_map[fdb_rec.solver]
         if not self.job.solver or slv_name == self.job.solver:
           compile_entry = {
@@ -152,7 +154,8 @@ class FinEvaluator(FinClass):
           kernel_objects = []
           blobs = session.query(self.dbt.kernel_cache).filter(
               self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
-          for obj in blobs.all():
+          res = session_retry(session, blobs.all, lambda x: x(), self.logger)
+          for obj in res:
             kernel_objects.append({
                 'blob': obj.kernel_blob.decode('utf-8'),
                 'comp_options': obj.kernel_args,
@@ -165,8 +168,7 @@ class FinEvaluator(FinClass):
 
       assert find_compile_res
       fjob['miopen_find_compile_result'] = find_compile_res
-    fjob = [fjob]
-    return fjob
+    return [fjob]
 
   def get_fin_input(self):
     """ Populate the input for fin and write to a tempfile on machine
@@ -220,7 +222,10 @@ class FinEvaluator(FinClass):
 
     return True
 
-  def process_fdb_eval(self, fin_json, result_str='miopen_find_eval_result'):
+  def process_fdb_eval(
+      self,
+      fin_json: Dict,
+      result_str: str = 'miopen_find_eval_result') -> List[Dict]:
     """process find db eval json results"""
     status = []
     fdb_obj = None
@@ -239,7 +244,7 @@ class FinEvaluator(FinClass):
         if not ret:
           self.logger.warning('FinEval: Unable to update Database')
           slv_stat['success'] = False
-          slv_stat['result'] = 'FinEval: Unable to update Database'
+          slv_stat['result'] = fdb_obj['reason']
 
         status.append(slv_stat)
 
