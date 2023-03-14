@@ -154,10 +154,6 @@ def parse_line(args: argparse.Namespace, line: str, counts: dict,
     driver = DriverBatchNorm(line, args.command)
   else:
     driver = DriverConvolution(line, args.command)
-    if not driver.out_layout == driver.in_layout == driver.fil_layout:
-      raise ValueError(
-          f"Non-matching layouts {driver.out_layout}, {driver.in_layout}, {driver.fil_layout}"
-      )
 
   if not args.batch_list:
     process_config_line_v2(driver, args, counts, dbt, logger)

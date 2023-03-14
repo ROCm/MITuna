@@ -462,7 +462,9 @@ def export_pdb(dbt, args):
       if perf_db_entry.fdb_key:
         fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
         key_layout = vals[fds.index('out_layout')]
-        cfg_dict['layout'] = key_layout
+        if cfg_dict['layout'] != key_layout:
+          raise ValueError("Out layout doesn't match fdb_key"\
+                           f" {cfg_dict['layout']} != {key_layout}")
 
       #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
       ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
