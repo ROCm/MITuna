@@ -25,7 +25,7 @@
 #
 ###############################################################################
 """Session table and its associate functionality"""
-from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey
+from sqlalchemy import Column, String, UniqueConstraint
 
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
@@ -50,11 +50,6 @@ class Session(BASE, SessionMixin):
                                      name="uq_idx"),)
 
   miopen_v = Column(String(length=64), nullable=False)
-  solver_id = Column(Integer,
-                     ForeignKey("solver.id",
-                                onupdate="CASCADE",
-                                ondelete="CASCADE"),
-                     nullable=True)
 
   def get_query(self, sess, sess_obj, entry):
     """get session matching this object"""
