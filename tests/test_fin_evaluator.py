@@ -39,17 +39,10 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from dummy_machine import DummyMachine
 from utils import CfgImportArgs
 
-
-def test_fin_evaluator():
+def get_kwargs(dbt):
   num_gpus = Value('i', 1)
   v = Value('i', 0)
   e = Value('i', 0)
-
-  args = CfgImportArgs()
-  dbt = MIOpenDBTables(config_type=args.config_type)
-  with DbSession() as session:
-    dbt.session_id = session.query(dbt.job_table.session).filter(dbt.job_table.state=='compiled')\
-                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').first().session
 
   kwargs = {
       'machine': DummyMachine(False),
@@ -69,8 +62,18 @@ def test_fin_evaluator():
       'end_jobs': e,
       'session_id': dbt.session_id
   }
+  return kwargs
+
+
+def test_fin_evaluator():
+  args = CfgImportArgs()
+  dbt = MIOpenDBTables(config_type=args.config_type)
+  with DbSession() as session:
+    dbt.session_id = session.query(dbt.job_table.session).filter(dbt.job_table.state=='compiled')\
+                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').first().session
 
   # test get_job true branch
+  kwargs = get_kwargs(dbt)
   fin_eval = FinEvaluator(**kwargs)
   ans = fin_eval.get_job('compiled', 'eval_start', False)
   assert (ans is True)
@@ -112,6 +115,7 @@ def test_fin_evaluator():
     session.commit()
 
   #test get_job false branch
+  kwargs = get_kwargs(dbt)
   fin_eval = FinEvaluator(**kwargs)
   ans = fin_eval.get_job('new', 'eval_start', False)
   assert (ans is False)
