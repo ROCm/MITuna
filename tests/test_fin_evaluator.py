@@ -70,20 +70,16 @@ def test_fin_evaluator():
       'session_id': dbt.session_id
   }
 
-  with DbSession() as session:
-    c_count = session.query(dbt.job_table).filter(dbt.job_table.state=='compiled')\
-                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').count()
-
   # test get_job true branch
   fin_eval = FinEvaluator(**kwargs)
-  get_num = min(c_count, fin_eval.claim_num)
-  ans = fin_eval.get_job('compiled', 'evaluating', False)
+  ans = fin_eval.get_job('compiled', 'eval_start', False)
   assert (ans is True)
+  fin_eval.set_job_state('evaluating')
 
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').count()
-    assert (count == get_num)
+    assert (count == 1)
 
   # test get_fin_input
   file_name = fin_eval.get_fin_input()
@@ -95,12 +91,13 @@ def test_fin_evaluator():
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').count()
-    assert (count == get_num - 1)
+    assert (count == 0)
 
   # test check gpu with "good" GPU
   # the job state will remain 'evaluated'
-  ans = fin_eval.get_job('compiled', 'evaluated', False)
+  ans = fin_eval.get_job('compiled', 'eval_start', False)
   assert (ans is True)
+  fin_eval.set_job_state('evaluated')
   fin_eval.machine.set_gpu_state(True)
   fin_eval.check_gpu()
   with DbSession() as session:
