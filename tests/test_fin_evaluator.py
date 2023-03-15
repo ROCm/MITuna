@@ -107,13 +107,10 @@ def test_fin_evaluator():
 
   with DbSession() as session:
     session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
-                                         .filter(dbt.job_table.state=='evaluated')\
-                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').delete()
-    session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
-                                         .filter(dbt.job_table.state=='evaluating')\
+                                         .filter(dbt.job_table.state=='new')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').delete()
 
   #test get_job false branch
   fin_eval = FinEvaluator(**kwargs)
-  ans = fin_eval.get_job('new', 'evaluating', False)
+  ans = fin_eval.get_job('new', 'eval_start', False)
   assert (ans is False)
