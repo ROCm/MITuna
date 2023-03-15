@@ -535,7 +535,7 @@ def pytestSuite3() {
 
         }
         try {
-           sh "wget http://localhost:${jenkin_port}/job/${job_name}/job/${branch_master}/${latest_succes_build}/artifact/${cov_file}"
+           sh "wget http://localhost:8080/job/Test_mb/job/rk_coverage_auto/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
         } catch (Exception err) {
            currentBuild.result = 'SUCCESS'
         }
@@ -560,6 +560,7 @@ def coverageExport() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
+           echo "${env.TUNA_COVERAGE_URL}"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"

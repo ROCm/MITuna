@@ -41,7 +41,7 @@ def check_export(filename):
   status = os.path.exists(filename)
   return status
 
-
+#make this main script function
 def curcov():
   """extract current coverage from a json file"""
   curcov_json = open(file_path_curcov_json)
