@@ -207,7 +207,6 @@ class MIOpen(MITunaInterface):
        @param parser The command line argument parser
     """
     valid_fin_steps = list(k for k in FinStep.__members__)
-    print(valid_fin_steps)
     if ',' in self.args.fin_steps:
       parser.error('Multiple fin_steps currently not supported')
     f_steps = self.args.fin_steps.split(',')
