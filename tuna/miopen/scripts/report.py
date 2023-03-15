@@ -98,6 +98,7 @@ def main():
   args = parse_args()
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
   df = get_data(args, dbt)
+  df[6] = df[5]-df[2]
 
   prct_positive = (df[6] > 0).sum() / df.shape[0] *100
   prct_equal = (df[6] == 0).sum() / df.shape[0] *100
