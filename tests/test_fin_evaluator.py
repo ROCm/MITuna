@@ -109,6 +109,7 @@ def test_fin_evaluator():
     session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
                                          .filter(dbt.job_table.state=='new')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_builder').delete()
+    session.commit()
 
   #test get_job false branch
   fin_eval = FinEvaluator(**kwargs)
