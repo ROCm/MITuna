@@ -248,10 +248,11 @@ class WorkerInterface(Process):
     for idx in range(NUM_SQL_RETRIES):
       try:
         with self.job_queue_lock:
-          if imply_end and self.end_jobs.value > 0:
-            self.logger.warning('No %s jobs found, skip query', find_state)
-            return False
           if self.job_queue.empty():
+            if imply_end and self.end_jobs.value > 0:
+                self.logger.warning('No %s jobs found, skip query', find_state)
+                return False
+
             with DbSession() as session:
               job_rows = self.get_job_objs(session, find_state)
 
