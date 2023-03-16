@@ -28,7 +28,6 @@
 
 from typing import Dict, Set, Optional
 from re import search
-
 from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import DriverBase
 from tuna.miopen.utils.metadata import CONV_CONFIG_COLS
@@ -151,7 +150,7 @@ class DriverConvolution(DriverBase):
     """Compose obj from conv_config row"""
     self.decompose_weight_t(db_obj)
     key: str
-    value: str
+    value: int
     for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
       if key not in ('id', 'input_t', 'weight_t', 'driver'):
         setattr(self, key, value)
@@ -169,9 +168,9 @@ class DriverConvolution(DriverBase):
 
   def get_conv_dict(self) -> dict:
     """Populate c_dict with conv table elems"""
-    c_dict: dict = {}
+    c_dict: Dict[str, int] = {}
     key: str
-    val: str
+    val: int
     for key, val in self.to_dict().items():
       if key in CONV_CONFIG_COLS:
         c_dict[key] = val
@@ -193,7 +192,7 @@ class DriverConvolution(DriverBase):
   def set_defaults(self, defaults) -> None:
     """Set fds defaults"""
     k: str
-    val: str
+    val: int
     for k, val in self.to_dict().items():
       if k in defaults.keys():
         if val is None:
