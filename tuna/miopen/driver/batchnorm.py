@@ -25,7 +25,6 @@
 #
 ###############################################################################
 """Module that encapsulates the DB representation of a batch_normDriver cmd"""
-from typing import Union
 
 from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import DriverBase
@@ -61,7 +60,7 @@ class DriverBatchNorm(DriverBase):
     self.in_channels: int = 1
     self.in_layout: str = 'NCHW'
     self.num_dims: int = 2
-    self.direction: Union[str, int] = 'F'
+    self.direction: str = 'F'
     self.save: int = 0
     self.verify: int = 1
     self._cmd: str = 'bnorm'
@@ -91,10 +90,11 @@ class DriverBatchNorm(DriverBase):
 
   def compute_direction(self) -> None:
     """Setting BN direction based on forw and back"""
-    self.direction = int(self.forw) + 4 * int(self.back)
+    direction_t: int
+    direction_t = int(self.forw) + 4 * int(self.back)
 
-    if self.direction and self.direction in DIRECTION:
-      self.direction = DIR_MAP[self.direction]
+    if direction_t and direction_t in DIRECTION:
+      self.direction = DIR_MAP[direction_t]
     else:
       raise ValueError("Can't import driver commmand line, \
           one and only one of forw or back must be set")
