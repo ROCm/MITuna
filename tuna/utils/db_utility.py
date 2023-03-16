@@ -29,11 +29,13 @@
 import os
 import enum
 import random
+import logging
 from time import sleep
 from datetime import datetime
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
 from sqlalchemy import create_engine
+from typing import Callable, Any
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
@@ -136,17 +138,20 @@ def get_id_solvers():
   return id_solver_map_c, id_solver_map_h
 
 
-def session_retry(session, callback, actuator, logger=LOGGER):
+def session_retry(session: DbSession,
+                  callback: Callable,
+                  actuator: Callable,
+                  logger: logging.Logger = LOGGER) -> Any:
   """retry handling for a callback function using an actuator (lamda function with params)"""
   for idx in range(NUM_SQL_RETRIES):
     try:
       return actuator(callback)
     except OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
       session.rollback()
       sleep(random.randint(1, 30))
     except pymysql.err.OperationalError as error:
-      logger.warning('%s, maybe DB contention sleeping (%s)...', error, idx)
+      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
       session.rollback()
       sleep(random.randint(1, 30))
     except IntegrityError as error:
