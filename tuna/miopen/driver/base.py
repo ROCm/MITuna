@@ -271,13 +271,13 @@ class DriverBase():
         setattr(self, flag_sh_value[0], f_digi_v)
       else:
         raise ValueError(
-            f'Invalid command line arg for {self.cmd}: {tok1[0]} - {tok2} line: {line}'
+            f'Invalid command line arg for {self.cmd}: {flag_sh_value[0]} - {f_digi_v} line: {line}'
         )
     return True
 
-  def to_dict(self) -> Dict[str, int]:
+  def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
-    copy_dict: Dict[str, int] = {}
+    copy_dict: Dict[str, Union[str, int]] = {}
     key: str
     value: int
     for key, value in vars(self).items():
