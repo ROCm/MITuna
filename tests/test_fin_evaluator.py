@@ -39,6 +39,7 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from dummy_machine import DummyMachine
 from utils import CfgImportArgs
 
+
 def get_kwargs(dbt):
   num_gpus = Value('i', 1)
   v = Value('i', 0)
