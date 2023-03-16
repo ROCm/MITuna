@@ -157,8 +157,13 @@ class WorkerInterface(Process):
     cond_str = ' AND '.join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
-    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE SKIP LOCKED"
+    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
+    #try once without waiting for lock
+    no_lock = cond_str + " SKIP LOCKED"
     entries = gen_select_objs(session, self.job_attr,
+                              self.dbt.job_table.__tablename__, no_lock)
+    if not entries:
+        entries = gen_select_objs(session, self.job_attr,
                               self.dbt.job_table.__tablename__, cond_str)
 
     return [(job,) for job in entries]
@@ -248,10 +253,11 @@ class WorkerInterface(Process):
     for idx in range(NUM_SQL_RETRIES):
       try:
         with self.job_queue_lock:
-          if imply_end and self.end_jobs.value > 0:
-            self.logger.warning('No %s jobs found, skip query', find_state)
-            return False
           if self.job_queue.empty():
+            if imply_end and self.end_jobs.value > 0:
+                self.logger.warning('No %s jobs found, skip query', find_state)
+                return False
+
             with DbSession() as session:
               job_rows = self.get_job_objs(session, find_state)
 
