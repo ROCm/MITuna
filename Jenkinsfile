@@ -81,17 +81,17 @@ pipeline {
             }
         }
         stage("pytest3"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps{
-            script{
-                if (branch == "branch_master") { 
-                utils.coverageExport()
-                } else {
-                utils.pytestSuite3()
+            agent { label utils.rocmnode("tunatest") }
+            steps {
+                script {
+                    if (branch == branch_master) { 
+                        runTestsAndCoverage("develop")
+                    } else {
+                        runTestsAndCoverage("branch")
+                    }
                 }
             }
-            }
-
+        }
         }
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
