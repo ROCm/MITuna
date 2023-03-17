@@ -523,23 +523,24 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        if (current_run != main_branch) {
-        try {
-           sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
-        } catch (Exception err) {
-           currentBuild.result = 'SUCCESS'
-        }
-        }
         sshagent (credentials: ['bastion-ssh-key']) {                 
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"
            sh "python3 -m coverage json"
-           sh "python3 tests/covscripts/coverage.py ${current_run}"
         }
         if (current_run == main_branch) {
+            sh "python3 tests/covscripts/coverage.py ${main_branch}"
             archiveArtifacts artifacts: "develop_percent_coverage.txt", allowEmptyArchive: true, fingerprint: true
+        } else {
+        try {
+           sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
+           sh "python3 tests/covscripts/coverage.py ${current_run}"
+        } catch (Exception err) {
+           currentBuild.result = 'SUCCESS'
         }
+        }
+
     }
 }
 
