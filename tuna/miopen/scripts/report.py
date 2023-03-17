@@ -115,26 +115,26 @@ def summary_report(args, dbt):
 
   dfr[6] = dfr[5]-dfr[2]
   pd.options.display.max_rows = 100
-  print(dfr.tail(100))
+  #print(dfr.tail(100))
 
 
   #prct configs faster or slower
   prct_positive = (dfr[6] > 0).sum() / dfr.shape[0] *100
   prct_equal = (dfr[6] == 0).sum() / dfr.shape[0] *100
   prct_negative = (dfr[6] < 0).sum() / dfr.shape[0] *100
-  print(f"configs with faster kernel_time: {round(prct_positive,4)}%")
+  print(f"\nconfigs with faster kernel_time: {round(prct_positive,4)}%")
   print(f"configs with equal kernel_time: {round(prct_equal,4)}%")
   print(f"configs with slower kernel_time: {round(prct_negative,4)}%")
 
   #averages
   avg_positive = (dfr[6] > 0).mean()
   avg_negative = (dfr[6] < 0).mean()
-  print(f"Mean for configs with faster kernel_time: {avg_positive}")
+  print(f"\nMean for configs with faster kernel_time: {avg_positive}")
   print(f"Mean for configs with slower kernel_time: {avg_negative}")
   print(f"Mean for all configs: {dfr[6].mean()}")
 
   prct_speedup_per_config = (dfr[2]-dfr[5]) / ((dfr[2]+dfr[5]) /2) * 100
-  print(f"Overall speed-up: {round(prct_speedup_per_config.mean(), 4)}")
+  print(f"Overall speed-up: {round(prct_speedup_per_config.mean(), 4)}\n")
 
   return dfr
 
@@ -161,11 +161,9 @@ def detailed_report(args, dfr):
   _, id_solver_map = get_id_solvers()
   dfr_detailed_summary['solver_x'] = dfr_detailed_summary['solver_x'].apply(id_solver_map.get)
   dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(id_solver_map.get)
-  #print(dfr_detailed_summary)
-  print("Detailed report has been written to file 'detailed_report.csv'")
-  dfr_detailed_summary.to_csv(f'detailed_report_sess{args.session_id}_gv{args.golden_v}.csv',\
-                              mode='a')
-  #dfr_detailed_summary.tail(100)
+  report_file = f"detailed_report_sess{args.session_id}_gv{args.golden_v}.csv"
+  print(f"Detailed report has been written to file: {report_file}")
+  dfr_detailed_summary.to_csv(report_file, mode='a')
 
 
 def main():
