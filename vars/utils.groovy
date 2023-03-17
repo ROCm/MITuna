@@ -534,11 +534,11 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
             archiveArtifacts artifacts: "develop_percent_coverage.txt", allowEmptyArchive: true, fingerprint: true
         } else {
         try {
-           sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
-           sh "python3 tests/covscripts/coverage.py ${current_run}"
+            sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
         } catch (Exception err) {
-           currentBuild.result = 'SUCCESS'
+            currentBuild.result = 'SUCCESS'
         }
+            sh "python3 tests/covscripts/coverage.py ${current_run}"
         }
 
     }
