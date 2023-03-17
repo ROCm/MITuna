@@ -525,7 +525,7 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         if (current_run != main_branch) {
         try {
-           sh "wget ${env.TUNA_COVERAGE_URL}/rk_coverage_auto/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
+           sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
         } catch (Exception err) {
            currentBuild.result = 'SUCCESS'
         }
