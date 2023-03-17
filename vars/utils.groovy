@@ -558,8 +558,8 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "find miopen/ -type f -name "*.py" | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  ' "
-            sh "pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  '  example/*.py *.py"
+            sh "cd tuna && find miopen/ -type f -name "*.py" | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  ' "
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  '  example/*.py *.py"
             sh "mypy tuna/miopen/utils/analyze_parse_db.py --ignore-missing-imports"
             sh "mypy tuna/miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/scripts/corrupt_configs.py --ignore-missing-imports --follow-imports=skip"
