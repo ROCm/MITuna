@@ -279,7 +279,7 @@ class DriverBase():
     """Return class to dictionary"""
     copy_dict: Dict[str, Union[str, int]] = {}
     key: str
-    value: int
+    value: Union[int, str]
     for key, value in vars(self).items():
       if key == "_cmd":
         copy_dict["cmd"] = value
