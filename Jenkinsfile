@@ -80,7 +80,7 @@ pipeline {
             }
             }
         }
-        stage("pytest3"){
+        stage("pytest3 and Tests Coverage"){
             agent { label utils.rocmnode("tunatest") }
             steps {
                 script {

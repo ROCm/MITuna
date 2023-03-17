@@ -511,7 +511,7 @@ def pytestSuite2() {
     }
 }
 
-def pytestSuite3() {
+def pytestSuit3AndCoverage(coverage_mode) {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -523,51 +523,23 @@ def pytestSuite3() {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        //addMachine(arch, num_cu)
-        // download the latest perf db
-        //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
-        sshagent (credentials: ['bastion-ssh-key']) {                 
-           // test fin builder and test fin builder conv in sequence
-           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
-           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
-           sh "coverage report -m"
-           sh "python3 -m coverage json"
-
-        }
+        if (coverage_mode == 'branch') {
         try {
            sh "wget http://localhost:8080/job/Test_mb/job/rk_coverage_auto/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
         } catch (Exception err) {
            currentBuild.result = 'SUCCESS'
         }
-         sh "python3 tests/covscripts/coverage.py branch"
-    }
-}
-
-def coverageExport() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8") {
-        env.TUNA_DB_HOSTNAME = "${db_host}"
-        env.TUNA_DB_NAME="${db_name}"
-        env.TUNA_DB_USER_NAME="${db_user}"
-        env.TUNA_DB_PASSWORD="${db_password}"
-        env.gateway_ip = "${gateway_ip}"
-        env.gateway_port = "${gateway_port}"
-        env.gateway_user = "${gateway_user}"
-        env.PYTHONPATH=env.WORKSPACE
-        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        //addMachine(arch, num_cu)
-        // download the latest perf db
-        //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
+        }
         sshagent (credentials: ['bastion-ssh-key']) {                 
-           // test fin builder and test fin builder conv in sequence
-           echo "${env.TUNA_COVERAGE_URL}"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"
            sh "python3 -m coverage json"
-           sh "python3 tests/covscripts/coverage.py develop"
+           sh "python3 tests/covscripts/coverage.py ${coverage_mode}"
         }
-        archiveArtifacts artifacts: "develop_percent_coverage.txt", allwEmptyArchive: true, fingerprint: true
+        if (coverage_mode == 'develop') {
+            archiveArtifacts artifacts: "develop_percent_coverage.txt", allowEmptyArchive: true, fingerprint: true
+        }
     }
 }
 
@@ -586,7 +558,7 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "find miopen/ -type f -name "*.py" | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  '"
+            sh "find miopen/ -type f -name "*.py" | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  ' "
             sh "mypy tuna/miopen/utils/analyze_parse_db.py --ignore-missing-imports"
             sh "mypy tuna/miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/scripts/corrupt_configs.py --ignore-missing-imports --follow-imports=skip"
