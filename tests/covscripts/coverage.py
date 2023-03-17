@@ -62,7 +62,7 @@ def branch(root_dir, coverage_file_name_txt, coverage_file_name_json):
 
 
 def main():
-  root_dir = os.path.dirname(__file__)
+  root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
   parser = argparse.ArgumentParser(
       description=
