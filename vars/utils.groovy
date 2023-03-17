@@ -525,7 +525,7 @@ def pytestSuit3AndCoverage(coverage_mode) {
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         if (coverage_mode == 'branch') {
         try {
-           sh "wget http://localhost:8080/job/Test_mb/job/rk_coverage_auto/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
+           sh "wget ${env.TUNA_COVERAGE_URL}/rk_coverage_auto/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
         } catch (Exception err) {
            currentBuild.result = 'SUCCESS'
         }
@@ -559,6 +559,7 @@ def runLint() {
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
             sh "find miopen/ -type f -name "*.py" | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  ' "
+            sh "pylint -f parseable --max-args=8 --ignore-imports=no --indent-string '  '  example/*.py *.py"
             sh "mypy tuna/miopen/utils/analyze_parse_db.py --ignore-missing-imports"
             sh "mypy tuna/miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/scripts/corrupt_configs.py --ignore-missing-imports --follow-imports=skip"

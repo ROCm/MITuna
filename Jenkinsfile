@@ -25,10 +25,7 @@ pipeline {
         TUNA_ROCM_VERSION = '4.5'
         //main branch artifacts variables
         branch_master = "rk_coverage_auto"
-        job_name = "Test_mb"
-        latest_succes_build = "lastSuccessfulBuild"
-        cov_file = "develop_percent_coverage.txt"
-        jenkin_port = "8080"
+
     } 
     stages {
         stage("code Format") {
