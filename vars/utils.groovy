@@ -537,7 +537,7 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
            sh "python3 -m coverage json"
            sh "python3 tests/covscripts/coverage.py ${current_run}"
         }
-        if (current_run == 'develop') {
+        if (current_run == main_branch) {
             archiveArtifacts artifacts: "develop_percent_coverage.txt", allowEmptyArchive: true, fingerprint: true
         }
     }
