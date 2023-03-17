@@ -31,6 +31,7 @@ from tuna.libraries import Library
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example
 
+
 def get_library(args: Dict[str, Any]) -> Union[Example, MIOpen]:
   """Factory method to get lib based on args"""
   library: Union[Example, MIOpen]
