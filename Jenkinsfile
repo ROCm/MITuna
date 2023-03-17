@@ -84,9 +84,9 @@ pipeline {
             steps {
                 script {
                     if (branch == branch_master) { 
-                        runTestsAndCoverage("develop")
+                        utils.pytestSuit3AndCoverage("develop")
                     } else {
-                        runTestsAndCoverage("branch")
+                        utils.pytestSuit3AndCoverage("branch")
                     }
                 }
             }
