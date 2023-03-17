@@ -67,9 +67,10 @@ def main():
   parser = argparse.ArgumentParser(
       description=
       'decide whether to extract coverage for develop or a peripheral branch')
-  parser.add_argument('function',
-                      choices=['develop', 'branch'],
-                      help='choose develop or branch')
+  parser.add_argument(
+      'function',
+      help=
+      'enter "develop" or any other string representing the peripheral branch')
   parser.add_argument(
       '--txt',
       dest='coverage_file_name_txt',
@@ -81,9 +82,9 @@ def main():
                       help='Name of the json file containing coverage data')
   args = parser.parse_args()
 
-  if args.function == 'develop':
+  if args.function.lower() == 'develop':
     develop(root_dir, args.coverage_file_name_txt, args.coverage_file_name_json)
-  elif args.function == 'branch':
+  else:
     branch(root_dir, args.coverage_file_name_txt, args.coverage_file_name_json)
 
 

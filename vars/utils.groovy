@@ -511,7 +511,7 @@ def pytestSuite2() {
     }
 }
 
-def pytestSuit3AndCoverage(coverage_mode) {
+def pytestSuit3AndCoverage(current_run, main_branch) {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -523,7 +523,7 @@ def pytestSuit3AndCoverage(coverage_mode) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        if (coverage_mode == 'branch') {
+        if (current_run != main_branch) {
         try {
            sh "wget ${env.TUNA_COVERAGE_URL}/rk_coverage_auto/lastSuccessfulBuild/artifact/develop_percent_coverage.txt"
         } catch (Exception err) {
@@ -535,9 +535,9 @@ def pytestSuit3AndCoverage(coverage_mode) {
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            sh "coverage report -m"
            sh "python3 -m coverage json"
-           sh "python3 tests/covscripts/coverage.py ${coverage_mode}"
+           sh "python3 tests/covscripts/coverage.py ${current_run}"
         }
-        if (coverage_mode == 'develop') {
+        if (current_run == 'develop') {
             archiveArtifacts artifacts: "develop_percent_coverage.txt", allowEmptyArchive: true, fingerprint: true
         }
     }

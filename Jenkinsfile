@@ -6,6 +6,7 @@ pipeline {
     environment {
         branch =  sh(script: "echo ${scm.branches[0].name} | sed 's/[^a-zA-Z0-9]/_/g' ", returnStdout: true).trim()
         branch_id = "${branch}_${BUILD_ID}"
+        branch_master = "develop"
         db_name = "${TUNA_DB_NAME}_${branch}_${BUILD_ID}"
         docker_args = '--privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw -v /var/lib/docker/:/var/lib/docker --group-add video'
         db_host = 'localhost'
@@ -23,8 +24,6 @@ pipeline {
         pwd = "${pwd}"
         port = "${port}"
         TUNA_ROCM_VERSION = '4.5'
-        //main branch artifacts variables
-        branch_master = "rk_coverage_auto"
 
     } 
     stages {
@@ -83,11 +82,7 @@ pipeline {
             agent { label utils.rocmnode("tunatest") }
             steps {
                 script {
-                    if (branch == branch_master) { 
-                        utils.pytestSuit3AndCoverage("develop")
-                    } else {
-                        utils.pytestSuit3AndCoverage("branch")
-                    }
+                    utils.pytestSuit3AndCoverage(branch_id, branch_master)
                 }
             }
         }
