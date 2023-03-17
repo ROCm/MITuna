@@ -559,6 +559,9 @@ def runLint() {
             sh "mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/garfana_dict.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/libraries.py"
+            sh "mypy tuna/grafana_dict.py"
             sh "yamllint tuna/miopen/yaml_files/*.yaml"
             sh "yamllint tuna/example/*.yaml"
           }
