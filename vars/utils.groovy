@@ -534,8 +534,7 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
             archiveArtifacts artifacts: "${env.COVERAGE_ARTIFACT_FILE_NAME}", allowEmptyArchive: true, fingerprint: true
         } else {
         try {
-            sh "echo ${main_branch}"
-            sh "wget ${env.TUNA_COVERAGE_URL}/rk_coverage_auto/lastSuccessfulBuild/artifact/${env.COVERAGE_ARTIFACT_FILE_NAME}"
+            sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/${env.COVERAGE_ARTIFACT_FILE_NAME}"
         } catch (Exception err) {
             currentBuild.result = 'SUCCESS'
         }
