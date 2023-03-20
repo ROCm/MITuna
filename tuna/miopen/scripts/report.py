@@ -38,16 +38,15 @@ LOGGER = setup_logger('report')
 
 def parse_args():
   """command line parsing"""
-  parser = setup_arg_parser('Post tuning report on config performance for current session',
-                            [TunaArgs.CONFIG_TYPE])
+  parser = setup_arg_parser(
+      'Post tuning report on config performance for current session',
+      [TunaArgs.CONFIG_TYPE])
   parser.add_argument(
       '--session_id',
       required=True,
       dest='session_id',
       type=int,
-      help=
-      'Session id to be used for comaprison against golden_v'
-  )
+      help='Session id to be used for comaprison against golden_v')
   parser.add_argument('--golden_v',
                       dest='golden_v',
                       required=True,
@@ -74,13 +73,15 @@ def get_data(args, dbt):
 
     return pd.DataFrame(data=session.execute(query).fetchall())
 
+
 def check_missing_configs(args, dbt):
   """Check for configs that are in the session tuning but not in the golden_v tuning"""
   arch = None
-  num_cu=None
+  num_cu = None
 
   with DbSession() as session:
-    sess = session.query(dbt.session_table).filter(dbt.session_table.id==args.session_id).all()
+    sess = session.query(dbt.session_table).filter(
+        dbt.session_table.id == args.session_id).all()
     arch = sess[0].arch
     num_cu = sess[0].num_cu
 
@@ -102,26 +103,29 @@ def print_driver_cmds(dbt, ids_list, text):
     for cfg in drivers:
       print(cfg)
 
+
 def summary_report(args, dbt):
   """Print tuning summary"""
   dfr = get_data(args, dbt)
 
   dfr_null = dfr.loc[dfr[[2, 5]].eq(-1).any(axis=1)].copy()
-  print(f"#configs with k_time=-1 in session_id={args.session_id}: {dfr_null[2].eq(-1).sum()}")
-  print(f"#configs with k_time=-1 in miopen_golden_v={args.golden_v}: {dfr_null[5].eq(-1).sum()}")
+  print(
+      f"#configs with k_time=-1 in session_id={args.session_id}: {dfr_null[2].eq(-1).sum()}"
+  )
+  print(
+      f"#configs with k_time=-1 in miopen_golden_v={args.golden_v}: {dfr_null[5].eq(-1).sum()}"
+  )
   dfr = dfr.loc[~dfr[[2, 5]].eq(-1).any(axis=1)]
   #dfr.to_csv('data.csv')
 
-
-  dfr[6] = dfr[5]-dfr[2]
+  dfr[6] = dfr[5] - dfr[2]
   pd.options.display.max_rows = 100
   #print(dfr.tail(100))
 
-
   #prct configs faster or slower
-  prct_positive = (dfr[6] > 0).sum() / dfr.shape[0] *100
-  prct_equal = (dfr[6] == 0).sum() / dfr.shape[0] *100
-  prct_negative = (dfr[6] < 0).sum() / dfr.shape[0] *100
+  prct_positive = (dfr[6] > 0).sum() / dfr.shape[0] * 100
+  prct_equal = (dfr[6] == 0).sum() / dfr.shape[0] * 100
+  prct_negative = (dfr[6] < 0).sum() / dfr.shape[0] * 100
   print(f"\nconfigs with faster kernel_time: {round(prct_positive,4)}%")
   print(f"configs with equal kernel_time: {round(prct_equal,4)}%")
   print(f"configs with slower kernel_time: {round(prct_negative,4)}%")
@@ -133,10 +137,11 @@ def summary_report(args, dbt):
   print(f"Mean for configs with slower kernel_time: {avg_negative}")
   print(f"Mean for all configs: {dfr[6].mean()}")
 
-  prct_speedup_per_config = (dfr[2]-dfr[5]) / ((dfr[2]+dfr[5]) /2) * 100
+  prct_speedup_per_config = (dfr[2] - dfr[5]) / ((dfr[2] + dfr[5]) / 2) * 100
   print(f"Overall speed-up: {round(prct_speedup_per_config.mean(), 4)}\n")
 
   return dfr
+
 
 def detailed_report(args, dfr):
   """Print detailed tuning analysis"""
@@ -156,16 +161,27 @@ def detailed_report(args, dfr):
 
   #Percentage difference formula
   diff_mean = dfr_diff.groupby(['solver_x', 'solver_y'])\
-                  .apply(lambda grp: ((grp['ktime_y'] - grp['ktime_x']) / ((grp['ktime_y'] + grp['ktime_x'])/2) * 100 ).mean())
-  count = dfr_diff.groupby(['solver_x', 'solver_y']).apply(lambda grp: grp.shape[0])
-  dfr_detailed_summary = pd.DataFrame({'diff_mean': diff_mean, 'count' : count}).reset_index()
+                  .apply(lambda grp: ((grp['ktime_y'] - grp['ktime_x'])
+                    / ((grp['ktime_y'] + grp['ktime_x'])/2) * 100 ).mean())
+  count = dfr_diff.groupby(['solver_x',
+                            'solver_y']).apply(lambda grp: grp.shape[0])
+  dfr_detailed_summary = pd.DataFrame({
+      'diff_mean': diff_mean,
+      'count': count
+  }).reset_index()
 
   _, id_solver_map = get_id_solvers()
-  dfr_detailed_summary['solver_x'] = dfr_detailed_summary['solver_x'].apply(id_solver_map.get)
-  dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(id_solver_map.get)
+  dfr_detailed_summary['solver_x'] = dfr_detailed_summary['solver_x'].apply(
+      id_solver_map.get)
+  dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(
+      id_solver_map.get)
   report_file = f"detailed_report_sess{args.session_id}_gv{args.golden_v}.csv"
   print(f"Detailed report has been written to file: {report_file}")
-  dfr_detailed_summary.rename(columns={'solver_x' : 'session_solver', 'solver_y' : 'golden_solver'}, inplace=True)
+  dfr_detailed_summary.rename(columns={
+      'solver_x': 'session_solver',
+      'solver_y': 'golden_solver'
+  },
+                              inplace=True)
   dfr_detailed_summary.to_csv(report_file)
 
 
