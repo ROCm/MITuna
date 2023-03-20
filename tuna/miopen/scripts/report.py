@@ -99,9 +99,9 @@ def print_driver_cmds(dbt, ids_list, text):
     query = session.query(dbt.config_table.driver)\
                    .filter(dbt.config_table.id.in_(ids_list))
     drivers = [x[0] for x in query.all()]
-    print(f"{text}: {len(drivers)}")
+    LOGGER.info("%s: %s", text, len(drivers))
     for cfg in drivers:
-      print(cfg)
+      LOGGER.info(cfg)
 
 
 def summary_report(args, dbt):
@@ -109,36 +109,37 @@ def summary_report(args, dbt):
   dfr = get_data(args, dbt)
 
   dfr_null = dfr.loc[dfr[[2, 5]].eq(-1).any(axis=1)].copy()
-  print(
-      f"#configs with k_time=-1 in session_id={args.session_id}: {dfr_null[2].eq(-1).sum()}"
-  )
-  print(
-      f"#configs with k_time=-1 in miopen_golden_v={args.golden_v}: {dfr_null[5].eq(-1).sum()}"
-  )
+  LOGGER.info("#configs with k_time=-1 in session_id= %s: %s", args.session_id,
+              dfr_null[2].eq(-1).sum())
+  LOGGER.info("#configs with k_time=-1 in miopen_golden_v=%s : %s",
+              args.golden_v, dfr_null[5].eq(-1).sum())
   dfr = dfr.loc[~dfr[[2, 5]].eq(-1).any(axis=1)]
   #dfr.to_csv('data.csv')
 
   dfr[6] = dfr[5] - dfr[2]
   pd.options.display.max_rows = 100
-  #print(dfr.tail(100))
+  #LOGGER.info(dfr.tail(100))
 
   #prct configs faster or slower
   prct_positive = (dfr[6] > 0).sum() / dfr.shape[0] * 100
   prct_equal = (dfr[6] == 0).sum() / dfr.shape[0] * 100
   prct_negative = (dfr[6] < 0).sum() / dfr.shape[0] * 100
-  print(f"\nconfigs with faster kernel_time: {round(prct_positive,4)}%")
-  print(f"configs with equal kernel_time: {round(prct_equal,4)}%")
-  print(f"configs with slower kernel_time: {round(prct_negative,4)}%")
+  #pylint: disable=logging-format-truncated
+  LOGGER.info("\nconfigs with faster kernel_time: %f %",
+              round(prct_positive, 4))
+  LOGGER.info("configs with equal kernel_time: %f %", round(prct_equal, 4))
+  LOGGER.info("configs with slower kernel_time: %f %", round(prct_negative, 4))
 
   #averages
   avg_positive = (dfr[6] > 0).mean()
   avg_negative = (dfr[6] < 0).mean()
-  print(f"\nMean for configs with faster kernel_time: {avg_positive}")
-  print(f"Mean for configs with slower kernel_time: {avg_negative}")
-  print(f"Mean for all configs: {dfr[6].mean()}")
+  LOGGER.info("\nMean for configs with faster kernel_time: %s", avg_positive)
+  LOGGER.info("Mean for configs with slower kernel_time: %s", avg_negative)
+  LOGGER.info("Mean for all configs: %s", dfr[6].mean())
 
   prct_speedup_per_config = (dfr[2] - dfr[5]) / ((dfr[2] + dfr[5]) / 2) * 100
-  print(f"Overall speed-up: {round(prct_speedup_per_config.mean(), 4)}\n")
+  LOGGER.info("Overall speed-up: %s\n", round(prct_speedup_per_config.mean(),
+                                              4))
 
   return dfr
 
@@ -157,7 +158,7 @@ def detailed_report(args, dfr):
   dfr_diff = dfr_unq[dfr_unq['solver_x'] != dfr_unq['solver_y']]
 
   #for key, grp in dfr_diff.groupby(['solver_x', 'solver_y']):
-  #  print(key, ((grp['ktime_y'] - grp['ktime_x']) / grp['ktime_x']).mean(), grp.shape[0])
+  #  LOGGER.info(key, ((grp['ktime_y'] - grp['ktime_x']) / grp['ktime_x']).mean(), grp.shape[0])
 
   #Percentage difference formula
   diff_mean = dfr_diff.groupby(['solver_x', 'solver_y'])\
@@ -176,7 +177,7 @@ def detailed_report(args, dfr):
   dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(
       id_solver_map.get)
   report_file = f"detailed_report_sess{args.session_id}_gv{args.golden_v}.csv"
-  print(f"Detailed report has been written to file: {report_file}")
+  LOGGER.info("Detailed report has been written to file: %s", report_file)
   dfr_detailed_summary.rename(columns={
       'solver_x': 'session_solver',
       'solver_y': 'golden_solver'
