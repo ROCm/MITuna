@@ -116,7 +116,7 @@ def summary_report(args, dbt):
   dfr = dfr.loc[~dfr[[2, 5]].eq(-1).any(axis=1)]
   #dfr.to_csv('data.csv')
 
-  dfr[6] = dfr[5] - dfr[2]
+  dfr[6] = dfr[2] - dfr[5]
   pd.options.display.max_rows = 100
   #LOGGER.info(dfr.tail(100))
 
@@ -125,21 +125,27 @@ def summary_report(args, dbt):
   prct_equal = (dfr[6] == 0).sum() / dfr.shape[0] * 100
   prct_negative = (dfr[6] < 0).sum() / dfr.shape[0] * 100
   #pylint: disable=logging-format-truncated
-  LOGGER.info("\nconfigs with faster kernel_time: %f %",
-              round(prct_positive, 4))
-  LOGGER.info("configs with equal kernel_time: %f %", round(prct_equal, 4))
-  LOGGER.info("configs with slower kernel_time: %f %", round(prct_negative, 4))
+  LOGGER.info("configs with faster kernel_time: %f %%",
+              round(prct_negative, 4))
+  LOGGER.info("configs with equal kernel_time: %f %%", round(prct_equal, 4))
+  LOGGER.info("configs with slower kernel_time: %f %% \n", round(prct_positive, 4))
 
   #averages
   avg_positive = (dfr[6] > 0).mean()
   avg_negative = (dfr[6] < 0).mean()
-  LOGGER.info("\nMean for configs with faster kernel_time: %s", avg_positive)
-  LOGGER.info("Mean for configs with slower kernel_time: %s", avg_negative)
-  LOGGER.info("Mean for all configs: %s", dfr[6].mean())
+  LOGGER.info("Mean for configs with faster kernel_time: %s %%", avg_negative)
+  LOGGER.info("Mean for configs with slower kernel_time: %s %%", avg_positive)
+  LOGGER.info("Mean for all configs: %s %% \n", dfr[6].mean())
 
   prct_speedup_per_config = (dfr[2] - dfr[5]) / ((dfr[2] + dfr[5]) / 2) * 100
-  LOGGER.info("Overall speed-up: %s\n", round(prct_speedup_per_config.mean(),
-                                              4))
+  LOGGER.info("Overall speed-up: %s %%", round(prct_speedup_per_config.mean(), 4))
+  speed_up = f"speed_up_sess{args.session_id}_gv{args.golden_v}.csv"
+  LOGGER.info("Speed up per config has been written to file: %s", speed_up)
+  prct_speedup_per_config.to_csv(speed_up)
+
+  db_data = f"db_data_sess{args.session_id}_gv{args.golden_v}.csv"
+  LOGGER.info("Raw DB data has been written to file: %s", db_data)
+  dfr.to_csv(db_data)
 
   return dfr
 
@@ -162,8 +168,8 @@ def detailed_report(args, dfr):
 
   #Percentage difference formula
   diff_mean = dfr_diff.groupby(['solver_x', 'solver_y'])\
-                  .apply(lambda grp: ((grp['ktime_y'] - grp['ktime_x'])
-                    / ((grp['ktime_y'] + grp['ktime_x'])/2) * 100 ).mean())
+                  .apply(lambda grp: ((grp['ktime_x'] - grp['ktime_y'])
+                    / ((grp['ktime_x'] + grp['ktime_x'])/2) * 100 ).mean())
   count = dfr_diff.groupby(['solver_x',
                             'solver_y']).apply(lambda grp: grp.shape[0])
   dfr_detailed_summary = pd.DataFrame({
