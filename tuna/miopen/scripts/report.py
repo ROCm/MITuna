@@ -148,13 +148,15 @@ def detailed_report(args, dfr):
   dfr_new_unq = dfr_new.loc[dfr_new.groupby('config')['ktime'].idxmin()]
   dfr_old_unq = dfr_old.loc[dfr_old.groupby('config')['ktime'].idxmin()]
   dfr_unq = dfr_new_unq.merge(dfr_old_unq, on='config')
+  #NOTE: solver_x is session_id solver, solver_y is golden_v solver
   dfr_diff = dfr_unq[dfr_unq['solver_x'] != dfr_unq['solver_y']]
 
   #for key, grp in dfr_diff.groupby(['solver_x', 'solver_y']):
   #  print(key, ((grp['ktime_y'] - grp['ktime_x']) / grp['ktime_x']).mean(), grp.shape[0])
 
+  #Percentage difference formula
   diff_mean = dfr_diff.groupby(['solver_x', 'solver_y'])\
-                  .apply(lambda grp: ((grp['ktime_y'] - grp['ktime_x']) / grp['ktime_x']).mean())
+                  .apply(lambda grp: ((grp['ktime_y'] - grp['ktime_x']) / ((grp['ktime_y'] + grp['ktime_x'])/2) * 100 ).mean())
   count = dfr_diff.groupby(['solver_x', 'solver_y']).apply(lambda grp: grp.shape[0])
   dfr_detailed_summary = pd.DataFrame({'diff_mean': diff_mean, 'count' : count}).reset_index()
 
@@ -163,7 +165,8 @@ def detailed_report(args, dfr):
   dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(id_solver_map.get)
   report_file = f"detailed_report_sess{args.session_id}_gv{args.golden_v}.csv"
   print(f"Detailed report has been written to file: {report_file}")
-  dfr_detailed_summary.to_csv(report_file, mode='a')
+  dfr_detailed_summary.rename(columns={'solver_x' : 'session_solver', 'solver_y' : 'golden_solver'}, inplace=True)
+  dfr_detailed_summary.to_csv(report_file)
 
 
 def main():
