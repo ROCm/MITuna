@@ -147,6 +147,19 @@ def add_jobs(
     res = query.all()
     if not res:
       logger.error('No applicable solvers found for args %s', args.__dict__)
+
+    fin_step_str = 'not_fin'
+    if args.fin_steps:
+      fin_step_str = ','.join(args.fin_steps)
+    query = f"select * from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{fin_step_str}' and reason='{args.label}'"
+    logger.info(query)
+    ret = session.execute(query)
+    pre_ex = {}
+    for obj in ret:
+      if obj['config'] not in pre_ex:
+        pre_ex[obj['config']] = {}
+      pre_ex[obj['config']][obj['solver']] = True
+
     do_commit = False
     while True:
       for solv_app, slv in res:
@@ -162,7 +175,7 @@ def add_jobs(
 
           if job.config in pre_ex:
             if job.solver in pre_ex[job.config]:
-              LOGGER.warning("Job exists (skip): %s : %s", job.config,
+              logger.warning("Job exists (skip): %s : %s", job.config,
                              job.solver)
               continue
 
