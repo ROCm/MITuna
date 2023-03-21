@@ -125,10 +125,10 @@ def summary_report(args, dbt):
   prct_equal = (dfr[6] == 0).sum() / dfr.shape[0] * 100
   prct_negative = (dfr[6] < 0).sum() / dfr.shape[0] * 100
   #pylint: disable=logging-format-truncated
-  LOGGER.info("configs with faster kernel_time: %f %%",
-              round(prct_negative, 4))
+  LOGGER.info("configs with faster kernel_time: %f %%", round(prct_negative, 4))
   LOGGER.info("configs with equal kernel_time: %f %%", round(prct_equal, 4))
-  LOGGER.info("configs with slower kernel_time: %f %% \n", round(prct_positive, 4))
+  LOGGER.info("configs with slower kernel_time: %f %% \n",
+              round(prct_positive, 4))
 
   #averages
   avg_positive = (dfr[6] > 0).mean()
@@ -138,7 +138,8 @@ def summary_report(args, dbt):
   LOGGER.info("Mean for all configs: %s %% \n", dfr[6].mean())
 
   prct_speedup_per_config = (dfr[2] - dfr[5]) / ((dfr[2] + dfr[5]) / 2) * 100
-  LOGGER.info("Overall speed-up: %s %%", round(prct_speedup_per_config.mean(), 4))
+  LOGGER.info("Overall speed-up: %s %%", round(prct_speedup_per_config.mean(),
+                                               4))
   speed_up = f"speed_up_sess{args.session_id}_gv{args.golden_v}.csv"
   LOGGER.info("Speed up per config has been written to file: %s", speed_up)
   prct_speedup_per_config.to_csv(speed_up)
