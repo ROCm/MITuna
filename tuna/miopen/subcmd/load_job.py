@@ -200,7 +200,7 @@ def run_load_job(args: argparse.Namespace, logger: logging.Logger):
     except ValueError as terr:
       logger.error(terr)
 
-  cnt = add_jobs(args, dbt)
+  cnt = add_jobs(args, dbt, logger)
   print(f"New jobs added: {cnt}")
 
 
