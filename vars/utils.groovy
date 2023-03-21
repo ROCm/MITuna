@@ -535,10 +535,11 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
         } else {
         try {
             sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/${env.COVERAGE_ARTIFACT_FILE_NAME}"
+            sh "python3 tests/covscripts/coverage.py ${current_run}"
         } catch (Exception err) {
             currentBuild.result = 'SUCCESS'
         }
-            sh "python3 tests/covscripts/coverage.py ${current_run}"
+
         }
 
     }
