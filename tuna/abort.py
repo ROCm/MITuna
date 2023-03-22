@@ -26,12 +26,16 @@
 ###############################################################################
 """Utility module for checking abort attempts"""
 
+from typing import List, Optional
 import os
+import logging
 
 
-def chk_abort_file(mid, logger, arch=None):
+def chk_abort_file(mid: int,
+                   logger: logging.Logger,
+                   arch: Optional[str] = None) -> bool:
   """Checking presence of abort file to terminate processes immediately"""
-  abort_reason = []
+  abort_reason: List[str] = []
 
   if not arch is None:
     if os.path.exists(f'/tmp/miopen_abort_{arch}'):
@@ -40,6 +44,7 @@ def chk_abort_file(mid, logger, arch=None):
   if os.path.exists(f'/tmp/miopen_abort_mid_{mid}'):
     abort_reason.append('mid_' + str(mid))
   if abort_reason:
+    reason: str
     for reason in abort_reason:
       logger.warning('/tmp/mipen_abort_%s file found, returning', reason)
     return True

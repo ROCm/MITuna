@@ -85,8 +85,15 @@ class DriverBatchNorm(DriverBase):
 
   def parse_driver_line(self, line: str) -> None:
     super().parse_driver_line(line)
-
     self.compute_direction()
+
+  def parse_fdb_key(self, line):
+    """ Overidden Method"""
+    raise NotImplementedError("Not implemented")
+
+  def compose_weight_t(self):
+    """ Overridden Method """
+    raise NotImplementedError("Not implemented")
 
   def compute_direction(self) -> None:
     """Setting BN direction based on forw and back"""
