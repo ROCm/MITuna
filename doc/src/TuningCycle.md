@@ -64,8 +64,6 @@ Additionally the user may provide a name to tag a configuration for easier recal
 A tag will be required when adding a tuning job. Tags are stored in the config_tags table.
 A model and framework name and version are also required. This enables MITuna to track
 benchmark performance post-tuning.
-A model and framework name and version are also required. This enables MITuna to track
-benchmark performance post-tuning.
 
 ```
 ./go_fish.py miopen import_configs --add_model Resnet50 --md_version 1
