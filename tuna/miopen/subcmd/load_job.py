@@ -74,7 +74,7 @@ def arg_solvers(
   else:
     solver_ids.append(('', None))
 
-  args.solvers = solver_ids
+  args.solvers = solver_ids if solver_ids else []
 
 
 def test_tag_name(tag: str, dbt: MIOpenDBTables):
