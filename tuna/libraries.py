@@ -32,8 +32,8 @@ from enum import Enum
 class Library(Enum):
   """Enumerate supported libraries"""
   # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  MIOPEN = 'miopen'
-  EXAMPLE = 'example'
+  MIOPEN: str = 'miopen'
+  EXAMPLE: str = 'example'
 
-  def __str__(self):
+  def __str__(self) -> str:
     return self.value
