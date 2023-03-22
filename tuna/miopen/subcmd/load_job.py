@@ -64,17 +64,18 @@ def arg_solvers(
   elif args.algo:
     solver_arr = ALG_SLV_MAP[args.algo]
 
-  solver_ids = []
   if solver_arr:
+    solver_ids = []
     for solver in solver_arr:
       sid = solver_id_map.get(solver, None)
       if not sid:
         logger.error(f'Invalid solver: {solver}')
       solver_ids.append((solver, sid))
+    args.solvers = solver_ids
   else:
-    solver_ids.append(('', None))
+    args.solvers = [('', None)]
 
-  args.solvers = solver_ids if solver_ids else []
+  return args
 
 
 def test_tag_name(tag: str, dbt: MIOpenDBTables):
@@ -115,10 +116,8 @@ def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
     .filter(dbt.solver_app.solver == Solver.id)\
     .filter(dbt.solver_app.applicable == true())\
     .filter(Solver.valid == true())
-  if any([x[1] for x in args.solvers]):
-    solver_ids = [x[1] for x in args.solvers if x[1] is not None]
-    #if args.solvers[0][1]:  #check none
-    #solver_ids = [x for _, x in args.solvers]
+  if args.solvers[0][1]:  #check none
+    solver_ids = [x for _, x in args.solvers]
     query = query.filter(dbt.solver_app.solver.in_(solver_ids))
   if args.tunable:
     query = query.filter(Solver.tunable == true())
