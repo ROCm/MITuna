@@ -534,12 +534,11 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
             archiveArtifacts artifacts: "${env.COVERAGE_ARTIFACT_FILE_NAME}", allowEmptyArchive: true, fingerprint: true
         } else {
         try {
-            sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/${env.COVERAGE_ARTIFACT_FILE_NAME}"
-
+          sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/${env.COVERAGE_ARTIFACT_FILE_NAME}"
         } catch (Exception err) {
             currentBuild.result = 'SUCCESS'
         }
-        if (fileExists(${env.COVERAGE_ARTIFACT_FILE_NAME})) {
+        if (fileExists("${env.COVERAGE_ARTIFACT_FILE_NAME}")) {
             sh "python3 tests/covscripts/coverage.py ${current_run}"
         } else {
             echo "File ${env.COVERAGE_ARTIFACT_FILE_NAME} not found. Skipping coverage.py execution"
