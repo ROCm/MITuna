@@ -539,7 +539,11 @@ def pytestSuit3AndCoverage(current_run, main_branch) {
         } catch (Exception err) {
             currentBuild.result = 'SUCCESS'
         }
+        if (fileExists('${env.COVERAGE_ARTIFACT_FILE_NAME}')) {
             sh "python3 tests/covscripts/coverage.py ${current_run}"
+        } else {
+            echo "File ${env.COVERAGE_ARTIFACT_FILE_NAME} not found. Skipping coverage.py execution"
+        }
         }
 
     }
