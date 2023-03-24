@@ -548,20 +548,28 @@ def runLint() {
           tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
+            sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "mypy tuna/miopen/utils/config_type.py"
             sh "mypy tuna/connection.py --ignore-missing-imports"
+            sh "mypy tuna/abort.py --ignore-missing-imports"
             sh "mypy tuna/miopen/utils/analyze_parse_db.py --ignore-missing-imports"
             sh "mypy tuna/miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/scripts/corrupt_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/subcmd/import_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports"
             sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/grafana_dict.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/libraries.py"
+            sh "mypy tuna/lib_utils.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/yaml_files/*.yaml"
             sh "yamllint tuna/example/*.yaml"
+            sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }
