@@ -27,6 +27,7 @@
 """script for detecting find db entries with missing perf db entries"""
 
 import pandas as pd
+import numpy as np
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.tables import MIOpenDBTables
@@ -58,72 +59,90 @@ def parse_args():
   return args
 
 
-def get_data(args, dbt):
+def get_data(args, dbt, arch, num_cu):
   """Get data from DB based on args.session_id and optional golden_v"""
 
   with DbSession() as session:
-    query = f"select t1.config as c1, t1.solver as s1, t1.kernel_time as k1,"\
-            f"t2.config as c2, t2.solver as s2, t2.kernel_time as k2,"\
-            f"t1.kernel_time-t2.kernel_time as diff from {dbt.find_db_table.__tablename__} t1 "\
-            f"inner join (select config, solver, kernel_time, golden_miopen_v, session, "\
-            f"arch, num_cu from conv_golden) t2 on t1.config=t2.config and t1.solver=t2.solver "\
-            f"inner join (select id, arch, num_cu from session) s1 on s1.id={args.session_id} "\
-            f"where t1.session={args.session_id} and t2.golden_miopen_v={args.golden_v} and "\
-            f"t2.arch=s1.arch and t2.num_cu=s1.num_cu order by t1.config"
+    query = f"select config, solver, kernel_time from {dbt.find_db_table.__tablename__} "\
+            f"where session={args.session_id} order by config"
+    pd.options.display.max_rows = 100
+    query_data = session.execute(query).fetchall()
+    all_cfgs = [x[0] for x in query_data]
+    configs = set(all_cfgs)
+    session_data = pd.DataFrame(data=query_data)
+    query = f"select config, solver, kernel_time from conv_golden where golden_miopen_v="\
+            f"{args.golden_v} and arch='{arch}' and num_cu={num_cu} and config in "\
+            f"{tuple(configs)} order by config"
+    golden_data = pd.DataFrame(data=session.execute(query).fetchall())
+    session_data.columns = golden_data.columns = ['config', 'solver', 'ktime']
 
-    return pd.DataFrame(data=session.execute(query).fetchall())
+    dfr = pd.merge(session_data,
+                   golden_data,
+                   on=['config', 'solver'],
+                   how='outer')
+    return dfr
 
 
-def check_missing_configs(args, dbt):
+def check_missing_configs(args, dbt, dfr):
   """Check for configs that are in the session tuning but not in the golden_v tuning"""
-  arch = None
-  num_cu = None
+  #get number of configs that are in golden_v but not in session
+  sess_miss = dfr.loc[dfr['ktime_x'].isna()].copy()
+  missing_session_configs = sess_miss['config'].values.tolist()
+  print_driver_cmds(args, dbt, missing_session_configs, "Missing commands",
+                    'session')
 
+  #get number of configs that are in session but not in golden
+  gv_miss = dfr.loc[dfr['ktime_y'].isna()].copy()
+  missing_gv_configs = set(gv_miss['config'].values.tolist())
+  print_driver_cmds(args, dbt, missing_gv_configs, "Missing commands",
+                    'conv_golden')
+
+
+def print_driver_cmds(args, dbt, ids_list, text, table1):
+  """Print configs present in @table1 but missing from @table1"""
   with DbSession() as session:
-    sess = session.query(dbt.session_table).filter(
-        dbt.session_table.id == args.session_id).all()
-    arch = sess[0].arch
-    num_cu = sess[0].num_cu
-
-    query = f"select distinct config from {dbt.find_db_table.__tablename__} "\
-            f"where id={args.session_id} and config not in "\
-            f"(select config from {dbt.golden_table.__tablename__} where "\
-            f"golden_miopen_v={args.golden_v} and arch='{arch}' and num_cu={num_cu})"
-    missing_configs = [x[0] for x in session.execute(query).fetchall()]
-    print_driver_cmds(dbt, missing_configs, "Missing commands")
-
-
-def print_driver_cmds(dbt, ids_list, text):
-  """Print configs present in session but missing from golden"""
-  with DbSession() as session:
-    query = session.query(dbt.config_table.driver)\
+    query = session.query(dbt.config_table.id, dbt.config_table.driver)\
                    .filter(dbt.config_table.id.in_(ids_list))
-    drivers = [x[0] for x in query.all()]
-    LOGGER.info("%s: %s", text, len(drivers))
-    for cfg in drivers:
-      LOGGER.info(cfg)
+    drivers = query.all()
+    LOGGER.info("%s from %s:  %s", text, table1, len(drivers))
+    LOGGER.info("Driver cmds written to missing_%s.txt", table1)
+    missing_drivers = []
+    with open(f"missing_{table1}_sess{args.session_id}_gv{args.golden_v}.txt",
+              'w', encoding='utf-8') as fout:
+      for entry in drivers:
+        if entry[1] is not None:
+          fout.write(f"{entry[1]}\n")
+        else:
+          missing_drivers.append(entry[0])
+    if missing_drivers:
+      LOGGER.warning('Configs with missing drivers in db: %s',
+                     len(missing_drivers))
 
 
-def summary_report(args, dbt):
+def summary_report(args, data_frame):
   """Print tuning summary"""
-  dfr = get_data(args, dbt)
+  #dfr cols = [id, config, solver, ktime_x, ktime_y]
+  dfr = data_frame.copy(deep=True)
 
-  dfr_null = dfr.loc[dfr[[2, 5]].eq(-1).any(axis=1)].copy()
+  #copy of only entires where ktime=-1
+  dfr_null = dfr.loc[dfr[['ktime_x', 'ktime_y']].eq(-1).any(axis=1)].copy()
+  dfr_null.to_csv('null.csv')
   LOGGER.info("#configs with k_time=-1 in session_id= %s: %s", args.session_id,
-              dfr_null[2].eq(-1).sum())
+              dfr_null['ktime_x'].eq(-1).sum())
   LOGGER.info("#configs with k_time=-1 in miopen_golden_v=%s : %s",
-              args.golden_v, dfr_null[5].eq(-1).sum())
-  dfr = dfr.loc[~dfr[[2, 5]].eq(-1).any(axis=1)]
-  #dfr.to_csv('data.csv')
+              args.golden_v, dfr_null['ktime_y'].eq(-1).sum())
 
-  dfr[6] = dfr[2] - dfr[5]
-  pd.options.display.max_rows = 100
-  #LOGGER.info(dfr.tail(100))
+  #remove entries where k_time=-1
+  dfr = dfr.loc[~dfr[['ktime_x', 'ktime_y']].eq(-1).any(axis=1)].copy()
+  dfr.to_csv('data.csv')
+
+  dfr['diff'] = dfr['ktime_x'] - dfr['ktime_y']
+  dfr.to_csv('data.csv')
 
   #prct configs faster or slower
-  prct_positive = (dfr[6] > 0).sum() / dfr.shape[0] * 100
-  prct_equal = (dfr[6] == 0).sum() / dfr.shape[0] * 100
-  prct_negative = (dfr[6] < 0).sum() / dfr.shape[0] * 100
+  prct_positive = (dfr['diff'] > 0).sum() / dfr.shape[0] * 100
+  prct_equal = (dfr['diff'] == 0).sum() / dfr.shape[0] * 100
+  prct_negative = (dfr['diff'] < 0).sum() / dfr.shape[0] * 100
   #pylint: disable=logging-format-truncated
   LOGGER.info("configs with faster kernel_time: %f %%", round(prct_negative, 4))
   LOGGER.info("configs with equal kernel_time: %f %%", round(prct_equal, 4))
@@ -131,50 +150,66 @@ def summary_report(args, dbt):
               round(prct_positive, 4))
 
   #averages
-  avg_positive = (dfr[6] > 0).mean()
-  avg_negative = (dfr[6] < 0).mean()
+  avg_positive = (dfr['diff'] > 0).mean()
+  avg_negative = (dfr['diff'] < 0).mean()
   LOGGER.info("Mean for configs with faster kernel_time: %s %%", avg_negative)
   LOGGER.info("Mean for configs with slower kernel_time: %s %%", avg_positive)
-  LOGGER.info("Mean for all configs: %s %% \n", dfr[6].mean())
+  LOGGER.info("Mean for all configs: %s %%", dfr['diff'].mean())
 
-  prct_speedup_per_config = (dfr[2] - dfr[5]) / ((dfr[2] + dfr[5]) / 2) * 100
+  prct_speedup_per_config = (dfr['ktime_x'] - dfr['ktime_y']) / (
+      (dfr['ktime_x'] + dfr['ktime_y']) / 2) * 100
   LOGGER.info("Overall speed-up: %s %%", round(prct_speedup_per_config.mean(),
                                                4))
   speed_up = f"speed_up_sess{args.session_id}_gv{args.golden_v}.csv"
-  LOGGER.info("Speed up per config has been written to file: %s", speed_up)
+  LOGGER.info("Speed-up per config has been written to file: %s", speed_up)
   prct_speedup_per_config.to_csv(speed_up)
 
   db_data = f"db_data_sess{args.session_id}_gv{args.golden_v}.csv"
-  LOGGER.info("Raw DB data has been written to file: %s", db_data)
+  LOGGER.info("Raw DB data has been written to file: %s\n", db_data)
   dfr.to_csv(db_data)
-
-  return dfr
 
 
 def detailed_report(args, dfr):
   """Print detailed tuning analysis"""
-  #dfr = pd.read_csv('data.csv', index_col=0, header=0)
-  #dfr.columns = dfr.columns.map(int)
-  dfr_new = dfr.loc[:, 0:2]
-  dfr_old = dfr.loc[:, 3:5]
-  dfr_new.columns = dfr_old.columns = ['config', 'solver', 'ktime']
-  dfr_new_unq = dfr_new.loc[dfr_new.groupby('config')['ktime'].idxmin()]
-  dfr_old_unq = dfr_old.loc[dfr_old.groupby('config')['ktime'].idxmin()]
-  dfr_unq = dfr_new_unq.merge(dfr_old_unq, on='config')
-  #NOTE: solver_x is session_id solver, solver_y is golden_v solver
-  dfr_diff = dfr_unq[dfr_unq['solver_x'] != dfr_unq['solver_y']]
 
-  #for key, grp in dfr_diff.groupby(['solver_x', 'solver_y']):
-  #  LOGGER.info(key, ((grp['ktime_y'] - grp['ktime_x']) / grp['ktime_x']).mean(), grp.shape[0])
+  LOGGER.info('Detailed solver report:')
+
+  df_compare = dfr.replace(-1, np.nan).groupby('config')[['ktime_x',
+                                                          'ktime_y']].idxmin()
+  df_compare.columns = ['idx_x', 'idx_y']
+
+  df_compare['solver_x'] = df_compare['idx_x'].apply(dfr['solver'].get)
+  df_compare['solver_y'] = df_compare['idx_y'].apply(dfr['solver'].get)
+
+  df_compare['ktime_x'] = df_compare['idx_x'].apply(dfr['ktime_x'].get)
+  df_compare['ktime_y'] = df_compare['idx_y'].apply(dfr['ktime_y'].get)
+
+  #dataframe where solvers have changed
+  dfr_diff_solvers = df_compare.loc[df_compare['solver_x'].ne(
+      df_compare['solver_y'])]
+  #dataframe where solvers are the same
+  dfr_same_solvers = df_compare.loc[df_compare['solver_x'].eq(
+      df_compare['solver_y'])]
+  dfr_same_solvers = dfr_same_solvers.drop(columns=['idx_x', 'idx_y'])
+  dfr_same_solvers['%diff'] = (dfr_same_solvers['ktime_x'] - dfr_same_solvers['ktime_y'])\
+                    / ((dfr_same_solvers['ktime_x'] + dfr_same_solvers['ktime_x'])/2) * 100
+  LOGGER.info('Mean %%change for same solver: %s',
+              dfr_same_solvers.loc[:, '%diff'].mean())
+  report_file = f"same_solvers_report_sess{args.session_id}_gv{args.golden_v}.csv"
+  LOGGER.info("Same solvers detailed report has been written to file: %s",
+              report_file)
+  dfr_same_solvers.to_csv(report_file)
 
   #Percentage difference formula
-  diff_mean = dfr_diff.groupby(['solver_x', 'solver_y'])\
+  diff_mean = dfr_diff_solvers.groupby(['solver_x', 'solver_y'])\
                   .apply(lambda grp: ((grp['ktime_x'] - grp['ktime_y'])
                     / ((grp['ktime_x'] + grp['ktime_x'])/2) * 100 ).mean())
-  count = dfr_diff.groupby(['solver_x',
-                            'solver_y']).apply(lambda grp: grp.shape[0])
+  count = dfr_diff_solvers.groupby(['solver_x',
+                                    'solver_y']).apply(lambda grp: grp.shape[0])
+  # pylint: disable=unsupported-assignment-operation
+  # pylint: disable=unsubscriptable-object
   dfr_detailed_summary = pd.DataFrame({
-      'diff_mean': diff_mean,
+      'diff_mean%': diff_mean,
       'count': count
   }).reset_index()
 
@@ -183,8 +218,11 @@ def detailed_report(args, dfr):
       id_solver_map.get)
   dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(
       id_solver_map.get)
-  report_file = f"detailed_report_sess{args.session_id}_gv{args.golden_v}.csv"
-  LOGGER.info("Detailed report has been written to file: %s", report_file)
+  LOGGER.info('Mean %%change for the solvers that have changed: %s',
+              dfr_detailed_summary.loc[:, 'diff_mean%'].mean())
+  report_file = f"different_solvers_report_sess{args.session_id}_gv{args.golden_v}.csv"
+  LOGGER.info("Diff solvers detailed report has been written to file: %s",
+              report_file)
   dfr_detailed_summary.rename(columns={
       'solver_x': 'session_solver',
       'solver_y': 'golden_solver'
@@ -195,11 +233,18 @@ def detailed_report(args, dfr):
 
 def main():
   """main"""
+  pd.options.display.max_rows = 500
   args = parse_args()
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
+  with DbSession() as session:
+    sess = session.query(dbt.session_table).filter(
+        dbt.session_table.id == args.session_id).all()
+    arch = sess[0].arch
+    num_cu = sess[0].num_cu
 
-  check_missing_configs(args, dbt)
-  dfr = summary_report(args, dbt)
+  dfr = get_data(args, dbt, arch, num_cu)
+  check_missing_configs(args, dbt, dfr)
+  summary_report(args, dfr)
   detailed_report(args, dfr)
 
 
