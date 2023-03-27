@@ -170,7 +170,7 @@ class MIOpen(MITunaInterface):
       print_solvers()
       raise ValueError('Printing solvers...')
 
-    if self.args.fin_steps and self.args.subcommand is not 'load_job':
+    if self.args.fin_steps and self.args.subcommand != 'load_job':
       self.check_fin_args(parser)
 
     if self.args.find_mode is None and not (self.args.check_status or
