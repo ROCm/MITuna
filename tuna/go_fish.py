@@ -25,19 +25,25 @@
 #
 ###############################################################################
 """! @brief Script to launch tuning jobs, or execute commands on available machines"""
+
 import argparse
 import sys
+import logging
+from typing import Dict, List, Any, Union
 from tuna.utils.logger import setup_logger
 from tuna.libraries import Library
 from tuna.lib_utils import get_library
+from tuna.miopen.miopen_lib import MIOpen
+from tuna.example.example_lib import Example
 from tuna.yaml_parser import parse_yaml
 
 # Setup logging
-LOGGER = setup_logger('go_fish')
+LOGGER: logging.Logger = setup_logger('go_fish')
 
 
-def parse_args():
+def parse_args() -> Dict[str, Any]:
   """Function to parse arguments"""
+  args: argparse.Namespace
   parser = argparse.ArgumentParser(add_help=False)
 
   parser.add_argument('lib',
@@ -60,13 +66,17 @@ def parse_args():
   return vars(args)
 
 
-def main():
+def main() -> bool:
   """Main function to start Tuna"""
   LOGGER.info(sys.argv)
   LOGGER.info(len(sys.argv))
+
+  args: Dict[str, Any]
   args = parse_args()
 
   #case no yaml file
+  library: Union[Example, MIOpen]
+  yaml_files: List[str]
   library = get_library(args)
   yaml_files = [args['yaml']]
 
@@ -74,6 +84,7 @@ def main():
   if args['yaml']:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
 
+  worker_lst: list
   try:
     for yaml_file in yaml_files:
       args['yaml_file'] = yaml_file

@@ -25,13 +25,16 @@
 #
 ###############################################################################
 """Factory method to get library"""
+
+from typing import Union, Dict, Any
 from tuna.libraries import Library
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example
 
 
-def get_library(args):
+def get_library(args: Dict[str, Any]) -> Union[Example, MIOpen]:
   """Factory method to get lib based on args"""
+  library: Union[Example, MIOpen]
   if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
     library = MIOpen()
   elif args['lib'].value == Library.EXAMPLE.value:
