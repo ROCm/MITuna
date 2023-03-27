@@ -51,10 +51,10 @@ def get_table_example(grafana_req: str, data: List[str]) -> List[str]:
   EXAMPLE_TABLE['rows'].append(['val4', 'ex4', '4', '1.08'])
 
   #To populate the table with data from your DB:
-  res: str
+  res: List[str]
   with DbSession() as session:
-    query: str = session.query(ConvolutionFindDB.valid,
-                               ConvolutionFindDB.kernel_time).limit(5).all()
+    query: list = session.query(ConvolutionFindDB.valid,
+                                ConvolutionFindDB.kernel_time).limit(5).all()
     for res in query:
       EXAMPLE_TABLE['rows'].append([res[0], res[1], res[2], res[3]])
 
