@@ -26,8 +26,8 @@
 ###############################################################################
 """script for detecting find db entries with missing perf db entries"""
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.tables import MIOpenDBTables
@@ -108,7 +108,8 @@ def print_driver_cmds(args, dbt, ids_list, text, table1):
     LOGGER.info("Driver cmds written to missing_%s.txt", table1)
     missing_drivers = []
     with open(f"missing_{table1}_sess{args.session_id}_gv{args.golden_v}.txt",
-              'w', encoding='utf-8') as fout:
+              'w',
+              encoding='utf-8') as fout:
       for entry in drivers:
         if entry[1] is not None:
           fout.write(f"{entry[1]}\n")
