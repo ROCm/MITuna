@@ -80,22 +80,21 @@ def get_data(args, dbt, arch, num_cu):
                    golden_data,
                    on=['config', 'solver'],
                    how='outer')
-    return dfr
+    return dfr, session_data, golden_data
 
 
-def check_missing_configs(args, dbt, dfr):
+def check_missing_configs(args, dbt, session_data, golden_data):
   """Check for configs that are in the session tuning but not in the golden_v tuning"""
   #get number of configs that are in golden_v but not in session
-  sess_miss = dfr.loc[dfr['ktime_x'].isna()].copy()
-  missing_session_configs = sess_miss['config'].values.tolist()
-  print_driver_cmds(args, dbt, missing_session_configs, "Missing commands",
-                    'session')
 
-  #get number of configs that are in session but not in golden
-  gv_miss = dfr.loc[dfr['ktime_y'].isna()].copy()
-  missing_gv_configs = set(gv_miss['config'].values.tolist())
-  print_driver_cmds(args, dbt, missing_gv_configs, "Missing commands",
-                    'conv_golden')
+  sess_configs = set(session_data['config'].unique().flatten().tolist())
+  golden_configs = set(golden_data['config'].unique().flatten().tolist())
+
+  sess_miss = sess_configs.difference(golden_configs)
+  gv_miss = golden_configs.difference(sess_configs)
+
+  print_driver_cmds(args, dbt, list(sess_miss), "Missing commands", 'session')
+  print_driver_cmds(args, dbt, list(gv_miss), "Missing commands", 'conv_golden')
 
 
 def print_driver_cmds(args, dbt, ids_list, text, table1):
@@ -105,7 +104,8 @@ def print_driver_cmds(args, dbt, ids_list, text, table1):
                    .filter(dbt.config_table.id.in_(ids_list))
     drivers = query.all()
     LOGGER.info("%s from %s:  %s", text, table1, len(drivers))
-    LOGGER.info("Driver cmds written to missing_%s.txt", table1)
+    LOGGER.info("Driver cmds written to missing_%s_sess%s_gv%s.txt", table1,
+                args.session_id, args.golden_v)
     missing_drivers = []
     with open(f"missing_{table1}_sess{args.session_id}_gv{args.golden_v}.txt",
               'w',
@@ -116,8 +116,9 @@ def print_driver_cmds(args, dbt, ids_list, text, table1):
         else:
           missing_drivers.append(entry[0])
     if missing_drivers:
-      LOGGER.warning('Configs with missing drivers in db: %s',
-                     len(missing_drivers))
+      LOGGER.warning(
+          'Configs with missing drivers in db: %s that could not be written to file',
+          len(missing_drivers))
 
 
 def summary_report(args, data_frame):
@@ -243,8 +244,8 @@ def main():
     arch = sess[0].arch
     num_cu = sess[0].num_cu
 
-  dfr = get_data(args, dbt, arch, num_cu)
-  check_missing_configs(args, dbt, dfr)
+  dfr, session_data, golden_data = get_data(args, dbt, arch, num_cu)
+  check_missing_configs(args, dbt, session_data, golden_data)
   summary_report(args, dfr)
   detailed_report(args, dfr)
 
