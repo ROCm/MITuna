@@ -203,18 +203,18 @@ class MIOpen(MITunaInterface):
           self.args[sub_key] = subc_dict.get(sub_key)
 
   def check_fin_args(self, parser):
-        """! Helper function for fin args
+    """! Helper function for fin args
        @param parser The command line argument parser
         """
-        valid_fin_steps = list(k for k in FinStep.__members__)
-        if ',' in self.args.fin_steps:
-          parser.error('Multiple fin_steps currently not supported')
-        f_steps = self.args.fin_steps.split(',')
-        self.args.fin_steps = f_steps
-        for step in self.args.fin_steps:
-          if step not in valid_fin_steps:
-            parser.error(f"Supported fin steps are: {valid_fin_steps}")
-        assert len(self.args.fin_steps) == 1
+    valid_fin_steps = list(k for k in FinStep.__members__)
+    if ',' in self.args.fin_steps:
+      parser.error('Multiple fin_steps currently not supported')
+    f_steps = self.args.fin_steps.split(',')
+    self.args.fin_steps = f_steps
+    for step in self.args.fin_steps:
+      if step not in valid_fin_steps:
+        parser.error(f"Supported fin steps are: {valid_fin_steps}")
+    assert len(self.args.fin_steps) == 1
 
   def check_blacklist(self, parser):
     """! Helper function
