@@ -29,7 +29,7 @@
 import os
 import socket
 from time import sleep
-from io import BytesIO
+from io import BytesIO, StringIO
 import tempfile
 from subprocess import Popen, PIPE
 from sqlalchemy import Text, Column, orm
@@ -42,38 +42,43 @@ from tuna.dbBase.base_class import BASE
 from tuna.abort import chk_abort_file
 from tuna.utils.utility import check_qts
 from tuna.miopen.utils.metadata import DOCKER_CMD, LOG_TIMEOUT
+from paramiko.channel import ChannelFile
 
-ROCMINFO = '/opt/rocm/bin/rocminfo'
-ROCMSMI = '/opt/rocm/bin/rocm-smi'
-CLINFO = '/opt/rocm/opencl/bin/clinfo'
+from typing import Set, List, Optional, TextIO, Tuple
+import logging
+import pdb
+
+ROCMINFO: str = '/opt/rocm/bin/rocminfo'
+ROCMSMI: str = '/opt/rocm/bin/rocm-smi'
+CLINFO: str = '/opt/rocm/opencl/bin/clinfo'
 
 
 class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   """class for maintaining machine characteristics and interactions """
-  __tablename__ = "machine"
-  hostname = Column(Text, nullable=False)
-  port = Column(INTEGER(11, unsigned=True), nullable=False, server_default="22")
-  local_ip = Column(Text, nullable=True)
-  local_port = Column(INTEGER, server_default="22")
-  user = Column(Text, nullable=False)
-  password = Column(Text, nullable=False)
-  avail_gpus = Column(Text, nullable=False)
-  arch = Column(Text, nullable=False)
-  num_cu = Column(INTEGER, nullable=False, server_default="64")
-  sclk = Column(INTEGER)
-  mclk = Column(INTEGER)
-  available = Column(TINYINT(1), server_default="0")
-  remarks = Column(Text)
-  ipmi_inaccessible = Column(TINYINT, server_default="0")
-  ipmi_ip = Column(Text)
-  ipmi_port = Column(INTEGER(40, unsigned=True))
-  ipmi_user = Column(Text)
-  ipmi_password = Column(Text)
+  __tablename__: str = "machine"
+  hostname: str  = Column(Text, nullable=False)
+  port: int = Column(INTEGER(11, unsigned=True), nullable=False, server_default="22")
+  local_ip: str = Column(Text, nullable=True)
+  local_port: int = Column(INTEGER, server_default="22")
+  user: str = Column(Text, nullable=False)
+  password: str = Column(Text, nullable=False)
+  avail_gpus: str = Column(Text, nullable=False)
+  arch: str = Column(Text, nullable=False)
+  num_cu: int = Column(INTEGER, nullable=False, server_default="64")
+  sclk: int = Column(INTEGER)
+  mclk: int = Column(INTEGER)
+  available: int = Column(TINYINT(1), server_default="0")
+  remarks: str = Column(Text)
+  ipmi_inaccessible: int = Column(TINYINT, server_default="0")
+  ipmi_ip: str = Column(Text)
+  ipmi_port: int = Column(INTEGER(40, unsigned=True))
+  ipmi_user: str = Column(Text)
+  ipmi_password: str = Column(Text)
 
   @orm.reconstructor
   def __init__(self, **kwargs):
     #for the sake of pylint, this is explicitly populated
-    allowed_keys = set([
+    allowed_keys: Set = set([
         'id', 'hostname', 'user', 'password', 'port', 'ipmi_ip', 'ipmi_port',
         'ipmi_user', 'ipmi_password', 'ipmi_inaccessible', 'sclk', 'mclk',
         'arch', 'num_cu', 'avail_gpus', 'local_machine'
@@ -83,27 +88,28 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-    self.cnx_list = {}
-    self.log_list = {}
-    self.num_cpus = 0
+    self.cnx_list: list = {}
+    self.log_list: list = {}
+    self.num_cpus: int = 0
+
     if self.local_machine:  # pylint: disable=no-member ; false alarm
-      self.logger = setup_logger(f'Machine_{self.hostname}')
+      self.logger: logging.Logger = setup_logger(f'Machine_{self.hostname}')
       self.connect()
       self.mmi = None
-      self.id = 0  # pylint: disable=invalid-name
+      self.id: int = 0  # pylint: disable=invalid-name
       self.get_properties()
 
       if self.gpus:
-        self.arch = self.gpus[0]['arch']
-        self.num_cu = self.gpus[0]['num_cu']
-        self.avail_gpus = list(range(len(self.gpus)))
+        self.arch: str = self.gpus[0]['arch']
+        self.num_cu: str = self.gpus[0]['num_cu']
+        self.avail_gpus: int = list(range(len(self.gpus)))
     else:
-      cmd = 'hostname'
+      cmd: str = 'hostname'
       with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
-        hostname = subp.stdout.readline().strip()
+        hostname: str = subp.stdout.readline().strip()
       if self.local_ip is not None and check_qts(hostname):
         self.hostname = self.local_ip
-        self.port = self.local_port
+        self.port: int = self.local_port
       self.logger = setup_logger('Machine_{self.id}')
       self.mmi = MachineManagementInterface(self.ipmi_ip, self.ipmi_port,
                                             self.ipmi_user, self.ipmi_password)
@@ -113,33 +119,29 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         self.num_gpus = len(self.avail_gpus)
       self.cpus = []
       self.gpus = []
-      #self.get_properties()
-      #self.avail_gpus = range(self.num_gpus)
 
     self.logger.info("avail gpus: %s", self.avail_gpus)
 
-  def set_logger(self, logger):
+  def set_logger(self, logger: logging.Logger)-> bool:
     """set logging for machine, use this to associate the machine with a subprocess"""
-    pid = os.getpid()
+    pid: int = os.getpid()
     self.log_list[pid] = logger
     self.logger.info('Set logger for process %u', pid)
     return True
 
-  def get_logger(self):
+  def get_logger(self) -> logging.Logger:
     """return the logger for the current process"""
-    pid = os.getpid()
+    pid: int = os.getpid()
     if pid in self.log_list:
       return self.log_list[pid]
 
-    #self.logger.warning(
-    #    'No logger set for this pid (%u), using default logging', pid)
     return self.logger
 
-  def connect(self, abort=None):
+  def connect(self, abort=None) -> Connection:
     """get the connection for the current process, or create a new one"""
     logger = self.get_logger()
 
-    pid = os.getpid()
+    pid: int = os.getpid()
     if pid in self.cnx_list:
       return self.cnx_list[pid]
 
@@ -156,19 +158,22 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     }
     keys['logger'] = logger
     keys['chk_abort_file'] = abort
+    pdb.set_trace()
     connection = Connection(**keys)
     self.cnx_list[pid] = connection
 
     return connection
 
-  def get_num_cpus(self):
+  def get_num_cpus(self) -> int:
     """return number of available cpus"""
+    stdout: TextIO
     _, stdout, _ = self.connect().exec_command('nproc')
     self.num_cpus = int(stdout.readline())
 
     return self.num_cpus
 
-  def get_avail_gpus(self):
+  def get_avail_gpus(self) -> str:
+    pdb.set_trace()
     """return list of available gpus"""
     if not self.avail_gpus:
       if not self.gpus:
@@ -177,8 +182,9 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         self.num_gpus = len(self.avail_gpus)
     return self.avail_gpus
 
-  def get_gpu(self, idx):
+  def get_gpu(self, idx: int) -> Optional[int]:
     """return gpu details"""
+    pdb.set_trace()
     if not self.gpus:
       self.get_properties()
     if idx >= len(self.gpus):
@@ -186,31 +192,30 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return self.gpus[idx]
 
-  def get_cpus(self):
-    """return cpu details array"""
-    if not self.cpus:
-      self.get_properties()
-
-    return self.cpus
-
-  def parse_agents(self):  #pylint: disable=too-many-locals
+  def parse_agents(self) -> dict:  #pylint: disable=too-many-locals
     #pylint: disable=too-many-branches
     """create agent dictionary from rocminfo"""
+    stdout: TextIO
     _, stdout, _ = self.connect().exec_command(ROCMINFO)
 
-    agent = None
-    agents = {}
-    stack = []
+    agent: Optional[int, str] = None
+    agents: dict = {}
+    stack: list = []
     stack.append(agents)
+    line: str
+    sub: dict[str]
+    decoded_line: str
+    last_indent: int
     for line in stdout:
       decoded_line = line.strip()  # lines.strip().decode()
-      indent = 0
+      indent: int = 0
       if decoded_line:
         indent = line.find(decoded_line[0])
 
       if 'Agent ' in decoded_line:
         agent = int(decoded_line.split(' ')[1])
         agents[agent] = {}
+
         sub = agents[agent]
         last_indent = None
         last_div = agents
@@ -228,30 +233,29 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
             sub = stack.pop()
 
         if ':' in decoded_line:
-          cols = decoded_line.split(':')
-          field = cols[0].strip()
-          val = cols[1].strip()
+          cols: str = decoded_line.split(':')
+          field: str = cols[0].strip()
+          val: str = cols[1].strip()
           if val == '':
             sub[field] = {}
             last_div = sub[field]
           else:
             sub[field] = val
         else:
-          arr = decoded_line.split(' ', 1)
+          arr: list = decoded_line.split(' ', 1)
           if arr[0] in ('x', 'y', 'z'):
             sub[arr[0]] = arr[1].strip()
           else:
-            field = decoded_line.strip()
+            field: str = decoded_line.strip()
             sub[field] = {}
-            last_div = sub[field]
+            last_div: dict = sub[field]
 
         last_indent = indent
-
     return agents
 
   def get_properties(self):
     """return cpu and gpu device info as dicts"""
-    agents = self.parse_agents()
+    agents: dict = self.parse_agents()
 
     self.cpus = []
     self.gpus = []
@@ -287,6 +291,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     Write a file to this machine containing contents
     """
+    pdb.set_trace()
     if is_temp:
       assert filename is None
       _, filename = tempfile.mkstemp()
@@ -308,6 +313,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     Read a file from this machine and return the contents
     """
+    pdb.set_trace()
     if self.local_machine:  # pylint: disable=no-member ; false alarm
       # pylint: disable-next=unspecified-encoding
       with open(filename, 'rb' if byteread else 'r') as rfile:
@@ -328,7 +334,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     return self.write_file(b'', is_temp=True)
 
-  def exec_command(self, command, timeout=LOG_TIMEOUT):
+  def exec_command(self, command: str, timeout: int = LOG_TIMEOUT) -> Tuple[int, str,\
+  StringIO]:
     """
     Execute a command on this machine
     - through docker if on a remote machine
@@ -347,9 +354,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return ret_code, out, err
 
-  def get_gpu_clock(self, gpu_num=0):
+  def get_gpu_clock(self, gpu_num: int = 0) -> Tuple[str, str]:
     """query gpu clock levels with rocm-smi"""
-
     gpu_clk_cmd = f'{ROCMSMI} -c'
     _, stdout, _ = self.connect().exec_command(gpu_clk_cmd)
 
@@ -377,18 +383,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return sclk, mclk
 
-  def set_gpu_clock(self):
-    """set gpu clock level with rocm-smi"""
-    cnx = self.connect()
-
-    if self.sclk is not None:
-      sclk_cmd = f'{ROCMSMI} --setsclk {self.sclk}'
-      cnx.exec_command(sclk_cmd)
-    if self.mclk is not None:
-      mclk_cmd = f'{ROCMSMI} --setmclk {self.mclk}'
-      cnx.exec_command(mclk_cmd)
-
-  def restart_server(self, wait=True):
+  def restart_server(self, wait: bool = True) -> bool:
     """restart the machine"""
     logger = self.get_logger()
 
@@ -408,7 +403,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       return True
     return False
 
-  def chk_gpu_status(self, gpu_id):
+  def chk_gpu_status(self, gpu_id: int) -> bool:
+    line: str
     """check gpu status, can clinfo find the device"""
     logger = self.get_logger()
     cnx = self.connect()
@@ -442,14 +438,19 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     logger.warning('clinfo failed by default for Device ID: %u', gpu_id)
     return False
 
-  def getusedspace(self):
+  def getusedspace(self) -> float:
+    pdb.set_trace()
     """examine used space on disk"""
     logger = self.get_logger()
     logger.info("Getting free space")
+    lst: list
+    per: float 
+    out: TextIO
+    ssh_stdout: ChannelFile
     if self.local_machine:  # pylint: disable=no-member ; false alarm
       file_stat = os.statvfs('/')
-      total = file_stat.f_blocks * file_stat.f_frsize
-      used = (file_stat.f_blocks - file_stat.f_bfree) * file_stat.f_frsize
+      total: int = file_stat.f_blocks * file_stat.f_frsize
+      used: int = (file_stat.f_blocks - file_stat.f_bfree) * file_stat.f_frsize
       per = (float(used) / float(total)) * 100.0
     else:
       cnx = self.connect()
@@ -458,16 +459,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       if ssh_stdout is None:
         return None
       output = ssh_stdout.read()
-      lst = output.split()
+      lst  = output.split()
       per = int(lst[4][:-1])
     logger.info("Used space on %s : %u", self.hostname, per)
     return per
 
-  def clear_cache(self):
-    """clear the machine cache"""
-    logger = self.get_logger()
-    cnx = self.connect()
-
-    logger.warning('Initiating the cleanup')
-    cnx.exec_command("rm -rf ~/.cache/miopen/*")
-    logger.warning("Cache for %s cleared", self.hostname)
