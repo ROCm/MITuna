@@ -163,8 +163,8 @@ class WorkerInterface(Process):
     entries = gen_select_objs(session, self.job_attr,
                               self.dbt.job_table.__tablename__, no_lock)
     if not entries:
-        entries = gen_select_objs(session, self.job_attr,
-                              self.dbt.job_table.__tablename__, cond_str)
+      entries = gen_select_objs(session, self.job_attr,
+                                self.dbt.job_table.__tablename__, cond_str)
 
     return [(job,) for job in entries]
 
@@ -255,8 +255,8 @@ class WorkerInterface(Process):
         with self.job_queue_lock:
           if self.job_queue.empty():
             if imply_end and self.end_jobs.value > 0:
-                self.logger.warning('No %s jobs found, skip query', find_state)
-                return False
+              self.logger.warning('No %s jobs found, skip query', find_state)
+              return False
 
             with DbSession() as session:
               job_rows = self.get_job_objs(session, find_state)
