@@ -244,6 +244,26 @@ def get_class_by_tablename(tablename):
       return c
 
 
+def build_dict_val_key(obj, exclude=['id']):
+  """take object with to_dict function and create a key using values from the object's sorted keys"""
+  obj_dict = obj.to_dict()
+  for val in exclude:
+    obj_dict.pop(val, False)
+  obj_vals = [str(obj_dict[key]) for key in sorted(obj_dict.keys())]
+  map_key = '-'.join(obj_vals)
+  return map_key
+
+
+def get_session_val_map(session, table, attribs, val='id'):
+  """return a map of known object values to ids"""
+  objs = gen_select_objs(session, attribs, table.__tablename__, "")
+  id_map = {}
+  for obj in objs:
+    map_key = build_dict_val_key(obj, exclude=[val])
+    id_map[map_key] = obj.to_dict()[val]
+  return id_map
+
+
 class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?
   """@alex defines the types of databases produced in tuning sessions?"""
   FIND_DB = 1
