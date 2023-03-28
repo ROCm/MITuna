@@ -679,6 +679,7 @@ def getSessionVals(session_id)
       if(sdot > 0)
       {
         rocm_version = rocm_version.substring(0, sdot)
+        rocm_version = "'" + rocm_version + " " + rocm_v.substring(subv_i+1) + "'"
       }
     }
   }
