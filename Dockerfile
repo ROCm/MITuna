@@ -18,7 +18,7 @@ RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
        cat  /etc/apt/sources.list.d/rocm.list;\
     else \
        echo "Using Release VERSION: $ROCMVERSION";\
-       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel ${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
+       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
        #sh -c "echo deb [arch=amd64] $DEB_ROCM_REPO ubuntu main > /etc/apt/sources.list.d/rocm.list" ;\
     fi
