@@ -80,6 +80,11 @@ def get_data(args, dbt, arch, num_cu):
                    golden_data,
                    on=['config', 'solver'],
                    how='outer')
+
+    db_data = f"db_data_sess{args.session_id}_gv{args.golden_v}.csv"
+    LOGGER.info("Raw DB data has been written to file: %s\n", db_data)
+    dfr.to_csv(db_data)
+
     return dfr, session_data, golden_data
 
 
@@ -121,25 +126,13 @@ def print_driver_cmds(args, dbt, ids_list, text, table1):
           len(missing_drivers))
 
 
-def summary_report(args, data_frame):
+def configs_report(args, dfr):
   """Print tuning summary"""
-  #dfr cols = [id, config, solver, ktime_x, ktime_y]
-  dfr = data_frame.copy(deep=True)
 
-  #copy of only entires where ktime=-1
-  dfr_null = dfr.loc[dfr[['ktime_x', 'ktime_y']].eq(-1).any(axis=1)].copy()
-  dfr_null.to_csv('null.csv')
-  LOGGER.info("#configs with k_time=-1 in session_id= %s: %s", args.session_id,
-              dfr_null['ktime_x'].eq(-1).sum())
-  LOGGER.info("#configs with k_time=-1 in miopen_golden_v=%s : %s",
-              args.golden_v, dfr_null['ktime_y'].eq(-1).sum())
-
-  #remove entries where k_time=-1
-  dfr = dfr.loc[~dfr[['ktime_x', 'ktime_y']].eq(-1).any(axis=1)].copy()
-  dfr.to_csv('data.csv')
-
+  #remove entries where sess or gv dont have an entry for the same config
+  dfr = dfr.loc[~dfr[['solver_x', 'solver_y']].isna().any(axis=1)].copy()
+  #compute ktime diff for fastest solver/config
   dfr['diff'] = dfr['ktime_x'] - dfr['ktime_y']
-  dfr.to_csv('data.csv')
 
   #prct configs faster or slower
   prct_positive = (dfr['diff'] > 0).sum() / dfr.shape[0] * 100
@@ -154,28 +147,26 @@ def summary_report(args, data_frame):
   #averages
   avg_positive = (dfr['diff'] > 0).mean()
   avg_negative = (dfr['diff'] < 0).mean()
+
   LOGGER.info("Mean for configs with faster kernel_time: %s %%", avg_negative)
   LOGGER.info("Mean for configs with slower kernel_time: %s %%", avg_positive)
   LOGGER.info("Mean for all configs: %s %%", dfr['diff'].mean())
 
-  prct_speedup_per_config = (dfr['ktime_x'] - dfr['ktime_y']) / (
+  dfr['%speedup'] = (dfr['ktime_x'] - dfr['ktime_y']) / (
       (dfr['ktime_x'] + dfr['ktime_y']) / 2) * 100
-  LOGGER.info("Overall speed-up: %s %%", round(prct_speedup_per_config.mean(),
-                                               4))
-  speed_up = f"speed_up_sess{args.session_id}_gv{args.golden_v}.csv"
-  LOGGER.info("Speed-up per config has been written to file: %s", speed_up)
-  prct_speedup_per_config.to_csv(speed_up)
+  LOGGER.info("Overall speed-up: %s %%", round(dfr['%speedup'].mean(), 4))
 
-  db_data = f"db_data_sess{args.session_id}_gv{args.golden_v}.csv"
-  LOGGER.info("Raw DB data has been written to file: %s\n", db_data)
-  dfr.to_csv(db_data)
+  config_data = f"config_data_sess{args.session_id}_gv{args.golden_v}.csv"
+  LOGGER.info("Config report has been written to file: %s\n", config_data)
+  dfr.to_csv(config_data)
 
 
-def detailed_report(args, dfr):
+def solver_report(args, dfr):
   """Print detailed tuning analysis"""
 
   LOGGER.info('Detailed solver report:')
 
+  #dataframe with fastest solvers(solver_x, solver_y)
   df_compare = dfr.replace(-1, np.nan).groupby('config')[['ktime_x',
                                                           'ktime_y']].idxmin()
   df_compare.columns = ['idx_x', 'idx_y']
@@ -195,6 +186,11 @@ def detailed_report(args, dfr):
   dfr_same_solvers = dfr_same_solvers.drop(columns=['idx_x', 'idx_y'])
   dfr_same_solvers['%diff'] = (dfr_same_solvers['ktime_x'] - dfr_same_solvers['ktime_y'])\
                     / ((dfr_same_solvers['ktime_x'] + dfr_same_solvers['ktime_x'])/2) * 100
+  _, id_solver_map = get_id_solvers()
+  dfr_same_solvers['solver_x'] = dfr_same_solvers['solver_x'].apply(
+      id_solver_map.get)
+  dfr_same_solvers['solver_y'] = dfr_same_solvers['solver_y'].apply(
+      id_solver_map.get)
   LOGGER.info('Mean %%change for same solver: %s',
               dfr_same_solvers.loc[:, '%diff'].mean())
   report_file = f"same_solvers_report_sess{args.session_id}_gv{args.golden_v}.csv"
@@ -215,7 +211,6 @@ def detailed_report(args, dfr):
       'count': count
   }).reset_index()
 
-  _, id_solver_map = get_id_solvers()
   dfr_detailed_summary['solver_x'] = dfr_detailed_summary['solver_x'].apply(
       id_solver_map.get)
   dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(
@@ -232,6 +227,8 @@ def detailed_report(args, dfr):
                               inplace=True)
   dfr_detailed_summary.to_csv(report_file)
 
+  return df_compare
+
 
 def main():
   """main"""
@@ -246,8 +243,8 @@ def main():
 
   dfr, session_data, golden_data = get_data(args, dbt, arch, num_cu)
   check_missing_configs(args, dbt, session_data, golden_data)
-  summary_report(args, dfr)
-  detailed_report(args, dfr)
+  df_compare = solver_report(args, dfr)
+  configs_report(args, df_compare)
 
 
 if __name__ == '__main__':
