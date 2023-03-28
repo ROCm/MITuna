@@ -45,7 +45,7 @@ def curcov(file_path_curcov_json):
 
 
 def develop(root_dir, coverage_file_name_txt, coverage_file_name_json):
-  """run and compare coverage for develop branch"""
+  """run and compare coverage for develop branch. Only runs when develop is ran"""
   file_path_curcov_json = os.path.join(root_dir, coverage_file_name_json)
   curcov_percentage_ftdt = curcov(file_path_curcov_json)
 
