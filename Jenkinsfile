@@ -81,7 +81,7 @@ pipeline {
             agent { label utils.rocmnode("tunatest") }
             steps {
                 script {
-                    utils.pytestSuit3AndCoverage(branch, branch_master)
+                    utils.pytestSuite3AndCoverage(branch, branch_master)
                 }
             }
         }

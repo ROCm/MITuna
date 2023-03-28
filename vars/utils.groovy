@@ -511,7 +511,7 @@ def pytestSuite2() {
     }
 }
 
-def pytestSuit3AndCoverage(current_run, main_branch) {
+def pytestSuite3AndCoverage(current_run, main_branch) {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
