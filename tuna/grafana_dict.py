@@ -26,7 +26,9 @@
 ###############################################################################
 """ This file contains mappings relevant to Grafana dashboard responses """
 
-PRCT_CHANGE = {
+from typing import Dict, Sequence, Collection
+
+PRCT_CHANGE: Dict[str, Sequence[Collection[str]]] = {
     "title": "Performance Comparison",
     "type": "table",
     "columns": [{
@@ -43,7 +45,7 @@ PRCT_CHANGE = {
     "rows": []
 }
 
-CMD_PRCT_CHANGE = {
+CMD_PRCT_CHANGE: Dict[str, Sequence[Collection[str]]] = {
     "title": "Performance Comparison",
     "type": "table",
     "columns": [{
@@ -63,7 +65,7 @@ CMD_PRCT_CHANGE = {
     "rows": []
 }
 
-EXAMPLE_TABLE = {
+EXAMPLE_TABLE: Dict[str, Sequence[Collection[str]]] = {
     "title": "My Table Example",
     "type": "table",
     "columns": [{
