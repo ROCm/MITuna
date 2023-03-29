@@ -117,7 +117,7 @@ def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
     .filter(dbt.solver_app.applicable == true())\
     .filter(Solver.valid == true())
   #if args.solvers and args.solvers[0] and args.solvers[0][1]:
-  if args.solvers[0][1]:
+  if all([args.solvers, args.solvers[0], args.solvers[0][1]]):
     solver_ids = [x for _, x in args.solvers]
     query = query.filter(dbt.solver_app.solver.in_(solver_ids))
   if args.tunable:
