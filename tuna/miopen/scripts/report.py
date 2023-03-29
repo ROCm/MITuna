@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""script for detecting find db entries with missing perf db entries"""
+"""Post tuning analysis report"""
 
 import numpy as np
 import pandas as pd
@@ -47,7 +47,7 @@ def parse_args():
       required=True,
       dest='session_id',
       type=int,
-      help='Session id to be used for comaprison against golden_v')
+      help='Session id to be used for comparison against golden_v')
   parser.add_argument('--golden_v',
                       dest='golden_v',
                       required=True,
@@ -60,7 +60,7 @@ def parse_args():
 
 
 def get_data(args, dbt, arch, num_cu):
-  """Get data from DB based on args.session_id and optional golden_v"""
+  """Get data from DB based on args.session_id and golden_v"""
 
   with DbSession() as session:
     query = f"select config, solver, kernel_time from {dbt.find_db_table.__tablename__} "\
@@ -89,17 +89,20 @@ def get_data(args, dbt, arch, num_cu):
 
 
 def check_missing_configs(args, dbt, session_data, golden_data):
-  """Check for configs that are in the session tuning but not in the golden_v tuning"""
-  #get number of configs that are in golden_v but not in session
+  """Check for configs that are in the session tuning but not in the golden_v tuning
+     and the other way around"""
 
   sess_configs = set(session_data['config'].unique().flatten().tolist())
   golden_configs = set(golden_data['config'].unique().flatten().tolist())
 
   sess_miss = sess_configs.difference(golden_configs)
-  gv_miss = golden_configs.difference(sess_configs)
+  if sess_miss:
+    print_driver_cmds(args, dbt, list(sess_miss), "Missing commands", 'session')
 
-  print_driver_cmds(args, dbt, list(sess_miss), "Missing commands", 'session')
-  print_driver_cmds(args, dbt, list(gv_miss), "Missing commands", 'conv_golden')
+  gv_miss = golden_configs.difference(sess_configs)
+  if gv_miss:
+    print_driver_cmds(args, dbt, list(gv_miss), "Missing commands",
+                      'conv_golden')
 
 
 def print_driver_cmds(args, dbt, ids_list, text, table1):
@@ -127,7 +130,7 @@ def print_driver_cmds(args, dbt, ids_list, text, table1):
 
 
 def configs_report(args, dfr):
-  """Print tuning summary"""
+  """Print configs report"""
 
   #remove entries where sess or gv dont have an entry for the same config
   dfr = dfr.loc[~dfr[['solver_x', 'solver_y']].isna().any(axis=1)].copy()
@@ -152,8 +155,7 @@ def configs_report(args, dfr):
   LOGGER.info("Mean for configs with slower kernel_time: %s %%", avg_positive)
   LOGGER.info("Mean for all configs: %s %%", dfr['diff'].mean())
 
-  dfr['%speedup'] = (dfr['ktime_x'] - dfr['ktime_y']) / (
-      (dfr['ktime_x'] + dfr['ktime_y']) / 2) * 100
+  dfr['%speedup'] = (dfr['ktime_x'] - dfr['ktime_y']) / dfr['ktime_x'] * 100
   LOGGER.info("Overall speed-up: %s %%", round(dfr['%speedup'].mean(), 4))
 
   config_data = f"config_data_sess{args.session_id}_gv{args.golden_v}.csv"
@@ -162,7 +164,7 @@ def configs_report(args, dfr):
 
 
 def solver_report(args, dfr):
-  """Print detailed tuning analysis"""
+  """Print detailed fastest solvers report"""
 
   LOGGER.info('Detailed solver report:')
 
@@ -185,13 +187,13 @@ def solver_report(args, dfr):
       df_compare['solver_y'])]
   dfr_same_solvers = dfr_same_solvers.drop(columns=['idx_x', 'idx_y'])
   dfr_same_solvers['%diff'] = (dfr_same_solvers['ktime_x'] - dfr_same_solvers['ktime_y'])\
-                    / ((dfr_same_solvers['ktime_x'] + dfr_same_solvers['ktime_x'])/2) * 100
+                    / dfr_same_solvers['ktime_x']  * 100
   _, id_solver_map = get_id_solvers()
   dfr_same_solvers['solver_x'] = dfr_same_solvers['solver_x'].apply(
       id_solver_map.get)
   dfr_same_solvers['solver_y'] = dfr_same_solvers['solver_y'].apply(
       id_solver_map.get)
-  LOGGER.info('Mean %%change for same solver: %s',
+  LOGGER.info('Mean %%change for same fastest solvers: %s',
               dfr_same_solvers.loc[:, '%diff'].mean())
   report_file = f"same_solvers_report_sess{args.session_id}_gv{args.golden_v}.csv"
   LOGGER.info("Same solvers detailed report has been written to file: %s",
@@ -201,7 +203,7 @@ def solver_report(args, dfr):
   #Percentage difference formula
   diff_mean = dfr_diff_solvers.groupby(['solver_x', 'solver_y'])\
                   .apply(lambda grp: ((grp['ktime_x'] - grp['ktime_y'])
-                    / ((grp['ktime_x'] + grp['ktime_x'])/2) * 100 ).mean())
+                    / grp['ktime_x'] * 100 ).mean())
   count = dfr_diff_solvers.groupby(['solver_x',
                                     'solver_y']).apply(lambda grp: grp.shape[0])
   # pylint: disable=unsupported-assignment-operation
@@ -215,7 +217,7 @@ def solver_report(args, dfr):
       id_solver_map.get)
   dfr_detailed_summary['solver_y'] = dfr_detailed_summary['solver_y'].apply(
       id_solver_map.get)
-  LOGGER.info('Mean %%change for the solvers that have changed: %s',
+  LOGGER.info('Mean %%change for the fastest solvers that have changed: %s',
               dfr_detailed_summary.loc[:, 'diff_mean%'].mean())
   report_file = f"different_solvers_report_sess{args.session_id}_gv{args.golden_v}.csv"
   LOGGER.info("Diff solvers detailed report has been written to file: %s",
