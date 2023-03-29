@@ -135,17 +135,17 @@ def configs_report(args, dfr):
   #remove entries where sess or gv dont have an entry for the same config
   dfr = dfr.loc[~dfr[['solver_x', 'solver_y']].isna().any(axis=1)].copy()
   #compute ktime diff for fastest solver/config
-  dfr['diff'] = dfr['ktime_x'] - dfr['ktime_y']
+  dfr['diff'] = dfr['ktime_y'] - dfr['ktime_x']
 
   #prct configs faster or slower
   prct_positive = (dfr['diff'] > 0).sum() / dfr.shape[0] * 100
   prct_equal = (dfr['diff'] == 0).sum() / dfr.shape[0] * 100
   prct_negative = (dfr['diff'] < 0).sum() / dfr.shape[0] * 100
   #pylint: disable=logging-format-truncated
-  LOGGER.info("configs with faster kernel_time: %f %%", round(prct_negative, 4))
+  LOGGER.info("configs with faster kernel_time: %f %%", round(prct_positive, 4))
   LOGGER.info("configs with equal kernel_time: %f %%", round(prct_equal, 4))
   LOGGER.info("configs with slower kernel_time: %f %% \n",
-              round(prct_positive, 4))
+              round(prct_negative, 4))
 
   #averages
   avg_positive = (dfr['diff'] > 0).mean()
@@ -155,7 +155,7 @@ def configs_report(args, dfr):
   LOGGER.info("Mean for configs with slower kernel_time: %s %%", avg_positive)
   LOGGER.info("Mean for all configs: %s %%", dfr['diff'].mean())
 
-  dfr['%speedup'] = (dfr['ktime_x'] - dfr['ktime_y']) / dfr['ktime_x'] * 100
+  dfr['%speedup'] = (dfr['ktime_y'] - dfr['ktime_x']) / dfr['ktime_y'] * 100
   LOGGER.info("Overall speed-up: %s %%", round(dfr['%speedup'].mean(), 4))
 
   config_data = f"config_data_sess{args.session_id}_gv{args.golden_v}.csv"
@@ -186,8 +186,8 @@ def solver_report(args, dfr):
   dfr_same_solvers = df_compare.loc[df_compare['solver_x'].eq(
       df_compare['solver_y'])]
   dfr_same_solvers = dfr_same_solvers.drop(columns=['idx_x', 'idx_y'])
-  dfr_same_solvers['%diff'] = (dfr_same_solvers['ktime_x'] - dfr_same_solvers['ktime_y'])\
-                    / dfr_same_solvers['ktime_x']  * 100
+  dfr_same_solvers['%diff'] = (dfr_same_solvers['ktime_y'] - dfr_same_solvers['ktime_x'])\
+                    / dfr_same_solvers['ktime_y']  * 100
   _, id_solver_map = get_id_solvers()
   dfr_same_solvers['solver_x'] = dfr_same_solvers['solver_x'].apply(
       id_solver_map.get)
@@ -202,8 +202,8 @@ def solver_report(args, dfr):
 
   #Percentage difference formula
   diff_mean = dfr_diff_solvers.groupby(['solver_x', 'solver_y'])\
-                  .apply(lambda grp: ((grp['ktime_x'] - grp['ktime_y'])
-                    / grp['ktime_x'] * 100 ).mean())
+                  .apply(lambda grp: ((grp['ktime_y'] - grp['ktime_x'])
+                    / grp['ktime_y'] * 100 ).mean())
   count = dfr_diff_solvers.groupby(['solver_x',
                                     'solver_y']).apply(lambda grp: grp.shape[0])
   # pylint: disable=unsupported-assignment-operation
