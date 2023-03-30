@@ -59,7 +59,6 @@ pipeline {
             }
             }
         }
-        /*
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
         steps{
@@ -84,7 +83,6 @@ pipeline {
             }
             }
         }
-        */ 
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
