@@ -26,7 +26,9 @@
 
 import os
 from tuna.utils.logger import setup_logger
+from tuna.utils.utility import SimpleDict
 from tuna.utils.utility import get_env_vars, get_mmi_env_vars, arch2targetid
+from tuna.utils.db_utility import build_dict_val_key
 
 LOGGER = setup_logger('utility')
 
@@ -74,3 +76,19 @@ def test_get_mmi_env_vars():
   assert '10.100.00.000' == (ENV_VARS['gateway_ip'])
   assert '1234' == (ENV_VARS['gateway_port'])
   assert 'xyz' == (ENV_VARS['gateway_user'])
+
+def test_key_builder():
+  keyset = SimpleDict()
+  keyset.setattr('d', 3)
+  keyset.setattr('e', 4)
+  keyset.setattr('f', 5)
+
+  keystr = build_dict_val_key(keyset)
+  assert keystr == '3-4-5'
+
+  build_dict_val_key(keyset, ['e'])
+  assert keystr == '3-5'
+
+  keyset.setattr('a', 1)
+  keystr = build_dict_val_key(keyset)
+  assert keystr == '1-3-4-5'
