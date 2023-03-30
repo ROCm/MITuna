@@ -558,6 +558,7 @@ def runLint() {
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/flask_example.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/go_fish.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports"
             sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"
