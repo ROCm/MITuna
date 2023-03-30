@@ -144,13 +144,13 @@ def get_import_cfg_parser(
   return parser
 
 
-def get_load_job_parser():
+def get_load_job_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   "Return parser for load_job subcommand"
 
   #pylint: disable=duplicate-code
-  parser = setup_arg_parser(
-      'Insert jobs into MySQL db by tag from" \
-      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
+  parser = setup_arg_parser('Insert jobs into MySQL db by tag from" \
+      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
+                            with_yaml=with_yaml)
   config_filter = parser.add_mutually_exclusive_group(required=True)
   solver_filter = parser.add_mutually_exclusive_group()
   config_filter.add_argument(
