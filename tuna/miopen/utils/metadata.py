@@ -543,9 +543,9 @@ CONV_3D_DEFAULTS = {
     'trans_output_pad_h': 0,
     'trans_output_pad_w': 0,
     'trans_output_pad_d': 0,
-    'in_layout': 'NCHW',
-    'out_layout': 'NCHW',
-    'fil_layout': 'NCHW',
+    'in_layout': 'NCDHW',
+    'out_layout': 'NCDHW',
+    'fil_layout': 'NCDHW',
     'group_count': 1,
     'num_dims': 3
 }
