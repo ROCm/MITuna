@@ -77,6 +77,7 @@ def test_get_mmi_env_vars():
   assert '1234' == (ENV_VARS['gateway_port'])
   assert 'xyz' == (ENV_VARS['gateway_user'])
 
+
 def test_key_builder():
   keyset = SimpleDict()
   keyset.setattr('d', 3)
