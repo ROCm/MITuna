@@ -26,6 +26,7 @@
 ###############################################################################
 """Utility module for Flask functionality"""
 
+from typing import List
 from sqlalchemy import create_engine
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
@@ -39,7 +40,7 @@ ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user
                          f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
 
 
-def get_table_example(grafana_req, data):
+def get_table_example(grafana_req: str, data: List[str]) -> List[str]:
   """example on how to populate a table for a Grafana dashboard"""
 
   LOGGER.info('Request: %s', grafana_req)
@@ -50,9 +51,10 @@ def get_table_example(grafana_req, data):
   EXAMPLE_TABLE['rows'].append(['val4', 'ex4', '4', '1.08'])
 
   #To populate the table with data from your DB:
+  res: List[str]
   with DbSession() as session:
-    query = session.query(ConvolutionFindDB.valid,
-                          ConvolutionFindDB.kernel_time).limit(5).all()
+    query: list = session.query(ConvolutionFindDB.valid,
+                                ConvolutionFindDB.kernel_time).limit(5).all()
     for res in query:
       EXAMPLE_TABLE['rows'].append([res[0], res[1], res[2], res[3]])
 
