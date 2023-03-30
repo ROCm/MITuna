@@ -53,7 +53,7 @@ def test_yaml_parser():
 
 def parse_miopen_yaml1(miopen_yaml, miopen):
   yaml_files = parse_yaml(miopen_yaml, miopen)
-  assert len(yaml_files) == 3
+  assert len(yaml_files) == 4
 
   yaml_dicts = []
   #reading in initial yaml file split in 2 yaml files
