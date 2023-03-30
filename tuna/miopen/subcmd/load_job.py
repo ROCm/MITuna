@@ -139,7 +139,7 @@ def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
 def add_jobs(
     args: argparse.Namespace,
     dbt: MIOpenDBTables,
-    logger: logging.Logger,
+    logger: logging.Logger
 ):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
