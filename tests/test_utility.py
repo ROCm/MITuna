@@ -87,7 +87,7 @@ def test_key_builder():
   keystr = build_dict_val_key(keyset)
   assert keystr == '3-4-5'
 
-  build_dict_val_key(keyset, ['e'])
+  keystr = build_dict_val_key(keyset, ['e'])
   assert keystr == '3-5'
 
   setattr(keyset, 'a', 1)
