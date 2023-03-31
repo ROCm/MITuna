@@ -136,7 +136,7 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
   return return_config
 
 
-def get_tensor(tensor_type, tensor_dict):
+def get_tensor(tensor_type: str, tensor_dict: dict) -> dict:
   """Converts tensor dict to MIOpenDriver input"""
   ret_dict = {}
   layout = {}

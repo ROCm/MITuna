@@ -357,11 +357,10 @@ class FinClass(WorkerInterface):
             end += extra
 
           if start >= len_rows:
-            break
-
-          self.logger.info("cfg workdiv: start %s, end %s", start, end)
-
-          self.job_queue.put(master_cfg_list[start:end])
+            self.job_queue.put([])
+          else:
+            self.logger.info("cfg workdiv: start %s, end %s", start, end)
+            self.job_queue.put(master_cfg_list[start:end])
     try:
       self.all_configs = self.job_queue.get(True, 180)
     except queue.Empty:
@@ -692,7 +691,8 @@ class FinClass(WorkerInterface):
     kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
     return kernel_obj
 
-  def __check_layout_mismatch(self, fdb_entry, status):
+  def __check_layout_mismatch(self, fdb_entry: SimpleDict,
+                              status: dict) -> bool:
     """Check that the fdb key returned by fin matches the config being tuned, states to error if not"""
     fdb_key = fdb_entry.fdb_key
     fds, vals, _, _ = parse_pdb_key(fdb_key)
@@ -701,18 +701,18 @@ class FinClass(WorkerInterface):
 
     if cfg_layout != key_layout:
       status['success'] = False
-      status[
-          'result'] = f"fdb_key layout mismatch with config {key_layout} != {cfg_layout}"
+      status['result'] = f"fdb_key layout mismatch with config"\
+                         f" {key_layout} != {cfg_layout}"
       fdb_entry.valid = False
       return False
 
     return True
 
   def __update_fdb_w_kernels(self,
-                             session,
-                             fin_json,
-                             result_str='miopen_find_compile_result',
-                             check_str='find_compiled'):
+                             session: DbSession,
+                             fin_json: dict,
+                             result_str: str = 'miopen_find_compile_result',
+                             check_str: str = 'find_compiled') -> list:
     """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:

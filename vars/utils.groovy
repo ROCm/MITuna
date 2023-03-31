@@ -563,6 +563,7 @@ def runLint() {
             sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports"
             sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/worker/fin_utils.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/grafana_dict.py --ignore-missing-imports --follow-imports=skip"
