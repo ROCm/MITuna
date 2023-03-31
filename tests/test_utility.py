@@ -80,9 +80,9 @@ def test_get_mmi_env_vars():
 
 def test_key_builder():
   keyset = SimpleDict()
-  keyset.setattr('d', 3)
-  keyset.setattr('e', 4)
-  keyset.setattr('f', 5)
+  setattr(keyset, 'd', 3)
+  setattr(keyset, 'e', 4)
+  setattr(keyset, 'f', 5)
 
   keystr = build_dict_val_key(keyset)
   assert keystr == '3-4-5'
@@ -90,6 +90,6 @@ def test_key_builder():
   build_dict_val_key(keyset, ['e'])
   assert keystr == '3-5'
 
-  keyset.setattr('a', 1)
+  setattr(keyset, 'a', 1)
   keystr = build_dict_val_key(keyset)
   assert keystr == '1-3-4-5'
