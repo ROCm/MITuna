@@ -177,6 +177,7 @@ class DriverConvolution(DriverBase):
 
     c_dict['input_tensor'] = super().get_input_t_id()
     c_dict['weight_tensor'] = super().get_weight_t_id()
+    c_dict['driver'] = str(self)
 
     return c_dict
 
