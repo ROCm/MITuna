@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that a convolution MIOpenDriver cmd"""
 
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, Any
 from re import search
 from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import DriverBase
@@ -168,7 +168,7 @@ class DriverConvolution(DriverBase):
 
   def get_conv_dict(self) -> dict:
     """Populate c_dict with conv table elems"""
-    c_dict: Dict[str, int] = {}
+    c_dict: Dict[str, Any] = {}
     key: str
     val: int
     for key, val in self.to_dict().items():
