@@ -25,7 +25,7 @@
 ###############################################################################
 
 import sys
-from tuna.miopen.subcmd.update_golden import gold_base_update, gold_session_update, merge_golden_entries, create_perf_table, verify_no_duplicates, latest_golden_v
+from tuna.miopen.subcmd.update_golden import gold_base_update, gold_session_update, create_perf_table, verify_no_duplicates, latest_golden_v
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
