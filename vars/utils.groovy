@@ -547,6 +547,7 @@ def runLint() {
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
+            sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "mypy tuna/miopen/utils/config_type.py"
             sh "mypy tuna/connection.py --ignore-missing-imports"
@@ -563,6 +564,7 @@ def runLint() {
             sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports"
             sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/worker/fin_utils.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/grafana_dict.py --ignore-missing-imports --follow-imports=skip"
