@@ -130,8 +130,9 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
                                             self.ipmi_user, self.ipmi_password)
 
       if not self.avail_gpus is None:
-        self.avail_gpus = [int(val) for val in self.avail_gpus.split(',')
-                          ]  #type: ignore
+        self.avail_gpus = [
+            int(val) for val in self.avail_gpus.split(',')  #type: ignore
+        ]  #type: ignore
         self.num_gpus = len(self.avail_gpus)
       self.cpus = []  # type: ignore
       self.gpus = []  # type: ignore
@@ -315,7 +316,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     fout: SFTPFile
     fout_2: BufferedWriter
 
-    t_filename: Union[str, os.PathLike[Any]]
+    t_filename: Union[str, 'os.PathLike[Any]']
     if is_temp:
       assert filename is None
       _, t_filename = tempfile.mkstemp()
