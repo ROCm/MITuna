@@ -29,6 +29,7 @@ Script for adding jobs to the MySQL database
 """
 import logging
 import argparse
+from typing import Dict
 
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
@@ -154,7 +155,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
     query = f"select * from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{fin_step_str}' and reason='{args.label}'"
     logger.info(query)
     ret = session.execute(query)
-    pre_ex = {}
+    pre_ex: Dict[str, Dict[str, bool]] = {}
     for obj in ret:
       if obj['config'] not in pre_ex:
         pre_ex[obj['config']] = {}
