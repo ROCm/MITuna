@@ -95,7 +95,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     self.cnx_list: dict = {}
     self.log_list: dict = {}
-    self.num_cpus: int
+    self.num_cpus: int = 0
     self.avail_gpus: List[Dict[int, str]]
     self.sclk: int
     self.mclk: int
