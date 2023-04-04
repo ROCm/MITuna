@@ -49,7 +49,7 @@ from tuna.miopen.parse_miopen_args import get_load_job_parser
 
 def arg_fin_steps(args: argparse.Namespace):
   """fin steps for load jobs"""
-  if args.fin_steps =='':
+  if args.fin_steps == '':
     warnings.warn("An empty fin step argument for Load Job")
     args.fin_steps = set()
   elif args.fin_steps:
