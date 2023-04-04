@@ -20,21 +20,20 @@ def initSession(){
   sh "echo ${build_args}"
 
   tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.push()
 
   def docker_run_args = "--network host  --dns 8.8.8.8 --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
   def num_session = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
 
-  def margs = ''
   if(params.arch != '' && params.num_cu != '')
   {
-    margs = "-a ${params.arch} -n ${params.num_cu}"
+    def margs = "-a ${params.arch} -n ${params.num_cu}"
     sh "docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs}"
   }
   else
   {
-    sh "srun --no-kill -p ${slurm_partition} -N 1 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs}'"
+    tuna_docker.push()
+    sh "srun --no-kill -p ${slurm_partition} -N 1 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label}'"
   }
 
   def num_session2 = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
