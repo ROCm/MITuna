@@ -48,4 +48,4 @@ def test_arg_fin_steps_none():
   """check that fin_steps attribute remains None when no fin_steps are passed"""
   test_args = argparse.Namespace(fin_steps=None)
   arg_fin_steps(test_args)
-  assert test_args.fin_steps is None
+  assert test_args.fin_steps == None
