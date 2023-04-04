@@ -212,6 +212,8 @@ def run_load_job(args: argparse.Namespace, logger: logging.Logger):
       test_tag_name(args.tag, dbt)
     except ValueError as terr:
       logger.error(terr)
+  if args.solvers or args.algo:
+    args = arg_solvers(args, logger)
 
   cnt = add_jobs(args, dbt, logger)
   print(f"New jobs added: {cnt}")
