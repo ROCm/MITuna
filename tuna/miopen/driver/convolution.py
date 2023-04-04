@@ -223,7 +223,7 @@ class DriverConvolution(DriverBase):
 
     #NOTE: when DB col direction is renamed to forw, col_dict should be removed
     #and replaced with vars(self), but value still needs to map to 1,2 or 4.
-    col_dict: dict = vars(self)
+    col_dict: dict = vars(self).copy()
     if "direction" in col_dict.keys():
       col_dict["forw"] = int(INVERS_DIR_MAP[col_dict["direction"]])
       col_dict.pop("direction")

@@ -548,6 +548,7 @@ def runLint() {
           tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
+            sh "cd tuna && find miopen/subcmds/import_configs.py -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "mypy tuna/miopen/utils/config_type.py"
             sh "mypy tuna/connection.py --ignore-missing-imports"
             sh "mypy tuna/abort.py --ignore-missing-imports"
