@@ -180,8 +180,7 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
         parse_line(args, line, counts, dbt, logger)
       except ValueError as err:
         logger.warning(err)
-        if 'Skipping line' in str(err):
-          continue
+        continue
 
   return counts
 
@@ -315,6 +314,7 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
       except (ValueError, IntegrityError) as verr:
         logger.warning(verr)
         session.rollback()
+        continue
   logger.info('Benchmarked %s configs', count)
   return True
 
