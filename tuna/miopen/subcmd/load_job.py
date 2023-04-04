@@ -157,7 +157,7 @@ def test_tag_name(tag, dbt):
 
 def config_query(args, session, dbt):
   """ Produce config query for new style config table"""
-  cfg_query = session.query(dbt.config_table)\
+  cfg_query = session.query(dbt.config_table.id)\
       .filter(dbt.config_table.valid == 1)
 
   if args.tag:
@@ -174,7 +174,7 @@ def config_query(args, session, dbt):
 
 def compose_query(args, session, dbt, cfg_query):
   """Compose query based on args"""
-  query = session.query(dbt.solver_app, Solver)\
+  query = session.query(dbt.solver_app.config, Solver.solver)\
     .filter(dbt.solver_app.session == args.session_id)\
     .filter(dbt.solver_app.solver == Solver.id)\
     .filter(dbt.solver_app.applicable == true())\
@@ -192,8 +192,7 @@ def compose_query(args, session, dbt, cfg_query):
   if args.only_dynamic:
     query = query.filter(Solver.is_dynamic == true())
 
-  cfg_ids = [config.id for config in cfg_query.all()]
-  query = query.filter(dbt.solver_app.config.in_(cfg_ids))
+  query = query.filter(dbt.solver_app.config.in_(cfg_query.subquery()))
 
   return query
 
@@ -206,31 +205,32 @@ def add_jobs(args, dbt):
     cfg_query = config_query(args, session, dbt)
     query = compose_query(args, session, dbt, cfg_query)
     res = query.all()
+
     if not res:
       LOGGER.error('No applicable solvers found for args %s', args.__dict__)
 
     fin_step_str = 'not_fin'
     if args.fin_steps:
       fin_step_str = ','.join(args.fin_steps)
-    query = f"select * from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{fin_step_str}' and reason='{args.label}'"
+    query = f"select config, solver from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{fin_step_str}' and reason='{args.label}'"
     LOGGER.info(query)
     ret = session.execute(query)
     pre_ex = {}
-    for obj in ret:
-      if obj['config'] not in pre_ex:
-        pre_ex[obj['config']] = {}
-      pre_ex[obj['config']][obj['solver']] = True
+    for config, solver in ret:
+      if config not in pre_ex:
+        pre_ex[config] = {}
+      pre_ex[config][solver] = True
 
     do_commit = False
     while True:
-      for solv_app, slv in res:
+      for config, solver in res:
         try:
           job = dbt.job_table()
-          job.config = solv_app.config
+          job.config = config
+          job.solver = solver
           job.state = 'new'
           job.valid = 1
           job.reason = args.label
-          job.solver = slv.solver
           job.fin_step = args.fin_steps
           job.session = args.session_id
 
