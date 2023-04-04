@@ -69,6 +69,7 @@ def test_update_golden():
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
   gld_v1 = latest_golden_v(dbt) + 1
+  args.golden_v = gld_v1
 
   with DbSession() as session:
     assert gold_session_update(session, gld_v1, session_id, True)
