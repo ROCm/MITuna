@@ -59,5 +59,6 @@ wrapt==1.14.1
 yamllint==1.29.0
 yapf==0.30.0
 zipp==3.8.1
+coverage==7.0.5
 mysql-connector-python
 prometheus_flask_exporter
