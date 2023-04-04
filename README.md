@@ -117,4 +117,4 @@ In order for a PR to be accepted the following pylint command needs to result in
 ```
 cd MITuna/tuna
 pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' miopen/*.py example/*.py *.py
-
+```

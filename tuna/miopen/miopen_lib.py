@@ -100,6 +100,12 @@ class MIOpen(MITunaInterface):
                         dest='reset_interval',
                         required=False,
                         help='Restart interval for job in hours.')
+    parser.add_argument(
+        '--gpu_lim',
+        dest='gpu_lim',
+        type=int,
+        default=None,
+        help='Limit the number of gpu workers created by Tuna, index from 0')
 
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
@@ -295,6 +301,8 @@ class MIOpen(MITunaInterface):
       worker_ids = None
       if self.args.fin_steps and 'eval' in self.args.fin_steps[0]:
         worker_ids = machine.get_avail_gpus()
+        if self.args.gpu_lim and self.args.gpu_lim < len(worker_ids):
+          worker_ids = range(self.args.gpu_lim)
       else:
         worker_ids = super().get_num_procs(machine)
 
