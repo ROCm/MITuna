@@ -69,18 +69,18 @@ def test_arg_solvers_none():
   result = arg_solvers(args, logger)
   assert result.solvers == [('', None)]
 
+
 def test_arg_solvers_slv():
   """check that arg_solver attribute containing solvers are passed"""
   args = argparse.Namespace(solvers='ConvHipImplicitGemmV4R1Fwd', algo=None)
   logger = logging.getLogger()
-  
+
   solver_id_map = get_solver_ids()
-  
+
   print(f'{solver_id_map}')
-  
+
   assert 'ConvHipImplicitGemmV4R1Fwd' in solver_id_map
-  
-  result = arg_solvers(args,logger)
-  assert result.solvers == [('ConvHipImplicitGemmV4R1Fwd', solver_id_map['ConvHipImplicitGemmV4R1Fwd'])]
-  
-    
+
+  result = arg_solvers(args, logger)
+  assert result.solvers == [('ConvHipImplicitGemmV4R1Fwd',
+                             solver_id_map['ConvHipImplicitGemmV4R1Fwd'])]
