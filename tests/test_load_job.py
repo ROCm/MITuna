@@ -27,6 +27,7 @@
 import os
 import sys
 import argparse
+import logging
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -49,3 +50,18 @@ def test_arg_fin_steps_none():
   test_args = argparse.Namespace(fin_steps=None)
   arg_fin_steps(test_args)
   assert test_args.fin_steps == None
+
+def test_arg_fin_steps_tags():
+  """check that fin_steps attribute remains None when no fin_steps are passed"""
+  test_args = argparse.Namespace(fin_steps='miopen_find_compile,miopen_find_eval')
+  arg_fin_steps(test_args)
+  assert test_args.fin_steps == {'miopen_find_compile','miopen_find_eval'}
+
+#arg_solvers function
+def test_arg_solvers_none():
+  """check that arg_solver attributes when None is passed"""
+  args = argparse.Namespace(solvers=None, algo=None)
+  logger = logging.getLogger()
+  result = arg_solvers(args,logger)
+  assert result.solvers == [{'', None}]
+  
