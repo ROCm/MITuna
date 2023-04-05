@@ -444,6 +444,8 @@ class FinClass(WorkerInterface):
       outfile = "fin_input.json"
     if self.__create_dumplist():
       ret = self.__dump_json(outfile, to_file)
+      self.logger.info('Outfile ********************:%s', outfile)
+      self.logger.info('input file*****************:%s', to_file)
     else:
       self.logger.warning("Could not create dumplist for Fin input file")
 
