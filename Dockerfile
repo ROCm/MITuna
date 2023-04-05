@@ -7,7 +7,6 @@ FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=11650
-#ARG DEB_ROCM_REPO=http://repo.radeon.com/rocm/apt/.apt_$ROCMVERSION/
 # Add rocm repository
 RUN apt-get update
 RUN apt-get install -y wget gnupg
@@ -20,7 +19,6 @@ RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
        echo "Using Release VERSION: $ROCMVERSION";\
        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
-       #sh -c "echo deb [arch=amd64] $DEB_ROCM_REPO ubuntu main > /etc/apt/sources.list.d/rocm.list" ;\
     fi
 
 ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
