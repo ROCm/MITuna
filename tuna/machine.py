@@ -193,7 +193,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     if not self.avail_gpus:
       if not self.gpus:
         self.get_properties()
-        self.avail_gpus = str(range(len(self.gpus)))  #type: ignore
+        self.avail_gpus = range(len(self.gpus))  #type: ignore
         self.num_gpus = len(self.avail_gpus)
     return self.avail_gpus
 
@@ -212,7 +212,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     stdout: TextIO
     _, stdout, _ = self.connect().exec_command(ROCMINFO)
 
-    agent: int = 0
+    agent: Optional[int] = None
     agents: dict = {}
     stack: list = []
     decoded_line: str
@@ -232,7 +232,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         agent = int(decoded_line.split(' ')[1])
         agents[agent] = {}
         sub = agents[agent]
-        last_indent = 0
+        last_indent = None
         last_div = agents
         continue
       if indent == 0:
