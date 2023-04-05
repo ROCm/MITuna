@@ -35,6 +35,7 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.miopen.subcmd.load_job import arg_fin_steps, arg_solvers
+from tuna.utils.db_utility import get_solver_ids
 
 
 #arg_fin_steps function
@@ -62,8 +63,24 @@ def test_arg_fin_steps_tags():
 
 #arg_solvers function
 def test_arg_solvers_none():
-  """check that arg_solver attributes when None is passed"""
+  """check that arg_solver attributes when None are passed"""
   args = argparse.Namespace(solvers=None, algo=None)
   logger = logging.getLogger()
   result = arg_solvers(args, logger)
-  assert result.solvers == [{'', None}]
+  assert result.solvers == [('', None)]
+
+def test_arg_solvers_slv():
+  """check that arg_solver attribute containing solvers are passed"""
+  args = argparse.Namespace(solvers='ConvHipImplicitGemmV4R1Fwd', algo=None)
+  logger = logging.getLogger()
+  
+  solver_id_map = get_solver_ids()
+  
+  print(f'{solver_id_map}')
+  
+  assert 'ConvHipImplicitGemmV4R1Fwd' in solver_id_map
+  
+  result = arg_solvers(args,logger)
+  assert result.solvers == [('ConvHipImplicitGemmV4R1Fwd', solver_id_map['ConvHipImplicitGemmV4R1Fwd'])]
+  
+    
