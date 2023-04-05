@@ -37,7 +37,8 @@ from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
+from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite
+from tuna.miopen.utils.analyze_parse_db import mysql_to_sqlite_cfg
 from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.miopen.worker.fin_utils import compose_config_obj
 
@@ -446,9 +447,8 @@ def export_pdb(dbt, args):
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
-  query = get_pdb_query(dbt, args)
   cfg_map = {}
-  db_entries = query.all()
+  db_entries = get_pdb_query(dbt, args).all()
   total_entries = len(db_entries)
   LOGGER.info("pdb query returned: %s", total_entries)
 

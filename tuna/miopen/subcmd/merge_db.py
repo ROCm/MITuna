@@ -32,7 +32,8 @@ from shutil import copyfile
 
 from tuna.miopen.utils.parsing import parse_pdb_key, build_driver_cmd
 from tuna.utils.logger import setup_logger
-from tuna.miopen.utils.analyze_parse_db import parse_pdb_filename, insert_solver_sqlite, get_config_sqlite
+from tuna.miopen.utils.analyze_parse_db import parse_pdb_filename, insert_solver_sqlite
+from tuna.miopen.utils.analyze_parse_db import get_config_sqlite
 from tuna.miopen.utils.analyze_parse_db import get_sqlite_row, get_sqlite_table, get_sqlite_data
 from tuna.miopen.utils.helper import prune_cfg_dims
 from tuna.miopen.utils.metadata import DIR_MAP
@@ -71,14 +72,15 @@ def parse_args():
       'Master perf db from previous runs. May be a specific pdb, fdb, or sqlite db file. \
       If a directory is entered, will gather all pdb / fdb files depending on -f option.'
   )
+  # pylint: disable=duplicate-code
   parser.add_argument(
       '-t',
       '--target_file',
       type=str,
-      default=None,
       dest='target_file',
       required=True,
       help='Supply an absolute path to the file. This file will be merged.')
+  # pylint: enable=duplicate-code
 
   op_type = parser.add_mutually_exclusive_group()
   op_type.add_argument('-p',
