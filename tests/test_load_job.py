@@ -28,6 +28,7 @@ import os
 import sys
 import argparse
 import logging
+import random
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -36,6 +37,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.miopen.subcmd.load_job import arg_fin_steps, arg_solvers
 from tuna.utils.db_utility import get_solver_ids
+from tuna.miopen.utils.metadata import ALG_SLV_MAP
 
 
 #arg_fin_steps function
@@ -72,15 +74,22 @@ def test_arg_solvers_none():
 
 def test_arg_solvers_slv():
   """check that arg_solver attribute containing solvers are passed"""
-  args = argparse.Namespace(solvers='ConvHipImplicitGemmV4R1Fwd', algo=None)
-  logger = logging.getLogger()
-
   solver_id_map = get_solver_ids()
-
-  print(f'{solver_id_map}')
-
-  assert 'ConvHipImplicitGemmV4R1Fwd' in solver_id_map
-
+  random_solver = random.choice(list(get_solver_ids()))
+  args = argparse.Namespace(solvers=random_solver, algo=None)
+  logger = logging.getLogger()
   result = arg_solvers(args, logger)
-  assert result.solvers == [('ConvHipImplicitGemmV4R1Fwd',
-                             solver_id_map['ConvHipImplicitGemmV4R1Fwd'])]
+  assert result.solvers == [(random_solver, solver_id_map[random_solver])]
+
+
+def test_arg_solvers_alg():
+  """check that arg_solver attribute contains mapped alg:slover passed"""
+  solver_id_map = get_solver_ids()
+  random_solver = random.choice(list(get_solver_ids()))
+  random_algo = random.choice(list(ALG_SLV_MAP.keys()))
+
+  args = argparse.Namespace(solvers=random_solver, algo=random_algo)
+  logger = logging.getLogger()
+  result = arg_solvers(args, logger)
+
+  assert result.solvers == [(random_solver, solver_id_map[random_solver])]
