@@ -566,6 +566,7 @@ def runLint() {
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/worker/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/import_configs.py"
             sh "mypy tuna/miopen/utils/config_type.py"
             sh "mypy tuna/connection.py --ignore-missing-imports"
             sh "mypy tuna/abort.py --ignore-missing-imports"
