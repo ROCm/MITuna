@@ -115,18 +115,7 @@ def insert_config(driver: DriverBase, counts: dict, dbt: MIOpenDBTables,
       except IntegrityError as err:
         logger.warning("Err occurred: %s", err)
         session.rollback()
-    else:
-      try:
-        if args.mark_recurrent or args.tag:
-          new_cf_tag = dbt.config_tags_table(tag=args.tag,
-                                             recurrent=args.mark_recurrent,
-                                             config=new_cf.id)
-          session.add(new_cf_tag)
-          session.commit()
-          counts['cnt_tagged_configs'].add(new_cf.id)
-      except IntegrityError as err:
-        logger.warning("Err occurred: %s", err)
-        session.rollback()
+
     if args.mark_recurrent or args.tag:
       _ = tag_config_v2(driver, counts, dbt, args, logger, new_cf)
 

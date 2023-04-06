@@ -31,8 +31,8 @@ import random
 import functools
 import json
 
-from sqlalchemy.exc import OperationalError
 from typing import List, Dict
+from sqlalchemy.exc import OperationalError
 
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_utils import fin_job
