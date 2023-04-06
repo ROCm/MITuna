@@ -220,7 +220,6 @@ TENSOR_PRECISION = {
     'FP16': 'FP16',
     'convfp16': 'FP16',
     'BF16': 'BF16',
-    'BFP16': 'BF16',
     'convbfp16': 'BF16',
     'INT8': 'INT8',
     'convint8': 'INT8',
