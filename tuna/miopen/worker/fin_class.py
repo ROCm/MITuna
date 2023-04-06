@@ -318,7 +318,6 @@ class FinClass(WorkerInterface):
     session.commit()
     self.logger.info("Finished applic zeroing")
 
-
   def __set_all_configs(self, idx: int = 0, num_blk: int = 1) -> bool:
     """Gathering all configs from Tuna DB to set up fin input file"""
     if idx == 0:
