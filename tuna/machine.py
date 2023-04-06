@@ -322,8 +322,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       assert filename is None
       _, t_filename = tempfile.mkstemp()
       t_file = True
-
-    assert filename is not None
+    else:
+      assert filename is not None
 
     if self.local_machine:  # pylint: disable=no-member ; false alarm
       with open(filename, 'wb') as fout_2:
