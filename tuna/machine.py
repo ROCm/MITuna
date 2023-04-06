@@ -315,12 +315,14 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     ftp: Optional[paramiko.sftp_client.SFTPClient] = None
     fout: SFTPFile
     fout_2: BufferedWriter
+    t_file: bool = False
 
     t_filename: Union[str, 'os.PathLike[Any]']
     if is_temp:
       assert filename is None
       _, t_filename = tempfile.mkstemp()
-      return t_filename
+      t_file  = True
+
     assert filename is not None
 
     if self.local_machine:  # pylint: disable=no-member ; false alarm
@@ -334,6 +336,10 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         with ftp.open(filename, 'wb') as fout:
           fout.write(contents)
           fout.flush()
+
+    if t_file:
+      return t_filename
+
     return filename
 
   def read_file(self,
