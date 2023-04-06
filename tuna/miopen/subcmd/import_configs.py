@@ -180,8 +180,6 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
         parse_line(args, line, counts, dbt, logger)
       except ValueError as err:
         logger.warning(err)
-        #if 'Skipping line' in str(err):
-        #  continue
 
   return counts
 
