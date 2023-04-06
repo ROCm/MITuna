@@ -453,35 +453,42 @@ def export_pdb(dbt, args):
   LOGGER.info("pdb query returned: %s", total_entries)
 
   for perf_db_entry, cfg_entry in db_entries:
-    if cfg_entry.id in cfg_map:
-      ins_cfg_id = cfg_map[cfg_entry.id]
-    else:
-      cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
-
-      #override cfg layout with fdb key layout
-      if perf_db_entry.fdb_key:
-        fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
-        key_layout = vals[fds.index('out_layout')]
-        if cfg_dict['layout'] != key_layout:
-          raise ValueError("Out layout doesn't match fdb_key"\
-                           f" {cfg_dict['layout']} != {key_layout}")
-
-      #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
-      ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
-      cfg_map[cfg_entry.id] = ins_cfg_id
-
-    pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
-    num_perf += 1
-
-    if num_perf % (total_entries // 10) == 0:
-      cnx.commit()
-      LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf,
-                  cfg_entry.id, pdb_dict)
+    analyze_entry(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
+                  total_entries)
 
   cnx.commit()
   LOGGER.warning("Total number of entries in Perf DB: %s", num_perf)
 
   return local_path
+
+
+def analyze_entry(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
+                  total_entries):
+  """Analyze perf_dv entry"""
+  if cfg_entry.id in cfg_map:
+    ins_cfg_id = cfg_map[cfg_entry.id]
+  else:
+    cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
+
+    #override cfg layout with fdb key layout
+    if perf_db_entry.fdb_key:
+      fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
+      key_layout = vals[fds.index('out_layout')]
+      if cfg_dict['layout'] != key_layout:
+        raise ValueError("Out layout doesn't match fdb_key"\
+                         f" {cfg_dict['layout']} != {key_layout}")
+
+    #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
+    ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
+    cfg_map[cfg_entry.id] = ins_cfg_id
+
+  pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
+  num_perf += 1
+
+  if num_perf % (total_entries // 10) == 0:
+    cnx.commit()
+    LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf, cfg_entry.id,
+                pdb_dict)
 
 
 def main():
