@@ -30,6 +30,7 @@ import json
 import os
 import tempfile
 import functools
+from typing import List, Dict, Tuple
 import paramiko
 try:
   import queue
@@ -38,7 +39,6 @@ except ImportError:
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
-from typing import List, Dict, Tuple
 
 from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
@@ -48,6 +48,7 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import compose_config_obj
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.config_type import ConfigType
+from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
@@ -300,6 +301,23 @@ class FinClass(WorkerInterface):
 
     return True
 
+  def __rm_old_app(self, session: DbSession, cfg_rows: list) -> None:
+    """remove old applicability"""
+    rm_old = ''
+    if self.label and cfg_rows:
+      cfg_ids = [str(row.id) for row in cfg_rows]
+      cfg_str = ','.join(cfg_ids)
+      rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+              f" where session={self.session_id} and config in ({cfg_str});"
+    else:
+      rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+              f" where session={self.session_id};"
+
+    self.logger.info("Start applic zeroing")
+    session.execute(rm_old)
+    session.commit()
+    self.logger.info("Finished applic zeroing")
+
   def __set_all_configs(self, idx: int = 0, num_blk: int = 1) -> bool:
     """Gathering all configs from Tuna DB to set up fin input file"""
     if idx == 0:
@@ -323,21 +341,7 @@ class FinClass(WorkerInterface):
             r_dict['direction'] = row.get_direction()
           master_cfg_list.append(r_dict)
 
-        #remove old applicability
-        rm_old = ''
-        if self.label and rows:
-          cfg_ids = [str(row.id) for row in rows]
-          cfg_str = ','.join(cfg_ids)
-          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
-                   f" where session={self.session_id} and config in ({cfg_str});"
-        else:
-          rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
-                   f" where session={self.session_id};"
-
-        self.logger.info("Start applic zeroing")
-        session.execute(rm_old)
-        session.commit()
-        self.logger.info("Finished applic zeroing")
+        self.__rm_old_app(session, rows)
 
         block_size = len_rows // num_blk  #size of the config block
         extra = len_rows % num_blk  #leftover configs, don't divide evenly
@@ -356,11 +360,10 @@ class FinClass(WorkerInterface):
             end += extra
 
           if start >= len_rows:
-            break
-
-          self.logger.info("cfg workdiv: start %s, end %s", start, end)
-
-          self.job_queue.put(master_cfg_list[start:end])
+            self.job_queue.put([])
+          else:
+            self.logger.info("cfg workdiv: start %s, end %s", start, end)
+            self.job_queue.put(master_cfg_list[start:end])
     try:
       self.all_configs = self.job_queue.get(True, 180)
     except queue.Empty:
@@ -682,7 +685,8 @@ class FinClass(WorkerInterface):
       session.add(kernel_obj)
     return True
 
-  def populate_kernels(self, kern_obj, kernel_obj):
+  @staticmethod
+  def populate_kernels(kern_obj, kernel_obj):
     """populate kernel object"""
     kernel_obj.kernel_name = kern_obj['kernel_file']
     kernel_obj.kernel_args = kern_obj['comp_options']
@@ -691,11 +695,29 @@ class FinClass(WorkerInterface):
     kernel_obj.uncompressed_size = kern_obj['uncompressed_size']
     return kernel_obj
 
+  def __check_layout_mismatch(self, fdb_entry: SimpleDict,
+                              status: dict) -> bool:
+    """Check that the fdb key returned by fin matches the config being tuned,
+    states to error if not"""
+    fdb_key = fdb_entry.fdb_key
+    fds, vals, _, _ = parse_pdb_key(fdb_key)
+    key_layout = vals[fds.index('out_layout')]
+    cfg_layout = self.config.out_layout
+
+    if cfg_layout != key_layout:
+      status['success'] = False
+      status['result'] = f"fdb_key layout mismatch with config"\
+                         f" {key_layout} != {cfg_layout}"
+      fdb_entry.valid = False
+      return False
+
+    return True
+
   def __update_fdb_w_kernels(self,
-                             session,
-                             fin_json,
-                             result_str='miopen_find_compile_result',
-                             check_str='find_compiled'):
+                             session: DbSession,
+                             fin_json: dict,
+                             result_str: str = 'miopen_find_compile_result',
+                             check_str: str = 'find_compiled') -> list:
     """update find db + kernels from json results"""
     status = []
     if fin_json[result_str]:
@@ -706,6 +728,7 @@ class FinClass(WorkerInterface):
         if fdb_obj[check_str]:
           #returned entry is added to the table
           fdb_entry = self.__compose_fdb_entry(session, fin_json, fdb_obj)
+          self.__check_layout_mismatch(fdb_entry, slv_stat)
           if not self.pending:
             query = gen_update_query(fdb_entry, self.fdb_attr,
                                      self.dbt.find_db_table.__tablename__)
