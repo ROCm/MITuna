@@ -30,7 +30,7 @@ import os
 from os import statvfs_result
 import socket
 from time import sleep
-from io import BytesIO, BufferedWriter
+from io import BytesIO
 import tempfile
 from subprocess import Popen, PIPE
 import logging
@@ -314,7 +314,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     cnx: Connection
     ftp: Optional[paramiko.sftp_client.SFTPClient] = None
     fout: SFTPFile
-    fout_2: BufferedWriter
+    fout_2: IO[Any]
     t_file: bool = False
 
     t_filename: Union[str, 'os.PathLike[Any]']
@@ -326,14 +326,14 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       assert filename is not None
 
     if self.local_machine:  # pylint: disable=no-member ; false alarm
-      with open(filename, 'wb') as fout_2:
+      with open(filename, 'wb') as fout_2:  #type: ignore
         fout_2.write(contents)
         fout_2.flush()
     else:
       cnx = self.connect()
       ftp = cnx.ssh.open_sftp()
       if ftp is not None:
-        with ftp.open(filename, 'wb') as fout:
+        with ftp.open(filename, 'wb') as fout:  #type: ignore
           fout.write(contents)
           fout.flush()
 
