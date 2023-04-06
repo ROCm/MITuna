@@ -204,8 +204,8 @@ def gold_base_update(session: DbSession,
     session.execute(update_q)
 
   LOGGER.info("Inserting golden version %s -> %s.", base_gold_v, gold_v)
-  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config, fdb_key"\
-  ", params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
+  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
+  ", fdb_key, params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
   f" select valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   f" from conv_golden where golden_miopen_v={base_gold_v} and valid=1 and kernel_time>=0;"
@@ -234,8 +234,8 @@ def gold_session_update(session: DbSession,
     session.execute(update_q)
 
   LOGGER.info("Gold %s Insert session %s.", gold_v, tune_s)
-  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config, fdb_key"\
-  ", params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
+  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
+  ", fdb_key, params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
   f" select cfd.valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   " from conv_find_db as cfd inner join session as s on cfd.session=s.id"\
@@ -260,18 +260,18 @@ def main():
   with DbSession() as session:
     if args.base_golden_v:
 
-      def actuator(func):
+      def actuator1(func):
         return func(session, args.golden_v, args.base_golden_v, args.overwrite)
 
-      session_retry(session, gold_base_update, functools.partial(actuator),
+      session_retry(session, gold_base_update, functools.partial(actuator1),
                     LOGGER)
 
     if args.session_id:
 
-      def actuator(func):
+      def actuator2(func):
         return func(session, args.golden_v, args.session_id, args.overwrite)
 
-      session_retry(session, gold_session_update, functools.partial(actuator),
+      session_retry(session, gold_session_update, functools.partial(actuator2),
                     LOGGER)
 
   if args.create_perf_table:
