@@ -321,7 +321,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     if is_temp:
       assert filename is None
       _, t_filename = tempfile.mkstemp()
-      t_file  = True
+      t_file = True
 
     assert filename is not None
 
