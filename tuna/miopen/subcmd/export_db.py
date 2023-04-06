@@ -453,7 +453,7 @@ def export_pdb(dbt, args):
   LOGGER.info("pdb query returned: %s", total_entries)
 
   for perf_db_entry, cfg_entry in db_entries:
-    analyze_entry(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
+    populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
                   total_entries)
 
   cnx.commit()
@@ -462,7 +462,7 @@ def export_pdb(dbt, args):
   return local_path
 
 
-def analyze_entry(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
+def populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
                   total_entries):
   """Analyze perf_dv entry"""
   if cfg_entry.id in cfg_map:
