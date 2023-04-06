@@ -45,8 +45,8 @@ LOGGER = setup_logger('driver_base')
 
 class DriverBase():
   """Represents db tables based on ConfigType"""
-  tensor_attr = [column.name for column in inspect(TensorTable).c]
-  tensor_id_map = {}
+  tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
+  tensor_id_map: Dict[str, int] = {}
 
   def __init__(self,
                line: str = str(),

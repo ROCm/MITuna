@@ -134,6 +134,7 @@ class DriverBatchNorm(DriverBase):
         c_dict[key] = val
 
     c_dict['input_tensor'] = super().get_input_t_id()
+    c_dict['driver'] = str(self)
 
     return c_dict
 
