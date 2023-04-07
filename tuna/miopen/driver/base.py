@@ -31,8 +31,10 @@ from abc import abstractmethod
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import Query
+from sqlalchemy.inspection import inspect
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
+from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
 from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import TENSOR_PRECISION
@@ -43,6 +45,8 @@ LOGGER = setup_logger('driver_base')
 
 class DriverBase():
   """Represents db tables based on ConfigType"""
+  tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
+  tensor_id_map: Dict[str, int] = {}
 
   def __init__(self,
                line: str = str(),
@@ -157,17 +161,31 @@ class DriverBase():
     """Insert new row into tensor table and return primary key"""
     ret_id: int = -1
     session: Session
-
     with DbSession() as session:
       try:
-        tid: TensorTable = TensorTable(**tensor_dict)
-        session.add(tid)
-        session.commit()
-        ret_id = tid.id
-        LOGGER.info("Insert Tensor: %s", ret_id)
+        tid = TensorTable(**tensor_dict)
+        tid.valid = 1
+        key = build_dict_val_key(tid)
+        #cache the tensor table to avoid queries
+        if not DriverBase.tensor_id_map:
+          DriverBase.tensor_id_map = get_session_val_map(
+              session, TensorTable, DriverBase.tensor_attr)
+        id_map = DriverBase.tensor_id_map
+        if key in id_map:
+          ret_id = id_map[key]
+          LOGGER.info("Get Tensor: %s", ret_id)
+        else:
+          session.add(tid)
+          session.commit()
+          ret_id = tid.id
+          id_map[key] = ret_id
+          LOGGER.info("Insert Tensor: %s", ret_id)
       except IntegrityError as err:
         LOGGER.warning(err)
         session.rollback()
+        #update tensor table cache
+        DriverBase.tensor_id_map = get_session_val_map(session, TensorTable,
+                                                       DriverBase.tensor_attr)
         ret_id = self.get_tensor_id(session, tensor_dict)
         LOGGER.info("Get Tensor: %s", ret_id)
     return ret_id
