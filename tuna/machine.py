@@ -314,13 +314,11 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     cnx: Connection
     ftp: Optional[paramiko.sftp_client.SFTPClient] = None
-    t_file: bool = False
 
-    t_filename: Union[str, 'os.PathLike[str]']
+    #t_filename: Union[str, 'os.PathLike[str]']
     if is_temp:
       assert filename is None
-      _, t_filename = tempfile.mkstemp()
-      t_file = True
+      _, filename = tempfile.mkstemp()
     else:
       assert filename is not None
 
@@ -330,15 +328,10 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         fout.flush()
     else:
       cnx = self.connect()
-      if cnx is not None and cnx.ssh is not None:
-        ftp = cnx.ssh.open_sftp()
-      if ftp is not None:
-        with ftp.open(filename, 'wb') as fout:  #type: ignore
-          fout.write(contents)
-          fout.flush()
-
-    if t_file:
-      return t_filename
+      ftp = cnx.ssh.open_sftp()
+      with ftp.open(filename, 'wb') as fout:  #type: ignore
+        fout.write(contents)
+        fout.flush()
 
     return filename
 
