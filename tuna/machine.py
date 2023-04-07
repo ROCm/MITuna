@@ -306,8 +306,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return self.cpus, self.gpus
 
-  def write_file(self, contents: bytes, filename: Union[bytes, Text] = None , \
-  is_temp: bool = False) -> Union[bytes, Text]:
+  def write_file(self, contents: bytes, filename: Union[str, bytes, 'os.PathLike[str]', None] = None , \
+  is_temp: bool = False) -> Union[str, bytes, 'os.PathLike[str]', None]:
     """
     Write a file to this machine containing contents
     """
@@ -317,7 +317,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     fout_2: IO[Any]
     t_file: bool = False
 
-    t_filename: Union[str, 'os.PathLike[Any]']
+    t_filename: Union[str, 'os.PathLike[str]']
     if is_temp:
       assert filename is None
       _, t_filename = tempfile.mkstemp()
@@ -325,8 +325,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     else:
       assert filename is not None
 
-    if self.local_machine:  # pylint: disable=no-member ; false alarm
-      with open(filename, 'wb') as fout_2:  #type: ignore
+    if self.local_machine and filename is not None:  # pylint: disable=no-member ; false alarm
+      with open(filename, 'wb') as fout_2:
         fout_2.write(contents)
         fout_2.flush()
     else:
