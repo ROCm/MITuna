@@ -306,8 +306,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return self.cpus, self.gpus
 
-  def write_file(self, contents: bytes, filename: Union[str, bytes, 'os.PathLike[str]', None] = None , \
-  is_temp: bool = False) -> Union[str, bytes, 'os.PathLike[str]', None]:
+  def write_file(self, contents: bytes, filename: Union[str, bytes, 'os.PathLike[str]',\
+  None] = None, is_temp: bool = False) -> Union[str, bytes, 'os.PathLike[str]', None]:
     """
     Write a file to this machine containing contents
     """
