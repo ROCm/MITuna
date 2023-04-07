@@ -458,27 +458,28 @@ def pytestSuite1() {
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
-        sshagent (credentials: ['bastion-ssh-key']) {                 
-           sh "pytest tests/test_abort_file.py -s"
-           sh "pytest tests/test_analyze_parse_db.py -s"
-
-           sh "pytest tests/test_connection.py -s"
+        sshagent (credentials: ['bastion-ssh-key']) {   
+           sh "coverage erase"              
+           sh "python3 -m coverage run -a -m pytest tests/test_abort_file.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_analyze_parse_db.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
-           sh "pytest tests/test_importconfigs.py -s"
-           sh "pytest tests/test_machine.py -s"
-           sh "pytest tests/test_dbBase.py -s"
-           sh "pytest tests/test_driver.py -s"
-           sh "pytest tests/test_fin_class.py -s"
-           sh "pytest tests/test_fin_utils.py -s"
-           sh "pytest tests/test_add_session.py -s"
-           sh "pytest tests/test_merge_db.py -s"
-           sh "pytest tests/test_merge_db_functions.py -s"
-           sh "pytest tests/test_utility.py -s"
-           sh "pytest tests/test_example.py -s"
-           sh "pytest tests/test_yaml_parser.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_importconfigs.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_machine.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_dbBase.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_driver.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_class.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_utils.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_add_session.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_merge_db.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_merge_db_functions.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_utility.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_example.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_yaml_parser.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
+        sh "coverage report -m "
     }
 }
 
@@ -502,13 +503,14 @@ def pytestSuite2() {
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
            // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_worker.py -s"
-           sh "TUNA_LOGLEVEL=INFO pytest tests/test_fin_builder.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_worker.py -s"
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
         }
+        sh "coverage report -m"
     }
 }
 
-def pytestSuite3() {
+def pytestSuite3AndCoverage(current_run, main_branch) {
     def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -520,14 +522,28 @@ def pytestSuite3() {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        //addMachine(arch, num_cu)
-        // download the latest perf db
-        //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {                 
-           // test fin builder and test fin builder conv in sequence
-           sh "pytest tests/test_fin_evaluator.py -s"
-           sh "pytest tests/test_update_golden.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
         }
+        sh "coverage report -m"
+        sh "python3 -m coverage json"
+        if (current_run == main_branch) {
+            sh "python3 tests/covscripts/coverage.py ${main_branch}"
+            archiveArtifacts artifacts: "${env.COVERAGE_ARTIFACT_FILE_NAME}", allowEmptyArchive: true, fingerprint: true
+        } else {
+        try {
+          sh "wget ${env.TUNA_COVERAGE_URL}/${main_branch}/lastSuccessfulBuild/artifact/${env.COVERAGE_ARTIFACT_FILE_NAME}"
+        } catch (Exception err) {
+            currentBuild.result = 'SUCCESS'
+        }
+        if (fileExists("${env.COVERAGE_ARTIFACT_FILE_NAME}")) {
+            sh "python3 tests/covscripts/coverage.py ${current_run}"
+        } else {
+            echo "File ${env.COVERAGE_ARTIFACT_FILE_NAME} not found. Skipping coverage.py execution"
+        }
+        }
+
     }
 }
 
@@ -549,6 +565,8 @@ def runLint() {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
+            sh "cd tuna && find miopen/worker/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/import_configs.py"
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/update_golden.py"
             sh "mypy tuna/miopen/utils/config_type.py"
             sh "mypy tuna/connection.py --ignore-missing-imports"
@@ -683,6 +701,7 @@ def getSessionVals(session_id)
       if(sdot > 0)
       {
         rocm_version = rocm_version.substring(0, sdot)
+        rocm_version = "'" + rocm_version + " " + rocm_v.substring(subv_i+1) + "'"
       }
     }
   }

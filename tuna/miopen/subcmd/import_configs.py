@@ -28,9 +28,9 @@
 import os
 import logging
 import argparse
+from typing import Any, Optional, Union, Tuple
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
-from typing import Any, Optional, Union, Tuple
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db, ENGINE
@@ -115,18 +115,7 @@ def insert_config(driver: DriverBase, counts: dict, dbt: MIOpenDBTables,
       except IntegrityError as err:
         logger.warning("Err occurred: %s", err)
         session.rollback()
-    else:
-      try:
-        if args.mark_recurrent or args.tag:
-          new_cf_tag = dbt.config_tags_table(tag=args.tag,
-                                             recurrent=args.mark_recurrent,
-                                             config=new_cf.id)
-          session.add(new_cf_tag)
-          session.commit()
-          counts['cnt_tagged_configs'].add(new_cf.id)
-      except IntegrityError as err:
-        logger.warning("Err occurred: %s", err)
-        session.rollback()
+
     if args.mark_recurrent or args.tag:
       _ = tag_config_v2(driver, counts, dbt, args, logger, new_cf)
 
@@ -180,7 +169,6 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
         parse_line(args, line, counts, dbt, logger)
       except ValueError as err:
         logger.warning(err)
-        continue
 
   return counts
 
@@ -252,7 +240,8 @@ def get_database_id(framework: Framework, fw_version: int, model: int,
     except NoResultFound as dberr:
       logger.error(dberr)
       logger.error(
-          "Framework not present in the DB. Please run 'import_benchmark.py --add_framework' to populate the DB table"
+          "Framework not present in the DB. Please run 'import_benchmark.py --add_framework' "\
+     "to populate the DB table"
       )
     try:
       res = session.query(dbt.model.id).filter(dbt.model.model == model)\
@@ -260,7 +249,8 @@ def get_database_id(framework: Framework, fw_version: int, model: int,
       mid = res.id
     except NoResultFound as dberr:
       logger.error(
-          "Model not present in the DB. Please run 'import_config.py --add_model' to populate the DB table"
+          "Model not present in the DB. Please run 'import_config.py --add_model' to "\
+     "populate the DB table"
       )
       logger.error(dberr)
   return mid, fid
@@ -314,7 +304,6 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
       except (ValueError, IntegrityError) as verr:
         logger.warning(verr)
         session.rollback()
-        continue
   logger.info('Benchmarked %s configs', count)
   return True
 
@@ -332,6 +321,7 @@ def check_import_benchmark_args(args: argparse.Namespace) -> None:
          and gpus need to all be specified to add a new benchmark""")
 
 
+# pylint: disable=too-many-return-statements
 def run_import_configs(args: argparse.Namespace,
                        logger: logging.Logger) -> bool:
   """Main function"""
@@ -343,40 +333,40 @@ def run_import_configs(args: argparse.Namespace,
   if args.print_models:
     print_models(logger)
     return True
-  elif args.add_model:
+  if args.add_model:
     add_model(args, logger)
     return True
-  elif args.add_framework:
+  if args.add_framework:
     add_frameworks(args, logger)
     return True
-  elif args.add_benchmark:
+  if args.add_benchmark:
     add_benchmark(args, dbt, logger)
     return True
-  else:
-    if not (args.tag and args.framework and args.fw_version and args.model and
-            args.md_version):
-      logger.error(
-          """Tag, framework & version, model & version arguments is required to \
-                  import configurations""")
-      return False
+  if not (args.tag and args.framework and args.fw_version and args.model and
+          args.md_version):
+    logger.error(
+        """Tag, framework & version, model & version arguments is required to \
+                import configurations""")
+    return False
 
-    mid, fid = get_database_id(args.framework, args.fw_version, args.model,
-                               args.md_version, dbt, logger)
-    if mid is None or fid is None:
-      logger.error(
-          'Please use --add_model and --add_framework to add new model and framework'
-      )
-      return False
+  mid, fid = get_database_id(args.framework, args.fw_version, args.model,
+                             args.md_version, dbt, logger)
+  if mid is None or fid is None:
+    logger.error(
+        'Please use --add_model and --add_framework to add new model and framework'
+    )
+    return False
 
-    set_import_cfg_batches(args)
-    counts = import_cfgs(args, dbt, logger)
-    #tagging imported configs with benchmark
-    add_benchmark(args, dbt, logger)
+  set_import_cfg_batches(args)
+  counts = import_cfgs(args, dbt, logger)
+  #tagging imported configs with benchmark
+  add_benchmark(args, dbt, logger)
 
-    logger.info('New configs added: %u', counts['cnt_configs'])
-    if args.tag or args.tag_only:
-      logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
-    return True
+  logger.info('New configs added: %u', counts['cnt_configs'])
+  if args.tag or args.tag_only:
+    logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
+
+  return True
 
 
 def main():

@@ -35,7 +35,7 @@ from datetime import datetime
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
 from sqlalchemy import create_engine
-from typing import Callable, Any
+from typing import Callable, Any, List, Dict
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
@@ -242,6 +242,29 @@ def get_class_by_tablename(tablename):
   for c in BASE._decl_class_registry.values():
     if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
       return c
+
+
+def build_dict_val_key(obj: SimpleDict, exclude: List[str] = ['id']):
+  """take object with to_dict function and create a key using values from the object's sorted keys"""
+  obj_dict = obj.to_dict()
+  for val in exclude:
+    obj_dict.pop(val, False)
+  obj_vals = [str(obj_dict[key]) for key in sorted(obj_dict.keys())]
+  map_key: str = '-'.join(obj_vals)
+  return map_key
+
+
+def get_session_val_map(session: DbSession,
+                        table: BASE,
+                        attribs: List[str],
+                        val: str = 'id'):
+  """return a map of known object values to ids"""
+  objs = gen_select_objs(session, attribs, table.__tablename__, "")
+  val_map: Dict[str, int] = {}
+  for obj in objs:
+    map_key = build_dict_val_key(obj, exclude=[val])
+    val_map[map_key] = obj.to_dict()[val]
+  return val_map
 
 
 class DB_Type(enum.Enum):  # pylint: disable=invalid-name ; @chris rename, maybe?

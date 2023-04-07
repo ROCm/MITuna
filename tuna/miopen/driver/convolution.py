@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that a convolution MIOpenDriver cmd"""
 
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, Any
 from re import search
 from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import DriverBase
@@ -168,7 +168,7 @@ class DriverConvolution(DriverBase):
 
   def get_conv_dict(self) -> dict:
     """Populate c_dict with conv table elems"""
-    c_dict: Dict[str, int] = {}
+    c_dict: Dict[str, Any] = {}
     key: str
     val: int
     for key, val in self.to_dict().items():
@@ -177,6 +177,7 @@ class DriverConvolution(DriverBase):
 
     c_dict['input_tensor'] = super().get_input_t_id()
     c_dict['weight_tensor'] = super().get_weight_t_id()
+    c_dict['driver'] = str(self)
 
     return c_dict
 
@@ -222,7 +223,7 @@ class DriverConvolution(DriverBase):
 
     #NOTE: when DB col direction is renamed to forw, col_dict should be removed
     #and replaced with vars(self), but value still needs to map to 1,2 or 4.
-    col_dict: dict = vars(self)
+    col_dict: dict = vars(self).copy()
     if "direction" in col_dict.keys():
       col_dict["forw"] = int(INVERS_DIR_MAP[col_dict["direction"]])
       col_dict.pop("direction")
@@ -252,7 +253,7 @@ class DriverConvolution(DriverBase):
       w_dict['dim3'] = self.fil_h
       w_dict['dim4'] = self.fil_w
       w_dict['layout'] = self.fil_layout
-    elif self.fil_layout == 'NHWC':
+    elif self.fil_layout in ('NHWC', 'NDHWC'):
       w_dict['dim0'] = self.out_channels
       w_dict['dim1'] = self.in_channels
       w_dict['dim2'] = self.fil_d
@@ -267,13 +268,13 @@ class DriverConvolution(DriverBase):
     self.num_dims = db_obj.weight_t.num_dims
     self.fil_layout = db_obj.weight_t.layout
 
-    if self.fil_layout == 'NCHW':
+    if self.fil_layout in ('NCHW', 'NCDHW'):
       self.out_channels = db_obj.weight_t.dim0
       self.in_channels = db_obj.weight_t.dim1
       self.fil_d = db_obj.weight_t.dim2
       self.fil_h = db_obj.weight_t.dim3
       self.fil_w = db_obj.weight_t.dim4
-    elif self.fil_layout == 'NHWC':
+    elif self.fil_layout in ('NHWC', 'NDHWC'):
       self.out_channels = db_obj.weight_t.dim0
       self.in_channels = db_obj.weight_t.dim1
       self.fil_d = db_obj.weight_t.dim2
