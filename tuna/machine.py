@@ -41,7 +41,7 @@ from sqlalchemy import Text, Column, orm
 from sqlalchemy.dialects.mysql import TINYINT, INTEGER
 
 from paramiko.channel import ChannelFile
-from paramiko.sftp_file import SFTPFile
+from paramiko import SSHClient
 import paramiko
 from tuna.machine_management_interface import MachineManagementInterface
 from tuna.utils.logger import setup_logger
@@ -104,6 +104,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     self.logger: logging.Logger
     self.mmi: MachineManagementInterface
     self.cnx: Connection
+    self.ssh: paramiko.SSHClient = SSHClient()
 
     if self.local_machine:  # pylint: disable=no-member ; false alarm
       self.logger = setup_logger(f'Machine_{self.hostname}')
@@ -313,8 +314,6 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     cnx: Connection
     ftp: Optional[paramiko.sftp_client.SFTPClient] = None
-    fout: SFTPFile
-    fout_2: IO[Any]
     t_file: bool = False
 
     t_filename: Union[str, 'os.PathLike[str]']
@@ -326,12 +325,13 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       assert filename is not None
 
     if self.local_machine and filename is not None:  # pylint: disable=no-member ; false alarm
-      with open(filename, 'wb') as fout_2:
-        fout_2.write(contents)
-        fout_2.flush()
+      with open(filename, 'wb') as fout:
+        fout.write(contents)
+        fout.flush()
     else:
       cnx = self.connect()
-      ftp = cnx.ssh.open_sftp()
+      if cnx is not None and cnx.ssh is not None:
+        ftp = cnx.ssh.open_sftp()
       if ftp is not None:
         with ftp.open(filename, 'wb') as fout:  #type: ignore
           fout.write(contents)
