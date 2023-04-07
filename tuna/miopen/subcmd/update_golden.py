@@ -443,6 +443,8 @@ def main():
       session_retry(session, gold_session_update, functools.partial(actuator),
                     LOGGER)
 
+  LOGGER.info('Finished Updating conv_golden %s', args.golden_v)
+
   if args.create_perf_table:
     LOGGER.info('Updating conv perf DB table')
     create_perf_table(args)
