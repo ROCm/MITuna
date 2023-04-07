@@ -454,7 +454,7 @@ def export_pdb(dbt, args):
 
   for perf_db_entry, cfg_entry in db_entries:
     populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
-                  total_entries)
+                    total_entries)
 
   cnx.commit()
   LOGGER.warning("Total number of entries in Perf DB: %s", num_perf)
@@ -463,7 +463,7 @@ def export_pdb(dbt, args):
 
 
 def populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
-                  total_entries):
+                    total_entries):
   """Analyze perf_dv entry"""
   if cfg_entry.id in cfg_map:
     ins_cfg_id = cfg_map[cfg_entry.id]
