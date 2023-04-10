@@ -307,22 +307,21 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return self.cpus, self.gpus
 
-  def write_file(self, contents: bytes, filename: Union[str, bytes, 'os.PathLike[str]',\
-  None] = None, is_temp: bool = False) -> Union[str, bytes, 'os.PathLike[str]', None]:
+  def write_file(self, contents: bytes, filename: str = None, \
+  is_temp: bool = False) -> str:
     """
     Write a file to this machine containing contents
     """
     cnx: Connection
     ftp: Optional[paramiko.sftp_client.SFTPClient] = None
 
-    #t_filename: Union[str, 'os.PathLike[str]']
     if is_temp:
       assert filename is None
       _, filename = tempfile.mkstemp()
     else:
       assert filename is not None
 
-    if self.local_machine and filename is not None:  # pylint: disable=no-member ; false alarm
+    if self.local_machine:  # pylint: disable=no-member ; false alarm
       with open(filename, 'wb') as fout:
         fout.write(contents)
         fout.flush()
@@ -341,8 +340,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     Read a file from this machine and return the contents
     """
-    ret: bytes
-    ret_str: str
+    ret: Union[str, bytes]
     cnx: Connection
     ftp: paramiko.sftp_client.SFTPClient
     content_io: BytesIO
@@ -358,8 +356,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       ftp.getfo(filename, content_io)
       ret = content_io.getvalue()
       if not byteread:
-        ret_str = ret.decode()
-        return ret_str
+        ret = ret.decode()
       return ret
 
   def make_temp_file(self) -> Union[str, Text]:
@@ -437,10 +434,9 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     logger = self.get_logger()
 
     logger.warning('Sending remote reboot command')
-    if self.ipmi_ip is not None and not self.ipmi_inaccessible:
+    if self.ipmi_ip is not None and not self.ipmi_inaccessible and self.mmi is not None:
       logger.info('Using IPMI to reboot machine')
-      if self.mmi is not None:
-        self.mmi.restart_server()
+      self.mmi.restart_server()
     else:
       logger.info('No IPMI credentials, using shell to reboot machine')
       cnx = self.connect()
