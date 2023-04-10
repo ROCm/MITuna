@@ -36,7 +36,6 @@ from subprocess import Popen, PIPE
 import logging
 
 from typing import Set, List, Optional, TextIO, Tuple, Dict, Union, IO, Any, Callable
-from typing_extensions import SupportsIndex
 from sqlalchemy import Text, Column, orm
 from sqlalchemy.dialects.mysql import TINYINT, INTEGER
 
@@ -185,7 +184,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """return number of available cpus"""
     stdout: TextIO
     _, stdout, _ = self.connect().exec_command('nproc')
-    self.num_cpus = int(stdout.readline())  #type: ignore
+    self.num_cpus = int(stdout.readline())
 
     return self.num_cpus
 
@@ -270,7 +269,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return agents
 
-  def get_properties(self) -> Tuple[List[Any], List[Any]]:
+  def get_properties(self) -> Tuple[List[Dict], List[Dict[Any, Any]]]:
     """return cpu and gpu device info as dicts"""
     agents: dict = self.parse_agents()
 
@@ -390,8 +389,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return ret_code, out, err
 
-  def get_gpu_clock(self, gpu_num: int = 0) -> Tuple[Union[SupportsIndex, slice], \
-  Union[SupportsIndex, slice]]:
+  def get_gpu_clock(self, gpu_num: int = 0) -> Tuple[int, int]:
     """query gpu clock levels with rocm-smi"""
     stdout = Optional[IO[str]]
     gpu_clk_cmd: str = f'{ROCMSMI} -c'
@@ -400,12 +398,12 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     base_idx: Union[int, None] = None
     gpu_clk: List[Dict[str, int]] = []
     gpu_idx: int = 0
-    level: Union[int, str]
-    sclk: Union[SupportsIndex, slice]
-    mclk: Union[SupportsIndex, slice]
+    level: int
+    sclk: int
+    mclk: int
     line: str
-    idx1: Optional[int]
-    idx2: Optional[int]
+    idx1: int
+    idx2: int
 
     for line in stdout:
       if 'GPU' in line:
@@ -456,7 +454,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     logger: logging.Logger = self.get_logger()
     cnx = self.connect()
 
-    if gpu_id not in self.avail_gpus:  #type: ignore
+    if gpu_id not in self.avail_gpus:
       logger.info('GPU index %u out of bounds', gpu_id)
       return False
     logger.info('Checking GPU %u status', gpu_id)
