@@ -81,7 +81,6 @@ def test_driver():
   assert c_dict1["input_tensor"]
   assert c_dict1["weight_tensor"]
 
-
   cmd2 = "./bin/MIOpenDriver convfp16 -n 128 -c 256 -H 56 -W 56 -k 64 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -F 2 -t 1 --fil_layout NCHW --in_layout NCHW --out_layout NCHW"
   driver2 = DriverConvolution(cmd2)
   d2_str = driver2.to_dict()
