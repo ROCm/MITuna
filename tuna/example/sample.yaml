@@ -2,7 +2,6 @@
 # common script arguments
 arch: 'gfx908'
 num_cu: 120
-config_type: 'convolution'
 session_id: 1
 remote_machine: false
 label: 'Example'
