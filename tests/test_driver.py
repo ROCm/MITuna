@@ -64,7 +64,6 @@ def test_driver():
   c_dict1 = driver1.compose_tensors(keep_id=True)
   assert c_dict1["input_tensor"]
   assert c_dict1["weight_tensor"]
-  assert c_dict1['id'] != None
 
   counts = {}
   counts['cnt_configs'] = 0
@@ -76,6 +75,12 @@ def test_driver():
     driver_1_row = DriverConvolution(db_obj=row1)
     #compare DriverConvolution for same driver cmd built from Driver-line, vs built from that Driver-line's DB row
     assert driver1 == driver_1_row
+
+  c_dict1 = driver1.compose_tensors(keep_id=True)
+  assert c_dict1['id'] != None
+  assert c_dict1["input_tensor"]
+  assert c_dict1["weight_tensor"]
+
 
   cmd2 = "./bin/MIOpenDriver convfp16 -n 128 -c 256 -H 56 -W 56 -k 64 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -F 2 -t 1 --fil_layout NCHW --in_layout NCHW --out_layout NCHW"
   driver2 = DriverConvolution(cmd2)
@@ -92,7 +97,6 @@ def test_driver():
   itensor2 = driver2.get_input_t_id()
   wtensor2 = driver2.get_weight_t_id()
   c_dict2 = driver2.compose_tensors(keep_id=True)
-  assert c_dict2['id'] != None
   assert c_dict2["input_tensor"]
   assert c_dict2["weight_tensor"]
   assert c_dict2
@@ -122,7 +126,6 @@ def test_driver():
   assert (d3_str["direction"] == 'F')
   itensor3 = driver3.get_input_t_id()
   c_dict3 = driver3.compose_tensors(keep_id=True)
-  assert c_dict3['id'] != None
   assert c_dict3["input_tensor"]
   assert c_dict3
 
