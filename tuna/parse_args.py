@@ -143,7 +143,7 @@ def setup_arg_parser(desc: str,
   return parser
 
 
-def clean_args(opt1='MIOPEN', opt2='miopen'):
+def clean_args():
   """clean arguments"""
   libs = [elem.value for elem in Library]
   for lib in libs:
