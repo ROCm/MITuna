@@ -64,6 +64,7 @@ def test_driver():
   c_dict1 = driver1.compose_tensors(keep_id=True)
   assert c_dict1["input_tensor"]
   assert c_dict1["weight_tensor"]
+  assert c_dict1['id'] != None
 
   counts = {}
   counts['cnt_configs'] = 0
@@ -91,6 +92,7 @@ def test_driver():
   itensor2 = driver2.get_input_t_id()
   wtensor2 = driver2.get_weight_t_id()
   c_dict2 = driver2.compose_tensors(keep_id=True)
+  assert c_dict2['id'] != None
   assert c_dict2["input_tensor"]
   assert c_dict2["weight_tensor"]
   assert c_dict2
@@ -120,6 +122,7 @@ def test_driver():
   assert (d3_str["direction"] == 'F')
   itensor3 = driver3.get_input_t_id()
   c_dict3 = driver3.compose_tensors(keep_id=True)
+  assert c_dict3['id'] != None
   assert c_dict3["input_tensor"]
   assert c_dict3
 
