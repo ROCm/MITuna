@@ -177,6 +177,7 @@ def parse_example_yaml(example_yaml, example):
 
   dict1 = {
       'arch': 'gfx908',
+      'config_type': 'convolution',
       'docker_name': 'my_docker_name',
       'init_session': True,
       'label': 'Example',
@@ -187,6 +188,7 @@ def parse_example_yaml(example_yaml, example):
   }
   dict2 = {
       'arch': 'gfx908',
+      'config_type': 'convolution',
       'docker_name': 'my_docker_name',
       'execute': True,
       'label': 'Example',
