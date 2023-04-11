@@ -50,6 +50,10 @@ def test_yaml_parser():
   parse_miopen_yaml3(miopen_yaml3, Library('miopen'))
   parse_example_yaml(example_yaml, Library('example'))
 
+  go_fish = "{0}/../tuna/go_fish.py miopen --yaml ../tuna/miopen/yaml_files/sample1.yaml".format(
+      this_path)
+  os.system(go_fish)
+
 
 def parse_miopen_yaml1(miopen_yaml, miopen):
   yaml_files = parse_yaml(miopen_yaml, miopen)
