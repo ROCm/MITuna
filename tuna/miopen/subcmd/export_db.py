@@ -37,7 +37,8 @@ from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite, mysql_to_sqlite_cfg
+from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite
+from tuna.miopen.utils.analyze_parse_db import mysql_to_sqlite_cfg
 from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.miopen.worker.fin_utils import compose_config_obj
 
@@ -446,42 +447,48 @@ def export_pdb(dbt, args):
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
-  query = get_pdb_query(dbt, args)
   cfg_map = {}
-  db_entries = query.all()
+  db_entries = get_pdb_query(dbt, args).all()
   total_entries = len(db_entries)
   LOGGER.info("pdb query returned: %s", total_entries)
 
   for perf_db_entry, cfg_entry in db_entries:
-    if cfg_entry.id in cfg_map:
-      ins_cfg_id = cfg_map[cfg_entry.id]
-    else:
-      cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
-
-      #override cfg layout with fdb key layout
-      if perf_db_entry.fdb_key:
-        fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
-        key_layout = vals[fds.index('out_layout')]
-        if cfg_dict['layout'] != key_layout:
-          raise ValueError("Out layout doesn't match fdb_key"\
-                           f" {cfg_dict['layout']} != {key_layout}")
-
-      #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
-      ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
-      cfg_map[cfg_entry.id] = ins_cfg_id
-
-    pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
-    num_perf += 1
-
-    if num_perf % (total_entries // 10) == 0:
-      cnx.commit()
-      LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf,
-                  cfg_entry.id, pdb_dict)
+    populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
+                    total_entries)
 
   cnx.commit()
   LOGGER.warning("Total number of entries in Perf DB: %s", num_perf)
 
   return local_path
+
+
+def populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
+                    total_entries):
+  """Analyze perf_dv entry"""
+  if cfg_entry.id in cfg_map:
+    ins_cfg_id = cfg_map[cfg_entry.id]
+  else:
+    cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
+
+    #override cfg layout with fdb key layout
+    if perf_db_entry.fdb_key:
+      fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
+      key_layout = vals[fds.index('out_layout')]
+      if cfg_dict['layout'] != key_layout:
+        raise ValueError("Out layout doesn't match fdb_key"\
+                         f" {cfg_dict['layout']} != {key_layout}")
+
+    #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
+    ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
+    cfg_map[cfg_entry.id] = ins_cfg_id
+
+  pdb_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
+  num_perf += 1
+
+  if num_perf % (total_entries // 10) == 0:
+    cnx.commit()
+    LOGGER.info("PDB count: %s, mysql cfg: %s, pdb: %s", num_perf, cfg_entry.id,
+                pdb_dict)
 
 
 def main():
