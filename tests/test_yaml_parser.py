@@ -27,6 +27,7 @@
 import os
 import sys
 import yaml
+import subprocess
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -50,10 +51,22 @@ def test_yaml_parser():
   parse_miopen_yaml3(miopen_yaml3, Library('miopen'))
   parse_example_yaml(example_yaml, Library('example'))
 
+  multiple_yamls()
+
+
+def multiple_yamls():
   yaml_sample = "{0}/yaml_sample.yaml".format(this_path)
   go_fish = "{0}/../tuna/go_fish.py miopen --yaml {1}".format(
       this_path, yaml_sample)
-  assert os.system(go_fish)
+  subp_fail = True
+
+  try:
+    subprocess.run(go_fish, shell=True, check=True)
+  except subprocess.CalledProcessError as subp_err:
+    print(subp_err)
+    subp_fail = True
+
+  assert subp_fail == False
 
 
 def parse_miopen_yaml1(miopen_yaml, miopen):
