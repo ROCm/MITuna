@@ -66,7 +66,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   local_port: int = Column(INTEGER, server_default="22")
   user: str = Column(Text, nullable=False)
   password: str = Column(Text, nullable=False)
-  avail_gpus: List[Dict[int, str]] = Column(Text, nullable=False)
+  avail_gpus: List[int] = Column(Text, nullable=False)
   arch: str = Column(Text, nullable=False)
   num_cu: int = Column(INTEGER, nullable=False, server_default="64")
   sclk: int = Column(INTEGER)
@@ -116,7 +116,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       if self.gpus:
         self.arch = self.gpus[0]['arch']
         self.num_cu = self.gpus[0]['num_cu']
-        self.avail_gpus = list(range(len(self.gpus)))  #type: ignore
+        self.avail_gpus = list(range(len(self.gpus)))
     else:
       cmd: str = 'hostname'
       with Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True) as subp:
@@ -134,8 +134,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
             int(val) for val in self.avail_gpus.split(',')  #type: ignore
         ]  #type: ignore
         self.num_gpus = len(self.avail_gpus)
-      self.cpus = []  # type: ignore
-      self.gpus = []  # type: ignore
+      self.cpus = []
+      self.gpus = []
 
     self.logger.info("avail gpus: %s", self.avail_gpus)
 
@@ -188,12 +188,12 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return self.num_cpus
 
-  def get_avail_gpus(self) -> List[Dict[int, str]]:
+  def get_avail_gpus(self) -> List[int]:
     """return list of available gpus"""
     if not self.avail_gpus:
       if not self.gpus:
         self.get_properties()
-        self.avail_gpus = range(len(self.gpus))  #type: ignore
+        self.avail_gpus = list(range(len(self.gpus)))
         self.num_gpus = len(self.avail_gpus)
     return self.avail_gpus
 
