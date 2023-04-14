@@ -106,7 +106,6 @@ def test_arg_solvers_alg():
 def test_cfg_compose():
   """check the config query function for args tags and cmd intake"""
   dbt = MIOpenDBTables(config_type=ConfigType.convolution)
-  logger = setup_logger('test_loadjob')
   args = LdJobArgs
   args.cmd == 'FP32'
   args.solvers == random.choice(list(get_solver_ids()))
@@ -118,12 +117,15 @@ def test_cfg_compose():
   assert len(results) > 0
   assert comp_query is not None
 
-#
+
+#add_job function
 def test_add_job():
   """check the add job function for correct count numbers"""
   connect_db()
   dbt = MIOpenDBTables(session_id=None, config_type=ConfigType.convolution)
   logger = setup_logger('test_loadjob')
   args = LdJobArgs
+  print(random.choice(list(get_solver_ids())))
+  print(type(random.choice(list(get_solver_ids()))))
   counts = add_jobs(args, dbt, logger)
   assert counts == 2
