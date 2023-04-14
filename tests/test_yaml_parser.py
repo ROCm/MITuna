@@ -58,12 +58,12 @@ def multiple_yamls():
   yaml_sample = "{0}/yaml_sample.yaml".format(this_path)
   go_fish = "{0}/../tuna/go_fish.py miopen --yaml {1}".format(
       this_path, yaml_sample)
-  subp_fail = True
+  subp_fail = False
 
   try:
     subprocess.run(go_fish, shell=True, check=True)
   except subprocess.CalledProcessError as subp_err:
-    print(subp_err)
+    print(f"Subprocess error: {subp_err}")
     subp_fail = True
 
   assert subp_fail == False
