@@ -95,11 +95,11 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     self.cnx_list: dict = {}
     self.log_list: dict = {}
     self.num_cpus: int = 0
-    self.avail_gpus: List[Dict[int, str]]
+    self.avail_gpus: List[int]
     self.sclk: int
     self.mclk: int
-    self.gpus: List[Dict[Any, Any]]
-    self.cpus: List[dict]
+    self.gpus: List[Dict[str, Any]]
+    self.cpus: List[Dict[str, Any]]
     self.logger: logging.Logger
     self.mmi: MachineManagementInterface
     self.cnx: Connection
@@ -197,7 +197,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         self.num_gpus = len(self.avail_gpus)
     return self.avail_gpus
 
-  def get_gpu(self, idx: int) -> Optional[Dict[int, str]]:
+  def get_gpu(self, idx: int) -> Optional[Dict[str, Any]]:
     """return gpu details"""
     if not self.gpus:
       self.get_properties()
@@ -269,7 +269,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     return agents
 
-  def get_properties(self) -> Tuple[List[Dict], List[Dict[Any, Any]]]:
+  def get_properties(self) -> Tuple[List[Dict], List[Dict[str, Any]]]:
     """return cpu and gpu device info as dicts"""
     agents: dict = self.parse_agents()
 
