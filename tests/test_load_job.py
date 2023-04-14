@@ -117,10 +117,36 @@ def test_cfg():
     print(before_cfg_num)
 
   args = LdJobArgs
+  args.cmd == 'FP32'
 
   with DbSession() as session:
     cfg_query = config_query(args, session, dbt)
     results = cfg_query.all()
-    print(results)
+
+  assert len(results) > 0
+
+
+#config_compose functions
+def test_compose_query():
+  """check the config query function for args tags and cmd intake"""
+  dbt = MIOpenDBTables(config_type=ConfigType.convolution)
+
+  res = None
+  find_conv_job = "SELECT count(*) FROM conv_job;"
+
+  before_cfg_num = 0
+  with DbCursor() as cur:
+    cur.execute(find_conv_job)
+    res = cur.fetchall()
+    before_cfg_num = res[0][0]
+    print(before_cfg_num)
+
+  args = LdJobArgs
+  args.solvers = "GemmFwd1x1_0_1"
+  with DbSession() as session:
+    cfg_query = config_query(args, session, dbt)
+    comp_query = compose_query(args, session, dbt, cfg_query)
+    results = comp_query.all()
+    print(comp_query.all())
 
   assert len(results) > 0
