@@ -36,13 +36,15 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.miopen.subcmd.load_job import arg_fin_steps, arg_solvers
-from tuna.miopen.subcmd.load_job import config_query
+from tuna.miopen.subcmd.load_job import config_query, compose_query, add_jobs
 from tuna.utils.db_utility import get_solver_ids
-from tuna.miopen.utils.metadata import ALG_SLV_MAP
+from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.sql import DbCursor
 from tuna.utils.logger import setup_logger
+from utils import LdJobArgs
+
 
 #arg_fin_steps function
 def test_arg_fin_steps_empty():
@@ -98,19 +100,27 @@ def test_arg_solvers_alg():
 
   assert result.solvers == [(random_solver, solver_id_map[random_solver])]
 
-def test_config_query():
+
+#config_query/compose functions
+def test_cfg():
+  """check the config query function for args tags and cmd intake"""
   dbt = MIOpenDBTables(config_type=ConfigType.convolution)
-  logger = setup_logger('test_load_job')
+
   res = None
-  clean_tags = "TRUNCATE table conv_config_tags;"
-  find_tags = "SELECT count(*) FROM conv_config_tags WHERE tag='conv_config_test';"
-  find_configs = "SELECT count(*) FROM conv_config;"
-  with DbCursor() as cur:
-    cur.execute(clean_tags)
+  find_conv_job = "SELECT count(*) FROM conv_job;"
 
   before_cfg_num = 0
   with DbCursor() as cur:
-    cur.execute(find_configs)
+    cur.execute(find_conv_job)
     res = cur.fetchall()
     before_cfg_num = res[0][0]
-    
+    print(before_cfg_num)
+
+  args = LdJobArgs
+
+  with DbSession() as session:
+    cfg_query = config_query(args, session, dbt)
+    results = cfg_query.all()
+    print(results)
+
+  assert len(results) > 0
