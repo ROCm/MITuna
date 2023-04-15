@@ -31,6 +31,7 @@ from os import statvfs_result
 import socket
 from time import sleep
 from io import BytesIO
+from io import StringIO
 import tempfile
 from subprocess import Popen, PIPE
 import logging
@@ -365,7 +366,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     return self.write_file(b'', is_temp=True)
 
   def exec_command(self, command: str, timeout: int = LOG_TIMEOUT) -> Tuple[int, str,\
-  ChannelFile]:
+  StringIO]:
     """
     Execute a command on this machine
     - through docker if on a remote machine
@@ -374,7 +375,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     cnx: Connection
     ret_code: int
     out: str
-    err: ChannelFile
+    err: StringIO
 
     logger = self.get_logger()
     if isinstance(command, list):
@@ -384,16 +385,16 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     logger.info('Running command: %s', command)
     cnx = self.connect()
     ret_code, out, err = cnx.exec_command(command, timeout=timeout)
-    if err is not None and hasattr(err, 'channel'):
-      err.channel.settimeout(LOG_TIMEOUT)
 
     return ret_code, out, err
 
-  def get_gpu_clock(self, gpu_num: int = 0) -> Tuple[int, int]:
+  def get_gpu_clock(self, gpu_num: int = 0) -> Union[Tuple[int, int], bool]:
     """query gpu clock levels with rocm-smi"""
     stdout = Optional[IO[str]]
     gpu_clk_cmd: str = f'{ROCMSMI} -c'
     _, stdout, _ = self.connect().exec_command(gpu_clk_cmd)
+    if stdout is None:
+      return False
 
     base_idx: Union[int, None] = None
     gpu_clk: List[Dict[str, int]] = []
