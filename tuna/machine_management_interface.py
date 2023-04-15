@@ -36,23 +36,31 @@ from paramiko.dsskey import DSSKey
 from paramiko.ecdsakey import ECDSAKey
 from paramiko.ed25519key import Ed25519Key
 from paramiko.rsakey import RSAKey
+from paramiko.agent import AgentKey
 from tuna.utils.utility import get_mmi_env_vars
-
+from paramiko.channel import Channel
 from tuna.utils.logger import setup_logger
+from typing import Dict, TYPE_CHECKING, List, Tuple, Union, Any, Optional, IO, TextIO
+from paramiko.channel import ChannelFile, ChannelStderrFile, ChannelStdinFile
+from io import StringIO
+import logging
+from paramiko.pkey import PKey
 
-ENV_VARS = get_mmi_env_vars()
+ENV_VARS: Dict = get_mmi_env_vars()
 
-GATEWAY_IP = ENV_VARS['gateway_ip']
-GATEWAY_PORT = ENV_VARS['gateway_port']
-GATEWAY_USER = ENV_VARS['gateway_user']
-NUM_SSH_RETRIES = 30
-SSH_TIMEOUT = 30.0
+GATEWAY_IP: str = ENV_VARS['gateway_ip']
+GATEWAY_PORT: int = ENV_VARS['gateway_port']
+GATEWAY_USER: str = ENV_VARS['gateway_user']
+NUM_SSH_RETRIES: int = 30
+SSH_TIMEOUT: float = 30.0
 
 
-def key_from_file():
+def key_from_file() -> Union[Tuple[AgentKey, ...], List]:
   """ Get private ssh keys from file system """
-  keyfiles = []
-  keys = []
+  keyfiles: List = []
+  keys: List = []
+  full_path: str
+  keytype: Any[Type]
   for keytype, name in [
       (RSAKey, "rsa"),
       (DSSKey, "dsa"),
@@ -68,9 +76,12 @@ def key_from_file():
   return keys
 
 
-def key():
+def key() -> Union[Tuple[AgentKey, ...], List]:
   """ Get Private key from ssh agent or file system ( fallback) """
   # First try ssh-agent if available
+  keys: Union[Tuple[AgentKey, ...], List[Any]]
+  agent: paramiko.agent.Agent
+
   agent = paramiko.Agent()
   keys = agent.get_keys()
   if not keys:
@@ -86,28 +97,36 @@ class SSHTunnel():  # pylint: disable=too-few-public-methods
   to access BMC systems via bastion
   '''
 
-  def __init__(self, host, user, auth, via=None, via_user=None):
+  def __init__(self, host: Optional[Tuple[str, int]] , \
+  user: str, auth: str, via: Union[str] = None, \
+  via_user: Optional[str] = None) -> None:
+
+    channel: paramiko.channel.Channel
+    via_transport: paramiko.transport.Transport
+
     if via:
       via_transport = paramiko.Transport(via)
       via_transport.start_client()
-      via_transport.auth_publickey(via_user, key()[0])
-      # via_transport.auth_none(via_user, via_auth)
-      # setup forwarding from 127.0.0.1:<free_random_port> to |host|
-      channel = via_transport.open_channel('direct-tcpip', host,
-                                           ('127.0.0.1', 0))
+      if via_user is not None:
+        via_transport.auth_publickey(via_user, key()[0])
+      if host is not None:
+        channel = via_transport.open_channel('direct-tcpip', host,
+                                             ('127.0.0.1', 0))
       self.transport = paramiko.Transport(channel)
     else:
-      self.transport = paramiko.Transport(host)
-    self.transport.start_client()
-    self.transport.auth_password(user, auth)
+      if host is not None:
+        self.transport = paramiko.Transport(host)
+        self.transport.start_client()
+        self.transport.auth_password(user, auth)
 
-  def run(self, cmd):
+  def run(self, cmd) -> Tuple[str, int]:
     """ Run a shell command on the constructed SSH tunnel """
+    channel: paramiko.channel.Channel
     channel = self.transport.open_session()
     channel.set_combine_stderr(True)
     channel.exec_command(cmd)
-    retcode = channel.recv_exit_status()
-    buf = ''
+    retcode: int = channel.recv_exit_status()
+    buf: str = ''
     while channel.recv_ready():
       buf += channel.recv(1024).decode()
     return (buf, retcode)
@@ -115,8 +134,8 @@ class SSHTunnel():  # pylint: disable=too-few-public-methods
 
 class MgmtBackend(Enum):
   """ Supported Backends """
-  IPMI = 1
-  OpenBMC = 2  # pylint: disable=invalid-name ; more readable than all-uppercase
+  IPMI: int = 1
+  OpenBMC: int = 2  # pylint: disable=invalid-name ; more readable than all-uppercase
 
 
 class MachineManagementInterface():
@@ -126,28 +145,34 @@ class MachineManagementInterface():
   The variable is lazily intialized upon first connection
   """
   gateway_session = None
-  obmc_tunnels = {}
+  obmc_tunnels: dict = {}
 
   def __init__(self,
                mgmt_ip,
                mgmt_port,
                mgmt_user,
                mgmt_password,
-               backend=MgmtBackend.IPMI):
-    self.mgmt_ip = mgmt_ip
-    self.mgmt_port = mgmt_port
-    self.mgmt_user = mgmt_user
-    self.mgmt_password = mgmt_password
-    self.logger = setup_logger("MachineMgmt")
+               backend=MgmtBackend.IPMI) -> None:
+    self.mgmt_ip: str = mgmt_ip
+    self.mgmt_port: int = mgmt_port
+    self.mgmt_user: str = mgmt_user
+    self.mgmt_password: str = mgmt_password
+    self.logger: logging.Logger = setup_logger("MachineMgmt")
     self.backend = backend
 
-  def connect_to_gateway(self, gw_ip, gw_port, gw_user):
+  def connect_to_gateway(self, gw_ip: str, gw_port: int,
+                         gw_user: str) -> Union[paramiko.SSHClient, None]:
     """ Establish an SSH connection to the gateway """
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh: Optional[paramiko.SSHClient] = paramiko.SSHClient()
+    if ssh is not None:
+      ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     for ssh_idx in range(NUM_SSH_RETRIES):
       try:
-        ssh.connect(gw_ip, username=gw_user, port=gw_port, timeout=SSH_TIMEOUT)
+        if ssh is not None:
+          ssh.connect(gw_ip,
+                      username=gw_user,
+                      port=gw_port,
+                      timeout=SSH_TIMEOUT)
       except paramiko.ssh_exception.BadHostKeyException:
         ssh = None
         self.logger.error(
@@ -171,15 +196,19 @@ class MachineManagementInterface():
         "Gateway: %s", gw_ip)
     return None
 
-  def run_bmc_command(self, command):
+  def run_bmc_command(self, command: str) -> int:
     """ Exec a BMC command on the remote host """
+    tunnel: SSHTunnel 
     tunnel = MachineManagementInterface.obmc_tunnels.get(
         (self.mgmt_ip, self.mgmt_port), None)
+
     if tunnel is None:
-      tunnel = SSHTunnel((self.mgmt_ip, self.mgmt_port),
-                         self.mgmt_user,
-                         self.mgmt_password, (GATEWAY_IP, int(GATEWAY_PORT)),
-                         via_user=GATEWAY_USER)
+      tunnel = SSHTunnel(
+          (self.mgmt_ip, self.mgmt_port),
+          self.mgmt_user,
+          self.mgmt_password,
+          (GATEWAY_IP, int(GATEWAY_PORT)),  
+          via_user=GATEWAY_USER)
       MachineManagementInterface.obmc_tunnels[(self.mgmt_ip,
                                                self.mgmt_port)] = tunnel
     self.logger.info('Running OBMC command: %s', command)
@@ -188,13 +217,24 @@ class MachineManagementInterface():
     self.logger.info('OBMC return code: %s', retcode)
     return retcode
 
-  def run_ipmi_command(self, command):
+  def run_ipmi_command(self, command: str) -> int:
     """ Exec an IPMI command on the remote host """
     # pylint: disable=consider-using-f-string ; more-readable this way
-    cmd = 'ipmitool -H {} -U {} -P {} -p {} {}'.format(self.mgmt_ip,
-                                                       self.mgmt_user,
-                                                       self.mgmt_password,
-                                                       self.mgmt_port, command)
+    out_ch:Optional[IO[str]]
+    err_ch: Optional[IO[str]]
+    error: List[str]
+    er_append: str
+    exit_status: int
+
+    """ temp variables used in exec command """
+    i_var: ChannelStdinFile
+    o_var: ChannelFile
+    e_var: ChannelStderrFile
+    e_result: str
+
+    cmd: str = 'ipmitool -H {} -U {} -P {} -p {} {}'.format(
+        self.mgmt_ip, self.mgmt_user, self.mgmt_password, self.mgmt_port,
+        command)
     # pylint: enable=consider-using-f-string
     self.logger.info('Running IPMI command: %s', cmd)
     with Popen(cmd,
@@ -204,10 +244,11 @@ class MachineManagementInterface():
                universal_newlines=True) as subp:
       out_ch = subp.stdout
       err_ch = subp.stderr
-      error = [x.strip() for x in err_ch.readlines()]
-      error = '\n'.join(error)
-      exit_status = 0
-      if error:
+      if err_ch is not None:
+        error = [x.strip() for x in err_ch.readlines()]
+        er_append = '\n'.join(error)
+        exit_status = 0
+      if er_append:
         exit_status = 1
         try:
           if (not MachineManagementInterface.gateway_session or
@@ -217,27 +258,31 @@ class MachineManagementInterface():
                 GATEWAY_IP, GATEWAY_PORT, GATEWAY_USER)
 
           ssh = MachineManagementInterface.gateway_session
-          _, out_ch, err_ch = ssh.exec_command(cmd, timeout=SSH_TIMEOUT)
-          error = [x.strip() for x in err_ch.readlines()]
-          error = '\n'.join(error)
-          exit_status = out_ch.channel.exit_status
+          if ssh is not None:
+            _, o_var, e_var = ssh.exec_command(cmd, timeout=SSH_TIMEOUT)
+          if e_var is not None: 
+            error = [x.strip() for x in e_var.readlines()]
+            e_result = '\n'.join(error)
+            exit_status = o_var.channel.exit_status
         except paramiko.ssh_exception.SSHException:
           self.logger.warning('Failed to execute ipmitool command')
 
-      output = [x.strip() for x in out_ch.readlines()]
-      output = '\n'.join(output)
-      self.logger.warning('IPMI std output: %s', output)
-      self.logger.warning('IPMI err output: %s', error)
+      output = [x.strip() for x in o_var.readlines()]
+      rstr: str = '\n'.join(output)
+      self.logger.warning('IPMI std output: %s', rstr)
+      self.logger.warning('IPMI err output: %s', e_result)
       return exit_status
 
-  def restart_server(self):
+  def restart_server(self) -> Optional[int]:
     """ Method to restart a remote machine """
-    ret = None
+    ret_ipmi: Union[int, None] = None
+    ret_bmc: Union[str, int]
     if self.backend == MgmtBackend.IPMI:
-      ret = self.run_ipmi_command("chassis power cycle")
+      ret_ipmi = self.run_ipmi_command("chassis power cycle")
     else:
-      ret = self.run_bmc_command("chassisoff")
-      ret |= self.run_bmc_command("chassison")
+      ret_bmc = self.run_bmc_command("chassisoff")
+      ret_bmc |= self.run_bmc_command("chassison")
+    reveal_locals()  
     return ret
 
   def server_status(self):
