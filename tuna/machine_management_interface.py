@@ -31,20 +31,18 @@ from time import sleep
 from enum import Enum
 import os
 from subprocess import Popen, PIPE
+from typing import Dict, List, Tuple, Union, Any, Optional, IO
+
+import logging
 import paramiko
 from paramiko.dsskey import DSSKey
 from paramiko.ecdsakey import ECDSAKey
 from paramiko.ed25519key import Ed25519Key
 from paramiko.rsakey import RSAKey
 from paramiko.agent import AgentKey
+from paramiko.channel import ChannelFile
 from tuna.utils.utility import get_mmi_env_vars
-from paramiko.channel import Channel
 from tuna.utils.logger import setup_logger
-from typing import Dict, TYPE_CHECKING, List, Tuple, Union, Any, Optional, IO, TextIO
-from paramiko.channel import ChannelFile, ChannelStderrFile, ChannelStdinFile
-from io import StringIO
-import logging
-from paramiko.pkey import PKey
 
 ENV_VARS: Dict = get_mmi_env_vars()
 
@@ -60,7 +58,6 @@ def key_from_file() -> Union[Tuple[AgentKey, ...], List]:
   keyfiles: List = []
   keys: List = []
   full_path: str
-  keytype: Any[Type]
   for keytype, name in [
       (RSAKey, "rsa"),
       (DSSKey, "dsa"),
@@ -97,7 +94,7 @@ class SSHTunnel():  # pylint: disable=too-few-public-methods
   to access BMC systems via bastion
   '''
 
-  def __init__(self, host: Optional[Tuple[str, int]] , \
+  def __init__(self, host: Optional[Tuple[str, int]], \
   user: str, auth: str, via: Union[str] = None, \
   via_user: Optional[str] = None) -> None:
 
@@ -158,7 +155,7 @@ class MachineManagementInterface():
     self.mgmt_user: str = mgmt_user
     self.mgmt_password: str = mgmt_password
     self.logger: logging.Logger = setup_logger("MachineMgmt")
-    self.backend = backend
+    self.backend: MgmtBackend = backend
 
   def connect_to_gateway(self, gw_ip: str, gw_port: int,
                          gw_user: str) -> Union[paramiko.SSHClient, None]:
@@ -198,7 +195,7 @@ class MachineManagementInterface():
 
   def run_bmc_command(self, command: str) -> int:
     """ Exec a BMC command on the remote host """
-    tunnel: SSHTunnel 
+    tunnel: SSHTunnel
     tunnel = MachineManagementInterface.obmc_tunnels.get(
         (self.mgmt_ip, self.mgmt_port), None)
 
@@ -207,7 +204,7 @@ class MachineManagementInterface():
           (self.mgmt_ip, self.mgmt_port),
           self.mgmt_user,
           self.mgmt_password,
-          (GATEWAY_IP, int(GATEWAY_PORT)),  
+          (GATEWAY_IP, int(GATEWAY_PORT)),#type: ignore
           via_user=GATEWAY_USER)
       MachineManagementInterface.obmc_tunnels[(self.mgmt_ip,
                                                self.mgmt_port)] = tunnel
@@ -220,16 +217,13 @@ class MachineManagementInterface():
   def run_ipmi_command(self, command: str) -> int:
     """ Exec an IPMI command on the remote host """
     # pylint: disable=consider-using-f-string ; more-readable this way
-    out_ch:Optional[IO[str]]
     err_ch: Optional[IO[str]]
     error: List[str]
     er_append: str
     exit_status: int
 
-    """ temp variables used in exec command """
-    i_var: ChannelStdinFile
+    # temp variables used in exec command
     o_var: ChannelFile
-    e_var: ChannelStderrFile
     e_result: str
 
     cmd: str = 'ipmitool -H {} -U {} -P {} -p {} {}'.format(
@@ -242,7 +236,6 @@ class MachineManagementInterface():
                stderr=PIPE,
                shell=True,
                universal_newlines=True) as subp:
-      out_ch = subp.stdout
       err_ch = subp.stderr
       if err_ch is not None:
         error = [x.strip() for x in err_ch.readlines()]
@@ -260,7 +253,7 @@ class MachineManagementInterface():
           ssh = MachineManagementInterface.gateway_session
           if ssh is not None:
             _, o_var, e_var = ssh.exec_command(cmd, timeout=SSH_TIMEOUT)
-          if e_var is not None: 
+          if e_var is not None:
             error = [x.strip() for x in e_var.readlines()]
             e_result = '\n'.join(error)
             exit_status = o_var.channel.exit_status
@@ -273,21 +266,25 @@ class MachineManagementInterface():
       self.logger.warning('IPMI err output: %s', e_result)
       return exit_status
 
-  def restart_server(self) -> Optional[int]:
+  def restart_server(self) -> int :
     """ Method to restart a remote machine """
-    ret_ipmi: Union[int, None] = None
-    ret_bmc: Union[str, int]
+    ret_ipmi: int
+    ret_bmc: int
+    ret_status: bool = False
+
     if self.backend == MgmtBackend.IPMI:
       ret_ipmi = self.run_ipmi_command("chassis power cycle")
+      ret_status = True
     else:
       ret_bmc = self.run_bmc_command("chassisoff")
       ret_bmc |= self.run_bmc_command("chassison")
-    reveal_locals()  
-    return ret
+    if ret_status:
+      return ret_ipmi
+    return ret_bmc
 
-  def server_status(self):
+  def server_status(self) -> int:
     """ Return the status of the management backend of the remote machine """
-    ret = None
+    ret: Optional[int]  = None
     if self.backend == MgmtBackend.IPMI:
       ret = self.run_ipmi_command("chassis status")
     else:
