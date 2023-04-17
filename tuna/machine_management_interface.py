@@ -58,6 +58,8 @@ def key_from_file() -> Union[Tuple[AgentKey, ...], List]:
   keyfiles: List = []
   keys: List = []
   full_path: str
+  keytype: Any[type]
+
   for keytype, name in [
       (RSAKey, "rsa"),
       (DSSKey, "dsa"),
@@ -204,7 +206,7 @@ class MachineManagementInterface():
           (self.mgmt_ip, self.mgmt_port),
           self.mgmt_user,
           self.mgmt_password,
-          (GATEWAY_IP, int(GATEWAY_PORT)),#type: ignore
+          (GATEWAY_IP, int(GATEWAY_PORT)),  #type: ignore
           via_user=GATEWAY_USER)
       MachineManagementInterface.obmc_tunnels[(self.mgmt_ip,
                                                self.mgmt_port)] = tunnel
@@ -266,7 +268,7 @@ class MachineManagementInterface():
       self.logger.warning('IPMI err output: %s', e_result)
       return exit_status
 
-  def restart_server(self) -> int :
+  def restart_server(self) -> int:
     """ Method to restart a remote machine """
     ret_ipmi: int
     ret_bmc: int
@@ -284,7 +286,7 @@ class MachineManagementInterface():
 
   def server_status(self) -> int:
     """ Return the status of the management backend of the remote machine """
-    ret: Optional[int]  = None
+    ret: Optional[int] = None
     if self.backend == MgmtBackend.IPMI:
       ret = self.run_ipmi_command("chassis status")
     else:
