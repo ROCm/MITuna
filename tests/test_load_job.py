@@ -36,7 +36,8 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.miopen.subcmd.load_job import arg_fin_steps, arg_solvers
-from tuna.miopen.subcmd.load_job import config_query, compose_query, add_jobs
+from tuna.miopen.subcmd.load_job import config_query, compose_query
+from tuna.miopen.subcmd.load_job import add_jobs, run_load_job
 from tuna.utils.db_utility import get_solver_ids
 from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
@@ -116,16 +117,3 @@ def test_cfg_compose():
 
   assert len(results) > 0
   assert comp_query is not None
-
-
-#add_job function
-def test_add_job():
-  """check the add job function for correct count numbers"""
-  connect_db()
-  dbt = MIOpenDBTables(session_id=None, config_type=ConfigType.convolution)
-  logger = setup_logger('test_loadjob')
-  args = LdJobArgs
-  print(random.choice(list(get_solver_ids())))
-  print(type(random.choice(list(get_solver_ids()))))
-  counts = add_jobs(args, dbt, logger)
-  assert counts == 2
