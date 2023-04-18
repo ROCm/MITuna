@@ -1,0 +1,14 @@
+---
+# common script arguments
+# yamllint disable rule:key-duplicates
+arch: 'gfx908'
+num_cu: 120
+config_type: 'convolution'
+session_id: 1
+remote_machine: false
+label: 'Example'
+restart_machine: false
+docker_name: 'my_docker_name'
+
+load_job:
+  enabled: true

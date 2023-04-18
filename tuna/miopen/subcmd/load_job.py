@@ -206,7 +206,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
 
 
 def run_load_job(args: argparse.Namespace, logger: logging.Logger):
-  """trigger the script run in miopen lib"""
+  """Load jobs based on cmd line arguments"""
 
   connect_db()
 

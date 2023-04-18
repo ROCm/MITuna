@@ -43,6 +43,7 @@ def test_yaml_parser():
   miopen_yaml1 = "{0}/../tuna/miopen/yaml_files/sample1.yaml".format(this_path)
   miopen_yaml2 = "{0}/../tuna/miopen/yaml_files/sample2.yaml".format(this_path)
   miopen_yaml3 = "{0}/../tuna/miopen/yaml_files/sample3.yaml".format(this_path)
+  miopen_yaml4 = "{0}/../tuna/miopen/yaml_files/sample4.yaml".format(this_path)
   example_yaml = "{0}/../tuna/example/sample.yaml".format(this_path)
 
   parse_miopen_yaml1(miopen_yaml1, Library('miopen'))
@@ -104,6 +105,7 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'restart_machine': False,
       'session_id': 1
   }
+  
 
   assert (yaml_dicts[0] == dict1)
   assert (yaml_dicts[1] == dict2)
@@ -162,6 +164,36 @@ def parse_miopen_yaml3(miopen_yaml, miopen):
       'session_id': 1
   }
   assert (yaml_dicts[0] == dict1)
+
+
+def parse_miopen_yaml4(miopen_yaml, miopen):
+  yaml_files = parse_yaml(miopen_yaml, miopen)
+  assert len(yaml_files) == 1
+
+  yaml_dicts = []
+  for yfile in yaml_files:
+    with open(yfile, encoding="utf8") as stream:
+      yaml_dict = yaml.safe_load(stream)
+      yaml_dicts.append(yaml_dict)
+
+  dict4 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'init_session': True,
+      'label': 'Example',
+          'load_job': {
+          'solvers': '('', None)]',
+          'tunable': 'False',
+          'fin_steps': 'False',
+          'tag': 'someTag'
+      },
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
+  assert (yaml_dicts[0] == dict4)
 
 
 def parse_example_yaml(example_yaml, example):
