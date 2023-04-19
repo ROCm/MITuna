@@ -35,8 +35,6 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.db.session import Session
 from tuna.utils.db_utility import session_retry
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import split_packets
-from tuna.utils.utility import SimpleDict
 from tuna.db_engine import ENGINE
 
 # Setup logging
@@ -90,37 +88,6 @@ def parse_args():
   return args
 
 
-def get_fdb_query(dbt):
-  """! Compose query to get all fdb entries for the session"""
-  with DbSession() as session:
-    query = session.query(dbt.find_db_table)\
-            .filter(dbt.find_db_table.session == dbt.session_id)\
-            .filter(dbt.find_db_table.valid == 1)
-
-  return query
-
-
-def get_fdb_entries(dbt):
-  """! Compose query to get all fdb entries for the session, performs better than get_fdb_query"""
-  with DbSession() as session:
-    fdb_attr = [
-        "config", "solver", "session", "fdb_key", "params", "kernel_time",
-        "workspace_sz", "alg_lib", "opencl", "kernel_group"
-    ]
-    attr_str = ','.join(fdb_attr)
-    query = f"select {attr_str} from {dbt.find_db_table.__tablename__}"\
-            f" where valid=1 and session={dbt.session_id} and kernel_time>0;"
-    ret = session.execute(query)
-    entries = []
-    for row in ret:
-      entry = SimpleDict()
-      for i, col in enumerate(fdb_attr):
-        setattr(entry, col, row[i])
-      entries.append(entry)
-
-  return entries
-
-
 def get_golden_query(dbt, golden_version):
   """! Compose query to get all entries for a golden miopen version"""
   with DbSession() as session:
@@ -129,28 +96,6 @@ def get_golden_query(dbt, golden_version):
             .filter(dbt.golden_table.valid == 1)
 
   return query
-
-
-def get_golden_entries(dbt, golden_version):
-  """! Compose query to get all golden db entries for the session,
-        performs better than get_golden_query"""
-  with DbSession() as session:
-    fdb_attr = [
-        "config", "solver", "session", "fdb_key", "params", "kernel_time",
-        "workspace_sz", "alg_lib", "opencl", "kernel_group"
-    ]
-    attr_str = ','.join(fdb_attr)
-    query = f"select {attr_str} from {dbt.golden_table.__tablename__}"\
-            f" where valid=1 and golden_miopen_v={golden_version};"
-    ret = session.execute(query)
-    entries = []
-    for row in ret:
-      entry = SimpleDict()
-      for i, col in enumerate(fdb_attr):
-        setattr(entry, col, row[i])
-      entries.append(entry)
-
-  return entries
 
 
 def latest_golden_v(dbt):
@@ -169,32 +114,6 @@ def latest_golden_v(dbt):
   return version
 
 
-def get_gold_query(session, gold_table, gold_entry):
-  """Construct a Db query for the golden entry
-  """
-  query = session.query(gold_table).filter(
-      gold_table.golden_miopen_v == gold_entry.golden_miopen_v,
-      gold_table.config == gold_entry.config,
-      gold_table.solver == gold_entry.solver,
-      gold_table.arch == gold_entry.arch,
-      gold_table.num_cu == gold_entry.num_cu)
-
-  return query
-
-
-def update_gold_entry(session, golden_table, gold_entry):
-  """ Add a new entry to golden table if there isnt one already """
-  gold_query = get_gold_query(session, golden_table, gold_entry)
-  obj = gold_query.first()
-  if obj:  # existing entry in db
-    ret = obj
-  else:
-    # Insert the above entry
-    session.add(gold_entry)
-    ret = gold_entry
-  return ret
-
-
 def sess_info(session):
   """ get map for session id to arch / num_cu """
   sess_map = {}
@@ -203,64 +122,6 @@ def sess_info(session):
     sess_map[entry.id] = (entry.arch, entry.num_cu)
 
   return sess_map
-
-
-def init_gold_entry(dbt, golden_v, config, solver, arch, num_cu):
-  """ initialize golden_table entry with key values """
-  gold_entry = dbt.golden_table()
-  #unique identifiers
-  gold_entry.golden_miopen_v = golden_v
-  gold_entry.config = config
-  gold_entry.solver = solver
-  gold_entry.arch = arch
-  gold_entry.num_cu = num_cu
-  return gold_entry
-
-
-def copy_gold_data(gold_entry, entry):
-  """ copy data fields for a golden_table entry """
-  gold_entry.valid = 1
-  gold_entry.session = entry.session
-
-  gold_entry.fdb_key = entry.fdb_key
-  #if new entry has no params (is from a find tuning), then don't overwrite
-  if entry.params:
-    gold_entry.params = entry.params
-  gold_entry.kernel_time = entry.kernel_time
-  gold_entry.workspace_sz = entry.workspace_sz
-  gold_entry.alg_lib = entry.alg_lib
-  gold_entry.opencl = entry.opencl
-
-  gold_entry.kernel_group = entry.kernel_group
-
-
-def merge_golden_entries(session, dbt, golden_v, entries, simple_copy=False):
-  """! Retrieve fdb entries and populate golden table"""
-  sess_map = sess_info(session)
-  count = 0
-  print_interval = (len(entries) + 9) // 10
-  for copy_entry in entries:
-    arch, num_cu = sess_map[copy_entry.session]
-    golden_entry = init_gold_entry(dbt, golden_v, copy_entry.config,
-                                   copy_entry.solver, arch, num_cu)
-
-    if simple_copy:
-      session.add(golden_entry)
-    else:
-      #resolve to existing entry if present
-      golden_entry = update_gold_entry(session, dbt.golden_table, golden_entry)
-
-    copy_gold_data(golden_entry, copy_entry)
-
-    count += 1
-    if count % print_interval == 0:
-      gld = golden_entry
-      t_str = f"{count}: {gld.golden_miopen_v}-{gld.config}-{gld.solver}-{gld.arch}-{gld.num_cu}"
-      LOGGER.info(t_str)
-
-  session.commit()
-
-  return count
 
 
 def verify_no_duplicates(entries):
@@ -280,36 +141,6 @@ def verify_no_duplicates(entries):
     test_set[key] = entry
 
   return True
-
-
-def process_merge_golden(dbt, golden_v, entries, s_copy=False):
-  """ retry loop for merging into golden table """
-  LOGGER.info("Merging %s entries", len(entries))
-
-  all_packs = split_packets(entries, 10000)
-  num_packs = len(all_packs)
-  LOGGER.info("Merging %s packs", num_packs)
-
-  pcnt = 0
-  prev_pcnt = 0
-  with DbSession() as session:
-
-    def actuator(func, pack):
-      return func(session, dbt, golden_v, pack, s_copy)
-
-    for i, pack in enumerate(all_packs):
-      ret = session_retry(session, merge_golden_entries,
-                          functools.partial(actuator, pack=pack), LOGGER)
-
-      if not ret:
-        LOGGER.error("Failed to merge db pack %s", i)
-        return False
-      pcnt = int((i + 1) * 100 / num_packs)
-      if pcnt > prev_pcnt:
-        prev_pcnt = pcnt
-        LOGGER.info("Merged: %s%%", pcnt)
-
-  return len(entries)
 
 
 def get_perf_str(args, table_name):
@@ -373,8 +204,8 @@ def gold_base_update(session: DbSession,
     session.execute(update_q)
 
   LOGGER.info("Inserting golden version %s -> %s.", base_gold_v, gold_v)
-  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config, fdb_key"\
-  ", params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
+  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
+  ", fdb_key, params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
   f" select valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   f" from conv_golden where golden_miopen_v={base_gold_v} and valid=1 and kernel_time>=0;"
@@ -403,8 +234,8 @@ def gold_session_update(session: DbSession,
     session.execute(update_q)
 
   LOGGER.info("Gold %s Insert session %s.", gold_v, tune_s)
-  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config, fdb_key"\
-  ", params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
+  insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
+  ", fdb_key, params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
   f" select cfd.valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   " from conv_find_db as cfd inner join session as s on cfd.session=s.id"\
@@ -429,21 +260,19 @@ def main():
   with DbSession() as session:
     if args.base_golden_v:
 
-      def actuator(func):
+      def actuator1(func):
         return func(session, args.golden_v, args.base_golden_v, args.overwrite)
 
-      session_retry(session, gold_base_update, functools.partial(actuator),
+      session_retry(session, gold_base_update, functools.partial(actuator1),
                     LOGGER)
 
     if args.session_id:
 
-      def actuator(func):
+      def actuator2(func):
         return func(session, args.golden_v, args.session_id, args.overwrite)
 
-      session_retry(session, gold_session_update, functools.partial(actuator),
+      session_retry(session, gold_session_update, functools.partial(actuator2),
                     LOGGER)
-
-  LOGGER.info('Finished Updating conv_golden %s', args.golden_v)
 
   if args.create_perf_table:
     LOGGER.info('Updating conv perf DB table')
