@@ -106,7 +106,7 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'restart_machine': False,
       'session_id': 1
   }
-  
+
   dict4 = {
       'arch': 'gfx908',
       'config_type': 'convolution',
@@ -124,7 +124,7 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'restart_machine': False,
       'session_id': 1
   }
-  
+
   print(yaml_dicts[3])
   print(dict4)
   assert (yaml_dicts[0] == dict1)
