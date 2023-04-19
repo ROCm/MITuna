@@ -27,28 +27,35 @@
 """Interface class to set up and launch tuning functionality"""
 from multiprocessing import Value, Lock, Queue as mpQueue
 
+from typing import Optional
+from paramiko.channel import ChannelFile
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
+import logging
+from tuna.worker_interface import WorkerInterface
+from tuna.miopen import chk_gpu_status
+from tuna.miopen import Machine
 
 
 class MITunaInterface():
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
-  def __init__(self, library=Library.MIOPEN):
-    self.library = library
+  def __init__(self, library=Library.MIOPEN) -> None:
+    self.library: Library  = library
 
-    self.logger = setup_logger(logger_name=self.library.value,
+    self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
                                add_streamhandler=True)
-    self.args = None
+    self.args: Optional[str] = None
 
-  def check_docker(self, worker, dockername="miopentuna"):
+  def check_docker(self, worker, dockername="miopentuna") -> None:
     """! Checking for docker
       @param worker The worker interface instance
       @param dockername The name of the docker
     """
     self.logger.warning("docker not installed or requires sudo .... ")
+    out2: ChannelFile
     _, out2, _ = worker.exec_command("sudo docker info")
     while not out2.channel.exit_status_ready():
       self.logger.warning(out2.readline())
@@ -56,21 +63,23 @@ class MITunaInterface():
       self.logger.warning(
           "docker not installed or failed to run with sudo .... ")
     else:
+      out: ChannelFile
       _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
-      line = None
+      line: Optional[str] = None
       for line in out.readlines():
-        if line.find(dockername) != -1:
-          self.logger.warning('%s docker image exists', dockername)
-          break
+        if line is not None:
+          if line.find(dockername) != -1:
+            self.logger.warning('%s docker image exists', dockername)
+            break
       if line is None:
         self.logger.warning('%s docker image does not exist', dockername)
 
   def check_status(self,
-                   worker,
-                   b_first,
-                   gpu_idx,
-                   machine,
-                   dockername="miopentuna"):
+                   worker: WorkerInterface,
+                   b_first: int,
+                   gpu_idx: int,
+                   machine: Machine,
+                   dockername: str ="miopentuna") -> bool:
     """! Function to check gpu_status
       @param worker The worker interface instance
       @param b_first Flag to keep track of visited GPU
@@ -97,17 +106,18 @@ class MITunaInterface():
       self.check_docker(worker, dockername)
     else:
       _, out, _ = worker.exec_command(f"docker images | grep {dockername}")
-      line = None
+      line: Optional[str] = None
       for line in out.readlines():
-        if line.find(dockername) != -1:
-          self.logger.warning('%s docker image exists', dockername)
-          break
+        if line is not None:
+          if line.find(dockername) != -1:
+            self.logger.warning('%s docker image exists', dockername)
+            break
       if line is None:
         self.logger.warning('%s docker image does not exist', dockername)
 
     return True
 
-  def add_tables(self):
+  def add_tables(self)-> bool :
     """Add library specific tables"""
     return self.add_tables()
 
