@@ -12,3 +12,7 @@ docker_name: 'my_docker_name'
 
 load_job:
   enabled: true
+  solvers: "[('', None)]"
+  tunable: false
+  fin_steps: false
+  tag: 'someTag'

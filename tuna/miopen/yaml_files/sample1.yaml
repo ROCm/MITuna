@@ -28,6 +28,10 @@ import_configs:
 
 load_job:
   enabled: true
+  solvers: "[('', None)]"
+  tunable: false
+  fin_steps: false
+  tag: 'someTag'
 
 update_applicability:
   enabled: false
