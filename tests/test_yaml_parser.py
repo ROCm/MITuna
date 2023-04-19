@@ -105,6 +105,25 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'restart_machine': False,
       'session_id': 1
   }
+  
+  dict4 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'init_session': True,
+      'label': 'Example',
+      'load_job': {
+          'solvers': '('
+                     ', None)]',
+          'tunable': 'False',
+          'fin_steps': 'False',
+          'tag': 'someTag'
+      },
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
 
   assert (yaml_dicts[0] == dict1)
   assert (yaml_dicts[1] == dict2)
