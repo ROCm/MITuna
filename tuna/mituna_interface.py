@@ -27,16 +27,15 @@
 """Interface class to set up and launch tuning functionality"""
 from multiprocessing import Value, Lock, Queue as mpQueue
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from paramiko.channel import ChannelFile
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 import logging
 from tuna.worker_interface import WorkerInterface
-from tuna.miopen import chk_gpu_status
-from tuna.miopen import Machine
-
+from tuna.machine import Machine
+import pdb
 
 class MITunaInterface():
   """ Interface class extended by libraries. The purpose of this class is to define
@@ -47,8 +46,10 @@ class MITunaInterface():
 
     self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
                                add_streamhandler=True)
-    self.args: Optional[str] = None
+    self.args: Optional[str]
 
+    self.set_label()
+    
   def check_docker(self, worker, dockername="miopentuna") -> None:
     """! Checking for docker
       @param worker The worker interface instance
@@ -121,9 +122,11 @@ class MITunaInterface():
     """Add library specific tables"""
     return self.add_tables()
 
-  def get_num_procs(self, machine):
+  def get_num_procs(self, machine: Machine) -> Optional[range]:
     """Determine number of processes by compute capacity"""
-    worker_ids = None
+    worker_ids: Optional[range] = None
+    num_procs: int
+    env: Dict[str, Any]
     env = get_env_vars()
     if env['slurm_cpus'] > 0:
       num_procs = int(env['slurm_cpus'])
@@ -139,8 +142,9 @@ class MITunaInterface():
 
     return worker_ids
 
-  def get_f_vals(self, machine, worker_ids):
+  def get_f_vals(self, machine, worker_ids) -> Dict[str, Any]:
     """Determine kwargs for worker_interface"""
+    f_vals: Dict[str, Any]
     f_vals = self.compose_f_vals(machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))
     f_vals['envmt'] = self.get_envmt()
@@ -150,12 +154,12 @@ class MITunaInterface():
     """Get runtime envmt"""
     raise NotImplementedError("Not implemented")
 
-  def compose_f_vals(self, machine):
+  def compose_f_vals(self, machine: Machine)-> Dict[str, Any]:
     """! Compose dict for WorkerInterface constructor
       @param args The command line arguments
       @param machine Machine instance
     """
-    f_vals = {}
+    f_vals: Dict[str, Any] = {}
     f_vals["barred"] = Value('i', 0)
     f_vals["bar_lock"] = Lock()
     #multiprocess queue for jobs, shared on machine
@@ -168,6 +172,12 @@ class MITunaInterface():
     f_vals["end_jobs"] = Value('i', 0)
 
     return f_vals
+  
+  def set_label(self):
+    if self.args.label is not None and \
+      self.args.docker_name is  not None and \
+      self.args.session_id is  not None:
+        return 'label','docker_name','session_id'
 
   def get_kwargs(self, gpu_idx, f_vals):
     """! Helper function to set up kwargs for worker instances
