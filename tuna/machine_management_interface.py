@@ -284,15 +284,6 @@ class MachineManagementInterface():
       return ret_ipmi
     return ret_bmc
 
-  def server_status(self) -> int:
-    """ Return the status of the management backend of the remote machine """
-    ret: Optional[int] = None
-    if self.backend == MgmtBackend.IPMI:
-      ret = self.run_ipmi_command("chassis status")
-    else:
-      ret = self.run_bmc_command("chassisstate")
-    return ret
-
 
 if __name__ == '__main__':
   pass
