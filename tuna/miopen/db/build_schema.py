@@ -46,7 +46,7 @@ def recreate_triggers(drop_triggers, create_triggers):
       try:
         conn.execute(trg)
       except OperationalError as oerr:
-        LOGGER.warning("Operational Error occured while adding trigger: '%s'",
+        LOGGER.warning("Operational Error occurred while adding trigger: '%s'",
                        trg)
         LOGGER.info('%s \n', oerr)
         continue

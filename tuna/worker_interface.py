@@ -509,7 +509,7 @@ class WorkerInterface(Process):
         ret: bool = self.step()
         self.logger.info("proc %s step %s", self.gpu_id, ret)
         if not ret:
-          self.logger.warning('No more steps, quiting...')
+          self.logger.warning('No more steps, quitting...')
           with self.bar_lock:
             self.num_procs.value -= 1
           return True

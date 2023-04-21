@@ -90,7 +90,7 @@ def create_tables(all_tables):
     except (OperationalError, ProgrammingError) as err:
       LOGGER.warning('Err occurred %s \n For table: %s.', err, table)
       LOGGER.warning(
-          'Schema migration not implemented, please udpate schema manually')
+          'Schema migration not implemented, please update schema manually')
       continue
 
   return True

@@ -1,4 +1,4 @@
-New library integration 
+New library integration
 =======================
 An example of how to integrate external applications in Tuna to utilize the scaling
 features of Tuna
@@ -11,7 +11,7 @@ The supported tuning steps are:
 ```
 ./go_fish.py example --add_tables
 ./go_fish.py example --init_session -l my_label
-./tuna/example/load_job.py -a gfx908 -n 120 -l my_lable --session_id 1
+./example/load_job.py -a gfx908 -n 120 -l my_label --session_id 1
 ./go_fish.py example --execute --session_id 1
 ```
 
