@@ -26,16 +26,15 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 from multiprocessing import Value, Lock, Queue as mpQueue
-
 from typing import Optional, Dict, Any
 from io import StringIO
 import logging
 from paramiko.channel import ChannelFile
+from tuna.worker_interface import WorkerInterface
+from tuna.machine import Machine
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
-from tuna.worker_interface import WorkerInterface
-from tuna.machine import Machine
 
 
 class MITunaInterface():
@@ -47,17 +46,15 @@ class MITunaInterface():
 
     self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
                                                add_streamhandler=True)
-    self.args: Optional[str]
-
-    self.set_label()
+    self.args: Optional[str] = None
 
   def check_docker(self, worker, dockername="miopentuna") -> None:
     """! Checking for docker
       @param worker The worker interface instance
       @param dockername The name of the docker
     """
-    self.logger.warning("docker not installed or requires sudo .... ")
     out2: ChannelFile
+    self.logger.warning("docker not installed or requires sudo .... ")
     _, out2, _ = worker.exec_command("sudo docker info")
     while not out2.channel.exit_status_ready():
       self.logger.warning(out2.readline())
@@ -66,8 +63,8 @@ class MITunaInterface():
           "docker not installed or failed to run with sudo .... ")
     else:
       out: StringIO = StringIO()
-      _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
       line: Optional[str] = None
+      _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
       for line in out.readlines():
         if line is not None:
           if line.find(dockername) != -1:
@@ -143,7 +140,7 @@ class MITunaInterface():
 
     return worker_ids
 
-  def get_f_vals(self, machine, worker_ids) -> Dict[str, Any]:
+  def get_f_vals(self, machine: Machine, worker_ids: range) -> Dict[str, Any]:
     """Determine kwargs for worker_interface"""
     f_vals: Dict[str, Any]
     f_vals = self.compose_f_vals(machine)
@@ -174,32 +171,15 @@ class MITunaInterface():
 
     return f_vals
 
-  def set_label(self):
-    """ set the dictionary value """
-    if self.args.label is not None:
-      return 'label'
-    return None
-
-  def set_docker_name(self):
-    """ Set the dictionary value """
-    if self.args.docker_name is not None:
-      return 'docker_name'
-    return None
-
-  def set_session_id(self):
-    """ Set the dictionary value """
-    if self.args.session_id is not None:
-      return 'session_id'
-    return None
-
-  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]):
+  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
     """
     envmt: Dict[str, Any] = f_vals["envmt"].copy()
+    kwargs = {}
 
-    kwargs: Dict[str, Any] = {
+    kwargs = {
         'machine': f_vals["machine"],
         'gpu_id': gpu_idx,
         'num_procs': f_vals["num_procs"],
@@ -210,9 +190,11 @@ class MITunaInterface():
         'job_queue_lock': f_vals["job_queue_lock"],
         'result_queue': f_vals["result_queue"],
         'result_queue_lock': f_vals["result_queue_lock"],
-        'label': self.set_label(),
-        'docker_name': self.set_docker_name(),
+        'label': self.args.label,  #type: ignore
+        'docker_name': self.args.docker_name,  #type: ignore
         'end_jobs': f_vals['end_jobs'],
-        'session_id': self.set_session_id()
+        'session_id':
+            self.args.session_id  #type: ignore
     }
+
     return kwargs
