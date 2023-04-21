@@ -50,7 +50,7 @@ def parse_args():
                       type=str,
                       dest='label',
                       required=True,
-                      help='Label to annontate the jobs.',
+                      help='Label to annotate the jobs.',
                       default='new')
 
   args = parser.parse_args()

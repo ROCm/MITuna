@@ -34,14 +34,14 @@ the tuning part.
 Tuning Steps
 ------------
 
-Tuning stores intermittent data in a central mySQL database. Each reference to a table, 
+Tuning stores intermittent data in a central mySQL database. Each reference to a table,
 refers to a table in this database. Each table and its associated schema is found in miopen_tables.py.
 
-Tuning is divided in multiple steps and each step builds on top of the previous ones. 
-To start a tuning session, some prerequisite have to be asserted: setting up configurations, 
-getting the latest solvers and their associated applicability from MIOpen, 
-and adding the jobs that compose the tuning session. 
-Once these prerequisite are established the tuning session can begin. Each step, 
+Tuning is divided in multiple steps and each step builds on top of the previous ones.
+To start a tuning session, some prerequisite have to be asserted: setting up configurations,
+getting the latest solvers and their associated applicability from MIOpen,
+and adding the jobs that compose the tuning session.
+Once these prerequisite are established the tuning session can begin. Each step,
 including the prerequisites are detailed below.
 
 **Add Network Configurations(1)**
@@ -59,8 +59,8 @@ benchmarking of a certain model, post tuning.
 ```
 
 The config table contains network configurations. If provided with a text file of MIOpenDriver
-commands, the import script can translate those commands and populate the config table. 
-Additionally the user may provide a name to tag a configuration for easier recall later. 
+commands, the import script can translate those commands and populate the config table.
+Additionally the user may provide a name to tag a configuration for easier recall later.
 A tag will be required when adding a tuning job. Tags are stored in the config_tags table.
 A model and framework name and version are also required. This enables MITuna to track
 benchmark performance post-tuning.
@@ -68,10 +68,10 @@ benchmark performance post-tuning.
 ```
 ./go_fish.py miopen import_configs --add_model Resnet50 --md_version 1
 ./go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1
-./go_fish.py miopen import_configs -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt 
+./go_fish.py miopen import_configs -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt
 --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1</p>
 -t - tag
--f - filepath 
+-f - filepath
 --model - model name
 --md_version - model version
 --framework - framework name
@@ -81,7 +81,7 @@ benchmark performance post-tuning.
 
 **Add Solvers (2)**
 
-The solver table contains MIOpen solvers and solver characteristics. 
+The solver table contains MIOpen solvers and solver characteristics.
 This should be updated when an MIOpen version modifies solvers.
 
 ```
@@ -90,7 +90,7 @@ This should be updated when an MIOpen version modifies solvers.
 
 **Add Tuning Session (3)**
 
-Session will track the architecture and skew, as well as the miopen version and 
+Session will track the architecture and skew, as well as the miopen version and
 rocm version for the tuning session.
 
 This command will need to be run from inside the tuning environment eg MITuna docker
@@ -116,7 +116,7 @@ solver_applicability table with applicable solvers for each configuration for th
 **Load Jobs (5)**
 
 Time to create the jobs for the tuning session. Specify the session id, the configs that
-should be tuned, and the fin_step to be executed. Confings can be added by using the tag from
+should be tuned, and the fin_step to be executed. Configs can be added by using the tag from
 the config_tags table. Jobs should have a compile and an eval fin step pair.
 
 Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, and miopen_find_eval.
@@ -132,13 +132,13 @@ Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, a
 
 **Compile Step (6)**
 
-Once prerequisites are set, tuning can begin. To compile the jobs, 
+Once prerequisites are set, tuning can begin. To compile the jobs,
 supply the session id along with the compile fin_step matching the one in the job table.
 
 [Use backend=HIPNOGPU docker]
 ```
 ./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile
---session_id    - tuning session id 
+--session_id    - tuning session id
 --fin_steps     - execute this operation
 ```
 
@@ -169,4 +169,3 @@ eg for MI100, -p will produce a gfx90878.db file, -f will produce gfx90878.HIP.f
 -f           - export find db
 -k           - export kernel db
 ```
-

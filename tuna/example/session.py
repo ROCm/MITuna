@@ -38,7 +38,7 @@ from tuna.worker_interface import WorkerInterface
 
 
 class SessionExample(BASE, SessionMixin):
-  """Session table to keep track of tunning sesions"""
+  """Session table to keep track of tuning sessions"""
   #pylint: disable=attribute-defined-outside-init
 
   __tablename__: str = "session_example"

@@ -1,4 +1,4 @@
-TUNA 
+TUNA
 ====
 
 Tuna is a distributed tuning infrastructure that provides pre-compiled kernels
@@ -13,7 +13,7 @@ Install python3.9
 ```
 apt-get update && apt-get install software-properties-common
 add-apt-repository ppa:deadsnakes/ppa
-apt install python3.9
+apt install python3.9 python3.9-dev python3.9-venv
 ```
 
 Install pip for python3.9
@@ -28,9 +28,21 @@ Install MySQL server
 apt-get install mysql-server
 ```
 
+```
+mysqld --initialize
+grep 'temporary password' /var/log/mysql/error.log
+```
+
 Enable the service
 ```
 systemctl start mysql
+```
+
+```
+mysql -u root -p
+<use the temporary password>
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY 'root-password';
+mysql> CREATE DATABASE <database_name>;
 ```
 
 Install ipmitool
@@ -50,7 +62,7 @@ passwordless ssh.
 
 Installation
 ------------
-Clone the repo using 
+Clone the repo using
 ```
 git clone <repo url>
 ```
@@ -60,7 +72,7 @@ cd MITuna
 ```
 Create a virtual envornment, and activate it (by sourcing its `activate` script)
 ```
-virtualenv -p python3.9 myvenv
+python3.9 -m venv myvenv
 source myvenv/bin/activate
 ```
 Install the required dependencies:
@@ -72,7 +84,7 @@ The above assumes that Tuna lives in the home directory and the virtual environm
 Add the following environment variables to a local file and then source the file:
 ```
 export TUNA_DB_USER_NAME=root
-export TUNA_DB_PASSWORD=<password for root>
+export TUNA_DB_USER_PASSWORD=<password for root>
 export TUNA_DB_HOSTNAME=localhost
 export TUNA_DB_NAME=<database_name>
 export gateway_ip=<gateway_ip>
