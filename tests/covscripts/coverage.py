@@ -78,12 +78,8 @@ def branch(root_dir, coverage_file_name_txt, coverage_file_name_json):
     prevcov_file = f.readline().strip()
     prev_cov = float(prevcov_file)
 
-  print(
-      f"Current Testing Coverage for current branch is: {curcov_percentage_ftdt}%"
-  )
-  print(
-      f"Current Testing Coverage for develop branch is: {prevcov_percentage_ftdt}%"
-  )
+  print(f"Current Testing Coverage for current branch is: {cur_cov}%")
+  print(f"Current Testing Coverage for develop branch is: {prev_cov}%")
   prct_change = (prev_cov - cur_cov) / prev_cov * 100
   if prct_change > 1:
     raise ValueError(
