@@ -28,28 +28,29 @@
 from multiprocessing import Value, Lock, Queue as mpQueue
 
 from typing import Optional, Dict, Any
+from io import StringIO
+import logging
 from paramiko.channel import ChannelFile
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
-import logging
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
-import pdb
+
 
 class MITunaInterface():
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
   def __init__(self, library=Library.MIOPEN) -> None:
-    self.library: Library  = library
+    self.library: Library = library
 
     self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
-                               add_streamhandler=True)
+                                               add_streamhandler=True)
     self.args: Optional[str]
 
     self.set_label()
-    
+
   def check_docker(self, worker, dockername="miopentuna") -> None:
     """! Checking for docker
       @param worker The worker interface instance
@@ -64,7 +65,7 @@ class MITunaInterface():
       self.logger.warning(
           "docker not installed or failed to run with sudo .... ")
     else:
-      out: ChannelFile
+      out: StringIO = StringIO()
       _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
       line: Optional[str] = None
       for line in out.readlines():
@@ -80,7 +81,7 @@ class MITunaInterface():
                    b_first: int,
                    gpu_idx: int,
                    machine: Machine,
-                   dockername: str ="miopentuna") -> bool:
+                   dockername: str = "miopentuna") -> bool:
     """! Function to check gpu_status
       @param worker The worker interface instance
       @param b_first Flag to keep track of visited GPU
@@ -118,7 +119,7 @@ class MITunaInterface():
 
     return True
 
-  def add_tables(self)-> bool :
+  def add_tables(self) -> bool:
     """Add library specific tables"""
     return self.add_tables()
 
@@ -154,7 +155,7 @@ class MITunaInterface():
     """Get runtime envmt"""
     raise NotImplementedError("Not implemented")
 
-  def compose_f_vals(self, machine: Machine)-> Dict[str, Any]:
+  def compose_f_vals(self, machine: Machine) -> Dict[str, Any]:
     """! Compose dict for WorkerInterface constructor
       @param args The command line arguments
       @param machine Machine instance
@@ -172,21 +173,33 @@ class MITunaInterface():
     f_vals["end_jobs"] = Value('i', 0)
 
     return f_vals
-  
-  def set_label(self):
-    if self.args.label is not None and \
-      self.args.docker_name is  not None and \
-      self.args.session_id is  not None:
-        return 'label','docker_name','session_id'
 
-  def get_kwargs(self, gpu_idx, f_vals):
+  def set_label(self):
+    """ set the dictionary value """
+    if self.args.label is not None:
+      return 'label'
+    return None
+
+  def set_docker_name(self):
+    """ Set the dictionary value """
+    if self.args.docker_name is not None:
+      return 'docker_name'
+    return None
+
+  def set_session_id(self):
+    """ Set the dictionary value """
+    if self.args.session_id is not None:
+      return 'session_id'
+    return None
+
+  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]):
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
     """
-    envmt = f_vals["envmt"].copy()
+    envmt: Dict[str, Any] = f_vals["envmt"].copy()
 
-    kwargs = {
+    kwargs: Dict[str, Any] = {
         'machine': f_vals["machine"],
         'gpu_id': gpu_idx,
         'num_procs': f_vals["num_procs"],
@@ -197,10 +210,9 @@ class MITunaInterface():
         'job_queue_lock': f_vals["job_queue_lock"],
         'result_queue': f_vals["result_queue"],
         'result_queue_lock': f_vals["result_queue_lock"],
-        'label': self.args.label,
-        'docker_name': self.args.docker_name,
+        'label': self.set_label(),
+        'docker_name': self.set_docker_name(),
         'end_jobs': f_vals['end_jobs'],
-        'session_id': self.args.session_id
+        'session_id': self.set_session_id()
     }
-
     return kwargs
