@@ -36,11 +36,10 @@ import tempfile
 from subprocess import Popen, PIPE
 import logging
 
-from typing import Set, List, Optional, TextIO, Tuple, Dict, Union, IO, Any, Callable
+from typing import Set, List, Optional, TextIO, Tuple, Dict, Union, Any, Callable
 from sqlalchemy import Text, Column, orm
 from sqlalchemy.dialects.mysql import TINYINT, INTEGER
 
-from paramiko.channel import ChannelFile
 from paramiko import SSHClient
 import paramiko
 from tuna.machine_management_interface import MachineManagementInterface
@@ -365,7 +364,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     return self.write_file(b'', is_temp=True)
 
-  def exec_command(self, command: str, timeout: int = LOG_TIMEOUT) -> Tuple[int, str,\
+  def exec_command(self, command: str, timeout: int = LOG_TIMEOUT) -> Tuple[int, StringIO,\
   StringIO]:
     """
     Execute a command on this machine
@@ -374,7 +373,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     """
     cnx: Connection
     ret_code: int
-    out: str
+    out: StringIO = StringIO()
     err: StringIO
 
     logger = self.get_logger()
@@ -390,7 +389,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
   def get_gpu_clock(self, gpu_num: int = 0) -> Union[Tuple[int, int], bool]:
     """query gpu clock levels with rocm-smi"""
-    stdout = Optional[IO[str]]
+    stdout: StringIO = StringIO()
     gpu_clk_cmd: str = f'{ROCMSMI} -c'
     _, stdout, _ = self.connect().exec_command(gpu_clk_cmd)
     if stdout is None:
@@ -451,7 +450,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   def chk_gpu_status(self, gpu_id: int) -> bool:
     """check gpu status, can clinfo find the device"""
     line: str
-    stdout: ChannelFile
+    stdout: StringIO = StringIO()
     logger: logging.Logger = self.get_logger()
     cnx = self.connect()
 
@@ -463,8 +462,6 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         f'GPU_DEVICE_ORDINAL={gpu_id} {CLINFO} | grep gfx', timeout=30)
     if stdout is None:
       return False
-    if hasattr(stdout, 'channel'):
-      stdout.channel.settimeout(30)
     for line in stdout:
       try:
         line = line.strip()
@@ -490,8 +487,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     logger.info("Getting free space")
     lst: list
     per: float
-    output: bytes
-    ssh_stdout: ChannelFile
+    output: str
+    ssh_stdout: StringIO = StringIO()
     cnx: Connection
     if self.local_machine:  # pylint: disable=no-member ; false alarm
       file_stat: statvfs_result = os.statvfs('/')
