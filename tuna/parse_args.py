@@ -27,30 +27,31 @@
 """ Module to centralize command line argument parsing """
 import sys
 from enum import Enum
-from typing import List
+from typing import List, Dict, Any
 import jsonargparse
 from tuna.miopen.utils.config_type import ConfigType
+from tuna.libraries import Library
 
 
 class TunaArgs(Enum):
   """ Enumeration of all the common argument supported by setup_arg_parser """
-  ARCH = 'arch'
-  NUM_CU = 'num_cu'
-  DIRECTION = 'direction'
-  VERSION = 'version'
-  CONFIG_TYPE = 'config_type'
-  SESSION_ID = 'session_id'
-  MACHINES = 'machines'
-  REMOTE_MACHINE = 'remote_machine'
-  LABEL = 'label'
-  RESTART_MACHINE = 'restart_machine'
-  DOCKER_NAME = 'docker_name'
+  ARCH: str = 'arch'
+  NUM_CU: str = 'num_cu'
+  DIRECTION: str = 'direction'
+  VERSION: str = 'version'
+  CONFIG_TYPE: str = 'config_type'
+  SESSION_ID: str = 'session_id'
+  MACHINES: str = 'machines'
+  REMOTE_MACHINE: str = 'remote_machine'
+  LABEL: str = 'label'
+  RESTART_MACHINE: str = 'restart_machine'
+  DOCKER_NAME: str = 'docker_name'
 
 
 def setup_arg_parser(desc: str,
                      arg_list: List[TunaArgs],
                      parser=None,
-                     with_yaml=True):
+                     with_yaml=True) -> Dict[str, Any]:
   """ function to aggregate common command line args """
   parser = jsonargparse.ArgumentParser(description=desc)
   if with_yaml:
@@ -138,19 +139,18 @@ def setup_arg_parser(desc: str,
                         type=str,
                         default='miopentuna',
                         help='Select a docker to run on. (default miopentuna)')
-
   return parser
 
 
-def clean_args(opt1='MIOPEN', opt2='miopen'):
+def clean_args() -> None:
   """clean arguments"""
-  if opt1 in sys.argv:
-    sys.argv.remove(opt1)
-  if opt2 in sys.argv:
-    sys.argv.remove(opt2)
+  libs: List[Any] = [elem.value for elem in Library]
+  for lib in libs:
+    if lib in sys.argv:
+      sys.argv.remove(lib)
 
 
-def args_check(args, parser):
+def args_check(args, parser) -> None:
   """Common scripts args check function"""
   if args.machines is not None:
     args.machines = [int(x) for x in args.machines.split(',')
