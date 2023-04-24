@@ -26,6 +26,13 @@ import_configs:
   framework: 'Pytorch'
   fw_version: 1
 
+load_job:
+  enabled: true
+  solvers: "[('', None)]"
+  tunable: false
+  fin_steps: false
+  tag: 'someTag'
+
 update_applicability:
   enabled: false
   session_id: 1
