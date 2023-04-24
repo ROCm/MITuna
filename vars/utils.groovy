@@ -566,6 +566,12 @@ def runLint() {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
+            sh "cd tuna && find miopen/worker/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/import_configs.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/import_db.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/export_db.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/merge_db.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' miopen/subcmd/update_golden.py"
             sh "mypy tuna/miopen/utils/config_type.py"
             sh "mypy tuna/connection.py --ignore-missing-imports"
             sh "mypy tuna/abort.py --ignore-missing-imports"
@@ -591,6 +597,7 @@ def runLint() {
             sh "yamllint tuna/miopen/yaml_files/*.yaml"
             sh "yamllint tuna/example/*.yaml"
             sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/machine.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }

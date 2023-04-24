@@ -30,7 +30,8 @@ import sqlite3
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
-from tuna.miopen.utils.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg, parse_pdb_filename
+from tuna.miopen.utils.analyze_parse_db import get_sqlite_data, sqlite_to_mysql_cfg
+from tuna.miopen.utils.analyze_parse_db import parse_pdb_filename
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
@@ -55,7 +56,6 @@ def parse_args():
       '-t',
       '--target_file',
       type=str,
-      default=None,
       dest='target_file',
       required=True,
       help=

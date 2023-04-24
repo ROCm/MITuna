@@ -30,7 +30,7 @@ import sys
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
-from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args, args_check
+from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.miopen.db.miopen_tables import FinStep, get_miopen_tables
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
@@ -161,7 +161,6 @@ class MIOpen(MITunaInterface):
                        default=None,
                        help='execute on each machine')
 
-    clean_args()
     self.args = parser.parse_args()
 
     #overwritte common lib args with subcommand args value

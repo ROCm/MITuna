@@ -27,6 +27,7 @@
 import os
 import sys
 import yaml
+import subprocess
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -51,6 +52,23 @@ def test_yaml_parser():
   parse_miopen_yaml3(miopen_yaml3, Library('miopen'))
   parse_miopen_yaml4(miopen_yaml4, Library('miopen'))
   parse_example_yaml(example_yaml, Library('example'))
+
+  multiple_yamls()
+
+
+def multiple_yamls():
+  yaml_sample = "{0}/yaml_sample.yaml".format(this_path)
+  go_fish = "{0}/../tuna/go_fish.py miopen --yaml {1}".format(
+      this_path, yaml_sample)
+  subp_fail = False
+
+  try:
+    subprocess.run(go_fish, shell=True, check=True)
+  except subprocess.CalledProcessError as subp_err:
+    print(f"Subprocess error: {subp_err}")
+    subp_fail = True
+
+  assert subp_fail == False
 
 
 def parse_miopen_yaml1(miopen_yaml, miopen):
@@ -229,7 +247,6 @@ def parse_example_yaml(example_yaml, example):
 
   dict1 = {
       'arch': 'gfx908',
-      'config_type': 'convolution',
       'docker_name': 'my_docker_name',
       'init_session': True,
       'label': 'Example',
@@ -240,7 +257,6 @@ def parse_example_yaml(example_yaml, example):
   }
   dict2 = {
       'arch': 'gfx908',
-      'config_type': 'convolution',
       'docker_name': 'my_docker_name',
       'execute': True,
       'label': 'Example',
