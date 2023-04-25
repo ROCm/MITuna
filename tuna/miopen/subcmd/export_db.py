@@ -255,6 +255,40 @@ def build_miopen_fdb(fdb_alg_lists):
   return miopen_fdb
 
 
+def build_miopen_fdb_2(query):
+  """return dict with key: fdb_key + alg_lib, val: solver list"""
+  find_db = OrderedDict()
+  solvers = {}
+  db_entries = query.all()
+  total_entries = len(db_entries)
+  LOGGER.info("fdb query returned: %s", total_entries)
+
+  for fdb_entry, _ in db_entries:
+    fdb_key = fdb_entry.fdb_key
+    if fdb_key not in solvers:
+      solvers[fdb_key] = {}
+    if fdb_entry.solver in solvers[fdb_key].keys():
+      LOGGER.warning("Skipped duplicate solver: %s : %s with ts %s vs prev %s",
+                     fdb_key, fdb_entry.solver, fdb_entry.update_ts,
+                     solvers[fdb_key][fdb_entry.solver])
+      continue
+    solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
+
+    fdb_key = fdb_entry.fdb_key
+    lst = find_db.get(fdb_key)
+    if not lst:
+      find_db[fdb_key] = [fdb_entry]
+    else:
+      lst.append(fdb_entry)
+
+  for key, entries in find_db.items():
+    entries.sort(key=lambda x: float(x.kernel_time))
+    while len(entries) > 4:
+      entries.pop()
+
+  return find_db
+
+
 def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   """
   Serialize find_db map to plain text file in MIOpen format
@@ -268,10 +302,10 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
         # pylint: disable-next=consider-using-f-string ; more reable
-        lst.append('{alg}:{},{},{},{alg},{}'.format(ID_SOLVER_MAP[rec.solver],
-                                                    rec.kernel_time,
+        lst.append('{slv}:{slv},{},{},{alg},{}'.format(rec.kernel_time,
                                                     rec.workspace_sz,
                                                     '<unused>',
+                                                    slv=ID_SOLVER_MAP[rec.solver],
                                                     alg=rec.alg_lib))
       out.write(f"{key}={';'.join(lst)}\n")
   return file_name
@@ -281,9 +315,9 @@ def export_fdb(dbt, args):
   """Function to export find_db to txt file
   """
   query = get_fdb_query(dbt, args)
-  fdb_alg_lists = get_fdb_alg_lists(query)
-  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
+  miopen_fdb = build_miopen_fdb_2(query)
 
+  LOGGER.info("write fdb to file.")
   return write_fdb(args.arch, args.num_cu, args.opencl, miopen_fdb,
                    args.filename)
 
@@ -367,8 +401,7 @@ def export_kdb(dbt, args):
   Function to export the kernel cache
   """
   query = get_fdb_query(dbt, args)
-  fdb_alg_lists = get_fdb_alg_lists(query)
-  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
+  miopen_fdb = build_miopen_fdb_2(query)
 
   LOGGER.info("Building kdb.")
   kern_db = build_miopen_kdb(dbt, miopen_fdb)
