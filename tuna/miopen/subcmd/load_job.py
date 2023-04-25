@@ -172,37 +172,6 @@ def config_query(args, session, dbt):
   return cfg_query
 
 
-def get_config_ids(args, session, dbt):
-  """! Compose query to get all config ids to load for this job set"""
-  conds = []
-  conds.append("valid=1")
-
-  if args.tag:
-    tag_query = f"select config from {dbt.config_tags_table.__tablename__}"\
-                f" where valid=1 and tag='{args.tag}';"
-    ret = session.execute(tag_query)
-    cfgs = [str(val[0]) for val in ret]
-    cfg_str = ','.join(cfgs)
-    conds.append(f"id in ({cfg_str})")
-
-  if args.cmd:
-    prec = TENSOR_PRECISION[args.cmd]
-    tensor_query = f"select id from {dbt.tensor_table.__tablename__}"\
-                   f" where valid=1 and data_type='{prec}';"
-    ret = session.execute(tensor_query)
-    ids = [str(val[0]) for val in ret]
-    id_str = ','.join(ids)
-    conds.append(f"input_tensor in ({id_str})")
-
-  cond_str = " and ".join(conds)
-  cfg_query = f"select id from {dbt.config_table.__tablename__}"\
-              f" where {cond_str};"
-  LOGGER.info(cfg_query)
-  ret = session.execute(cfg_query)
-  cfg_ids = [int(val[0]) for val in ret]
-  return cfg_ids
-
-
 def compose_query(args, session, dbt, cfg_query):
   """Compose query based on args"""
   query = session.query(dbt.solver_app.config, Solver.solver)\
@@ -228,53 +197,11 @@ def compose_query(args, session, dbt, cfg_query):
   return query
 
 
-def get_applic_entres(args, session, dbt, cfg_ids):
-  """! Compose query and create object for applicable entries"""
-  conds = []
-  conds.append(f"sa.session={args.session_id}")
-  conds.append("sa.applicable=1")
-  conds.append("s.valid=1")
-  conds.append("sa.valid=1")
-
-  if args.solvers[0][1]:  #check none
-    solver_ids = [str(x) for _, x in args.solvers]
-    id_str = ','.join(solver_ids)
-    conds.append(f"sa.solver in ({id_str})")
-  if args.tunable:
-    conds.append("sa.tunable=1")
-
-  cfgtype = ConfigType('convolution').name
-  if args.config_type is ConfigType.batch_norm:
-    cfgtype = ConfigType('batch_norm').name
-
-  conds.append(f"s.config_type='{cfgtype}'")
-
-  if args.only_dynamic:
-    conds.append("s.is_dynamic=1")
-
-  cfg_id_str = ','.join([str(val) for val in cfg_ids])
-  conds.append(f"sa.config in ({cfg_id_str})")
-
-  cond_str = ' and '.join(conds)
-
-  ret = None
-  with DbSession() as session:
-    query = f"select sa.config, s.solver from {dbt.solver_app.__tablename__} as sa"\
-            f" inner join {dbt.solver_table.__tablename__} as s on sa.solver=s.id"\
-            f" where {cond_str};"
-    LOGGER.info(query)
-    ret = session.execute(query)
-
-  return ret
-
-
 def add_jobs(args, dbt):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
   counts = 0
   with DbSession() as session:
-    #cfg_ids = get_config_ids(args, session, dbt)
-    #res = get_applic_entres(args, session, dbt, cfg_ids)
     cfg_query = config_query(args, session, dbt)
     query = compose_query(args, session, dbt, cfg_query)
     res = query.all()
@@ -282,9 +209,6 @@ def add_jobs(args, dbt):
     if not res:
       LOGGER.error('No applicable solvers found for args %s', args.__dict__)
 
-    fin_step_str = 'not_fin'
-    if args.fin_steps:
-      fin_step_str = ','.join(args.fin_steps)
     query = f"select config, solver from {dbt.job_table.__tablename__} where session={args.session_id}"
     LOGGER.info(query)
     ret = session.execute(query)
