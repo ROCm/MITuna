@@ -134,6 +134,7 @@ class DriverConvolution(DriverBase):
       setattr(self, 'spatial_dim', 3)
 
   def parse_driver_line(self, line: str) -> None:
+    """Parse MIOpenDriver line"""
     super().parse_driver_line(line)
 
     if self.direction and self.direction in DIRECTION:
@@ -162,9 +163,9 @@ class DriverConvolution(DriverBase):
     c_dict: dict = self.get_conv_dict()
 
     if keep_id:
-      c_dict_copy = c_dict.copy()
-      c_dict_copy.pop('driver', None)
-      c_dict['id'] = get_db_id(c_dict_copy, ConvolutionConfig)
+      dict_copy = c_dict.copy()
+      dict_copy.pop('driver', None)
+      c_dict['id'] = get_db_id(dict_copy, ConvolutionConfig)
 
     return c_dict
 
