@@ -25,12 +25,12 @@
 ###############################################################################
 
 import sys
-from tuna.update_golden import merge_golden_entries, get_fdb_entries, create_perf_table, verify_no_duplicates, latest_golden_v
-from tuna.miopen.tables import MIOpenDBTables
+from tuna.miopen.subcmd.update_golden import gold_base_update, gold_session_update, create_perf_table, verify_no_duplicates, latest_golden_v
+from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.config_type import ConfigType
-from tuna.miopen.miopen_tables import ConvolutionGolden
-from tuna.find_db import ConvolutionFindDB
+from tuna.miopen.utils.config_type import ConfigType
+from tuna.miopen.db.miopen_tables import ConvolutionGolden
+from tuna.miopen.db.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs
 
 sys.path.append("../tuna")
@@ -68,27 +68,30 @@ def test_update_golden():
   args.config_type = ConfigType.convolution
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
-  args.golden_v = latest_golden_v(dbt) + 1
-
-  entries = get_fdb_entries(dbt)
-  assert entries
-  assert len(entries) == 1
-  fdb_obj = entries[0]
-  assert fdb_obj.config == 1
-  assert fdb_obj.solver == 1
-  assert fdb_obj.session == session_id
-  assert fdb_obj.params == 'param'
-  assert fdb_obj.fdb_key == 'key'
+  gld_v1 = latest_golden_v(dbt) + 1
+  args.golden_v = gld_v1
 
   with DbSession() as session:
-    assert merge_golden_entries(session, dbt, args.golden_v, entries)
+    assert gold_session_update(session, gld_v1, session_id, True)
     query = session.query(ConvolutionGolden)\
-                    .filter(ConvolutionGolden.golden_miopen_v == args.golden_v)\
+                    .filter(ConvolutionGolden.golden_miopen_v == gld_v1)\
                     .filter(ConvolutionGolden.session == session_id)
     res = query.all()
     assert len(res) == 1
     assert res[0].params == 'param'
 
+    gld_v2 = gld_v1 + 1
+    assert gold_base_update(session, gld_v2, gld_v1, True)
+    query = session.query(ConvolutionGolden)\
+                    .filter(ConvolutionGolden.golden_miopen_v == gld_v2)\
+                    .filter(ConvolutionGolden.session == session_id)
+    res = query.all()
+    assert len(res) == 1
+    assert res[0].params == 'param'
+
+
+  entries = session.query(ConvolutionFindDB)\
+                  .filter(ConvolutionFindDB.session == session_id).all()
   assert verify_no_duplicates(entries)
 
   fdb_entry2 = build_fdb_entry(session_id)

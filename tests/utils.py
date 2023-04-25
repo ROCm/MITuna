@@ -27,9 +27,9 @@
 from multiprocessing import Value
 
 from tuna.worker_interface import WorkerInterface
-from tuna.miopen.session import Session
+from tuna.miopen.db.session import Session
 from tuna.machine import Machine
-from tuna.config_type import ConfigType
+from tuna.miopen.utils.config_type import ConfigType
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.miopen_lib import MIOpen
 
@@ -56,6 +56,16 @@ def get_sqlite_table(cnx, table_name):
   rows = c.fetchall()
   columns = [x[0] for x in c.description]
   return rows, columns
+
+
+class DummyArgs(object):
+  """Dummy args object class to be used for testing"""
+
+  # pylint: disable=too-many-instance-attributes
+
+  def __init__(self, **kwargs):
+    """Constructor"""
+    pass
 
 
 class CfgImportArgs():
@@ -120,16 +130,6 @@ class ExampleArgs():
   docker_name = 'miopentuna'
   init_session = True
   ticket = 'N/A'
-
-
-class DummyArgs(object):
-  """Dummy args object class to be used for testing"""
-
-  # pylint: disable=too-many-instance-attributes
-
-  def __init__(self, **kwargs):
-    """Constructor"""
-    pass
 
 
 def get_worker_args(args, machine, miopen):

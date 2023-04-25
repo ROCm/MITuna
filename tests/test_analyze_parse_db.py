@@ -32,9 +32,9 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.metadata import SQLITE_CONFIG_COLS
-from tuna.helper import prune_cfg_dims
-from tuna.analyze_parse_db import parse_pdb_filename
+from tuna.miopen.utils.metadata import SQLITE_CONFIG_COLS
+from tuna.miopen.utils.helper import prune_cfg_dims
+from tuna.miopen.utils.analyze_parse_db import parse_pdb_filename
 
 
 def test_prune_cfg_dims():

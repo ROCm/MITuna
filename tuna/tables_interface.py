@@ -26,12 +26,12 @@
 ###############################################################################
 """Module that encapsulates the DB representation for a library"""
 
-from tuna.miopen.miopen_tables import JobMixin
+from tuna.dbBase.sql_alchemy import DbSession
 
 
 #pylint: disable=too-few-public-methods
 class DBTablesInterface():
-  """Represents db tables based on ConfigType"""
+  """Represents db tables interface class"""
 
   def __init__(self, **kwargs):
     """Constructor"""
@@ -40,13 +40,18 @@ class DBTablesInterface():
     self.__dict__.update((key, None) for key in allowed_keys)
 
     #for pylint
-    self.job_table = JobMixin
+    self.job_table = None
     self.session_id = None
     self.session = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-  def set_tables(self):
-    """Set appropriate tables based on config type"""
+  def set_tables(self, sess_class):
+    """Set appropriate tables based on requirements"""
+    if self.session_id is not None:
+      with DbSession() as session:
+        query = session.query(sess_class).filter(
+            sess_class.id == self.session_id)
+        self.session = query.one()
     return True

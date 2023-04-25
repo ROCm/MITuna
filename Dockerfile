@@ -5,19 +5,20 @@ ARG ROCM_PRE=0
 
 FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION=5.1
-ARG OSDB_BKC_VERSION
-ARG DEB_ROCM_REPO=http://repo.radeon.com/rocm/apt/.apt_$ROCMVERSION/
+ARG ROCMVERSION=
+ARG OSDB_BKC_VERSION=11650
 # Add rocm repository
 RUN apt-get update
 RUN apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
 RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
-       echo "Using BKC VERISION: $OSDB_BKC_VERSION";\
+       echo "Using BKC VERSION: $OSDB_BKC_VERSION";\
        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
     else \
-       sh -c "echo deb [arch=amd64] $DEB_ROCM_REPO ubuntu main > /etc/apt/sources.list.d/rocm.list" ;\
+       echo "Using Release VERSION: $ROCMVERSION";\
+       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
+       cat  /etc/apt/sources.list.d/rocm.list;\
     fi
 
 ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
@@ -103,7 +104,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=4e8d0830374c50bec6be2d762cc200f42e8250fd
+ARG MIOPEN_BRANCH=b4e0a67333ee4bbcbbec1203a0260feff2882cfb
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -140,7 +141,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=6bdfe003b9659ce5ed0c8fb894e69c5be5896cb6
+ARG FIN_BRANCH=4b1aecb98258252c9fb5e8e028722c9a245b98cb
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 
@@ -174,6 +175,7 @@ ADD tests /tuna/tests/
 ADD utils /tuna/utils/
 ADD requirements.txt /tuna/
 WORKDIR /tuna
+ENV PYTHONPATH=/tuna
 
 RUN python3 setup.py install
 
