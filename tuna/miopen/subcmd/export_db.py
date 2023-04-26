@@ -281,7 +281,7 @@ def build_miopen_fdb_2(query):
     else:
       lst.append(fdb_entry)
 
-  for key, entries in find_db.items():
+  for _, entries in find_db.items():
     entries.sort(key=lambda x: float(x.kernel_time))
     while len(entries) > 4:
       entries.pop()
