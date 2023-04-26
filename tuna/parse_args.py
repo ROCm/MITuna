@@ -144,10 +144,11 @@ def setup_arg_parser(desc: str,
 
 def clean_args() -> None:
   """clean arguments"""
-  libs: List[Any] = [elem.value for elem in Library]
+  libs: List[Any]  = [elem.value for elem in Library]
   for lib in libs:
     if lib in sys.argv:
       sys.argv.remove(lib)
+
 
 
 def args_check(args, parser) -> None:
