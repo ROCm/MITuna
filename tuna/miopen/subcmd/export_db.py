@@ -302,11 +302,12 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
         # pylint: disable-next=consider-using-f-string ; more reable
-        lst.append('{slv}:{slv},{},{},{alg},{}'.format(rec.kernel_time,
-                                                    rec.workspace_sz,
-                                                    '<unused>',
-                                                    slv=ID_SOLVER_MAP[rec.solver],
-                                                    alg=rec.alg_lib))
+        lst.append('{slv}:{slv},{},{},{alg},{}'.format(
+            rec.kernel_time,
+            rec.workspace_sz,
+            '<unused>',
+            slv=ID_SOLVER_MAP[rec.solver],
+            alg=rec.alg_lib))
       out.write(f"{key}={';'.join(lst)}\n")
   return file_name
 
