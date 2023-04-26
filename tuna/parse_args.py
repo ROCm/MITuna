@@ -30,6 +30,7 @@ from enum import Enum
 from typing import List
 import jsonargparse
 from tuna.miopen.utils.config_type import ConfigType
+from tuna.libraries import Library
 
 
 class TunaArgs(Enum):
@@ -142,12 +143,12 @@ def setup_arg_parser(desc: str,
   return parser
 
 
-def clean_args(opt1='MIOPEN', opt2='miopen'):
+def clean_args():
   """clean arguments"""
-  if opt1 in sys.argv:
-    sys.argv.remove(opt1)
-  if opt2 in sys.argv:
-    sys.argv.remove(opt2)
+  libs = [elem.value for elem in Library]
+  for lib in libs:
+    if lib in sys.argv:
+      sys.argv.remove(lib)
 
 
 def args_check(args, parser):

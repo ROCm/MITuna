@@ -29,7 +29,7 @@
 import sys
 
 from tuna.mituna_interface import MITunaInterface
-from tuna.parse_args import TunaArgs, setup_arg_parser, clean_args, args_check
+from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.utils.db_utility import create_tables
@@ -72,7 +72,6 @@ class Example(MITunaInterface):
                        dest='init_session',
                        help='Set up a new tuning session.')
 
-    clean_args('EXAMPLE', 'example')
     self.args = parser.parse_args()
     if len(sys.argv) == 1:
       parser.print_help()
