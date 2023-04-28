@@ -112,14 +112,15 @@ def get_base_query(dbt: MIOpenDBTables, args: argparse.Namespace,
   return query
 
 
-def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace):
+def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
+                  logger: logging.Logger):
   """ Helper function to create find db query
   """
   src_table = dbt.find_db_table
   if args.golden_v is not None:
     src_table = dbt.golden_table
 
-  query = get_base_query(dbt, args)
+  query = get_base_query(dbt, args, logger)
   query = query.filter(src_table.kernel_time != -1)\
       .filter(src_table.workspace_sz != -1)
 
@@ -128,13 +129,14 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace):
   return query
 
 
-def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace):
+def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
+                  logger: logging.Logger):
   """Compose query to get perf_db rows based on filters from args"""
   src_table = dbt.find_db_table
   if args.golden_v is not None:
     src_table = dbt.golden_table
 
-  query = get_base_query(dbt, args)
+  query = get_base_query(dbt, args, logger)
   query = query.filter(src_table.params != '')\
       .filter(src_table.solver == dbt.solver_table.id)\
       .filter(dbt.solver_table.tunable == 1)
@@ -221,12 +223,13 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   return file_name
 
 
-def export_fdb(dbt: MIOpenDBTables, args: argparse.Namespace):
+def export_fdb(dbt: MIOpenDBTables, args: argparse.Namespace,
+               logger: logging.Logger):
   """Function to export find_db to txt file
   """
-  query = get_fdb_query(dbt, args)
-  fdb_alg_lists = get_fdb_alg_lists(query)
-  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
+  query = get_fdb_query(dbt, args, logger)
+  fdb_alg_lists = get_fdb_alg_lists(query, logger)
+  miopen_fdb = build_miopen_fdb(fdb_alg_lists, logger)
 
   return write_fdb(args.arch, args.num_cu, args.opencl, miopen_fdb,
                    args.filename)
@@ -311,15 +314,15 @@ def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace,
   """
   Function to export the kernel cache
   """
-  query = get_fdb_query(dbt, args)
-  fdb_alg_lists = get_fdb_alg_lists(query)
-  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
+  query = get_fdb_query(dbt, args, logger)
+  fdb_alg_lists = get_fdb_alg_lists(query, logger)
+  miopen_fdb = build_miopen_fdb(fdb_alg_lists, logger)
 
   logger.info("Building kdb.")
-  kern_db = build_miopen_kdb(dbt, miopen_fdb)
+  kern_db = build_miopen_kdb(dbt, miopen_fdb, logger)
 
   logger.info("write kdb to file.")
-  return write_kdb(args.arch, args.num_cu, kern_db, args.filename)
+  return write_kdb(args.arch, args.num_cu, kern_db, logger, args.filename)
 
 
 def create_sqlite_tables(arch, num_cu, filename=None):
@@ -394,13 +397,13 @@ def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace,
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
   cfg_map = {}
-  db_entries = get_pdb_query(dbt, args).all()
+  db_entries = get_pdb_query(dbt, args, logger).all()
   total_entries = len(db_entries)
   logger.info("pdb query returned: %s", total_entries)
 
   for perf_db_entry, cfg_entry in db_entries:
     populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
-                    total_entries)
+                    total_entries, logger)
 
   cnx.commit()
   logger.warning("Total number of entries in Perf DB: %s", num_perf)
@@ -450,11 +453,11 @@ def run_export_db(args: argparse.Namespace, logger: logging.Logger):
       logger.error(terr)
 
   if args.find_db:
-    result_file = export_fdb(dbt, args)
+    result_file = export_fdb(dbt, args, logger)
   elif args.kern_db:
-    result_file = export_kdb(dbt, args)
+    result_file = export_kdb(dbt, args, logger)
   elif args.perf_db:
-    result_file = export_pdb(dbt, args)
+    result_file = export_pdb(dbt, args, logger)
 
   print(result_file)
 
