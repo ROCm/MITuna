@@ -46,13 +46,10 @@ from tuna.miopen.parse_miopen_args import get_export_db_parser
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
 
-# Setup logging
-logger = setup_logger('export_db')
-
 _, ID_SOLVER_MAP = get_id_solvers()
 
 
-def arg_export_db(args: argparse.Namespace):
+def arg_export_db(args: argparse.Namespace, logger: logging.Logger):
   """export db args for exportdb"""
   if args.golden_v and not (args.arch and args.num_cu):
     logger.error('arch and num_cu must be set with golden_v')
