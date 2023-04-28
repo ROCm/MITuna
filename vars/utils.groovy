@@ -230,14 +230,14 @@ def finFindEval(){
             error("Unable to evaluate find jobs using Fin")
         }
         def MIOPEN_BRANCH = runsql("SELECT miopen_v from session WHERE id=1;")
-        def fdb_file = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
+        def fdb_file = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts  "${fdb_file}"
-        def kdb_file = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
+        def kdb_file = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts "${kdb_file}"
 
         def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
-        def fdb_file_nhwc = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
+        def fdb_file_nhwc = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
         def num_evaluated_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
         if (num_evaluated_jobs_nhwc != num_jobs_nhwc){
@@ -245,12 +245,12 @@ def finFindEval(){
         }
 
         archiveArtifacts  "${fdb_file_nhwc}"
-        def kdb_file_nhwc = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1} --filename kdb_nhwc", returnStdout: true)
+        def kdb_file_nhwc = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1} --filename kdb_nhwc", returnStdout: true)
         archiveArtifacts "${kdb_file_nhwc}"
 
         def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
-        def fdb_file_nchw = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
+        def fdb_file_nchw = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
         def num_evaluated_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
         if (num_evaluated_jobs_nchw != num_jobs_nchw){
@@ -258,7 +258,7 @@ def finFindEval(){
         }
 
         archiveArtifacts  "${fdb_file_nchw}"
-        def kdb_file_nchw = sh(script: "./tuna/miopen/subcmd/export_db.py -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
+        def kdb_file_nchw = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts "${kdb_file_nchw}"
     }
 }
