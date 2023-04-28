@@ -38,7 +38,6 @@ from tuna.miopen.utils.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
-from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite
 from tuna.miopen.utils.analyze_parse_db import mysql_to_sqlite_cfg
 from tuna.miopen.utils.parsing import parse_pdb_key
@@ -54,6 +53,7 @@ _, ID_SOLVER_MAP = get_id_solvers()
 
 
 def arg_export_db(args: argparse.Namespace):
+  """export db args for exportdb"""
   if args.golden_v and not (args.arch and args.num_cu):
     logger.error('arch and num_cu must be set with golden_v')
 
@@ -145,7 +145,7 @@ def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace):
   return query
 
 
-def get_fdb_alg_lists(query):
+def get_fdb_alg_lists(query, logger: logging.Logger):
   """return dict with key: fdb_key + alg_lib, val: solver list"""
   find_db = OrderedDict()
   solvers = {}
@@ -174,7 +174,7 @@ def get_fdb_alg_lists(query):
   return find_db
 
 
-def build_miopen_fdb(fdb_alg_lists):
+def build_miopen_fdb(fdb_alg_lists, logger: logging.Logger):
   """ create miopen find db object for export
   """
   total_entries = len(fdb_alg_lists)
@@ -235,7 +235,7 @@ def export_fdb(dbt: MIOpenDBTables, args: argparse.Namespace):
                    args.filename)
 
 
-def build_miopen_kdb(dbt: MIOpenDBTables, find_db):
+def build_miopen_kdb(dbt: MIOpenDBTables, find_db, logger: logging.Logger):
   """ create miopen kernel db object for export
   """
   num_fdb_entries = 0
@@ -263,7 +263,7 @@ def build_miopen_kdb(dbt: MIOpenDBTables, find_db):
   return kern_db
 
 
-def write_kdb(arch, num_cu, kern_db, filename=None):
+def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
   """
   Write blob map to sqlite
   """
@@ -309,7 +309,7 @@ def write_kdb(arch, num_cu, kern_db, filename=None):
   return file_name
 
 
-def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace):
+def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace, logger: logging.Logger):
   """
   Function to export the kernel cache
   """
@@ -390,7 +390,7 @@ def insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id):
   return perf_db_dict
 
 
-def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace):
+def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace, logger: logging.Logger):
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
@@ -410,7 +410,7 @@ def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace):
 
 
 def populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
-                    total_entries):
+                    total_entries, logger: logging.Logger):
   """Analyze perf_dv entry"""
   if cfg_entry.id in cfg_map:
     ins_cfg_id = cfg_map[cfg_entry.id]
@@ -444,8 +444,11 @@ def run_export_db(args: argparse.Namespace, logger: logging.Logger):
   dbt = MIOpenDBTables(session_id=args.session_id)
 
   if args.session_id:
-    args.arch = dbt.session.arch
-    args.num_cu = dbt.session.num_cu
+    try:
+      args.arch = dbt.session.arch
+      args.num_cu = dbt.session.num_cu
+    except ValueError as terr:
+      logger.error(terr)
 
   if args.find_db:
     result_file = export_fdb(dbt, args)
