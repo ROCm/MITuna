@@ -297,7 +297,7 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
         benchmark.config = db_obj.id
         benchmark.gpu_number = args.gpu_count
         benchmark.driver_cmd = str(driver)
-        benchmark.batchsize = args.batchsize
+        benchmark.batchsize = driver.batchsize
         session.add(benchmark)
         session.commit()
         count += 1
@@ -313,11 +313,11 @@ def check_import_benchmark_args(args: argparse.Namespace) -> None:
   if args.add_model and not args.md_version:
     raise ValueError('Version needs to be specified with model')
   if args.add_benchmark and not (args.model and args.framework and
-                                 args.gpu_count and args.batchsize and
-                                 args.md_version and args.fw_version and
+                                 args.gpu_count and args.md_version and
+                                 args.fw_version and
                                  (args.driver or args.file_name)):
     raise ValueError(
-        """Model, md_version, framework, fw_version, driver(or filename), batchsize \n
+        """Model, md_version, framework, fw_version, driver(or filename), \n
          and gpus need to all be specified to add a new benchmark""")
 
 
