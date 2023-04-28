@@ -44,6 +44,7 @@ from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
 from tuna.miopen.parse_miopen_args import get_import_cfg_parser
 from tuna.miopen.parse_miopen_args import get_load_job_parser
+from tuna.miopen.parse_miopen_args import get_export_db_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
@@ -116,6 +117,9 @@ class MIOpen(MITunaInterface):
 
     subcommands.add_subcommand('load_job',
                                get_load_job_parser(),
+                               required=False)
+    subcommands.add_subcommand('export_db',
+                               get_export_db_parser(),
                                required=False)
 
     group = parser.add_mutually_exclusive_group()
