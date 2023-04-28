@@ -309,7 +309,8 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
   return file_name
 
 
-def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace, logger: logging.Logger):
+def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace,
+               logger: logging.Logger):
   """
   Function to export the kernel cache
   """
@@ -390,7 +391,8 @@ def insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id):
   return perf_db_dict
 
 
-def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace, logger: logging.Logger):
+def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace,
+               logger: logging.Logger):
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
