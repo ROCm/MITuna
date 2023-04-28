@@ -219,7 +219,7 @@ def get_load_job_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   return parser
 
 
-def get_export_db_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
+def get_export_db_parser() -> jsonargparse.ArgumentParser:
   """Return parser for export db subcommand"""
   parser = setup_arg_parser('Convert MYSQL find_db to text find_dbs' \
   'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION])
