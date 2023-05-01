@@ -27,6 +27,10 @@
 """
 Script for adding jobs to the MySQL database
 """
+import logging
+import argparse
+import warnings
+from typing import Dict
 
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
@@ -40,87 +44,24 @@ from tuna.miopen.db.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.miopen.parse_miopen_args import get_load_job_parser
 
-LOGGER = setup_logger('load_jobs')
 
-
-def parse_args():
-  """ Argument input for the module """
-  #pylint: disable=duplicate-code
-  parser = setup_arg_parser(
-      'Insert jobs into MySQL db by tag from" \
-      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE])
-  config_filter = parser.add_mutually_exclusive_group(required=True)
-  solver_filter = parser.add_mutually_exclusive_group()
-  config_filter.add_argument(
-      '-t',
-      '--tag',
-      type=str,
-      dest='tag',
-      default=None,
-      help='All configs with this tag will be added to the job table. \
-                        By default adds jobs with no solver specified (all solvers).'
-  )
-  config_filter.add_argument('--all_configs',
-                             dest='all_configs',
-                             action='store_true',
-                             help='Add all convolution jobs')
-  solver_filter.add_argument(
-      '-A',
-      '--algo',
-      type=str,
-      dest='algo',
-      default=None,
-      help='Add job for each applicable solver+config in Algorithm.',
-      choices=ALG_SLV_MAP.keys())
-  solver_filter.add_argument('-s',
-                             '--solvers',
-                             type=str,
-                             dest='solvers',
-                             default=None,
-                             help='add jobs with only these solvers '\
-                               '(can be a comma separated list)')
-  parser.add_argument(
-      '-d',
-      '--only_dynamic',
-      dest='only_dynamic',
-      action='store_true',
-      help='Use with --tag to create a job for dynamic solvers only.')
-  parser.add_argument('--tunable',
-                      dest='tunable',
-                      action='store_true',
-                      help='Use to add only tunable solvers.')
-  parser.add_argument('-c',
-                      '--cmd',
-                      type=str,
-                      dest='cmd',
-                      default=None,
-                      required=False,
-                      help='Command precision for config',
-                      choices=['conv', 'convfp16', 'convbfp16'])
-  parser.add_argument('-l',
-                      '--label',
-                      type=str,
-                      dest='label',
-                      required=True,
-                      help='Label to annontate the jobs.',
-                      default='new')
-  parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
-  parser.add_argument(
-      '--session_id',
-      required=True,
-      dest='session_id',
-      type=int,
-      help=
-      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
-  )
-
-  args = parser.parse_args()
-
-  if args.fin_steps:
+def arg_fin_steps(args: argparse.Namespace):
+  """fin steps for load jobs"""
+  if args.fin_steps == '':
+    warnings.warn("An empty fin step argument for Load Job")
+    args.fin_steps = set()
+  elif args.fin_steps:
     steps = [x.strip() for x in args.fin_steps.split(',')]
     args.fin_steps = set(steps)
 
+
+def arg_solvers(
+    args: argparse.Namespace,
+    logger: logging.Logger,
+):
+  """solvers """
   solver_id_map = get_solver_ids()
   solver_arr = None
   if args.solvers:
@@ -133,7 +74,7 @@ def parse_args():
     for solver in solver_arr:
       sid = solver_id_map.get(solver, None)
       if not sid:
-        parser.error(f'Invalid solver: {solver}')
+        logger.error(f'Invalid solver: {solver}')
       solver_ids.append((solver, sid))
     args.solvers = solver_ids
   else:
@@ -142,7 +83,7 @@ def parse_args():
   return args
 
 
-def test_tag_name(tag, dbt):
+def test_tag_name(tag: str, dbt: MIOpenDBTables):
   """ test if a tag name is in config_tags table """
   with DbSession() as session:
     query = session.query(dbt.config_tags_table.tag)\
@@ -155,7 +96,7 @@ def test_tag_name(tag, dbt):
   return True
 
 
-def config_query(args, session, dbt):
+def config_query(args: argparse.Namespace, session, dbt: MIOpenDBTables):
   """ Produce config query for new style config table"""
   cfg_query = session.query(dbt.config_table.id)\
       .filter(dbt.config_table.valid == 1)
@@ -172,14 +113,15 @@ def config_query(args, session, dbt):
   return cfg_query
 
 
-def compose_query(args, session, dbt, cfg_query):
+def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
+                  cfg_query):
   """Compose query based on args"""
   query = session.query(dbt.solver_app.config, Solver.solver)\
     .filter(dbt.solver_app.session == args.session_id)\
     .filter(dbt.solver_app.solver == Solver.id)\
     .filter(dbt.solver_app.applicable == true())\
     .filter(Solver.valid == true())
-  if args.solvers[0][1]:  #check none
+  if args.solvers and len(args.solvers[0]) > 1 and args.solvers[0][1]:
     solver_ids = [x for _, x in args.solvers]
     query = query.filter(dbt.solver_app.solver.in_(solver_ids))
   if args.tunable:
@@ -197,7 +139,8 @@ def compose_query(args, session, dbt, cfg_query):
   return query
 
 
-def add_jobs(args, dbt):
+def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
+             logger: logging.Logger):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
   counts = 0
@@ -207,15 +150,15 @@ def add_jobs(args, dbt):
     res = query.all()
 
     if not res:
-      LOGGER.error('No applicable solvers found for args %s', args.__dict__)
+      logger.error('No applicable solvers found for args %s', args.__dict__)
 
     fin_step_str = 'not_fin'
     if args.fin_steps:
       fin_step_str = ','.join(args.fin_steps)
     query = f"select config, solver from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{fin_step_str}' and reason='{args.label}'"
-    LOGGER.info(query)
+    logger.info(query)
     ret = session.execute(query)
-    pre_ex = {}
+    pre_ex: Dict[str, Dict[str, bool]] = {}
     for config, solver in ret:
       if config not in pre_ex:
         pre_ex[config] = {}
@@ -236,7 +179,7 @@ def add_jobs(args, dbt):
 
           if job.config in pre_ex:
             if job.solver in pre_ex[job.config]:
-              LOGGER.warning("Job exists (skip): %s : %s", job.config,
+              logger.warning("Job exists (skip): %s : %s", job.config,
                              job.solver)
               continue
 
@@ -246,7 +189,7 @@ def add_jobs(args, dbt):
           counts += 1
         except IntegrityError as err:
           session.rollback()
-          LOGGER.warning('Integrity Error: %s', err)
+          logger.warning('Integrity Error: %s', err)
       if not do_commit:
         try:
           session.commit()
@@ -254,7 +197,7 @@ def add_jobs(args, dbt):
           session.rollback()
           counts = 0
           do_commit = True
-          LOGGER.warning(
+          logger.warning(
               'Quick update failed, rolling back to add one by one : %s', err)
           continue
       break
@@ -262,9 +205,9 @@ def add_jobs(args, dbt):
   return counts
 
 
-def main():
-  """ main """
-  args = parse_args()
+def run_load_job(args: argparse.Namespace, logger: logging.Logger):
+  """Load jobs based on cmd line arguments"""
+
   connect_db()
 
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
@@ -272,11 +215,19 @@ def main():
     try:
       test_tag_name(args.tag, dbt)
     except ValueError as terr:
-      LOGGER.error(terr)
+      logger.error(terr)
+  if args.solvers or args.algo:
+    args = arg_solvers(args, logger)
 
-  cnt = add_jobs(args, dbt)
-
+  cnt = add_jobs(args, dbt, logger)
   print(f"New jobs added: {cnt}")
+
+
+def main():
+  """ main """
+  parser = get_load_job_parser()
+  args = parser.parse_args()
+  run_load_job(args, setup_logger('load_job'))
 
 
 if __name__ == '__main__':
