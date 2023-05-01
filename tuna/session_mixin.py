@@ -25,29 +25,43 @@
 #
 ###############################################################################
 """Session table and its associate functionality"""
+
+from __future__ import __annotations__
+
+from typing import TYPE_CHECKING
+import logging
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import IntegrityError
-
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 
-LOGGER = setup_logger('session')
+if TYPE_CHECKING:
+  from tuna.worker_interface import WorkerInterface
+  from utils import DummyArgs
+  from tuna.miopen.db.session import get_query
+
+LOGGER: logging.Logger = setup_logger('session')
 
 
 class SessionMixin():
   """Session Mixin to provide interface for the session table"""
   #pylint: disable=too-few-public-methods
+  #pylint: disable=too-many-instance-attributes
 
-  arch = Column(String(length=20), nullable=False, server_default="")
-  num_cu = Column(Integer, nullable=False)
-  rocm_v = Column(String(length=64), nullable=False)
-  reason = Column(String(length=60), nullable=False)
-  ticket = Column(String(length=64), nullable=False, server_default="N/A")
-  docker = Column(String(length=64),
-                  nullable=False,
-                  server_default="miopentuna")
+  arch: str = Column(String(length=20), nullable=False, server_default="")
+  num_cu: int = Column(Integer, nullable=False)
+  rocm_v: str = Column(String(length=64), nullable=False)
+  reason: str = Column(String(length=60), nullable=False)
+  ticket: str = Column(String(length=64), nullable=False, server_default="N/A")
+  docker: str = Column(String(length=64),
+                       nullable=False,
+                       server_default="miopentuna")
 
-  def add_new_session(self, args, worker):
+  def __init__(self):
+    self.session_id = 0
+    self.get_query = get_query
+
+  def add_new_session(self, args: DummyArgs, worker: WorkerInterface) -> None:
     """Add new session entry"""
     self.reason = args.label
     self.docker = args.docker_name
@@ -71,13 +85,13 @@ class SessionMixin():
     else:
       self.ticket = 'N/A'
 
-  def insert_session(self):
+  def insert_session(self) -> int:
     """Insert new session obj and return its id"""
     with DbSession() as session:
       try:
         session.add(self)
         session.commit()
-        LOGGER.info('Added new session_id: %s', self.id)
+        LOGGER.info('Added new session_id: %s', self.session_id)
       except IntegrityError as err:
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
@@ -86,4 +100,4 @@ class SessionMixin():
         LOGGER.warning('Session for these values already exists: %s', entry.id)
         return entry.id
 
-    return self.id
+    return self.session_id
