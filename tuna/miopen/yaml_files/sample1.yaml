@@ -33,6 +33,9 @@ load_job:
   fin_steps: false
   tag: 'someTag'
 
+export_db:
+  enabled: true
+
 update_applicability:
   enabled: false
   session_id: 1
