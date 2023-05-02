@@ -45,12 +45,14 @@ def test_yaml_parser():
   miopen_yaml2 = "{0}/../tuna/miopen/yaml_files/sample2.yaml".format(this_path)
   miopen_yaml3 = "{0}/../tuna/miopen/yaml_files/sample3.yaml".format(this_path)
   miopen_yaml4 = "{0}/../tuna/miopen/yaml_files/sample4.yaml".format(this_path)
+  #miopen_yaml5 = "{0}/../tuna/miopen/yaml_files/sample5.yaml".format(this_path)
   example_yaml = "{0}/../tuna/example/sample.yaml".format(this_path)
 
   parse_miopen_yaml1(miopen_yaml1, Library('miopen'))
   parse_miopen_yaml2(miopen_yaml2, Library('miopen'))
   parse_miopen_yaml3(miopen_yaml3, Library('miopen'))
   parse_miopen_yaml4(miopen_yaml4, Library('miopen'))
+  #parse_miopen_yaml5(miopen_yaml5, Library('miopen'))
   parse_example_yaml(example_yaml, Library('example'))
 
   multiple_yamls()
@@ -73,7 +75,7 @@ def multiple_yamls():
 
 def parse_miopen_yaml1(miopen_yaml, miopen):
   yaml_files = parse_yaml(miopen_yaml, miopen)
-  assert len(yaml_files) == 4
+  assert len(yaml_files) == 5
 
   yaml_dicts = []
   #reading in initial yaml file split in 2 yaml files
@@ -142,13 +144,25 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'restart_machine': False,
       'session_id': 1
   }
+  
+  dict5 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'label': 'Example',
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
 
-  print(yaml_dicts[3])
-  print(dict4)
+  print(yaml_dicts[4])
+  print(dict5)
   assert (yaml_dicts[0] == dict1)
   assert (yaml_dicts[1] == dict2)
   assert (yaml_dicts[2] == dict3)
   assert (yaml_dicts[3] == dict4)
+  assert (yaml_dicts[4] == dict5)
 
 
 def parse_miopen_yaml2(miopen_yaml, miopen):
@@ -232,7 +246,34 @@ def parse_miopen_yaml4(miopen_yaml, miopen):
       'session_id': 1
   }
   assert (yaml_dicts[0] == dict4)
+  """
+def parse_miopen_yaml5(miopen_yaml, miopen):
+  yaml_files = parse_yaml(miopen_yaml, miopen)
+  assert len(yaml_files) == 1
 
+  yaml_dicts = []
+  for yfile in yaml_files:
+    with open(yfile, encoding="utf8") as stream:
+      yaml_dict = yaml.safe_load(stream)
+      yaml_dicts.append(yaml_dict)
+
+  dict1 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'label': 'Example',
+      'export_db': {
+          'arch': 'gfx908',
+          'session_id': 1
+      },
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
+  assert (yaml_dicts[0] == dict1)
+
+"""
 
 def parse_example_yaml(example_yaml, example):
   yaml_files = parse_yaml(example_yaml, example)
