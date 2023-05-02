@@ -42,6 +42,7 @@ from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
+from tuna.miopen.subcmd.export_db import run_export_db
 from tuna.miopen.parse_miopen_args import get_import_cfg_parser
 from tuna.miopen.parse_miopen_args import get_load_job_parser
 from tuna.miopen.parse_miopen_args import get_export_db_parser
@@ -354,6 +355,10 @@ class MIOpen(MITunaInterface):
 
     if self.args.subcommand is not None and self.args.subcommand == 'load_job':
       run_load_job(self.args.load_job, self.logger)
+      return None
+
+    if self.args.subcommand is not None and self.args.subcommand == 'export_db':
+      run_export_db(self.args.export_db, self.logger)
       return None
 
     machines = load_machines(self.args)
