@@ -46,9 +46,11 @@ class MITunaInterface():
 
     self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
                                                add_streamhandler=True)
-    self.args: Optional[str] = None
+    self.args = None
 
-  def check_docker(self, worker, dockername="miopentuna") -> None:
+  def check_docker(self,
+                   worker: WorkerInterface,
+                   dockername="miopentuna") -> None:
     """! Checking for docker
       @param worker The worker interface instance
       @param dockername The name of the docker
@@ -190,11 +192,15 @@ class MITunaInterface():
         'job_queue_lock': f_vals["job_queue_lock"],
         'result_queue': f_vals["result_queue"],
         'result_queue_lock': f_vals["result_queue_lock"],
-        'label': self.args.label,  #type: ignore
-        'docker_name': self.args.docker_name,  #type: ignore
-        'end_jobs': f_vals['end_jobs'],
-        'session_id':
-            self.args.session_id  #type: ignore
+        'end_jobs': f_vals['end_jobs']
     }
+    if self.args is not None:
+      kwargs['label'] = self.args.label
+
+    if self.args is not None:
+      kwargs['docker_name'] = self.args.docker_name
+
+    if self.args is not None:
+      kwargs['session_id'] = self.args.session_id
 
     return kwargs
