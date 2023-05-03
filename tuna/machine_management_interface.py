@@ -40,7 +40,7 @@ from paramiko.ecdsakey import ECDSAKey
 from paramiko.ed25519key import Ed25519Key
 from paramiko.rsakey import RSAKey
 from paramiko.agent import AgentKey
-from paramiko.channel import ChannelFile
+from paramiko.channel import ChannelFile, ChannelStderrFile
 from tuna.utils.utility import get_mmi_env_vars
 from tuna.utils.logger import setup_logger
 
@@ -225,7 +225,8 @@ class MachineManagementInterface():
     exit_status: int
 
     # temp variables used in exec command
-    o_var: ChannelFile
+    out_ch: ChannelFile
+    err_out: ChannelStderrFile
     e_result: str
 
     cmd: str = 'ipmitool -H {} -U {} -P {} -p {} {}'.format(
@@ -254,15 +255,15 @@ class MachineManagementInterface():
 
           ssh = MachineManagementInterface.gateway_session
           if ssh is not None:
-            _, o_var, e_var = ssh.exec_command(cmd, timeout=SSH_TIMEOUT)
-          if e_var is not None:
-            error = [x.strip() for x in e_var.readlines()]
+            _, out_ch, err_out = ssh.exec_command(cmd, timeout=SSH_TIMEOUT)
+          if err_out is not None:
+            error = [x.strip() for x in err_out.readlines()]
             e_result = '\n'.join(error)
-            exit_status = o_var.channel.exit_status
+            exit_status = out_ch.channel.exit_status
         except paramiko.ssh_exception.SSHException:
           self.logger.warning('Failed to execute ipmitool command')
 
-      output = [x.strip() for x in o_var.readlines()]
+      output = [x.strip() for x in out_ch.readlines()]
       rstr: str = '\n'.join(output)
       self.logger.warning('IPMI std output: %s', rstr)
       self.logger.warning('IPMI err output: %s', e_result)
@@ -270,19 +271,13 @@ class MachineManagementInterface():
 
   def restart_server(self) -> int:
     """ Method to restart a remote machine """
-    ret_ipmi: int
-    ret_bmc: int
-    ret_status: bool = False
 
+    ret: Optional[int] = None
     if self.backend == MgmtBackend.IPMI:
-      ret_ipmi = self.run_ipmi_command("chassis power cycle")
-      ret_status = True
+      ret = self.run_ipmi_command("chassis status")
     else:
-      ret_bmc = self.run_bmc_command("chassisoff")
-      ret_bmc |= self.run_bmc_command("chassison")
-    if ret_status:
-      return ret_ipmi
-    return ret_bmc
+      ret = self.run_bmc_command("chassisstate")
+    return ret
 
 
 if __name__ == '__main__':
