@@ -459,7 +459,8 @@ def pytestSuite1() {
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {   
-           sh "coverage erase"              
+           sh "coverage erase"
+           sh "python3 -m coverage run -a -m pytest tests/test_export_db.py -s"            
            sh "python3 -m coverage run -a -m pytest tests/test_abort_file.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_analyze_parse_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_connection.py -s"
