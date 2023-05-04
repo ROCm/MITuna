@@ -26,7 +26,7 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 from multiprocessing import Value, Lock, Queue as mpQueue
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from io import StringIO
 import logging
 from paramiko.channel import ChannelFile
@@ -35,6 +35,8 @@ from tuna.machine import Machine
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
+from tests.utils import GoFishArgs
+from tests.utils import ExampleArgs
 
 
 class MITunaInterface():
@@ -42,11 +44,12 @@ class MITunaInterface():
   common functionalities. """
 
   def __init__(self, library=Library.MIOPEN) -> None:
+
     self.library: Library = library
 
     self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
                                                add_streamhandler=True)
-    self.args = None
+    self.args: Union[GoFishArgs, ExampleArgs] = None
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -179,7 +182,7 @@ class MITunaInterface():
       @param f_vals Dict containing runtime information
     """
     envmt: Dict[str, Any] = f_vals["envmt"].copy()
-    kwargs = {}
+    kwargs: Dict[str, Any] = {}
 
     kwargs = {
         'machine': f_vals["machine"],
@@ -192,15 +195,10 @@ class MITunaInterface():
         'job_queue_lock': f_vals["job_queue_lock"],
         'result_queue': f_vals["result_queue"],
         'result_queue_lock': f_vals["result_queue_lock"],
-        'end_jobs': f_vals['end_jobs']
+        'label': self.args.label,
+        'docker_name': self.args.docker_name,
+        'end_jobs': f_vals['end_jobs'],
+        'session_id': self.args.session_id
     }
-    if self.args is not None:
-      kwargs['label'] = self.args.label
-
-    if self.args is not None:
-      kwargs['docker_name'] = self.args.docker_name
-
-    if self.args is not None:
-      kwargs['session_id'] = self.args.session_id
 
     return kwargs
