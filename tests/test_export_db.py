@@ -38,12 +38,10 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.miopen.subcmd.export_db import (arg_export_db, get_filename,
-                                          get_base_query, get_fdb_query,
-                                          get_pdb_query, get_fdb_alg_lists,
-                                          build_miopen_fdb, write_fdb,
-                                          export_fdb, build_miopen_kdb,
-                                          write_kdb, export_kdb)
+from tuna.miopen.subcmd.export_db import (
+    arg_export_db, get_filename, get_base_query, get_fdb_query, get_pdb_query,
+    get_fdb_alg_lists, build_miopen_fdb, write_fdb, export_fdb,
+    build_miopen_kdb, write_kdb, export_kdb, create_sqlite_tables, get_cfg_dict)
 from tuna.utils.db_utility import DB_Type
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
@@ -88,7 +86,6 @@ args = DummyArgs()
 args.session_id = session_id
 args.config_type = ConfigType.convolution
 dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
-
 logger = logging.getLogger("test_logger")
 
 
@@ -154,5 +151,79 @@ with DbSession() as session:
     build_mioopen_kdp = build_miopen_kdb(dbt, alg_lists, logger)
     assert build_mioopen_kdp is not None
 
+  def test_create_sqlite_tables(mock_args):
+    cnx, local_path = create_sqlite_tables(mock_args.arch, mock_args.num_cu,
+                                           mock_args.filename)
+    cur = cnx.cursor()
+    cur.execute(
+        "SELECT name from sqlite_master WHERE type='table' AND (name='config' or name='perf_db')"
+    )
+    table_names = cur.fetchall()
+    cur.close()
+    assert len(table_names) == 2
+    assert ('config') in table_names[0]
+    assert ('perf_db') in table_names[1]
+
+    cur = cnx.cursor()
+    cur.execute(
+        "SELECT name from sqlite_master WHERE type='index' AND (name='idx_config' OR name='idx_perf_db')"
+    )
+    index_names = cur.fetchall()
+    cur.close()
+    assert len(index_names) == 2
+    assert ('idx_config') in index_names[0]
+    assert ('idx_perf_db') in index_names[1]
+    cnx.close()
+    os.remove(local_path)
+
   session.delete(fdb_entry)
   session.commit()
+
+
+def test_get_cfg_dict():
+
+  class CfgEntry:
+    valid = 1
+
+    @staticmethod
+    def to_dict():
+      return {
+          'direction': 'B',
+          'out_channels': 10,
+          'in_channels': 5,
+          'in_w': 8,
+          'conv_stride_w': 1,
+          'fil_w': 3,
+          'pad_w': 0,
+          'in_h': 8,
+          'conv_stride_h': 1,
+          'fil_h': 3,
+          'pad_h': 0,
+          'spatial_dim': 3,
+          'in_d': 8,
+          'conv_stride_d': 1,
+          'fil_d': 3,
+          'pad_d': 0
+      }
+
+  class TensorEntry:
+    id = 1
+
+    @staticmethod
+    def to_dict(ommit_valid=False):
+      return {
+          'id': 1,
+          'tensor_id_1': 'cfg_value_1',
+          'tensor_id_2': 'cfg_value_2'
+      }
+
+  cfg_entry = CfgEntry()
+  tensor_entry = TensorEntry()
+
+  cfg_dict = get_cfg_dict(cfg_entry, tensor_entry)
+
+  assert isinstance(cfg_dict, dict)
+  assert 'tensor_id_1' in cfg_dict
+  assert 'tensor_id_2' in cfg_dict
+  assert cfg_dict['tensor_id_1'] == 'cfg_value_1'
+  assert cfg_dict['tensor_id_2'] == 'cfg_value_2'
