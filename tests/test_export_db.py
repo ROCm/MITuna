@@ -30,43 +30,25 @@ import argparse
 import logging
 import pytest
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Query
-from sqlalchemy.sql import Select
+from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from unittest.mock import MagicMock
-
-from tuna.miopen.subcmd.export_db import arg_export_db, get_filename
-from tuna.miopen.subcmd.export_db import get_base_query, get_fdb_query
-from tuna.miopen.subcmd.export_db import get_pdb_query, get_fdb_alg_lists
-from tuna.miopen.subcmd.export_db import build_miopen_fdb, write_fdb
-from tuna.miopen.subcmd.export_db import export_fdb
-from tuna.utils.db_utility import get_id_solvers, DB_Type
+from tuna.miopen.subcmd.export_db import (arg_export_db, get_filename,
+                                          get_base_query, get_fdb_query,
+                                          get_pdb_query, get_fdb_alg_lists,
+                                          build_miopen_fdb, write_fdb,
+                                          export_fdb, build_miopen_kdb,
+                                          write_kdb, export_kdb)
+from tuna.utils.db_utility import DB_Type
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
-from tuna.miopen.parse_miopen_args import get_export_db_parser
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs
-
-
-def test_get_file():
-  arch = "gfx900"
-  num_cu = 64
-  filename = None
-  ocl = True
-  db_type = DB_Type.FIND_DB
-
-  expeted_filename = "tuna_1.0.0/gfx900_64.OpenCL.fdb.txt"
-  actual_filename = get_filename(arch, num_cu, filename, ocl, db_type)
-
-  assert actual_filename == expeted_filename, f"expected {expeted_filename}, but got {actual_filename}"
 
 
 @pytest.fixture
@@ -75,7 +57,7 @@ def mock_args():
   args.golden_v = None
   args.arch = "arch"
   args.num_cu = 64
-  args.opencl = 1
+  args.opencl = "1"
   args.config_tag = None
   args.filename = None
   return args
@@ -100,47 +82,77 @@ def build_fdb_entry(session_id):
   return fdb_entry
 
 
-def test_fdp_queries(mock_args, caplog):
-  session_id = add_test_session()
-  fdb_entry = build_fdb_entry(session_id)
-  with DbSession() as session:
-    session.add(fdb_entry)
-    session.commit()
+session_id = add_test_session()
+fdb_entry = build_fdb_entry(session_id)
+args = DummyArgs()
+args.session_id = session_id
+args.config_type = ConfigType.convolution
+dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
-  res = None
-  args = DummyArgs()
-  args.session_id = session_id
-  args.config_type = ConfigType.convolution
-  dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
-  caplog.set_level(logging.INFO)
-  logger = logging.getLogger("test_logger")
+logger = logging.getLogger("test_logger")
 
-  with DbSession() as session:
-    query_base = get_base_query(dbt, mock_args, logger)
-    query_fdb = get_fdb_query(dbt, mock_args, logger)
-    alg_list = get_fdb_alg_lists(query_fdb, logger)
-    query_pdb = get_pdb_query(dbt, mock_args, logger)
-    build_mioopen_fdp = build_miopen_fdb(alg_list, logger)
-    test_write_file_fdp = write_fdb(mock_args.arch, mock_args.num_cu,
-                                    mock_args.opencl, build_mioopen_fdp,
-                                    mock_args.filename)
-    test_export_fdp = export_fdb(dbt, mock_args, logger)
-    session.delete(fdb_entry)
-    session.commit()
 
-  assert query_base is not None, "Query object is None"
-  assert isinstance(
-      query_base,
-      Query), f"epected query to be an instance of Query, Got {type(query)}"
-  assert query_fdb is not None, "Query object is None"
-  assert isinstance(
-      query_fdb,
-      Query), f"epected query to be an instance of Query, Got {type(query_fdb)}"
-  assert alg_list is not None, f"expected a retrived an fdb alg list, Got {type(alg_list)}"
-  assert build_mioopen_fdp is not None, f"failed to build miopen_fdb, Got {type(alg_list)}"
-  assert test_write_file_fdp is not None
-  assert test_export_fdp is not None
-  assert query_pdb is not None, "Query object is None"
-  assert isinstance(
-      query_pdb,
-      Query), f"epected query to be an instance of Query, Got {type(query_pdb)}"
+def test_get_file():
+  arch = "gfx900"
+  num_cu = 64
+  filename = None
+  ocl = True
+  db_type = DB_Type.FIND_DB
+
+  expeted_filename = "tuna_1.0.0/gfx900_64.OpenCL.fdb.txt"
+  actual_filename = get_filename(arch, num_cu, filename, ocl, db_type)
+
+  assert actual_filename == expeted_filename, f"expected {expeted_filename}, but got {actual_filename}"
+
+
+with DbSession() as session:
+  session.add(fdb_entry)
+  session.commit()
+
+with DbSession() as session:
+
+  def test_get_base_query(mock_args):
+    query = get_base_query(dbt, mock_args, logger)
+    assert query is not None, "Query object is None"
+    assert isinstance(
+        query,
+        Query), f"epected query to be an instance of Query, Got {type(query)}"
+
+  def test_get_fdb_query(mock_args):
+    fdb_query = get_fdb_query(dbt, mock_args, logger)
+    assert fdb_query is not None, "Query object is None"
+    assert isinstance(
+        fdb_query, Query
+    ), f"epected query to be an instance of Query, Got {type(fdb_query)}"
+
+  def test_get_fdb_alg_lists(mock_args):
+    fdb_query = get_fdb_query(dbt, mock_args, logger)
+    alg_lists = get_fdb_alg_lists(fdb_query, logger)
+    assert alg_lists is not None, f"expected a retrived an fdb alg list, Got {type(test_get_fdb_alg_lists)}"
+
+  def test_get_pdb_query(mock_args):
+    pdb_query = get_pdb_query(dbt, mock_args, logger)
+    assert pdb_query is not None, "Query object is None"
+    assert isinstance(
+        pdb_query, Query
+    ), f"epected query to be an instance of Query, Got {type(pdb_query)}"
+
+  def test_build_export_miopen_fdp(mock_args):
+    fdb_query = get_fdb_query(dbt, mock_args, logger)
+    alg_lists = get_fdb_alg_lists(fdb_query, logger)
+    miopen_fdb = build_miopen_fdb(alg_lists, logger)
+    fdb_file = write_fdb(mock_args.arch, mock_args.num_cu, mock_args.opencl,
+                         miopen_fdb, mock_args.filename)
+    fdb_exported = export_fdb(dbt, mock_args, logger)
+    assert miopen_fdb is not None, f"failed to build miopen_fdb, Got {type(miopen_fdb)}"
+    assert fdb_file is not None
+    assert fdb_exported is not None
+
+  def test_buid_miopen_kdp(mock_args):
+    fdb_query = get_fdb_query(dbt, mock_args, logger)
+    alg_lists = get_fdb_alg_lists(fdb_query, logger)
+    build_mioopen_kdp = build_miopen_kdb(dbt, alg_lists, logger)
+    assert build_mioopen_kdp is not None
+
+  session.delete(fdb_entry)
+  session.commit()
