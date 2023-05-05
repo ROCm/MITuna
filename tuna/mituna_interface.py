@@ -26,17 +26,16 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 from multiprocessing import Value, Lock, Queue as mpQueue
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any
 from io import StringIO
 import logging
+import argparse
 from paramiko.channel import ChannelFile
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
-from tests.utils import GoFishArgs
-from tests.utils import ExampleArgs
 
 
 class MITunaInterface():
@@ -49,7 +48,7 @@ class MITunaInterface():
 
     self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
                                                add_streamhandler=True)
-    self.args: Union[GoFishArgs, ExampleArgs] = None
+    self.args: argparse.Namespace
 
   def check_docker(self,
                    worker: WorkerInterface,
