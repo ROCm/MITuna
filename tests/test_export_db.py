@@ -82,7 +82,6 @@ def mock_args():
 
 
 #testing fdb and pdb functions
-@pytest.fixture
 def build_fdb_entry(session_id):
   fdb_entry = ConvolutionFindDB()
   fdb_entry.config = 1
