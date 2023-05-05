@@ -26,19 +26,13 @@
 ###############################################################################
 """Session table and its associate functionality"""
 
-from __future__ import __annotations__
-
-from typing import TYPE_CHECKING
 import logging
+import argparse
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
-
-if TYPE_CHECKING:
-  from tuna.worker_interface import WorkerInterface
-  from utils import DummyArgs
-  from tuna.miopen.db.session import get_query
+from tuna.example.session import SessionExample
 
 LOGGER: logging.Logger = setup_logger('session')
 
@@ -59,9 +53,10 @@ class SessionMixin():
 
   def __init__(self):
     self.session_id = 0
-    self.get_query = get_query
 
-  def add_new_session(self, args: DummyArgs, worker: WorkerInterface) -> None:
+    self.get_query = SessionExample().get_query
+
+  def add_new_session(self, args: argparse.Namespace, worker) -> None:
     """Add new session entry"""
     self.reason = args.label
     self.docker = args.docker_name
