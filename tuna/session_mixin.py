@@ -32,7 +32,6 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
-from tuna.example.session import SessionExample
 
 LOGGER: logging.Logger = setup_logger('session')
 
@@ -53,8 +52,6 @@ class SessionMixin():
 
   def __init__(self):
     self.session_id = 0
-
-    self.get_query = SessionExample().get_query
 
   def add_new_session(self, args: argparse.Namespace, worker) -> None:
     """Add new session entry"""
@@ -91,7 +88,7 @@ class SessionMixin():
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
         session.rollback()
-        entry = self.get_query(session, type(self), self).one()
+        entry = self.get_query(session, type(self), self).one()  #type: ignore
         LOGGER.warning('Session for these values already exists: %s', entry.id)
         return entry.id
 
