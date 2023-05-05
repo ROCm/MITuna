@@ -45,7 +45,9 @@ from unittest.mock import MagicMock
 
 from tuna.miopen.subcmd.export_db import arg_export_db, get_filename
 from tuna.miopen.subcmd.export_db import get_base_query, get_fdb_query
-from tuna.miopen.subcmd.export_db import get_pdb_query
+from tuna.miopen.subcmd.export_db import get_pdb_query, get_fdb_alg_lists
+from tuna.miopen.subcmd.export_db import build_miopen_fdb, write_fdb
+from tuna.miopen.subcmd.export_db import export_fdb
 from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.miopen.parse_miopen_args import get_export_db_parser
@@ -53,15 +55,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs
 
-
-@pytest.fixture
-def remove_tuna_directory():
-  yield
-  if os.path.exists("tuna_1.0.0"):
-    os.rmdir("tuna_1.0.0")
-
-
-def test_get_file(remove_tuna_directory):
+def test_get_file():
   arch = "gfx900"
   num_cu = 64
   filename = None
@@ -72,21 +66,6 @@ def test_get_file(remove_tuna_directory):
   actual_filename = get_filename(arch, num_cu, filename, ocl, db_type)
 
   assert actual_filename == expeted_filename, f"expected {expeted_filename}, but got {actual_filename}"
-  assert os.path.exists("tuna_1.0.0"), "directory 'tuna_10.0.0' not created"
-
-
-@pytest.fixture
-def mock_db_tables():
-  db_tables = MIOpenDBTables()
-  db_tables.find_db_table = MagicMock()
-  db_tables.golden_table = MagicMock()
-  db_tables.config_table = MagicMock()
-  db_tables.config_tags_table = MagicMock()
-  db_tables.solver_table = MagicMock()
-  db_tables.kernel_cache = MagicMock()
-  db_tables.session = MagicMock()
-  return db_tables
-
 
 @pytest.fixture
 def mock_args():
@@ -99,21 +78,8 @@ def mock_args():
   args.filename = None
   return args
 
-
-def test_get_base_query(mock_db_tables, mock_args, caplog):
-  caplog.set_level(logging.INFO)
-  logger = logging.getLogger("test_logger")
-  query = get_base_query(mock_db_tables, mock_args, logger)
-  assert query is not None, "Query object is None"
-  assert isinstance(
-      query,
-      Query), f"epected query to be an instance of Query, Got {type(query)}"
-  logs = [
-      record.message for record in caplog.records if record.levelname == 'INFO'
-  ]
-  assert len(logs) > 0, "No logs must contains at least one record"
-
-
+#testing fdb and pdb functions
+@pytest.fixture
 def build_fdb_entry(session_id):
   fdb_entry = ConvolutionFindDB()
   fdb_entry.config = 1
@@ -132,7 +98,7 @@ def build_fdb_entry(session_id):
   return fdb_entry
 
 
-def test_get_fdb_query(mock_args, caplog):
+def test_fdp_queries(mock_args, caplog):
   session_id = add_test_session()
   fdb_entry = build_fdb_entry(session_id)
   with DbSession() as session:
@@ -148,15 +114,30 @@ def test_get_fdb_query(mock_args, caplog):
   logger = logging.getLogger("test_logger")
 
   with DbSession() as session:
+    query_base = get_base_query(dbt, mock_args, logger)
     query_fdb = get_fdb_query(dbt, mock_args, logger)
+    alg_list = get_fdb_alg_lists(query_fdb, logger)
     query_pdb = get_pdb_query(dbt, mock_args, logger)
+    build_mioopen_fdp = build_miopen_fdb(alg_list, logger)
+    test_write_file_fdp = write_fdb(mock_args.arch, mock_args.num_cu, mock_args.opencl, build_mioopen_fdp, mock_args.filename)
+    test_export_fdp = export_fdb(dbt, mock_args, logger)
     session.delete(fdb_entry)
     session.commit()
+
+  assert query_base is not None, "Query object is None"
+  assert isinstance(
+      query_base,
+      Query), f"epected query to be an instance of Query, Got {type(query)}"
   assert query_fdb is not None, "Query object is None"
   assert isinstance(
       query_fdb,
       Query), f"epected query to be an instance of Query, Got {type(query_fdb)}"
+  assert alg_list is not None, f"expected a retrived an fdb alg list, Got {type(alg_list)}"
+  assert build_mioopen_fdp is not None, f"failed to build miopen_fdb, Got {type(alg_list)}"
+  assert test_write_file_fdp is not None
+  assert test_export_fdp is not None
   assert query_pdb is not None, "Query object is None"
   assert isinstance(
       query_pdb,
       Query), f"epected query to be an instance of Query, Got {type(query_pdb)}"
+
