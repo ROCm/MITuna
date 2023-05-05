@@ -55,6 +55,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs
 
+
 def test_get_file():
   arch = "gfx900"
   num_cu = 64
@@ -67,6 +68,7 @@ def test_get_file():
 
   assert actual_filename == expeted_filename, f"expected {expeted_filename}, but got {actual_filename}"
 
+
 @pytest.fixture
 def mock_args():
   args = argparse.Namespace()
@@ -77,6 +79,7 @@ def mock_args():
   args.config_tag = None
   args.filename = None
   return args
+
 
 #testing fdb and pdb functions
 @pytest.fixture
@@ -119,7 +122,9 @@ def test_fdp_queries(mock_args, caplog):
     alg_list = get_fdb_alg_lists(query_fdb, logger)
     query_pdb = get_pdb_query(dbt, mock_args, logger)
     build_mioopen_fdp = build_miopen_fdb(alg_list, logger)
-    test_write_file_fdp = write_fdb(mock_args.arch, mock_args.num_cu, mock_args.opencl, build_mioopen_fdp, mock_args.filename)
+    test_write_file_fdp = write_fdb(mock_args.arch, mock_args.num_cu,
+                                    mock_args.opencl, build_mioopen_fdp,
+                                    mock_args.filename)
     test_export_fdp = export_fdb(dbt, mock_args, logger)
     session.delete(fdb_entry)
     session.commit()
@@ -140,4 +145,3 @@ def test_fdp_queries(mock_args, caplog):
   assert isinstance(
       query_pdb,
       Query), f"epected query to be an instance of Query, Got {type(query_pdb)}"
-
