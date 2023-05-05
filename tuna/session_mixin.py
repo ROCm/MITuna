@@ -51,7 +51,7 @@ class SessionMixin():
                        server_default="miopentuna")
 
   def __init__(self):
-    self.session_id = 0
+    self.id: int = 0  # pylint: disable=invalid-name
 
   def add_new_session(self, args: argparse.Namespace, worker) -> None:
     """Add new session entry"""
@@ -83,7 +83,7 @@ class SessionMixin():
       try:
         session.add(self)
         session.commit()
-        LOGGER.info('Added new session_id: %s', self.session_id)
+        LOGGER.info('Added new session_id: %s', self.id)
       except IntegrityError as err:
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
@@ -92,4 +92,4 @@ class SessionMixin():
         LOGGER.warning('Session for these values already exists: %s', entry.id)
         return entry.id
 
-    return self.session_id
+    return self.id
