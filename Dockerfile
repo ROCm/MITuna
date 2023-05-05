@@ -52,7 +52,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     libnuma-dev \
     libpthread-stubs0-dev \
     llvm \
-    miopengemm \
+    # miopengemm \
     pkg-config \
     python3 \
     python3-dev \
