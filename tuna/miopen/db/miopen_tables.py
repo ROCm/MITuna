@@ -372,7 +372,6 @@ class JobMixin():
   eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
 
   gpu_id = Column(Integer, nullable=False, server_default="-1")
-  kernel_time = Column(DOUBLE, nullable=False, server_default="-1")
   machine_id = Column(Integer, nullable=False, server_default="-1")
   eval_mid = Column(Integer, server_default="-1")
   cache_loc = Column(Text)

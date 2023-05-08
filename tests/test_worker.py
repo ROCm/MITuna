@@ -56,6 +56,7 @@ def add_job(w):
   args.tag = 'tuna_pytest_worker'
   args.mark_recurrent = True
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
+  logger = setup_logger('test_add_job')
 
   dbt = MIOpenDBTables(session_id=w.session_id, config_type=args.config_type)
   counts = import_cfgs(args, dbt, setup_logger('test_worker'))
@@ -93,7 +94,7 @@ def add_job(w):
     except ValueError as terr:
       print(terr)
 
-  num_jobs = add_jobs(args, dbt)
+  num_jobs = add_jobs(args, dbt, logger)
   assert num_jobs > 0
 
 
