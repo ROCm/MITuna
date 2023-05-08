@@ -5,8 +5,8 @@ ARG ROCM_PRE=0
 
 FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION=
-ARG OSDB_BKC_VERSION=11650
+ARG ROCMVERSION='5.5 50'
+ARG OSDB_BKC_VERSION=
 # Add rocm repository
 RUN apt-get update
 RUN apt-get install -y wget gnupg
@@ -52,7 +52,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     libnuma-dev \
     libpthread-stubs0-dev \
     llvm \
-    miopengemm \
+    #miopengemm \
     pkg-config \
     python3 \
     python3-dev \
