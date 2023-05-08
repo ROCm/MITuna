@@ -29,6 +29,7 @@ import sys
 import argparse
 import logging
 import pytest
+import itertools
 
 from sqlalchemy.orm import Query
 from sqlalchemy.ext.declarative import declarative_base
@@ -41,12 +42,49 @@ this_path = os.path.dirname(__file__)
 from tuna.miopen.subcmd.export_db import (
     arg_export_db, get_filename, get_base_query, get_fdb_query, get_pdb_query,
     get_fdb_alg_lists, build_miopen_fdb, write_fdb, export_fdb,
-    build_miopen_kdb, write_kdb, export_kdb, create_sqlite_tables, get_cfg_dict)
+    build_miopen_kdb, insert_perf_db_sqlite, create_sqlite_tables, get_cfg_dict,
+    populate_sqlite)
 from tuna.utils.db_utility import DB_Type
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.find_db import ConvolutionFindDB
+from tuna.utils.db_utility import get_id_solvers
 from utils import add_test_session, DummyArgs
+
+_, ID_SOLVER_MAP = get_id_solvers()
+
+
+class CfgEntry:
+  valid = 1
+
+  @staticmethod
+  def to_dict():
+    return {
+        'direction': 'B',
+        'out_channels': 10,
+        'in_channels': 5,
+        'in_w': 8,
+        'conv_stride_w': 1,
+        'fil_w': 3,
+        'pad_w': 0,
+        'in_h': 8,
+        'conv_stride_h': 1,
+        'fil_h': 3,
+        'pad_h': 0,
+        'spatial_dim': 3,
+        'in_d': 8,
+        'conv_stride_d': 1,
+        'fil_d': 3,
+        'pad_d': 0
+    }
+
+
+class TensorEntry:
+  id = 1
+
+  @staticmethod
+  def to_dict(ommit_valid=False):
+    return {'id': 1, 'tensor_id_1': 'cfg_value_1', 'tensor_id_2': 'cfg_value_2'}
 
 
 @pytest.fixture
@@ -145,7 +183,7 @@ with DbSession() as session:
     assert fdb_file is not None
     assert fdb_exported is not None
 
-  def test_buid_miopen_kdp(mock_args):
+  def test_buid_miopen_kdb(mock_args):
     fdb_query = get_fdb_query(dbt, mock_args, logger)
     alg_lists = get_fdb_alg_lists(fdb_query, logger)
     build_mioopen_kdp = build_miopen_kdb(dbt, alg_lists, logger)
@@ -176,54 +214,47 @@ with DbSession() as session:
     cnx.close()
     os.remove(local_path)
 
+  def test_insert_perf_db_sqlite(mock_args):
+    ins_cfg_id = 1
+    perf_db_entry = build_fdb_entry(session_id)
+    cnx, local_path = create_sqlite_tables(mock_args.arch, mock_args.num_cu,
+                                           mock_args.filename)
+    perf_db_dict = insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id)
+    expected_data = {
+        "config": ins_cfg_id,
+        "solver": ID_SOLVER_MAP[perf_db_entry.solver],
+        "params": perf_db_entry.params
+    }
+
+    for key, value in expected_data.items():
+      assert perf_db_dict[key] == value
+
+    cur = cnx.cursor()
+    cur.execute("SELECT config, solver FROM perf_db WHERE config=?",
+                (ins_cfg_id,))
+    inserted_data = cur.fetchone()
+    cur.close()
+    cnx.close()
+    os.remove(local_path)
+    print(inserted_data)
+    print(perf_db_dict)
+    assert inserted_data is not None, "No data was inserted into perf_db table"
+    assert inserted_data == tuple(
+        itertools.islice(expected_data.values(), 2)
+    ), f"expected inserted data {tuple(itertools.islice(expected_data.values(),2))}, but got {inserted_data}"
+
+  def test_get_cfg_dict():
+
+    cfg_entry = CfgEntry()
+    tensor_entry = TensorEntry()
+
+    cfg_dict = get_cfg_dict(cfg_entry, tensor_entry)
+
+    assert isinstance(cfg_dict, dict)
+    assert 'tensor_id_1' in cfg_dict
+    assert 'tensor_id_2' in cfg_dict
+    assert cfg_dict['tensor_id_1'] == 'cfg_value_1'
+    assert cfg_dict['tensor_id_2'] == 'cfg_value_2'
+
   session.delete(fdb_entry)
   session.commit()
-
-
-def test_get_cfg_dict():
-
-  class CfgEntry:
-    valid = 1
-
-    @staticmethod
-    def to_dict():
-      return {
-          'direction': 'B',
-          'out_channels': 10,
-          'in_channels': 5,
-          'in_w': 8,
-          'conv_stride_w': 1,
-          'fil_w': 3,
-          'pad_w': 0,
-          'in_h': 8,
-          'conv_stride_h': 1,
-          'fil_h': 3,
-          'pad_h': 0,
-          'spatial_dim': 3,
-          'in_d': 8,
-          'conv_stride_d': 1,
-          'fil_d': 3,
-          'pad_d': 0
-      }
-
-  class TensorEntry:
-    id = 1
-
-    @staticmethod
-    def to_dict(ommit_valid=False):
-      return {
-          'id': 1,
-          'tensor_id_1': 'cfg_value_1',
-          'tensor_id_2': 'cfg_value_2'
-      }
-
-  cfg_entry = CfgEntry()
-  tensor_entry = TensorEntry()
-
-  cfg_dict = get_cfg_dict(cfg_entry, tensor_entry)
-
-  assert isinstance(cfg_dict, dict)
-  assert 'tensor_id_1' in cfg_dict
-  assert 'tensor_id_2' in cfg_dict
-  assert cfg_dict['tensor_id_1'] == 'cfg_value_1'
-  assert cfg_dict['tensor_id_2'] == 'cfg_value_2'
