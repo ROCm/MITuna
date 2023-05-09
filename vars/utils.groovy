@@ -595,6 +595,7 @@ def runLint() {
             sh "mypy tuna/grafana_dict.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/libraries.py"
             sh "mypy tuna/lib_utils.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/machine_management_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "yamllint tuna/miopen/yaml_files/*.yaml"
             sh "yamllint tuna/example/*.yaml"
             sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
