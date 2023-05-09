@@ -115,8 +115,8 @@ class MITunaInterface():
           if line.find(dockername) != -1:
             self.logger.warning('%s docker image exists', dockername)
             break
-      if line is None:
-        self.logger.warning('%s docker image does not exist', dockername)
+        else:
+          self.logger.warning('%s docker image does not exist', dockername)
 
     return True
 
