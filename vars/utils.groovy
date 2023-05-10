@@ -592,6 +592,7 @@ def runLint() {
             sh "mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/grafana_dict.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/mituna_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/libraries.py"
             sh "mypy tuna/lib_utils.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/machine_management_interface.py --ignore-missing-imports --follow-imports=skip"
