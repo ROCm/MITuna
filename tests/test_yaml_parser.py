@@ -53,7 +53,7 @@ def test_yaml_parser():
   parse_miopen_yaml4(miopen_yaml4, Library('miopen'))
   parse_example_yaml(example_yaml, Library('example'))
 
-  #multiple_yamls()
+  multiple_yamls()
 
 
 def multiple_yamls():
@@ -67,6 +67,7 @@ def multiple_yamls():
   except subprocess.CalledProcessError as subp_err:
     print(f"Subprocess error: {subp_err}")
     subp_fail = True
+    print(f"{subp_err}")
 
   assert subp_fail == False
 
@@ -147,6 +148,9 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
+      'export_db': {
+          'file_name': 'fdb_nhwc'
+      },
       'label': 'Example',
       'num_cu': 120,
       'remote_machine': False,

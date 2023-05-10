@@ -35,6 +35,7 @@ load_job:
 
 export_db:
   enabled: true
+  file_name: 'fdb_nhwc'
 
 update_applicability:
   enabled: false

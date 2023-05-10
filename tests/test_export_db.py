@@ -169,10 +169,7 @@ with DbSession() as session:
                 (ins_cfg_id,))
     inserted_data = cur.fetchone()
     cur.close()
-    cnx.close()
     os.remove(local_path)
-    print(inserted_data)
-    print(perf_db_dict)
     assert inserted_data is not None, "No data was inserted into perf_db table"
     assert inserted_data == tuple(
         itertools.islice(expected_data.values(), 2)
