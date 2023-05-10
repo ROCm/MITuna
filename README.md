@@ -31,15 +31,18 @@ apt-get install mysql-server
 ```
 mysqld --initialize
 grep 'temporary password' /var/log/mysql/error.log
-mysql -u root -p
-<use the temporary password>
-mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY 'root-password';
-mysql> CREATE DATABASE <database_name>;
 ```
 
 Enable the service
 ```
 systemctl start mysql
+```
+
+```
+mysql -u root -p
+<use the temporary password>
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED BY 'root-password';
+mysql> CREATE DATABASE <database_name>;
 ```
 
 Install ipmitool
