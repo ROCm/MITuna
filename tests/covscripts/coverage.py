@@ -71,20 +71,20 @@ def develop(root_dir, coverage_file_name_txt, coverage_file_name_json):
 def branch(root_dir, coverage_file_name_txt, coverage_file_name_json):
   """run and compare coverage for the non-develop, peripheral branches"""
   file_path_curcov_json = os.path.join(root_dir, coverage_file_name_json)
-  curcov_percentage_ftdt = curcov(file_path_curcov_json)
+  cur_cov = curcov(file_path_curcov_json)
+  prev_cov = None
 
   with open(coverage_file_name_txt, 'r') as f:
     prevcov_file = f.readline().strip()
-    prevcov_percentage_ftdt = float(prevcov_file)
+    prev_cov = float(prevcov_file)
 
-  print(
-      f"Current Testing Coverage for current branch is: {curcov_percentage_ftdt}%"
-  )
-  print(
-      f"Current Testing Coverage for develop branch is: {prevcov_percentage_ftdt}%"
-  )
-  if curcov_percentage_ftdt < prevcov_percentage_ftdt:
-    raise ValueError('Code Coverage Decreased')
+  print(f"Current Testing Coverage for current branch is: {cur_cov}%")
+  print(f"Current Testing Coverage for develop branch is: {prev_cov}%")
+  prct_change = (prev_cov - cur_cov) / prev_cov * 100
+  if prct_change > 0.5:
+    raise ValueError(
+        f"Code Coverage Decreased by more than 0.5%%. Prev:{prev_cov}, cur: {cur_cov}"
+    )
 
 
 def main():

@@ -66,6 +66,7 @@ def add_fin_find_compile_job(session_id, dbt):
   args.tag = 'tuna_pytest_fin_builder'
   args.fin_steps = ['miopen_find_compile', 'miopen_find_eval']
   args.session_id = session_id
+  logger = setup_logger('test_add_fin_find_compile_job')
 
   #limit job scope
   args.algo = "miopenConvolutionAlgoGEMM"
@@ -80,7 +81,7 @@ def add_fin_find_compile_job(session_id, dbt):
   args.only_applicable = True
 
   connect_db()
-  return add_jobs(args, dbt)
+  return add_jobs(args, dbt, logger)
 
 
 def test_fin_builder():
