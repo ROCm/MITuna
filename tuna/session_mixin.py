@@ -30,6 +30,8 @@ import logging
 import argparse
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.query import Query
+from sqlalchemy.orm.session import Session
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 
@@ -38,8 +40,6 @@ LOGGER: logging.Logger = setup_logger('session')
 
 class SessionMixin():
   """Session Mixin to provide interface for the session table"""
-  #pylint: disable=too-few-public-methods
-  #pylint: disable=too-many-instance-attributes
 
   arch: str = Column(String(length=20), nullable=False, server_default="")
   num_cu: int = Column(Integer, nullable=False)
@@ -52,6 +52,10 @@ class SessionMixin():
 
   def __init__(self):
     self.id: int = 0  # pylint: disable=invalid-name
+
+  def get_query(self, sess: Session, sess_obj, entry) -> Query:
+    """Overloaded method.Defined in child class: session class"""
+    raise NotImplementedError("Not implemented")
 
   def add_new_session(self, args: argparse.Namespace, worker) -> None:
     """Add new session entry"""
@@ -79,6 +83,7 @@ class SessionMixin():
 
   def insert_session(self) -> int:
     """Insert new session obj and return its id"""
+    session: Session
     with DbSession() as session:
       try:
         session.add(self)
@@ -88,7 +93,7 @@ class SessionMixin():
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
         session.rollback()
-        entry = self.get_query(session, type(self), self).one()  #type: ignore
+        entry: Query = self.get_query(session, type(self), self).one()
         LOGGER.warning('Session for these values already exists: %s', entry.id)
         return entry.id
 
