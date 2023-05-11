@@ -178,31 +178,34 @@ def build_fdb_entry(session_id):
 class CfgEntry:
   valid = 1
 
-  @staticmethod
-  def to_dict():
-    return {
-        'direction': 'B',
-        'out_channels': 10,
-        'in_channels': 5,
-        'in_w': 8,
-        'conv_stride_w': 1,
-        'fil_w': 3,
-        'pad_w': 0,
-        'in_h': 8,
-        'conv_stride_h': 1,
-        'fil_h': 3,
-        'pad_h': 0,
-        'spatial_dim': 3,
-        'in_d': 8,
-        'conv_stride_d': 1,
-        'fil_d': 3,
-        'pad_d': 0
-    }
+  def __init__(self):
+    self.direction = 'B'
+    self.out_channels = 10
+    self.in_channels = 5
+    self.in_w = 8
+    self.conv_stride_w = 1
+    self.fil_w = 3
+    self.pad_w = 0
+    self.in_h = 8
+    self.conv_stride_h = 1
+    self.fil_h = 3
+    self.pad_h = 0
+    self.spatial_dim = 3
+    self.in_d = 8
+    self.conv_stride_d = 1
+    self.fil_d = 3
+    self.pad_d = 0
+
+  def to_dict(self):
+    return vars(self)
 
 
 class TensorEntry:
-  id = 1
 
-  @staticmethod
-  def to_dict(ommit_valid=False):
-    return {'id': 1, 'tensor_id_1': 'cfg_value_1', 'tensor_id_2': 'cfg_value_2'}
+  def __init__(self):
+    self.id = 1
+    self.tensor_id_1 = 'cfg_value_1'
+    self.tensor_id_2 = 'cfg_value_2'
+
+  def to_dict(self, omit_valid=False):
+    return vars(self)
