@@ -28,6 +28,7 @@
 import sqlite3
 import os
 from collections import OrderedDict
+from typing import Dict, List, Any
 import base64
 import argparse
 import logging
@@ -146,8 +147,8 @@ def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
 
 def get_fdb_alg_lists(query, logger: logging.Logger):
   """return dict with key: fdb_key + alg_lib, val: solver list"""
-  find_db = OrderedDict()
-  solvers = {}
+  find_db: OrderedDict = OrderedDict()
+  solvers: Dict[str, Dict[str, Any]] = {}
   db_entries = query.all()
   total_entries = len(db_entries)
   logger.info("fdb query returned: %s", total_entries)
@@ -178,7 +179,7 @@ def build_miopen_fdb(fdb_alg_lists, logger: logging.Logger):
   """
   total_entries = len(fdb_alg_lists)
   num_fdb_entries = 0
-  miopen_fdb = OrderedDict()
+  miopen_fdb: OrderedDict = OrderedDict()
   for fdbkey_alg, alg_entries in fdb_alg_lists.items():
     fdb_key = fdbkey_alg[0]
     num_fdb_entries += 1
@@ -396,7 +397,7 @@ def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace,
   """ export perf db from mysql to sqlite """
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
-  cfg_map = {}
+  cfg_map: Dict[Any, Any] = {}
   db_entries = get_pdb_query(dbt, args, logger).all()
   total_entries = len(db_entries)
   logger.info("pdb query returned: %s", total_entries)
