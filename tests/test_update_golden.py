@@ -56,7 +56,7 @@ def build_fdb_entry(session_id):
 
 
 def test_update_golden():
-  session_id = add_test_session()
+  session_id = add_test_session(arch='gfx90a', num_cu=110)
   fdb_entry = build_fdb_entry(session_id)
   with DbSession() as session:
     session.add(fdb_entry)

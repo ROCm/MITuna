@@ -40,7 +40,7 @@ this_path = os.path.dirname(__file__)
 
 
 def test_export_db():
-  session_id = add_test_session()
+  session_id = add_test_session(arch='gfx90a', num_cu=110)
 
   args = DummyArgs()
   args.session_id = session_id
