@@ -601,6 +601,7 @@ def runLint() {
             sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/machine.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/parse_args.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/sql.py --ignore-missing-imports"
           }
     }
 }
