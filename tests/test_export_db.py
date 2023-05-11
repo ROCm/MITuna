@@ -38,6 +38,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
+
 def test_export_db():
   session_id = add_test_session()
 
@@ -53,7 +54,6 @@ def test_export_db():
   if args.session_id:
     args.arch = dbt.session.arch
     args.num_cu = dbt.session.num_cu
-
 
   with DbSession() as session:
     fdb_entry = dbt.find_db_table()
@@ -83,11 +83,8 @@ def test_export_db():
   query = get_fdb_query(dbt, args)
   miopen_fdb = build_miopen_fdb(query)
 
-
   for key, solvers in sorted(miopen_fdb.items(), key=lambda kv: kv[0]):
     if key == '1x1':
       assert solvers[0].config == 1
     if key == '1x2':
       assert solvers[0].config == 2
-
-
