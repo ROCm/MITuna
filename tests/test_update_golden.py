@@ -56,7 +56,7 @@ def build_fdb_entry(session_id):
 
 
 def test_update_golden():
-  session_id = add_test_session(arch='gfx90a', num_cu=110)
+  session_id = add_test_session(arch='gfx90a', num_cu=110, label='pytest_update_golden')
   fdb_entry = build_fdb_entry(session_id)
   with DbSession() as session:
     session.add(fdb_entry)
@@ -104,7 +104,7 @@ def test_update_golden():
   entries.append(fdb_entry3)
   assert verify_no_duplicates(entries)
 
-  session_id2 = add_test_session(arch='gfx90a', num_cu=110)
+  session_id2 = add_test_session(arch='gfx90a', num_cu=110, label='pytest_update_golden2')
   fdb_entry4 = build_fdb_entry(session_id2)
   entries.append(fdb_entry4)
   assert verify_no_duplicates(entries)
