@@ -94,7 +94,7 @@ def test_export_db():
       assert False
 
   pdb_entries = get_pdb_query(dbt, args).all()
-  for entry in pdb_entries.items():
+  for entry, _ in pdb_entries:
     if entry.fdb_key == 'key1':
       assert entry.config == 1
     elif entry.fdb_key == 'key2':
