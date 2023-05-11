@@ -30,7 +30,7 @@ import os
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.miopen.subcmd.export_db import get_fdb_query, build_miopen_fdb
+from tuna.miopen.subcmd.export_db import get_fdb_query, build_miopen_fdb, get_pdb_query
 from utils import add_test_session, DummyArgs
 
 sys.path.append("../tuna")
@@ -63,8 +63,8 @@ def test_export_db():
     fdb_entry.config = 1
     fdb_entry.opencl = False
     fdb_entry.session = session_id
-    fdb_entry.fdb_key = '1x1'
-    fdb_entry.params = ''
+    fdb_entry.fdb_key = 'key1'
+    fdb_entry.params = 'params'
     fdb_entry.kernel_time = 10
     fdb_entry.workspace_sz = 0
     session.add(fdb_entry)
@@ -74,8 +74,8 @@ def test_export_db():
     fdb_entry2.config = 2
     fdb_entry2.opencl = False
     fdb_entry2.session = session_id
-    fdb_entry2.fdb_key = '1x2'
-    fdb_entry2.params = ''
+    fdb_entry2.fdb_key = 'key2'
+    fdb_entry2.params = 'params'
     fdb_entry2.kernel_time = 10
     fdb_entry2.workspace_sz = 0
     session.add(fdb_entry2)
@@ -86,7 +86,18 @@ def test_export_db():
   miopen_fdb = build_miopen_fdb(query)
 
   for key, solvers in sorted(miopen_fdb.items(), key=lambda kv: kv[0]):
-    if key == '1x1':
+    if key == 'key1':
       assert solvers[0].config == 1
-    if key == '1x2':
+    elif key == 'key2':
       assert solvers[0].config == 2
+    else:
+      assert False
+
+  pdb_entries = get_pdb_query(dbt, args).all()
+  for entry in pdb_entries.items():
+    if entry.fdb_key == 'key1':
+      assert entry.config == 1
+    elif entry.fdb_key == 'key2':
+      assert entry.config == 2
+    else:
+      assert False
