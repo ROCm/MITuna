@@ -581,6 +581,7 @@ def runLint() {
             sh "mypy tuna/miopen/scripts/corrupt_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/subcmd/import_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/subcmd/load_job.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/subcmd/export_db.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
