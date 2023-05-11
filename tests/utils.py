@@ -207,5 +207,5 @@ class TensorEntry:
     self.tensor_id_1 = 'cfg_value_1'
     self.tensor_id_2 = 'cfg_value_2'
 
-  def to_dict(self, omit_valid=False):
+  def to_dict(self, ommit_valid=False):
     return vars(self)
