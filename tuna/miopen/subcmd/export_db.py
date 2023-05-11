@@ -28,7 +28,7 @@
 import sqlite3
 import os
 from collections import OrderedDict
-from typing import Dict, List, Any
+from typing import Dict, Any
 import base64
 import argparse
 import logging
