@@ -44,6 +44,9 @@ def test_export_db():
   args = DummyArgs()
   args.session_id = session_id
   args.config_type = ConfigType.convolution
+  args.golden_v = None
+  args.opencl = False
+  args.config_tag = None
 
   dbt = MIOpenDBTables(session_id=args.session_id)
 
@@ -54,21 +57,25 @@ def test_export_db():
 
   with DbSession() as session:
     fdb_entry = dbt.find_db_table()
-    fdb_entry.num_cu = 100
+    fdb_entry.solver = 1
     fdb_entry.config = 1
-    fdb_entry.arch = 'gfx100'
     fdb_entry.opencl = False
     fdb_entry.session = session_id
     fdb_entry.fdb_key = '1x1'
+    fdb_entry.params = ''
+    fdb_entry.kernel_time = 10
+    fdb_entry.workspace_sz = 0
     session.add(fdb_entry)
 
     fdb_entry2 = dbt.find_db_table()
-    fdb_entry2.num_cu = 100
+    fdb_entry2.solver = 1
     fdb_entry2.config = 2
-    fdb_entry2.arch = 'gfx100'
     fdb_entry2.opencl = False
     fdb_entry2.session = session_id
     fdb_entry2.fdb_key = '1x2'
+    fdb_entry2.params = ''
+    fdb_entry2.kernel_time = 10
+    fdb_entry2.workspace_sz = 0
     session.add(fdb_entry2)
 
     session.commit()
@@ -76,8 +83,11 @@ def test_export_db():
   query = get_fdb_query(dbt, args)
   miopen_fdb = build_miopen_fdb(query)
 
-  assert miopen_fdb['1x1'].config == 1
-  assert miopen_fdb['1x1'].num_cu == 100
-  assert miopen_fdb['1x1'].arch == 'gfx100'
-  assert miopen_fdb['1x2'].config == 2
+
+  for key, solvers in sorted(miopen_fdb.items(), key=lambda kv: kv[0]):
+    if key == '1x1':
+      assert solvers[0].config == 1
+    if key == '1x2':
+      assert solvers[0].config == 2
+
 
