@@ -31,6 +31,7 @@ from sqlalchemy.orm.query import Query
 from tuna.dbBase.sql_alchemy import DbSession
 
 
+#pylint: disable=too-few-public-methods
 class DBTablesInterface():
   """Represents db tables interface class"""
 
@@ -46,9 +47,6 @@ class DBTablesInterface():
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
-
-  def do_nothing(self):
-    """dummy function to avoid R0903"""
 
   def set_tables(self, sess_class) -> bool:
     """Set appropriate tables based on requirements"""
