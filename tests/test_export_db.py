@@ -118,7 +118,9 @@ def test_export_db():
 
   export_fdb(dbt, args)
 
-  output_fp = open(get_filename(args.arch, args.num_cu, args.filename, args.opencl, DB_Type.FIND_DB))
+  output_fp = open(
+      get_filename(args.arch, args.num_cu, args.filename, args.opencl,
+                   DB_Type.FIND_DB))
   for line in output_fp:
     key, vals = line.split('=')
     assert key in ('key1', 'key2')
