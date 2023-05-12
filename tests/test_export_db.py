@@ -30,7 +30,8 @@ import os
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.miopen.subcmd.export_db import get_fdb_query, build_miopen_fdb, get_pdb_query, build_miopen_kdb
+from tuna.miopen.subcmd.export_db import get_fdb_query, build_miopen_fdb, get_pdb_query, build_miopen_kdb, export_fdb, get_filename
+from tuna.utils.db_utility import DB_Type
 from utils import add_test_session, DummyArgs
 
 sys.path.append("../tuna")
@@ -50,6 +51,7 @@ def test_export_db():
   args.golden_v = None
   args.opencl = False
   args.config_tag = None
+  args.filename = 'outfile'
 
   dbt = MIOpenDBTables(session_id=args.session_id)
 
@@ -77,7 +79,7 @@ def test_export_db():
     fdb_entry2.session = session_id
     fdb_entry2.fdb_key = 'key2'
     fdb_entry2.params = 'params'
-    fdb_entry2.kernel_time = 10
+    fdb_entry2.kernel_time = 20
     fdb_entry2.workspace_sz = 0
     fdb_entry2.kernel_group = 11360
     session.add(fdb_entry2)
@@ -113,6 +115,17 @@ def test_export_db():
       assert solvers[0].config == 2
     else:
       assert False
+
+  export_fdb(dbt, args)
+
+  output_fp = open(get_filename(args.arch, args.num_cu, args.filename, args.opencl, DB_Type.FIND_DB))
+  for line in output_fp:
+    key, vals = line.split('=')
+    assert key in ('key1', 'key2')
+    if key == 'key1':
+      assert float(vals.split(':')[1].split(',')[0]) == 10.0
+    elif key == 'key2':
+      assert float(vals.split(':')[1].split(',')[0]) == 20.0
 
   for kern in miopen_kdb:
     if kern.kernel_group not in (11359, 11360):
