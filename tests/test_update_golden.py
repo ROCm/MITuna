@@ -56,8 +56,8 @@ def build_fdb_entry(session_id):
 
 
 def test_update_golden():
-  session_id = add_test_session(arch='gfx90a',
-                                num_cu=104,
+  session_id = add_test_session(arch='gfx908',
+                                num_cu=120,
                                 label='pytest_update_golden')
   fdb_entry = build_fdb_entry(session_id)
   with DbSession() as session:
