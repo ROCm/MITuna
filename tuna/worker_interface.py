@@ -30,6 +30,8 @@ try:
   import queue
 except ImportError:
   import Queue as queue  #type: ignore
+
+import pdb
 import logging
 import os
 from datetime import datetime
@@ -73,6 +75,8 @@ class WorkerInterface(Process):
         'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
+
+    pdb.set_trace()
 
     #system vars
     self.machine = None
@@ -126,6 +130,8 @@ class WorkerInterface(Process):
   def set_logger(self, logger_name):
     """Build logger with given name"""
     # JD: This needs to be moved to logger.py
+
+    pdb.set_trace()
     log_level = os.environ.get('TUNA_LOGLEVEL', None)
     lgr = logging.getLogger(logger_name)
     log_file = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
@@ -142,11 +148,11 @@ class WorkerInterface(Process):
     lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
     self.logger = lgr
 
-  def set_db_tables(self):
+  def set_db_tables(self) -> None:
     """Initialize tables"""
     self.dbt = DBTablesInterface(session_id=self.session_id)
 
-  def reset_machine(self):
+  def reset_machine(self) -> None:
     """Function to reset machhine"""
     self.machine.restart_server()
     self.last_reset = datetime.now()
@@ -183,12 +189,12 @@ class WorkerInterface(Process):
 
     return entries
 
-  def queue_end_reset(self):
+  def queue_end_reset(self) -> None:
     """resets end queue flag"""
     with self.bar_lock:
       self.end_jobs.value = 0
 
-  def check_jobs_found(self, job_rows, find_state, imply_end):
+  def check_jobs_found(self, job_rows, find_state, imply_end) -> bool:
     """check for end of jobs"""
     if not job_rows:
       # we are done
@@ -200,7 +206,7 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_from_tuple(self, job_tuple):
+  def get_job_from_tuple(self, job_tuple) -> None:
     """find job table in a job tuple"""
     if has_attr_set(job_tuple, self.job_attr):
       return job_tuple
@@ -225,7 +231,7 @@ class WorkerInterface(Process):
 
     return job_tables
 
-  def refresh_query_objects(self, session, rows):
+  def refresh_query_objects(self, session, rows) -> None:
     """refresh objects in query rows"""
     for obj_tuple in rows:
       try:
@@ -234,21 +240,21 @@ class WorkerInterface(Process):
       except TypeError:
         session.refresh(obj_tuple)
 
-  def job_queue_push(self, job_rows):
+  def job_queue_push(self, job_rows) -> None:
     """load job_queue with info for job ids"""
     for job_tuple in job_rows:
       self.job_queue.put(job_tuple)
       job = self.get_job_from_tuple(job_tuple)
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
-  def job_queue_pop(self):
+  def job_queue_pop(self) -> None:
     """load job from top of job queue"""
     self.job = self.job_queue.get(True, 1)[0]
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                      self.job.reason)
 
   #pylint: disable=too-many-branches
-  def get_job(self, find_state, set_state, imply_end):
+  def get_job(self, find_state, set_state, imply_end) -> bool:
     """Interface function to get new job for builder/evaluator"""
     for idx in range(NUM_SQL_RETRIES):
       try:
@@ -389,7 +395,7 @@ class WorkerInterface(Process):
 
     return True
 
-  def set_barrier(self, funct, with_timeout):
+  def set_barrier(self, funct, with_timeout) -> bool:
     """Setting time barrier for Process to define execution timeout"""
     if self.barred.value == 0:
       # this is the first proc to reach the barrier
@@ -417,7 +423,7 @@ class WorkerInterface(Process):
 
     return False
 
-  def check_wait_barrier(self):
+  def check_wait_barrier(self) -> bool:
     """Checking time barrier"""
     self.logger.info('Checking barrier')
     if self.barred.value != 0:
@@ -454,7 +460,7 @@ class WorkerInterface(Process):
       except queue.Empty:
         break
 
-  def run(self):
+  def run(self) -> bool:
     """Main run function of WorkerInterface Process"""
 
     self.machine.set_logger(self.logger)
@@ -506,7 +512,8 @@ class WorkerInterface(Process):
   def run_command(self, cmd):
     """Run cmd and return ret_code"""
     for i in range(MAX_JOB_RETRIES):
-      ret_code, out, err = self.exec_docker_cmd(cmd)
+      ret_code, out, err = self.exec_do
+      cker_cmd(cmd)
 
       if ret_code != 0:
         self.logger.error('Error executing command: %s', ' '.join(cmd))
