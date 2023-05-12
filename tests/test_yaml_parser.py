@@ -149,7 +149,7 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
       'export_db': {
-          'file_name': 'fdb_nhwc'
+          'file_name': 'fdb_nhwc.txt'
       },
       'label': 'Example',
       'num_cu': 120,
