@@ -477,6 +477,7 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_utility.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_example.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_yaml_parser.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_export_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_load_job.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
@@ -594,6 +595,7 @@ def runLint() {
             sh "mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/grafana_dict.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/mituna_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/libraries.py"
             sh "mypy tuna/lib_utils.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/machine_management_interface.py --ignore-missing-imports --follow-imports=skip"
@@ -601,7 +603,9 @@ def runLint() {
             sh "yamllint tuna/example/*.yaml"
             sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/machine.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/session_mixin.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/parse_args.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/sql.py --ignore-missing-imports"
           }
     }
 }

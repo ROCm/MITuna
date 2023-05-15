@@ -48,6 +48,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import get_id_solvers
 from utils import add_test_session, DummyArgs, CfgEntry, TensorEntry, build_fdb_entry
 
+
 session_id = add_test_session()
 fdb_entry = build_fdb_entry(session_id)
 args = DummyArgs()
@@ -173,7 +174,6 @@ def test_insert_perf_db_sqlite():
       itertools.islice(expected_data.values(), 2)
   ), f"expected inserted data {tuple(itertools.islice(expected_data.values(),2))}, but got {inserted_data}"
 
-
 def test_get_cfg_dict():
 
   cfg_entry = CfgEntry()
@@ -186,3 +186,109 @@ def test_get_cfg_dict():
   assert 'tensor_id_2' in cfg_dict
   assert cfg_dict['tensor_id_1'] == 'cfg_value_1'
   assert cfg_dict['tensor_id_2'] == 'cfg_value_2'
+
+
+def test_export_db():
+  session_id = add_test_session(arch='gfx90a',
+                                num_cu=110,
+                                label='pytest_export_db')
+
+  args = DummyArgs()
+  args.session_id = session_id
+  args.config_type = ConfigType.convolution
+  args.golden_v = None
+  args.opencl = False
+  args.config_tag = None
+  args.filename = 'outfile'
+
+  dbt = MIOpenDBTables(session_id=args.session_id)
+
+  if args.session_id:
+    args.arch = dbt.session.arch
+    args.num_cu = dbt.session.num_cu
+
+  with DbSession() as session:
+    fdb_entry = dbt.find_db_table()
+    fdb_entry.solver = 1
+    fdb_entry.config = 1
+    fdb_entry.opencl = False
+    fdb_entry.session = session_id
+    fdb_entry.fdb_key = 'key1'
+    fdb_entry.params = 'params'
+    fdb_entry.kernel_time = 10
+    fdb_entry.workspace_sz = 0
+    fdb_entry.kernel_group = 11359
+    session.add(fdb_entry)
+
+    fdb_entry2 = dbt.find_db_table()
+    fdb_entry2.solver = 1
+    fdb_entry2.config = 2
+    fdb_entry2.opencl = False
+    fdb_entry2.session = session_id
+    fdb_entry2.fdb_key = 'key2'
+    fdb_entry2.params = 'params'
+    fdb_entry2.kernel_time = 20
+    fdb_entry2.workspace_sz = 0
+    fdb_entry2.kernel_group = 11360
+    session.add(fdb_entry2)
+
+    kcache = dbt.kernel_cache()
+    kcache.kernel_name = 'kname1'
+    kcache.kernel_args = 'arg1'
+    kcache.kernel_blob = bytes('blob', 'utf-8')
+    kcache.kernel_hash = 0
+    kcache.uncompressed_size = 0
+    kcache.kernel_group = 11359
+    session.add(kcache)
+
+    kcache2 = dbt.kernel_cache()
+    kcache2.kernel_name = 'kname2'
+    kcache2.kernel_args = 'arg2'
+    kcache2.kernel_blob = bytes('blob', 'utf-8')
+    kcache2.kernel_hash = 0
+    kcache2.uncompressed_size = 0
+    kcache2.kernel_group = 11360
+    session.add(kcache2)
+
+    session.commit()
+
+  query = get_fdb_query(dbt, args)
+  miopen_fdb = build_miopen_fdb(query)
+  miopen_kdb = build_miopen_kdb(dbt, miopen_fdb)
+
+  for key, solvers in sorted(miopen_fdb.items(), key=lambda kv: kv[0]):
+    if key == 'key1':
+      assert solvers[0].config == 1
+    elif key == 'key2':
+      assert solvers[0].config == 2
+    else:
+      assert False
+
+  export_fdb(dbt, args)
+
+  output_fp = open(
+      get_filename(args.arch, args.num_cu, args.filename, args.opencl,
+                   DB_Type.FIND_DB))
+  for line in output_fp:
+    key, vals = line.split('=')
+    assert key in ('key1', 'key2')
+    if key == 'key1':
+      assert float(vals.split(':')[1].split(',')[0]) == 10.0
+    elif key == 'key2':
+      assert float(vals.split(':')[1].split(',')[0]) == 20.0
+
+  for kern in miopen_kdb:
+    if kern.kernel_group not in (11359, 11360):
+      if kern.kernel_group == 11359:
+        assert kern.kernel_name == 'kname1'
+      elif kern.kernel_group == 11360:
+        assert kern.kernel_name == 'kname2'
+
+  pdb_entries = get_pdb_query(dbt, args).all()
+  for entry, _ in pdb_entries:
+    if entry.fdb_key == 'key1':
+      assert entry.config == 1
+    elif entry.fdb_key == 'key2':
+      assert entry.config == 2
+    else:
+      assert False
