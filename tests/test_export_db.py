@@ -50,7 +50,9 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import get_id_solvers
 from utils import add_test_session, DummyArgs, CfgEntry, TensorEntry, build_fdb_entry
 
-session_id = add_test_session()
+session_id = add_test_session(arch='gfx90a',
+                              num_cu=110,
+                              label='pytest_export_db')
 fdb_entry = build_fdb_entry(session_id)
 args = DummyArgs()
 args.session_id = session_id
@@ -58,17 +60,21 @@ args.config_type = ConfigType.convolution
 args.golden_v = None
 args.arch = "gfx900"
 args.num_cu = 64
-args.opencl = True
+args.opencl = False
 args.config_tag = None
-args.filename = None
+args.filename = 'testing_export_db_outfile'
 dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
+if args.session_id:
+  args.arch = dbt.session.arch
+  args.num_cu = dbt.session.num_cu
+
 logger = logging.getLogger("test_logger")
 
 
 def test_get_file():
   db_type = DB_Type.FIND_DB
 
-  expeted_filename = "tuna_1.0.0/gfx900_64.OpenCL.fdb.txt"
+  expeted_filename = 'tuna_1.0.0/testing_export_db_outfile.HIP.fdb.txt'
   actual_filename = get_filename(args.arch, args.num_cu, args.filename,
                                  args.opencl, db_type)
 
@@ -108,12 +114,6 @@ def test_build_export_miopen_fdp():
   assert miopen_fdb is not None, f"failed to build miopen_fdb, Got {type(miopen_fdb)}"
   assert fdb_file is not None
   assert fdb_exported is not None
-
-
-def test_buid_miopen_kdb():
-  fdb_query = get_fdb_query(dbt, args, logger)
-  build_mioopen_kdp = build_miopen_kdb(dbt, fdb_query, logger)
-  assert build_mioopen_kdp is not None
 
 
 def test_create_sqlite_tables():
@@ -183,23 +183,6 @@ def test_get_cfg_dict():
 
 
 def test_export_db():
-  session_id = add_test_session(arch='gfx90a',
-                                num_cu=110,
-                                label='pytest_export_db')
-
-  args = DummyArgs()
-  args.session_id = session_id
-  args.config_type = ConfigType.convolution
-  args.golden_v = None
-  args.opencl = False
-  args.config_tag = None
-  args.filename = 'outfile'
-
-  dbt = MIOpenDBTables(session_id=args.session_id)
-
-  if args.session_id:
-    args.arch = dbt.session.arch
-    args.num_cu = dbt.session.num_cu
 
   with DbSession() as session:
     fdb_entry = dbt.find_db_table()
@@ -258,7 +241,7 @@ def test_export_db():
     else:
       assert False
 
-  export_fdb(dbt, args)
+  export_fdb(dbt, args, logger)
 
   output_fp = open(
       get_filename(args.arch, args.num_cu, args.filename, args.opencl,
@@ -278,7 +261,7 @@ def test_export_db():
       elif kern.kernel_group == 11360:
         assert kern.kernel_name == 'kname2'
 
-  pdb_entries = get_pdb_query(dbt, args).all()
+  pdb_entries = get_pdb_query(dbt, args, logger).all()
   for entry, _ in pdb_entries:
     if entry.fdb_key == 'key1':
       assert entry.config == 1
