@@ -198,7 +198,7 @@ def get_pdb_query(dbt, args):
   return query
 
 
-def get_fdb_alg_lists(query):
+def build_miopen_fdb(query):
   """return dict with key: fdb_key + alg_lib, val: solver list"""
   find_db = OrderedDict()
   solvers = {}
@@ -217,42 +217,19 @@ def get_fdb_alg_lists(query):
       continue
     solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
 
-    fdb_key_alg = (fdb_entry.fdb_key, fdb_entry.alg_lib)
-    lst = find_db.get(fdb_key_alg)
+    fdb_key = fdb_entry.fdb_key
+    lst = find_db.get(fdb_key)
     if not lst:
-      find_db[fdb_key_alg] = [fdb_entry]
+      find_db[fdb_key] = [fdb_entry]
     else:
       lst.append(fdb_entry)
 
+  for _, entries in find_db.items():
+    entries.sort(key=lambda x: float(x.kernel_time))
+    while len(entries) > 4:
+      entries.pop()
+
   return find_db
-
-
-def build_miopen_fdb(fdb_alg_lists):
-  """ create miopen find db object for export
-  """
-  total_entries = len(fdb_alg_lists)
-  num_fdb_entries = 0
-  miopen_fdb = OrderedDict()
-  for fdbkey_alg, alg_entries in fdb_alg_lists.items():
-    fdb_key = fdbkey_alg[0]
-    num_fdb_entries += 1
-    #pick fastest solver for each algorithm
-    alg_entries.sort(key=lambda x: float(x.kernel_time))
-    fastest_entry = alg_entries[0]
-    lst = miopen_fdb.get(fdb_key)
-    if not lst:
-      miopen_fdb[fdb_key] = [fastest_entry]
-    else:
-      lst.append(fastest_entry)
-
-    if num_fdb_entries % (total_entries // 10) == 0:
-      LOGGER.info("FDB count: %s, fdb: %s, cfg: %s, slv: %s", num_fdb_entries,
-                  fastest_entry.fdb_key, fastest_entry.config,
-                  ID_SOLVER_MAP[fastest_entry.solver])
-
-  LOGGER.warning("Total number of entries in Find DB: %s", num_fdb_entries)
-
-  return miopen_fdb
 
 
 def write_fdb(arch, num_cu, ocl, find_db, filename=None):
@@ -268,11 +245,10 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
         # pylint: disable-next=consider-using-f-string ; more reable
-        lst.append('{alg}:{},{},{},{alg},{}'.format(ID_SOLVER_MAP[rec.solver],
-                                                    rec.kernel_time,
-                                                    rec.workspace_sz,
-                                                    '<unused>',
-                                                    alg=rec.alg_lib))
+        lst.append('{slv}:{},{},{alg}'.format(rec.kernel_time,
+                                              rec.workspace_sz,
+                                              slv=ID_SOLVER_MAP[rec.solver],
+                                              alg=rec.alg_lib))
       out.write(f"{key}={';'.join(lst)}\n")
   return file_name
 
@@ -281,9 +257,9 @@ def export_fdb(dbt, args):
   """Function to export find_db to txt file
   """
   query = get_fdb_query(dbt, args)
-  fdb_alg_lists = get_fdb_alg_lists(query)
-  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
+  miopen_fdb = build_miopen_fdb(query)
 
+  LOGGER.info("write fdb to file.")
   return write_fdb(args.arch, args.num_cu, args.opencl, miopen_fdb,
                    args.filename)
 
@@ -367,8 +343,7 @@ def export_kdb(dbt, args):
   Function to export the kernel cache
   """
   query = get_fdb_query(dbt, args)
-  fdb_alg_lists = get_fdb_alg_lists(query)
-  miopen_fdb = build_miopen_fdb(fdb_alg_lists)
+  miopen_fdb = build_miopen_fdb(query)
 
   LOGGER.info("Building kdb.")
   kern_db = build_miopen_kdb(dbt, miopen_fdb)
