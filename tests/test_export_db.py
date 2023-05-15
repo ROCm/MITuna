@@ -38,16 +38,17 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.miopen.subcmd.export_db import (
-    get_filename, get_base_query, get_fdb_query, get_pdb_query,
-    get_fdb_alg_lists, build_miopen_fdb, write_fdb, export_fdb,
-    build_miopen_kdb, insert_perf_db_sqlite, create_sqlite_tables, get_cfg_dict)
+from tuna.miopen.subcmd.export_db import (get_filename, get_base_query,
+                                          get_fdb_query, get_pdb_query,
+                                          build_miopen_fdb, write_fdb,
+                                          export_fdb, build_miopen_kdb,
+                                          insert_perf_db_sqlite,
+                                          create_sqlite_tables, get_cfg_dict)
 from tuna.utils.db_utility import DB_Type
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import get_id_solvers
 from utils import add_test_session, DummyArgs, CfgEntry, TensorEntry, build_fdb_entry
-
 
 session_id = add_test_session()
 fdb_entry = build_fdb_entry(session_id)
@@ -90,12 +91,6 @@ def test_get_fdb_query():
       Query), f"epected query to be an instance of Query, Got {type(fdb_query)}"
 
 
-def test_get_fdb_alg_lists():
-  fdb_query = get_fdb_query(dbt, args, logger)
-  alg_lists = get_fdb_alg_lists(fdb_query, logger)
-  assert alg_lists is not None, f"expected a retrived an fdb alg list, Got {type(test_get_fdb_alg_lists)}"
-
-
 def test_get_pdb_query():
   pdb_query = get_pdb_query(dbt, args, logger)
   assert pdb_query is not None, "Query object is None"
@@ -106,8 +101,7 @@ def test_get_pdb_query():
 
 def test_build_export_miopen_fdp():
   fdb_query = get_fdb_query(dbt, args, logger)
-  alg_lists = get_fdb_alg_lists(fdb_query, logger)
-  miopen_fdb = build_miopen_fdb(alg_lists, logger)
+  miopen_fdb = build_miopen_fdb(fdb_query, logger)
   fdb_file = write_fdb(args.arch, args.num_cu, args.opencl, miopen_fdb,
                        args.filename)
   fdb_exported = export_fdb(dbt, args, logger)
@@ -118,8 +112,7 @@ def test_build_export_miopen_fdp():
 
 def test_buid_miopen_kdb():
   fdb_query = get_fdb_query(dbt, args, logger)
-  alg_lists = get_fdb_alg_lists(fdb_query, logger)
-  build_mioopen_kdp = build_miopen_kdb(dbt, alg_lists, logger)
+  build_mioopen_kdp = build_miopen_kdb(dbt, fdb_query, logger)
   assert build_mioopen_kdp is not None
 
 
@@ -173,6 +166,7 @@ def test_insert_perf_db_sqlite():
   assert inserted_data == tuple(
       itertools.islice(expected_data.values(), 2)
   ), f"expected inserted data {tuple(itertools.islice(expected_data.values(),2))}, but got {inserted_data}"
+
 
 def test_get_cfg_dict():
 
@@ -252,9 +246,9 @@ def test_export_db():
 
     session.commit()
 
-  query = get_fdb_query(dbt, args)
-  miopen_fdb = build_miopen_fdb(query)
-  miopen_kdb = build_miopen_kdb(dbt, miopen_fdb)
+  query = get_fdb_query(dbt, args, logger)
+  miopen_fdb = build_miopen_fdb(query, logger)
+  miopen_kdb = build_miopen_kdb(dbt, miopen_fdb, logger)
 
   for key, solvers in sorted(miopen_fdb.items(), key=lambda kv: kv[0]):
     if key == 'key1':
