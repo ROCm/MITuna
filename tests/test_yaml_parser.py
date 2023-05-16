@@ -53,7 +53,7 @@ def test_yaml_parser():
   parse_miopen_yaml4(miopen_yaml4, Library('miopen'))
   parse_example_yaml(example_yaml, Library('example'))
 
-  #multiple_yamls()
+  multiple_yamls()
 
 
 def multiple_yamls():
