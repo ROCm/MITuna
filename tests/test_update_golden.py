@@ -26,52 +26,43 @@
 
 import sys
 import logging
-from tuna.miopen.subcmd.update_golden import gold_base_update, gold_session_update, create_perf_table, verify_no_duplicates, latest_golden_v
+from tuna.miopen.subcmd.update_golden import (
+    arg_update_golden, get_golden_query, gold_base_update, gold_session_update,
+    create_perf_table, verify_no_duplicates, latest_golden_v)
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.miopen_tables import ConvolutionGolden
 from tuna.miopen.db.find_db import ConvolutionFindDB
-from utils import add_test_session, DummyArgs
+from utils import add_test_session, DummyArgs, build_fdb_entry
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
-logger = logging.getLogger("test_logger")
+logger = logging.getLogger("update_golden_test_logger")
+session_id = add_test_session(arch='gfx908',
+                              num_cu=120,
+                              label='pytest_update_golden')
+res = None
+args = DummyArgs()
+args.session_id = session_id
+args.config_type = ConfigType.convolution
+args.base_golden_v = 1.0
+args.golden_version = 1.1
+dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
 
-def build_fdb_entry(session_id):
-  fdb_entry = ConvolutionFindDB()
-  fdb_entry.config = 1
-  fdb_entry.solver = 1
-  fdb_entry.session = session_id
-  fdb_entry.opencl = False
-
-  fdb_entry.fdb_key = 'key'
-  fdb_entry.alg_lib = 'Test'
-  fdb_entry.params = 'param'
-  fdb_entry.workspace_sz = 0
-  fdb_entry.valid = True
-  fdb_entry.kernel_time = 11111
-  fdb_entry.kernel_group = 1
-
-  return fdb_entry
+def test_args_golden():
+  results = arg_update_golden(args, logger)
+  assert results is not None
+  assert results.base_golden_v == args.base_golden_v
 
 
 def test_update_golden():
-  session_id = add_test_session(arch='gfx908',
-                                num_cu=120,
-                                label='pytest_update_golden')
   fdb_entry = build_fdb_entry(session_id)
   with DbSession() as session:
     session.add(fdb_entry)
     session.commit()
-
-  res = None
-  args = DummyArgs()
-  args.session_id = session_id
-  args.config_type = ConfigType.convolution
-  dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
   gld_v1 = latest_golden_v(dbt, logger) + 1
   args.golden_v = gld_v1

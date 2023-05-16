@@ -43,8 +43,6 @@ from tuna.db_engine import ENGINE
 
 def arg_update_golden(args: argparse.Namespace, logger: logging.Logger):
   """update golden args for update golden"""
-  args = args.parse_args()
-
   if not args.base_golden_v and not args.session_id:
     dbt = MIOpenDBTables(session_id=args.session_id,
                          config_type=args.config_type)
