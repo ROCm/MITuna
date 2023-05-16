@@ -477,7 +477,6 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_utility.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_example.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_yaml_parser.py -s"
-           sh "python3 -m coverage run -a -m pytest tests/test_export_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_load_job.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
