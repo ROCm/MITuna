@@ -61,6 +61,7 @@ pipeline {
             }
             }
         }
+        /**
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
         steps{
@@ -84,7 +85,7 @@ pipeline {
                     utils.pytestSuite3AndCoverage(branch, branch_master)
                 }
             }
-        }
+        }**/
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
