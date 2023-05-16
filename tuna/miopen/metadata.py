@@ -31,7 +31,9 @@ MIOPEN_TUNING_STEPS = [
     'list_solvers', 'fin_steps', 'import_db', 'check_status', 'execute_cmd'
 ]
 
-MIOPEN_SUBCOMMANDS = ['import_configs', 'load_job', 'export_db', 'update_golden']
+MIOPEN_SUBCOMMANDS = [
+    'import_configs', 'load_job', 'export_db', 'update_golden'
+]
 
 #tuning steps with 1 argument (possibly also --session_id)
 MIOPEN_SINGLE_OP = [

@@ -121,11 +121,11 @@ class MIOpen(MITunaInterface):
     subcommands.add_subcommand('load_job',
                                get_load_job_parser(),
                                required=False)
-    
+
     subcommands.add_subcommand('export_db',
                                get_export_db_parser(),
                                required=False)
-    
+
     subcommands.add_subcommand('update_golden',
                                get_update_golden_parser(),
                                required=False)

@@ -147,9 +147,8 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
-      'update_golden': {
-          'base_golden_v': 1.0,
-          'golden_v': 1.1
+      'export_db': {
+          'file_name': 'fdb_nhwc.txt'
       },
       'label': 'Example',
       'num_cu': 120,
@@ -157,13 +156,13 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'restart_machine': False,
       'session_id': 1
   }
-
   dict6 = {
       'arch': 'gfx908',
       'config_type': 'convolution',
       'docker_name': 'my_docker_name',
-      'export_db': {
-          'file_name': 'fdb_nhwc.txt'
+      'update_golden': {
+          'base_golden_v': 1.0,
+          'golden_v': 1.1
       },
       'label': 'Example',
       'num_cu': 120,
