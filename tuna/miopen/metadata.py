@@ -32,7 +32,7 @@ MIOPEN_TUNING_STEPS = [
     'execute_cmd'
 ]
 
-MIOPEN_SUBCOMMANDS = ['import_configs', 'load_job']
+MIOPEN_SUBCOMMANDS = ['import_configs', 'load_job', 'update_golden']
 
 #tuning steps with 1 argument (possibly also --session_id)
 MIOPEN_SINGLE_OP = [
