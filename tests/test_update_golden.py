@@ -63,9 +63,9 @@ def test_update_golden():
                                 num_cu=120,
                                 label='pytest_update_golden')
   fdb_entry = build_fdb_entry(session_id)
-  #with DbSession() as session:
-  #session.add(fdb_entry)
-  #session.commit()
+  with DbSession() as session:
+    session.add(fdb_entry)
+    session.commit()
 
   res = None
   args = DummyArgs()
