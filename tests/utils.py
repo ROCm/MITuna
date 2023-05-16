@@ -30,7 +30,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.machine import Machine
 from tuna.miopen.utils.config_type import ConfigType
-from tuna.mituna_interface import MITunaInterface
+from tuna.miopen.db.find_db import ConvolutionFindDB
 from tuna.miopen.miopen_lib import MIOpen
 
 # TODO: This is a copy and is unacceptable
@@ -155,3 +155,57 @@ def add_test_session(arch='gfx908', num_cu=120, label=None):
   session_id = Session().add_new_session(args, worker)
   assert (session_id)
   return session_id
+
+
+def build_fdb_entry(session_id):
+  fdb_entry = ConvolutionFindDB()
+  fdb_entry.config = 1
+  fdb_entry.solver = 1
+  fdb_entry.session = session_id
+  fdb_entry.opencl = False
+
+  fdb_entry.fdb_key = 'key'
+  fdb_entry.alg_lib = 'Test'
+  fdb_entry.params = 'param'
+  fdb_entry.workspace_sz = 0
+  fdb_entry.valid = True
+  fdb_entry.kernel_time = 11111
+  fdb_entry.kernel_group = 1
+
+  return fdb_entry
+
+
+class CfgEntry:
+  valid = 1
+
+  def __init__(self):
+    self.direction = 'B'
+    self.out_channels = 10
+    self.in_channels = 5
+    self.in_w = 8
+    self.conv_stride_w = 1
+    self.fil_w = 3
+    self.pad_w = 0
+    self.in_h = 8
+    self.conv_stride_h = 1
+    self.fil_h = 3
+    self.pad_h = 0
+    self.spatial_dim = 3
+    self.in_d = 8
+    self.conv_stride_d = 1
+    self.fil_d = 3
+    self.pad_d = 0
+
+  def to_dict(self):
+    return vars(self)
+
+
+class TensorEntry:
+
+  def __init__(self):
+    self.id = 1
+    self.tensor_id_1 = 'cfg_value_1'
+    self.tensor_id_2 = 'cfg_value_2'
+
+  def to_dict(self, ommit_valid=False):
+    return vars(self)
