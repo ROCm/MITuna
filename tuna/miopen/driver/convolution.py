@@ -209,9 +209,13 @@ class DriverConvolution(DriverBase):
                          k, self.spatial_dim)
 
     if self.spatial_dim == 3 and len(self.out_layout) != 5:
-        raise ValueError("Layout string (%s) should be 5 characters for spatial_dim %s", self.out_layout, self.spatial_dim)
+      raise ValueError(
+          "Layout string (%s) should be 5 characters for spatial_dim %s",
+          self.out_layout, self.spatial_dim)
     elif self.spatial_dim == 2 and len(self.out_layout) != 4:
-        raise ValueError("Layout string (%s) should be 4 characters for spatial_dim %s", self.out_layout, self.spatial_dim)
+      raise ValueError(
+          "Layout string (%s) should be 4 characters for spatial_dim %s",
+          self.out_layout, self.spatial_dim)
 
   @staticmethod
   def get_params(tok1: str) -> str:
