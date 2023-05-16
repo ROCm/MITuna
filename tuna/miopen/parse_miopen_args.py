@@ -222,8 +222,9 @@ def get_load_job_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
 def get_update_golden_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   "Return parser for update golden subcommand"
-  parser = setup_arg_parser('Populate golden table based on session_id',
-                            [TunaArgs.CONFIG_TYPE])
+  parser = setup_arg_parser('Populate golden table based on session_id.',
+                            [TunaArgs.CONFIG_TYPE],
+                            with_yaml=with_yaml)
   parser.add_argument('--golden_v',
                       dest='golden_v',
                       type=int,

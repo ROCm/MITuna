@@ -33,6 +33,11 @@ load_job:
   fin_steps: false
   tag: 'someTag'
 
+update_golden:
+  enabled: true
+  golden_v: 1.1
+  base_golden_v: 1.0
+
 update_applicability:
   enabled: false
   session_id: 1
