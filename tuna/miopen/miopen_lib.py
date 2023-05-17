@@ -41,7 +41,11 @@ from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
+from tuna.miopen.subcmd.load_job import run_load_job
+from tuna.miopen.subcmd.export_db import run_export_db
 from tuna.miopen.parse_miopen_args import get_import_cfg_parser
+from tuna.miopen.parse_miopen_args import get_load_job_parser
+from tuna.miopen.parse_miopen_args import get_export_db_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
@@ -112,11 +116,19 @@ class MIOpen(MITunaInterface):
                                get_import_cfg_parser(),
                                required=False)
 
+    subcommands.add_subcommand('load_job',
+                               get_load_job_parser(),
+                               required=False)
+    subcommands.add_subcommand('export_db',
+                               get_export_db_parser(),
+                               required=False)
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',
                        help='Add MIOpen library specific tables')
+
     group.add_argument('--init_session',
                        action='store_true',
                        dest='init_session',
@@ -168,7 +180,7 @@ class MIOpen(MITunaInterface):
       print_solvers()
       raise ValueError('Printing solvers...')
 
-    if self.args.fin_steps:
+    if self.args.fin_steps and self.args.subcommand != 'load_job':
       self.check_fin_args(parser)
 
     if self.args.find_mode is None and not (self.args.check_status or
@@ -203,7 +215,7 @@ class MIOpen(MITunaInterface):
   def check_fin_args(self, parser):
     """! Helper function for fin args
        @param parser The command line argument parser
-    """
+        """
     valid_fin_steps = list(k for k in FinStep.__members__)
     if ',' in self.args.fin_steps:
       parser.error('Multiple fin_steps currently not supported')
@@ -339,6 +351,14 @@ class MIOpen(MITunaInterface):
 
     if self.args.subcommand is not None and self.args.subcommand == 'import_configs':
       run_import_configs(self.args.import_configs, self.logger)
+      return None
+
+    if self.args.subcommand is not None and self.args.subcommand == 'load_job':
+      run_load_job(self.args.load_job, self.logger)
+      return None
+
+    if self.args.subcommand is not None and self.args.subcommand == 'export_db':
+      run_export_db(self.args.export_db, self.logger)
       return None
 
     machines = load_machines(self.args)

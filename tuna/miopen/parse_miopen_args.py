@@ -28,6 +28,7 @@
 import jsonargparse
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.db.benchmark import FrameworkEnum, ModelEnum
+from tuna.miopen.utils.metadata import ALG_SLV_MAP
 
 
 def get_import_cfg_parser(
@@ -140,4 +141,136 @@ def get_import_cfg_parser(
                       step in case the config does not exist in the table. Wildcard columns \
                       allowed for tagging')
 
+  return parser
+
+
+def get_load_job_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
+  "Return parser for load_job subcommand"
+
+  #pylint: disable=duplicate-code
+  parser = setup_arg_parser('Insert jobs into MySQL db by tag from" \
+      " config_tags table.', [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
+                            with_yaml=with_yaml)
+  config_filter = parser.add_mutually_exclusive_group(required=True)
+  solver_filter = parser.add_mutually_exclusive_group()
+  config_filter.add_argument(
+      '-t',
+      '--tag',
+      type=str,
+      dest='tag',
+      default=None,
+      help='All configs with this tag will be added to the job table. \
+                        By default adds jobs with no solver specified (all solvers).'
+  )
+  config_filter.add_argument('--all_configs',
+                             dest='all_configs',
+                             action='store_true',
+                             help='Add all convolution jobs')
+  solver_filter.add_argument(
+      '-A',
+      '--algo',
+      type=str,
+      dest='algo',
+      default=None,
+      help='Add job for each applicable solver+config in Algorithm.',
+      choices=ALG_SLV_MAP.keys())
+  solver_filter.add_argument('-s',
+                           '--solvers',
+                           type=str,
+                           dest='solvers',
+                           default=None,
+                           help='add jobs with only these solvers '\
+                             '(can be a comma separated list)')
+  parser.add_argument(
+      '-d',
+      '--only_dynamic',
+      dest='only_dynamic',
+      action='store_true',
+      help='Use with --tag to create a job for dynamic solvers only.')
+  parser.add_argument('--tunable',
+                      dest='tunable',
+                      action='store_true',
+                      help='Use to add only tunable solvers.')
+  parser.add_argument('-c',
+                      '--cmd',
+                      type=str,
+                      dest='cmd',
+                      default=None,
+                      required=False,
+                      help='Command precision for config',
+                      choices=['conv', 'convfp16', 'convbfp16'])
+  parser.add_argument('-l',
+                      '--label',
+                      type=str,
+                      dest='label',
+                      required=True,
+                      help='Label to annontate the jobs.',
+                      default='new')
+  parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
+  parser.add_argument(
+      '--session_id',
+      required=True,
+      dest='session_id',
+      type=int,
+      help=
+      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
+  )
+
+  return parser
+
+
+def get_export_db_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
+  """Return parser for export db subcommand"""
+  parser = setup_arg_parser('Convert MYSQL find_db to text find_dbs' \
+  'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION], with_yaml=with_yaml)
+
+  group_ver = parser.add_mutually_exclusive_group(required=True)
+  group_ver.add_argument(
+      '--session_id',
+      dest='session_id',
+      type=int,
+      help=
+      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
+  )
+  group_ver.add_argument(
+      '--golden_v',
+      dest='golden_v',
+      type=int,
+      help='export from the golden table using this version number')
+
+  parser.add_argument('--config_tag',
+                      dest='config_tag',
+                      type=str,
+                      help='import configs based on config tag',
+                      default=None)
+  parser.add_argument('-c',
+                      '--opencl',
+                      dest='opencl',
+                      action='store_true',
+                      help='Use OpenCL extension',
+                      default=False)
+  parser.add_argument('--filename',
+                      dest='filename',
+                      help='Custom filename for DB dump',
+                      default=None)
+
+  group = parser.add_mutually_exclusive_group(required=True)
+  group.add_argument('-k',
+                     '--kern_db',
+                     dest='kern_db',
+                     action='store_true',
+                     help='Serialize Kernel Database',
+                     default=False)
+  group.add_argument('-f',
+                     '--find_db',
+                     dest='find_db',
+                     action='store_true',
+                     help='Serialize Find Database',
+                     default=False)
+  group.add_argument('-p',
+                     '--perf_db',
+                     dest='perf_db',
+                     action='store_true',
+                     help='Serialize Perf Database',
+                     default=False)
   return parser

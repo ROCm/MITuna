@@ -25,29 +25,39 @@
 #
 ###############################################################################
 """Session table and its associate functionality"""
+
+import logging
+import argparse
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.exc import IntegrityError
-
+from sqlalchemy.orm.query import Query
+from sqlalchemy.orm.session import Session
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
 
-LOGGER = setup_logger('session')
+LOGGER: logging.Logger = setup_logger('session')
 
 
 class SessionMixin():
   """Session Mixin to provide interface for the session table"""
-  #pylint: disable=too-few-public-methods
 
-  arch = Column(String(length=20), nullable=False, server_default="")
-  num_cu = Column(Integer, nullable=False)
-  rocm_v = Column(String(length=64), nullable=False)
-  reason = Column(String(length=60), nullable=False)
-  ticket = Column(String(length=64), nullable=False, server_default="N/A")
-  docker = Column(String(length=64),
-                  nullable=False,
-                  server_default="miopentuna")
+  arch: str = Column(String(length=20), nullable=False, server_default="")
+  num_cu: int = Column(Integer, nullable=False)
+  rocm_v: str = Column(String(length=64), nullable=False)
+  reason: str = Column(String(length=60), nullable=False)
+  ticket: str = Column(String(length=64), nullable=False, server_default="N/A")
+  docker: str = Column(String(length=64),
+                       nullable=False,
+                       server_default="miopentuna")
 
-  def add_new_session(self, args, worker):
+  def __init__(self):
+    self.id: int = 0  # pylint: disable=invalid-name
+
+  def get_query(self, sess: Session, sess_obj, entry) -> Query:
+    """Overloaded method.Defined in child class: session class"""
+    raise NotImplementedError("Not implemented")
+
+  def add_new_session(self, args: argparse.Namespace, worker) -> None:
     """Add new session entry"""
     self.reason = args.label
     self.docker = args.docker_name
@@ -71,8 +81,9 @@ class SessionMixin():
     else:
       self.ticket = 'N/A'
 
-  def insert_session(self):
+  def insert_session(self) -> int:
     """Insert new session obj and return its id"""
+    session: Session
     with DbSession() as session:
       try:
         session.add(self)
@@ -82,7 +93,7 @@ class SessionMixin():
         LOGGER.warning("Err occurred trying to add new session: %s \n %s", err,
                        self)
         session.rollback()
-        entry = self.get_query(session, type(self), self).one()
+        entry: Query = self.get_query(session, type(self), self).one()
         LOGGER.warning('Session for these values already exists: %s', entry.id)
         return entry.id
 
