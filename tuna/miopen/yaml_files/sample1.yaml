@@ -33,6 +33,10 @@ load_job:
   fin_steps: false
   tag: 'someTag'
 
+export_db:
+  enabled: true
+  file_name: 'fdb_nhwc.txt'
+
 update_applicability:
   enabled: false
   session_id: 1

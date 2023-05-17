@@ -217,3 +217,60 @@ def get_load_job_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   )
 
   return parser
+
+
+def get_export_db_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
+  """Return parser for export db subcommand"""
+  parser = setup_arg_parser('Convert MYSQL find_db to text find_dbs' \
+  'architecture', [TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION], with_yaml=with_yaml)
+
+  group_ver = parser.add_mutually_exclusive_group(required=True)
+  group_ver.add_argument(
+      '--session_id',
+      dest='session_id',
+      type=int,
+      help=
+      'Session ID to be used as tuning tracker. Allows to correlate DB results to tuning sessions'
+  )
+  group_ver.add_argument(
+      '--golden_v',
+      dest='golden_v',
+      type=int,
+      help='export from the golden table using this version number')
+
+  parser.add_argument('--config_tag',
+                      dest='config_tag',
+                      type=str,
+                      help='import configs based on config tag',
+                      default=None)
+  parser.add_argument('-c',
+                      '--opencl',
+                      dest='opencl',
+                      action='store_true',
+                      help='Use OpenCL extension',
+                      default=False)
+  parser.add_argument('--filename',
+                      dest='filename',
+                      help='Custom filename for DB dump',
+                      default=None)
+
+  group = parser.add_mutually_exclusive_group(required=True)
+  group.add_argument('-k',
+                     '--kern_db',
+                     dest='kern_db',
+                     action='store_true',
+                     help='Serialize Kernel Database',
+                     default=False)
+  group.add_argument('-f',
+                     '--find_db',
+                     dest='find_db',
+                     action='store_true',
+                     help='Serialize Find Database',
+                     default=False)
+  group.add_argument('-p',
+                     '--perf_db',
+                     dest='perf_db',
+                     action='store_true',
+                     help='Serialize Perf Database',
+                     default=False)
+  return parser

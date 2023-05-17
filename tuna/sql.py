@@ -27,6 +27,9 @@
 """ Database resource manager """
 import mysql.connector  # pylint: disable=unused-import
 
+from mysql.connector.connection import MySQLConnection
+from mysql.connector.cursor import MySQLCursor
+
 
 class DbConnection():
   """ Resource manager class for a SQL connection """
@@ -39,6 +42,12 @@ class DbConnection():
         for my reason to use this.
         '''
     import os  # pylint: disable=import-outside-toplevel
+
+    self.db_user_name: str
+    self.db_user_password: str
+    self.db_host_name: str
+    self.db_name: str
+
     if 'TUNA_DB_USER_NAME' in os.environ:
       self.db_user_name = os.environ['TUNA_DB_USER_NAME']
     else:
@@ -55,9 +64,10 @@ class DbConnection():
       self.db_name = os.environ['TUNA_DB_NAME']
     else:
       self.db_name = ''
-    self.connection = None
 
-  def get_connection(self):
+    self.connection: MySQLConnection = None
+
+  def get_connection(self) -> MySQLConnection:
     """ return a cached connection if one exists, else create a new one
     and return that instead """
     if self.connection is not None and self.connection.is_connected():
@@ -72,7 +82,7 @@ class DbConnection():
       raise ValueError('Could not connect to the DB instance')
     return self.connection
 
-  def close_connection(self):
+  def close_connection(self) -> bool:
     """ Close a SQL connection after commiting the changes """
     self.connection.commit()
     self.connection.close()
@@ -89,11 +99,11 @@ class DbCursor():
   """Resource manager class for a SQL cursor"""
 
   def __init__(self):
-    self.cnx = None
-    self.sql_connection = None
-    self.cur = None
+    self.cnx: DbConnection = None
+    self.sql_connection: MySQLConnection = None
+    self.cur: MySQLCursor = None
 
-  def __enter__(self):
+  def __enter__(self) -> MySQLCursor:
     self.cnx = DbConnection()
     self.sql_connection = self.cnx.get_connection()
     self.cur = self.sql_connection.cursor()
