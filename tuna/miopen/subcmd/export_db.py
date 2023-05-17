@@ -179,40 +179,6 @@ def build_miopen_fdb(query, logger):
   return find_db
 
 
-def build_miopen_fdb_2(query):
-  """return dict with key: fdb_key + alg_lib, val: solver list"""
-  find_db = OrderedDict()
-  solvers = {}
-  db_entries = query.all()
-  total_entries = len(db_entries)
-  LOGGER.info("fdb query returned: %s", total_entries)
-
-  for fdb_entry, _ in db_entries:
-    fdb_key = fdb_entry.fdb_key
-    if fdb_key not in solvers:
-      solvers[fdb_key] = {}
-    if fdb_entry.solver in solvers[fdb_key].keys():
-      LOGGER.warning("Skipped duplicate solver: %s : %s with ts %s vs prev %s",
-                     fdb_key, fdb_entry.solver, fdb_entry.update_ts,
-                     solvers[fdb_key][fdb_entry.solver])
-      continue
-    solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
-
-    fdb_key = fdb_entry.fdb_key
-    lst = find_db.get(fdb_key)
-    if not lst:
-      find_db[fdb_key] = [fdb_entry]
-    else:
-      lst.append(fdb_entry)
-
-  for _, entries in find_db.items():
-    entries.sort(key=lambda x: float(x.kernel_time))
-    while len(entries) > 4:
-      entries.pop()
-
-  return find_db
-
-
 def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   """
   Serialize find_db map to plain text file in MIOpen format
