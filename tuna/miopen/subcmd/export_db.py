@@ -187,7 +187,7 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
 
   with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
-      solvers.sort(key=lambda x: (float(x.kernel_time), x.alg_lib))
+      solvers.sort(key=lambda x: (float(x.kernel_time), x.solver))
       lst = []
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
