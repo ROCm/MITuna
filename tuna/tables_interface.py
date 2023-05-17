@@ -28,10 +28,8 @@
 
 from typing import Any, Set, Union, Optional, Dict
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen.db.miopen_tables import ConvolutionJob, BNJob, FusionJob
-from tuna.example.example_tables import Job
-from tuna.miopen.db.session import Session
-from tuna.example.session import SessionExample
+from tuna.session_mixin import SessionMixin
+from tuna.miopen.db.miopen_tables import JobMixin
 
 
 #pylint: disable=too-few-public-methods
@@ -44,10 +42,9 @@ class DBTablesInterface():
     allowed_keys: Set = set(['session_id'])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    self.job_table: Optional[Union[ConvolutionJob, BNJob, FusionJob,
-                                   Job]] = None
+    self.job_table: Optional[JobMixin] = None
     self.session_id: Optional[int] = None
-    self.session: Optional[Union[Session, SessionExample]] = None
+    self.session: Optional[SessionMixin] = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
