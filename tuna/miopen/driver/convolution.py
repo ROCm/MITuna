@@ -210,11 +210,13 @@ class DriverConvolution(DriverBase):
 
     if self.spatial_dim == 3 and len(self.out_layout) != 5:
       raise ValueError(
-          f"Layout string {self.out_layout} should be 5 characters for spatial_dim {self.spatial_dim}"
+          f"Layout string {self.out_layout} should be 5 characters"\
+          f" for spatial_dim {self.spatial_dim}"
       )
     if self.spatial_dim == 2 and len(self.out_layout) != 4:
       raise ValueError(
-          f"Layout string {self.out_layout} should be 4 characters for spatial_dim {self.spatial_dim}"
+          f"Layout string {self.out_layout} should be 4 characters"\
+          f" for spatial_dim {self.spatial_dim}"
       )
 
   @staticmethod
