@@ -26,9 +26,12 @@
 ###############################################################################
 """Module that encapsulates the DB representation for a library"""
 
-from typing import Dict, Set, Any, Optional
-from sqlalchemy.orm.query import Query
+from typing import Any, Set, Union, Optional, Dict
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.miopen.db.miopen_tables import ConvolutionJob, BNJob, FusionJob
+from tuna.example.example_tables import Job
+from tuna.miopen.db.session import Session
+from tuna.example.session import SessionExample
 
 
 #pylint: disable=too-few-public-methods
@@ -41,9 +44,10 @@ class DBTablesInterface():
     allowed_keys: Set = set(['session_id'])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    self.job_table: Optional[Dict[str, Any]] = None
+    self.job_table: Optional[Union[ConvolutionJob, BNJob, FusionJob,
+                                   Job]] = None
     self.session_id: Optional[int] = None
-    self.session: Query = None
+    self.session: Optional[Union[Session, SessionExample]] = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -52,7 +56,7 @@ class DBTablesInterface():
     """Set appropriate tables based on requirements"""
     if self.session_id is not None:
       with DbSession() as session:
-        query: Query = session.query(sess_class).filter(
+        query = session.query(sess_class).filter(
             sess_class.id == self.session_id)
         self.session = query.one()
     return True
