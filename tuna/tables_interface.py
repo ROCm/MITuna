@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that encapsulates the DB representation for a library"""
 
-from typing import Any, Set, Union, Optional, Dict
+from typing import Any, Set, Optional, Dict
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.session_mixin import SessionMixin
 from tuna.miopen.db.miopen_tables import JobMixin
