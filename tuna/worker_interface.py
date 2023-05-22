@@ -39,7 +39,8 @@ import socket
 import random
 import string
 from time import sleep
-from typing import List, Tuple, Union
+from io import StringIO
+from typing import List, Tuple, Union, Set, Callable, Optional
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -52,6 +53,8 @@ from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
 from tuna.utils.utility import SimpleDict
+from tuna.example.example_tables import Job
+
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -69,14 +72,13 @@ class WorkerInterface(Process):
     """Constructor"""
     super().__init__()
 
-    allowed_keys = set([
+    allowed_keys: Set = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
         'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
-    pdb.set_trace()
 
     #system vars
     self.machine = None
@@ -91,10 +93,10 @@ class WorkerInterface(Process):
     self.result_queue_lock = Lock()
     self.end_jobs = None
     #job detail vars
-    self.envmt = []
-    self.fetch_state = ['new']
-    self.label = None
-    self.session_id = None
+    self.envmt: List = []
+    self.fetch_state: List = ['new']
+    self.label: str = None
+    self.session_id: int = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -102,20 +104,20 @@ class WorkerInterface(Process):
     #initialize tables
     self.set_db_tables()
 
-    self.hostname = self.machine.hostname
-    self.claim_num = self.num_procs.value * 3
-    self.last_reset = datetime.now()
+    self.hostname: str = self.machine.hostname
+    self.claim_num: int = self.num_procs.value * 3
+    self.last_reset: datetime = datetime.now()
 
-    dir_name = os.path.join(TUNA_LOG_DIR,
+    dir_name: str = os.path.join(TUNA_LOG_DIR,
                             type(self).__name__,
                             f"{self.hostname}_{self.machine.port}p")
     if not os.path.exists(dir_name):
       os.makedirs(dir_name)
-    logger_name = os.path.join(dir_name, str(self.gpu_id))
+    logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.set_logger(logger_name)
     connect_db()
 
-    self.job = SimpleDict()
+    self.job: SimpleDict = SimpleDict()
     try:
       self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
       self.job_attr.remove("insert_ts")
@@ -125,13 +127,17 @@ class WorkerInterface(Process):
 
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly
-    self.cnx = self.machine.connect(chk_abort_file)
+    self.cnx: Connection = self.machine.connect(chk_abort_file)
 
-  def set_logger(self, logger_name):
+  def set_logger(self, logger_name: str) -> None:
     """Build logger with given name"""
     # JD: This needs to be moved to logger.py
 
-    pdb.set_trace()
+    lgr: logging.Logger
+    fmt: logging.Formatter
+    file_handler: logging.FileHandler
+    stream_handler: logging.StreamHandler
+
     log_level = os.environ.get('TUNA_LOGLEVEL', None)
     lgr = logging.getLogger(logger_name)
     log_file = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
@@ -150,7 +156,7 @@ class WorkerInterface(Process):
 
   def set_db_tables(self) -> None:
     """Initialize tables"""
-    self.dbt = DBTablesInterface(session_id=self.session_id)
+    self.dbt: DBTablesInterface = DBTablesInterface(session_id=self.session_id)
 
   def reset_machine(self) -> None:
     """Function to reset machhine"""
@@ -160,6 +166,7 @@ class WorkerInterface(Process):
   def compose_work_objs(self, session: DbSession,
                         conds: List[str]) -> List[Tuple[SimpleDict, ...]]:
     """Query a job list for update"""
+    pdb.set_trace()
     cond_str = ' AND '.join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
@@ -177,7 +184,8 @@ class WorkerInterface(Process):
   def get_job_objs(self, session: DbSession,
                    find_state: str) -> List[Tuple[SimpleDict, ...]]:
     """Get list of job objects"""
-    conds = [f"session={self.dbt.session.id}", "valid=1"]
+    entries: List[Tuple[SimpleDict, ...]]
+    conds: list  = [f"session={self.dbt.session.id}", "valid=1"]
 
     if self.label:
       conds.append(f"reason='{self.label}'")
@@ -186,7 +194,6 @@ class WorkerInterface(Process):
     conds.append(f"state='{find_state}'")
 
     entries = self.compose_work_objs(session, conds)
-
     return entries
 
   def queue_end_reset(self) -> None:
@@ -194,8 +201,9 @@ class WorkerInterface(Process):
     with self.bar_lock:
       self.end_jobs.value = 0
 
-  def check_jobs_found(self, job_rows, find_state, imply_end) -> bool:
+  def check_jobs_found(self, job_rows: int, find_state: str, imply_end: bool) -> bool:
     """check for end of jobs"""
+    pdb.set_trace()
     if not job_rows:
       # we are done
       self.logger.warning('No %s jobs found, session %s', find_state,
@@ -206,33 +214,35 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_from_tuple(self, job_tuple) -> None:
+  def get_job_from_tuple(self, job_tuple: str) -> Union[str, None]:
     """find job table in a job tuple"""
+    pdb.set_trace()
     if has_attr_set(job_tuple, self.job_attr):
       return job_tuple
 
     for tble in job_tuple:
       if has_attr_set(tble, self.job_attr):
         return tble
-
     return None
 
-  def get_job_tables(self, job_rows):
+  def get_job_tables(self, job_rows: List[str]) -> List[str]:
     """find job tables in query results"""
+    pdb.set_trace()
     if has_attr_set(job_rows[0], self.job_attr):
-      job_tables = job_rows
+      job_tables: List[str] = job_rows
     else:
-      job_i = 0
+      job_i: int = 0
+      tble: str
       for i, tble in enumerate(job_rows[0]):
         if has_attr_set(tble, self.job_attr):
           job_i = i
           break
       job_tables = [row[job_i] for row in job_rows]
-
     return job_tables
 
   def refresh_query_objects(self, session, rows) -> None:
     """refresh objects in query rows"""
+    pdb.set_trace()
     for obj_tuple in rows:
       try:
         for entry in obj_tuple:
@@ -240,21 +250,27 @@ class WorkerInterface(Process):
       except TypeError:
         session.refresh(obj_tuple)
 
-  def job_queue_push(self, job_rows) -> None:
+  def job_queue_push(self, job_rows: List[str]) -> None:
     """load job_queue with info for job ids"""
+    pdb.set_trace()
+    job_tuple: str
     for job_tuple in job_rows:
       self.job_queue.put(job_tuple)
       job = self.get_job_from_tuple(job_tuple)
-      self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
+      if None not in (job.id, job.state, job.reason):
+        self.logger.info("Put job %s %s %s", self.job.id, job.state, job.reason)
 
   def job_queue_pop(self) -> None:
     """load job from top of job queue"""
+    pdb.set_trace()
     self.job = self.job_queue.get(True, 1)[0]
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                      self.job.reason)
 
   #pylint: disable=too-many-branches
   def get_job(self, find_state, set_state, imply_end) -> bool:
+
+    pdb.set_trace()
     """Interface function to get new job for builder/evaluator"""
     for idx in range(NUM_SQL_RETRIES):
       try:
@@ -289,7 +305,7 @@ class WorkerInterface(Process):
 
           #note for a compile job gpu_id is an index 0 tuna process number, not a gpu
           self.job.gpu_id = self.gpu_id
-
+        pdb.set_trace()
         return True
       except OperationalError as error:
         session.rollback()
@@ -315,6 +331,7 @@ class WorkerInterface(Process):
                     increment_retries: bool = False,
                     result: Union[str, None] = None) -> None:
     """Interface function to update job state for builder/evaluator"""
+    pdb.set_trace()
     self.logger.info('Setting job id %s state to %s', self.job.id, state)
     with DbSession() as session:
       job_set_attr = ['state', 'gpu_id']
@@ -346,18 +363,23 @@ class WorkerInterface(Process):
 
   def exec_command(self, cmd):
     """execute on native machine"""
+    pdb.set_trace()
     ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
     if err is not None and hasattr(err, 'channel'):
       self.logger.info(err)
       err.channel.settimeout(LOG_TIMEOUT)
     return ret_code, out, err
 
-  def exec_docker_cmd(self, cmd):
+  def exec_docker_cmd(self, cmd: str) -> Tuple[int, StringIO, StringIO]:
     """forward command execution to machine method"""
-    ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
+    ret_code: int
+    out: StringIO
+    err: StringIO
+    strOut: str
+    ret_code, out, err = self.machine.exec_command(cmd, timeout = LOG_TIMEOUT)
     if out:
-      out = out.read().strip()
-    if not out and err:
+      strOut = out.read().strip()
+    if not strOut and err:
       self.logger.info('Error executing docker cmd: %s \n err: %s', cmd,
                        err.read())
 
@@ -366,28 +388,31 @@ class WorkerInterface(Process):
       self.logger.info(err)
     return ret_code, out, err
 
-  def get_miopen_v(self):
+  def get_miopen_v(self) -> StringIO:
     """Interface function to get new branch hash"""
+    out: StringIO
     _, out, _ = self.exec_docker_cmd(
         "cat /opt/rocm/miopen/include/miopen/version.h "
         "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
     self.logger.info('Got branch commit hash: %s', out)
     return out
 
-  def get_rocm_v(self):
+  def get_rocm_v(self) -> StringIO:
     """Interface function to get rocm version info"""
+    out: StringIO
     _, out, _ = self.exec_docker_cmd("cat /opt/rocm/.info/version")
     self.logger.info('Got rocm version: %s', out)
     return out
 
-  def check_env(self):
+  def check_env(self) -> bool:
+    pdb.set_trace()
     """Checking that presumed rocm/miopen_v corresponds to the env rocm/miopen_v"""
-    env_rocm_v = self.get_rocm_v()
+    env_rocm_v: StringIO = self.get_rocm_v()
     if self.dbt.session.rocm_v != env_rocm_v:
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
       )
-    env_miopen_v = self.get_miopen_v()
+    env_miopen_v: StringIO = self.get_miopen_v()
     if self.dbt.session.miopen_v != env_miopen_v:
       raise ValueError(
           f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
@@ -395,15 +420,16 @@ class WorkerInterface(Process):
 
     return True
 
-  def set_barrier(self, funct, with_timeout) -> bool:
+  def set_barrier(self, funct: Callable, with_timeout: bool) -> bool:
     """Setting time barrier for Process to define execution timeout"""
+    pdb.set_trace()
     if self.barred.value == 0:
       # this is the first proc to reach the barrier
       with self.bar_lock:
         self.barred.value += 1
       self.logger.info('Waiting for other instances to pause')
-      wait_cnt = 0
-      timeout = False
+      wait_cnt: int = 0
+      timeout: bool = False
       while self.barred.value < self.num_procs.value:
         sleep(10)
         if with_timeout and self.barred.value == 1:
@@ -424,6 +450,7 @@ class WorkerInterface(Process):
     return False
 
   def check_wait_barrier(self) -> bool:
+    pdb.set_trace()
     """Checking time barrier"""
     self.logger.info('Checking barrier')
     if self.barred.value != 0:
@@ -438,8 +465,9 @@ class WorkerInterface(Process):
       return True
     return False
 
-  def reset_job_state(self):
+  def reset_job_state(self) -> None:
     """Helper function to reset job state during signal interrupt"""
+    pdb.set_trace()
     #also filter pending states eg compiled_pend
     if self.job and self.job.state in ("compile_start", "compiling",
                                        "eval_start", "evaluating"):
@@ -462,8 +490,9 @@ class WorkerInterface(Process):
 
   def run(self) -> bool:
     """Main run function of WorkerInterface Process"""
-
+    pdb.set_trace()
     self.machine.set_logger(self.logger)
+    usage: float
     try:
       self.cnx = self.machine.connect(chk_abort_file)
 
@@ -476,11 +505,11 @@ class WorkerInterface(Process):
           return False
 
         # re-establish node connection
-        usage = None
+        usage = 0 
         try:
           usage = self.machine.getusedspace()
         except (socket.timeout, socket.error):
-          usage = None
+          usage = 0
         if not usage:
           self.set_barrier(self.reset_machine, True)
           continue
@@ -490,7 +519,7 @@ class WorkerInterface(Process):
           self.set_barrier(lambda: (), True)
           continue
         # the step member is defined in the derived class
-        ret = self.step()  # pylint: disable=no-member
+        ret: bool = self.step()  # pylint: disable=no-member
         self.logger.info("proc %s step %s", self.gpu_id, ret)
         if not ret:
           self.logger.warning('No more steps, quiting...')
@@ -509,8 +538,9 @@ class WorkerInterface(Process):
 
     return True
 
-  def run_command(self, cmd):
+  def run_command(self, cmd: str) -> Tuple[int, StringIO ]:
     """Run cmd and return ret_code"""
+    pdb.set_trace()
     for i in range(MAX_JOB_RETRIES):
       ret_code, out, err = self.exec_do
       cker_cmd(cmd)
