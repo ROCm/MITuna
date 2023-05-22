@@ -8,7 +8,7 @@ breathe==4.30.0
 cryptography==39.0.1
 decorator==4.3.0
 docutils<0.17 # sphinx-rtd-theme 0.5.2 requires docutils<0.17
-flask==2.0.1
+flask==2.2.5
 idna==2.8
 importlib-metadata==6.0.0
 jsonargparse==4.19.0

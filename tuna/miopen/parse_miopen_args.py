@@ -274,3 +274,40 @@ def get_export_db_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
                      help='Serialize Perf Database',
                      default=False)
   return parser
+
+
+def get_update_golden_parser(
+    with_yaml: bool = True) -> jsonargparse.ArgumentParser:
+  "Return parser for update golden subcommand"
+  parser = setup_arg_parser('Populate golden table based on session_id.',
+                            [TunaArgs.CONFIG_TYPE],
+                            with_yaml=with_yaml)
+  parser.add_argument('--golden_v',
+                      dest='golden_v',
+                      type=int,
+                      default=None,
+                      required=True,
+                      help='target golden miopen version to write')
+  parser.add_argument('--base_golden_v',
+                      dest='base_golden_v',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='previous golden miopen version for initialization')
+  parser.add_argument('--session_id',
+                      required=False,
+                      dest='session_id',
+                      type=int,
+                      help='Tuning session to be imported to golden table.')
+  parser.add_argument('-o',
+                      '--overwrite',
+                      dest='overwrite',
+                      action='store_true',
+                      default=False,
+                      help='Write over existing golden version.')
+  parser.add_argument('--create_perf_table',
+                      dest='create_perf_table',
+                      action='store_true',
+                      default=False,
+                      help='Create performance table.')
+  return parser

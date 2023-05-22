@@ -43,9 +43,11 @@ from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
 from tuna.miopen.subcmd.export_db import run_export_db
+from tuna.miopen.subcmd.update_golden import run_update_golden
 from tuna.miopen.parse_miopen_args import get_import_cfg_parser
 from tuna.miopen.parse_miopen_args import get_load_job_parser
 from tuna.miopen.parse_miopen_args import get_export_db_parser
+from tuna.miopen.parse_miopen_args import get_update_golden_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
@@ -119,8 +121,13 @@ class MIOpen(MITunaInterface):
     subcommands.add_subcommand('load_job',
                                get_load_job_parser(),
                                required=False)
+
     subcommands.add_subcommand('export_db',
                                get_export_db_parser(),
+                               required=False)
+
+    subcommands.add_subcommand('update_golden',
+                               get_update_golden_parser(),
                                required=False)
 
     group = parser.add_mutually_exclusive_group()
@@ -359,6 +366,10 @@ class MIOpen(MITunaInterface):
 
     if self.args.subcommand is not None and self.args.subcommand == 'export_db':
       run_export_db(self.args.export_db, self.logger)
+      return None
+
+    if self.args.subcommand is not None and self.args.subcommand == 'update_golden':
+      run_update_golden(self.args.update_golden, self.logger)
       return None
 
     machines = load_machines(self.args)

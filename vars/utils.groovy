@@ -430,7 +430,7 @@ def perfEval_gfx908() {
 
         def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
         def next_gold_v = last_gold_v.toInteger() + 1
-        sh "./tuna/miopen/subcmd/update_golden.py --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
+        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())
@@ -582,6 +582,7 @@ def runLint() {
             sh "mypy tuna/miopen/subcmd/import_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/subcmd/load_job.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/subcmd/export_db.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/miopen/subcmd/update_golden.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
@@ -604,6 +605,7 @@ def runLint() {
             sh "mypy tuna/machine.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/session_mixin.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/parse_args.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/tables_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/sql.py --ignore-missing-imports"
           }
     }
