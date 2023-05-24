@@ -130,8 +130,7 @@ class WorkerInterface(Process):
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
-  
-  
+
   def set_logger(self, logger_name: str) -> None:
     """Build logger with given name"""
     # JD: This needs to be moved to logger.py
