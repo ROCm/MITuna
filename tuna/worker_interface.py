@@ -39,7 +39,7 @@ import random
 import string
 from time import sleep
 from io import StringIO
-from typing import List, Tuple, Union, Set, Callable, cast
+from typing import List, Tuple, Union, Set, Callable, cast, Optional
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 from paramiko.channel import ChannelStderrFile
@@ -215,7 +215,7 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_from_tuple(self, job_tuple: str) -> Union[str, str, None]:
+  def get_job_from_tuple(self, job_tuple: str) -> Optional[str]:
     """find job table in a job tuple"""
     tble: str
     if has_attr_set(job_tuple, self.job_attr):
