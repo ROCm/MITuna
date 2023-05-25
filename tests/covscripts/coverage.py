@@ -80,7 +80,7 @@ def branch(root_dir, coverage_file_name_txt, coverage_file_name_json):
 
   print(f"Current Testing Coverage for current branch is: {cur_cov}%")
   print(f"Current Testing Coverage for develop branch is: {prev_cov}%")
-  prct_change = (prev_cov - cur_cov) / prev_cov * 100
+  prct_change = (prev_cov - cur_cov)
   if prct_change > 0.5:
     raise ValueError(
         f"Code Coverage Decreased by more than 0.5%%. Prev:{prev_cov}, cur: {cur_cov}"
