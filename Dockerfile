@@ -141,7 +141,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=4b1aecb98258252c9fb5e8e028722c9a245b98cb
+ARG FIN_BRANCH=748c1c0ce2696d25b530f531423b85d85f9284a5
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 
