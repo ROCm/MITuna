@@ -40,14 +40,7 @@ def curcov(file_path_curcov_json):
   with open(file_path_curcov_json) as curcov_json:
     curcov_data = json.load(curcov_json)
   curcov_percentage = curcov_data['totals']['percent_covered']
-  print("**********************curcov_prece**********************\n")
-  print(curcov_percentage)
-  print("\n &&&&&&&&&&&&&&&&&&&&&End&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
   curcov_percentage_ftdt = round(curcov_percentage, 2)
-
-  print("**********************curcov_prece**********************\n")
-  print(curcov_percentage_ftdt)
-  print("\n &&&&&&&&&&&&&&&&&&&&&End&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
   return curcov_percentage_ftdt
 
 
@@ -79,8 +72,6 @@ def branch(root_dir, coverage_file_name_txt, coverage_file_name_json):
   """run and compare coverage for the non-develop, peripheral branches"""
   file_path_curcov_json = os.path.join(root_dir, coverage_file_name_json)
   cur_cov = curcov(file_path_curcov_json)
-  print("*********************cur_cov**********************\n")
-  print(f"Current develop branch is: {cur_cov}%")
   prev_cov = None
 
   with open(coverage_file_name_txt, 'r') as f:
@@ -89,10 +80,10 @@ def branch(root_dir, coverage_file_name_txt, coverage_file_name_json):
 
   print(f"Current Testing Coverage for current branch is: {cur_cov}%")
   print(f"Current Testing Coverage for develop branch is: {prev_cov}%")
-  prct_change = (prev_cov - cur_cov) / prev_cov * 100
-  if prct_change > 0.5:
+  code_cov_diff = (prev_cov - cur_cov)
+  if code_cov_diff > 0.5:
     raise ValueError(
-        f"Code Coverage Decreased by more than 0.5%%. Prev:{prev_cov}, cur: {cur_cov}"
+        f"Code Coverage Diffrence is Decreased by more than 0.5%%. Prev:{prev_cov}, cur: {cur_cov}"
     )
 
 
