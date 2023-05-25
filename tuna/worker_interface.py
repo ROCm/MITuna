@@ -46,8 +46,6 @@ from paramiko.channel import ChannelStderrFile
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
-from multiprocessing import Lock, Queue, Value
-
 
 from tuna.abort import chk_abort_file
 from tuna.miopen.utils.metadata import TUNA_LOG_DIR
@@ -58,7 +56,6 @@ from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_se
 from tuna.utils.db_utility import connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
-
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -86,22 +83,21 @@ class WorkerInterface(Process):
     #system vars
     self.machine: Machine = None
     #multiprocess vars
-    self.gpu_id: int =  None
-    self.num_procs =  None
+    self.gpu_id: int = None
+    self.num_procs = None
     self.barred = None
     self.bar_lock = Lock()
-    self.job_queue  = None
+    self.job_queue = None
     self.job_queue_lock = Lock()
-    self.result_queue  = None
+    self.result_queue = None
     self.result_queue_lock = Lock()
-    self.end_jobs =  None
+    self.end_jobs = None
     #job detail vars
     self.envmt: List = []
     self.fetch_state: List = ['new']
     self.label: str = None
     self.session_id: int = None
 
-    
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
