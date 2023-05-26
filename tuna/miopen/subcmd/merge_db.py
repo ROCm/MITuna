@@ -40,6 +40,7 @@ LOGGER = setup_logger('merge_pdb')
 
 DB_ALIAS = {'gfx803_36': 'gfx900_64', 'gfx803_64': 'gfx900_64'}
 
+
 def parse_jobline(line):
   """get entries from a fdb text line """
   # line = line.decode()
@@ -234,7 +235,8 @@ def write_merge_results(master_list, final_file, copy_files):
                                       key=lambda kv: kv[0]):
 
       params = []
-      sorted_slv = sorted(solvers.items(), key=lambda kv: (float(kv[1].split(',')[0]), kv[0]))
+      sorted_slv = sorted(solvers.items(),
+                          key=lambda kv: (float(kv[1].split(',')[0]), kv[0]))
       for solver_id, solver_params in sorted_slv:
         params.append(f'{solver_id}:{solver_params}')
       # pylint: disable-next=consider-using-f-string ; more readble

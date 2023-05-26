@@ -130,7 +130,8 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
   query = query.filter(src_table.kernel_time != -1)\
       .filter(src_table.workspace_sz != -1)
 
-  query = query.order_by(src_table.fdb_key, src_table.update_ts.desc(), src_table.num_cu.asc())
+  query = query.order_by(src_table.fdb_key, src_table.update_ts.desc(),
+                         src_table.num_cu.asc())
 
   return query
 
@@ -149,6 +150,7 @@ def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
 
   return query
 
+
 def add_entry_to_solvers(fdb_entry, solvers, logger):
   """check if fdb_key + solver exists in solvers, add if not present
   return False if similar entry already exists
@@ -165,6 +167,7 @@ def add_entry_to_solvers(fdb_entry, solvers, logger):
 
   solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
   return True
+
 
 def build_miopen_fdb(query, logger):
   """return dict with key: fdb_key + alg_lib, val: solver list"""
@@ -199,7 +202,8 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
 
   with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
-      solvers.sort(key=lambda x: (float(x.kernel_time), ID_SOLVER_MAP[x.solver]))
+      solvers.sort(
+          key=lambda x: (float(x.kernel_time), ID_SOLVER_MAP[x.solver]))
       lst = []
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
@@ -393,7 +397,7 @@ def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace,
   for perf_db_entry, cfg_entry in db_entries:
     if add_entry_to_solvers(perf_db_entry, solvers, logger):
       populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
-                    total_entries, logger)
+                      total_entries, logger)
 
   cnx.commit()
   logger.warning("Total number of entries in Perf DB: %s", num_perf)
