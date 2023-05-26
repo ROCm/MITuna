@@ -52,8 +52,8 @@ _, ID_SOLVER_MAP = get_id_solvers()
 
 def arg_export_db(args: argparse.Namespace, logger: logging.Logger):
   """export db args for exportdb"""
-  if args.golden_v and not (args.arch and args.num_cu):
-    logger.error('arch and num_cu must be set with golden_v')
+  if args.golden_v and not args.arch:
+    logger.error('arch must be set with golden_v')
 
 
 def get_filename(arch, num_cu, filename, ocl, db_type):
@@ -62,11 +62,15 @@ def get_filename(arch, num_cu, filename, ocl, db_type):
   tuna_dir = f'tuna_{version}'
   if not os.path.exists(tuna_dir):
     os.makedirs(tuna_dir)
-  final_name = f"{tuna_dir}/{arch}_{num_cu}"
-  if num_cu > 64:
-    final_name = f'{tuna_dir}/{arch}{num_cu:x}'
+
   if filename:
     final_name = f'{tuna_dir}/{filename}'
+  elif not num_cu:
+    final_name = f'{tuna_dir}/{arch}'
+  elif num_cu > 64:
+    final_name = f'{tuna_dir}/{arch}{num_cu:x}'
+  else:
+    final_name = f"{tuna_dir}/{arch}_{num_cu}"
 
   if db_type == DB_Type.FIND_DB:
     # pylint: disable-next=consider-using-f-string ; more readable
@@ -92,8 +96,9 @@ def get_base_query(dbt: MIOpenDBTables, args: argparse.Namespace,
     query = session.query(src_table, dbt.config_table)
     if args.golden_v is not None:
       query = query.filter(src_table.golden_miopen_v == args.golden_v)\
-              .filter(src_table.arch == args.arch)\
-              .filter(src_table.num_cu == args.num_cu)
+              .filter(src_table.arch == args.arch)
+      if args.num_cu:
+        query = query.filter(src_table.num_cu == args.num_cu)
       logger.info("golden_miopen_v: %s, arch: %s, num_cu: %s", args.golden_v,
                   args.arch, args.num_cu)
     else:
@@ -125,7 +130,7 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
   query = query.filter(src_table.kernel_time != -1)\
       .filter(src_table.workspace_sz != -1)
 
-  query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
+  query = query.order_by(src_table.fdb_key, src_table.update_ts.desc(), src_table.num_cu.asc())
 
   return query
 
@@ -137,13 +142,29 @@ def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
   if args.golden_v is not None:
     src_table = dbt.golden_table
 
-  query = get_base_query(dbt, args, logger)
+  query = get_fdb_query(dbt, args, logger)
   query = query.filter(src_table.params != '')\
       .filter(src_table.solver == dbt.solver_table.id)\
       .filter(dbt.solver_table.tunable == 1)
 
   return query
 
+def add_entry_to_solvers(fdb_entry, solvers, logger):
+  """check if fdb_key + solver exists in solvers, add if not present
+  return False if similar entry already exists
+  return True if the fdb_entry is added successfully
+  """
+  fdb_key = fdb_entry.fdb_key
+  if fdb_key not in solvers:
+    solvers[fdb_key] = {}
+  elif fdb_entry.solver in solvers[fdb_key].keys():
+    #logger.warning("Skipped duplicate solver: %s : %s with ts %s vs prev ts %s",
+    #                fdb_key, fdb_entry.solver, fdb_entry.update_ts,
+    #                solvers[fdb_key][fdb_entry.solver])
+    return False
+
+  solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
+  return True
 
 def build_miopen_fdb(query, logger):
   """return dict with key: fdb_key + alg_lib, val: solver list"""
@@ -154,25 +175,16 @@ def build_miopen_fdb(query, logger):
   logger.info("fdb query returned: %s", total_entries)
 
   for fdb_entry, _ in db_entries:
-    fdb_key = fdb_entry.fdb_key
-    if fdb_key not in solvers:
-      solvers[fdb_key] = {}
-    if fdb_entry.solver in solvers[fdb_key].keys():
-      logger.warning("Skipped duplicate solver: %s : %s with ts %s vs prev %s",
-                     fdb_key, fdb_entry.solver, fdb_entry.update_ts,
-                     solvers[fdb_key][fdb_entry.solver])
-      continue
-    solvers[fdb_key][fdb_entry.solver] = fdb_entry.update_ts
-
-    fdb_key = fdb_entry.fdb_key
-    lst = find_db.get(fdb_key)
-    if not lst:
-      find_db[fdb_key] = [fdb_entry]
-    else:
-      lst.append(fdb_entry)
+    if add_entry_to_solvers(fdb_entry, solvers, logger):
+      fdb_key = fdb_entry.fdb_key
+      lst = find_db.get(fdb_key)
+      if not lst:
+        find_db[fdb_key] = [fdb_entry]
+      else:
+        lst.append(fdb_entry)
 
   for _, entries in find_db.items():
-    entries.sort(key=lambda x: float(x.kernel_time))
+    entries.sort(key=lambda x: (float(x.kernel_time), x.solver))
     while len(entries) > 4:
       entries.pop()
 
@@ -187,7 +199,7 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
 
   with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
-      solvers.sort(key=lambda x: (float(x.kernel_time), x.solver))
+      solvers.sort(key=lambda x: (float(x.kernel_time), ID_SOLVER_MAP[x.solver]))
       lst = []
       # for alg_lib, solver_id, kernel_time, workspace_sz in solvers:
       for rec in solvers:
@@ -373,12 +385,14 @@ def export_pdb(dbt: MIOpenDBTables, args: argparse.Namespace,
   cnx, local_path = create_sqlite_tables(args.arch, args.num_cu, args.filename)
   num_perf = 0
   cfg_map: Dict[Any, Any] = {}
+  solvers: Dict[str, Dict[str, Any]] = {}
   db_entries = get_pdb_query(dbt, args, logger).all()
   total_entries = len(db_entries)
   logger.info("pdb query returned: %s", total_entries)
 
   for perf_db_entry, cfg_entry in db_entries:
-    populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
+    if add_entry_to_solvers(perf_db_entry, solvers, logger):
+      populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
                     total_entries, logger)
 
   cnx.commit()
