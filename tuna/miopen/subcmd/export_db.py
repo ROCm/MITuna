@@ -184,7 +184,7 @@ def build_miopen_fdb(query, logger):
         lst.append(fdb_entry)
 
   for _, entries in find_db.items():
-    entries.sort(key=lambda x: (float(x.kernel_time), x.solver))
+    entries.sort(key=lambda x: (float(x.kernel_time), ID_SOLVER_MAP[x.solver]))
     while len(entries) > 4:
       entries.pop()
 
