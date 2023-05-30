@@ -226,6 +226,15 @@ def update_master_list(master_list, local_paths, mids, keep_keys):
           target_merge(master_list, key, vals, keep_keys)
 
 
+def is_float(num):
+  """Test if string can be interpreted as a float"""
+  try:
+    float(num)
+    return True
+  except ValueError:
+    return False
+
+
 def write_merge_results(master_list, final_file, copy_files):
   """write merge results to file"""
   # serialize the file out
@@ -235,8 +244,15 @@ def write_merge_results(master_list, final_file, copy_files):
                                       key=lambda kv: kv[0]):
 
       params = []
-      sorted_slv = sorted(solvers.items(),
-                          key=lambda kv: (float(kv[1].split(',')[0]), kv[0]))
+      if is_float(solvers.values()[0].split(',')[0]):
+        #for solver indexed, idx 0 is time
+        sorted_slv = sorted(solvers.items(),
+                            key=lambda kv: (float(kv[1].split(',')[0]), kv[0]))
+      else:
+        #for alg indexed, idx 1 is time
+        sorted_slv = sorted(solvers.items(),
+                            key=lambda kv: (float(kv[1].split(',')[1]), kv[0]))
+
       for solver_id, solver_params in sorted_slv:
         params.append(f'{solver_id}:{solver_params}')
       # pylint: disable-next=consider-using-f-string ; more readble
