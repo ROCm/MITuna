@@ -244,7 +244,7 @@ def write_merge_results(master_list, final_file, copy_files):
                                       key=lambda kv: kv[0]):
 
       params = []
-      if is_float(solvers.values()[0].split(',')[0]):
+      if is_float(list(solvers.values())[0].split(',')[0]):
         #for solver indexed, idx 0 is time
         sorted_slv = sorted(solvers.items(),
                             key=lambda kv: (float(kv[1].split(',')[0]), kv[0]))
