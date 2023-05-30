@@ -160,6 +160,7 @@ def add_entry_to_solvers(fdb_entry, solvers, logger):
   if fdb_key not in solvers:
     solvers[fdb_key] = {}
   elif fdb_entry.solver in solvers[fdb_key].keys():
+    _ = logger
     #logger.warning("Skipped duplicate solver: %s : %s with ts %s vs prev ts %s",
     #                fdb_key, fdb_entry.solver, fdb_entry.update_ts,
     #                solvers[fdb_key][fdb_entry.solver])
