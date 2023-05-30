@@ -34,7 +34,7 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.miopen.subcmd.merge_db import parse_jobline, parse_text_fdb_name, parse_text_pdb_name
-from tuna.miopen.subcmd.merge_db import best_solver, target_merge
+from tuna.miopen.subcmd.merge_db import target_merge
 from tuna.miopen.subcmd.merge_db import update_master_list, write_merge_results
 from tuna.miopen.subcmd.merge_db import merge_text_file
 from tuna.miopen.subcmd.merge_db import get_sqlite_table
@@ -132,45 +132,6 @@ def test_load_master_list():
         'miopenConvolutionFwdAlgoGEMM':
             'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
     })
-
-
-def test_best_solver():
-
-  fdb_key = ({
-      'miopenConvolutionFwdAlgoImplicitGEMM':
-          'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm, 0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
-      'miopenConvolutionFwdAlgoWinograd':
-          'ConvBinWinogradRxSf2x3g1,0.03856,0,miopenConvolutionFwdAlgoWinograd,not used',
-      'miopenConvolutionFwdAlgoGEMM':
-          'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
-  })
-
-  solver, time = best_solver(fdb_key)
-
-  assert (len(solver) != 0)
-  assert (float(time) != 0)
-  assert (solver == 'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm')
-  assert (time == 0.02352)
-
-  #Sample solver name as space
-  test_value = ({
-      'miopenConvolutionFwdAlgoImplicitGEMM':
-          ' ,0.00000,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
-  })
-
-  new_solver, new_time = best_solver(test_value)
-
-  assert new_solver.isspace()
-  assert (new_solver == ' ')
-
-  #Sample solver name as None
-  test_value = ({
-      'miopenConvolutionFwdAlgoImplicitGEMM':
-          'None,0.00000,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
-  })
-
-  new_solver, new_time = best_solver(test_value)
-  assert (new_solver == 'None')
 
 
 def test_target_merge():
