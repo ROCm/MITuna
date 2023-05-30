@@ -130,8 +130,11 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
   query = query.filter(src_table.kernel_time != -1)\
       .filter(src_table.workspace_sz != -1)
 
-  query = query.order_by(src_table.fdb_key, src_table.update_ts.desc(),
-                         src_table.num_cu.asc())
+  if src_table == dbt.golden_table:
+    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc(),
+                           src_table.num_cu.asc())
+  else:
+    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
 
   return query
 
