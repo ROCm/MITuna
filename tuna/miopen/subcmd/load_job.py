@@ -27,6 +27,7 @@
 """
 Script for adding jobs to the MySQL database
 """
+import pdb
 import logging
 import argparse
 import warnings
@@ -154,7 +155,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
 
     fin_step_str = 'not_fin'
     if args.fin_steps:
-      fin_step_str = ','.join(args.fin_steps)
+      fin_step_str = args.fin_steps
     query = f"select config, solver from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{fin_step_str}' and reason='{args.label}'"
     logger.info(query)
     ret = session.execute(query)
