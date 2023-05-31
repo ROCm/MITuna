@@ -25,7 +25,9 @@
 #
 ###############################################################################
 """ Module for creating DB tables interfaces"""
+from typing import Dict, Any, List
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy import Column, Integer, DateTime, text
@@ -34,23 +36,31 @@ from sqlalchemy import Column, Integer, DateTime, text
 class BASE():
   """Base class for our own common functionalities among tables"""
 
-  __table_args__ = {'mysql_engine': 'InnoDB'}
-  __mapper_args__ = {'always_refresh': True}
+  def __init__(self):
+    self.__table__ = None
+    self._table_args__ = None
 
-  id = Column(Integer, primary_key=True)
-  insert_ts = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  update_ts = Column(
+  __table_args__: Dict[str, str] = {'mysql_engine': 'InnoDB'}
+  __mapper_args__: Dict[str, bool] = {'always_refresh': True}
+
+  id: Column = Column(Integer, primary_key=True)
+  insert_ts: Column = Column(DateTime,
+                             nullable=False,
+                             server_default=sqla_func.now())
+  update_ts: Column = Column(
       DateTime,
       nullable=False,
       server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
-  valid = Column(TINYINT(1), nullable=False, server_default="1")
+  valid: str = Column(TINYINT(1), nullable=False, server_default="1")
 
-  def to_dict(self, ommit_ts=True, ommit_valid=False):
+  def to_dict(self,
+              ommit_ts: bool = True,
+              ommit_valid: bool = False) -> Dict[str, Any]:
     """Helper function"""
-    copy_dict = {}
+    copy_dict: Dict[str, Any] = {}
     for key, val in vars(self).items():
       copy_dict[key] = val
-    exclude_cols = [
+    exclude_cols: List[str] = [
         '_sa_instance_state', 'md5', 'valid', 'input_tensor', 'weight_tensor'
     ]
     if not ommit_valid:
@@ -67,8 +77,8 @@ class BASE():
         copy_dict.pop('insert_ts')
     return copy_dict
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return f"Table name: {self.__table__}\nTable columns: {self.__table__.columns}"
 
 
-BASE = declarative_base(cls=BASE)
+BASE: DeclarativeMeta = declarative_base(cls=BASE)  #type: ignore
