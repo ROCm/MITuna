@@ -38,6 +38,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     apt-utils \
     sshpass \
     build-essential \
+    bzip2 \
+    lbzip2 \
     cmake \ 
     curl \
     doxygen \
@@ -111,7 +113,7 @@ ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
 # Install dependencies
 #issue with upstream for composable kernel install
-RUN sed -i "s#[^\n]*composable_kernel[^\n]*##g" requirements.txt
+#RUN sed -i "s#[^\n]*composable_kernel[^\n]*##g" requirements.txt
 RUN cmake -P install_deps.cmake --minimum
 
 RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
@@ -123,7 +125,8 @@ WORKDIR $MIOPEN_DIR/build
 ARG MIOPEN_CACHE_DIR=/tmp/${TUNA_USER}/cache
 ARG MIOPEN_USER_DB_PATH=/tmp/$TUNA_USER/config/miopen
 ARG MIOPEN_USE_MLIR=On
-ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DMIOPEN_USE_COMPOSABLEKERNEL=Off -DUSE_FIN=Off"
+ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DUSE_FIN=Off" 
+# -DMIOPEN_USE_COMPOSABLEKERNEL=Off
 
 RUN echo "MIOPEN: Selected $BACKEND backend."
 RUN if [ $BACKEND = "OpenCL" ]; then \
