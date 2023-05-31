@@ -46,6 +46,7 @@ def config_gpus(m):
     m.get_gpu_clock(i)
     #print('{}: {}'.format(i, m.chk_gpu_status(i)))
 
+
 def write_read_bytes(m):
   contents = bytes('8756abd', 'utf-8')
   tmpfile = m.write_file(contents, is_temp=True)
@@ -54,9 +55,7 @@ def write_read_bytes(m):
 
 
 def test_machine():
-  keys = {
-      'local_machine': True
-  }
+  keys = {'local_machine': True}
 
   m = Machine(**keys)
 

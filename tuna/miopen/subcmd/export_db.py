@@ -28,12 +28,14 @@
 import sqlite3
 import os
 from collections import OrderedDict
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Union
 import base64
 import argparse
 import logging
 
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.miopen.db.find_db import FindDBMixin
+from tuna.miopen.db.miopen_tables import GoldenMixin
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
@@ -56,7 +58,11 @@ def arg_export_db(args: argparse.Namespace, logger: logging.Logger):
     logger.error('arch must be set with golden_v')
 
 
-def get_filename(arch, num_cu, filename, ocl, db_type):
+def get_filename(arch: str,
+                 num_cu: Optional[int] = None,
+                 filename: Optional[str] = None,
+                 ocl: bool = False,
+                 db_type: DB_Type = DB_Type.FIND_DB) -> str:
   """Helper function to compose filename"""
   version = "1.0.0"
   tuna_dir = f'tuna_{version}'
@@ -154,7 +160,9 @@ def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
   return query
 
 
-def add_entry_to_solvers(fdb_entry, solvers, logger):
+def add_entry_to_solvers(fdb_entry: Union[GoldenMixin, FindDBMixin],
+                         solvers: Dict[str, Dict[str, Any]],
+                         logger: logging.Logger) -> bool:
   """check if fdb_key + solver exists in solvers, add if not present
   return False if similar entry already exists
   return True if the fdb_entry is added successfully
@@ -264,7 +272,7 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
   """
   Write blob map to sqlite
   """
-  file_name = get_filename(arch, num_cu, filename, None, DB_Type.KERN_DB)
+  file_name = get_filename(arch, num_cu, filename, False, DB_Type.KERN_DB)
   if os.path.isfile(file_name):
     os.remove(file_name)
 
@@ -323,7 +331,7 @@ def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace,
 
 def create_sqlite_tables(arch, num_cu, filename=None):
   """create sqlite3 tables"""
-  local_path = get_filename(arch, num_cu, filename, None, DB_Type.PERF_DB)
+  local_path = get_filename(arch, num_cu, filename, False, DB_Type.PERF_DB)
 
   cnx = sqlite3.connect(local_path)
 
