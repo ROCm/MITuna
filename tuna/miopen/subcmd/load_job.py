@@ -38,7 +38,6 @@ from sqlalchemy.sql.expression import true
 from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
 from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.logger import setup_logger
-from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db
 from tuna.miopen.db.miopen_tables import Solver
 from tuna.dbBase.sql_alchemy import DbSession
@@ -152,7 +151,10 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
     if not res:
       logger.error('No applicable solvers found for args %s', args.__dict__)
 
-    query = f"select config, solver from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{args.fin_steps}'"
+    fin_step_str = 'not_fin'
+    if args.fin_steps:
+      fin_step_str = ','.join(args.fin_steps)
+    query = f"select config, solver from {dbt.job_table.__tablename__} where session={args.session_id} and fin_step='{fin_step_str}'"
     logger.info(query)
     ret = session.execute(query)
     pre_ex: Dict[str, Dict[str, bool]] = {}
@@ -204,6 +206,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
 
 def run_load_job(args: argparse.Namespace, logger: logging.Logger):
   """Load jobs based on cmd line arguments"""
+  arg_fin_steps(args)
 
   connect_db()
 
