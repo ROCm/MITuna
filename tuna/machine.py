@@ -416,10 +416,10 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         if gpu_idx >= len(gpu_clk):
           gpu_clk.append({})
         if 'sclk' in line:
-          level = int(line[line.find('level'):].split(' ')[1])
+          level = int(line[line.find('level'):].split(':')[1])
           gpu_clk[gpu_idx]['sclk'] = level
         if 'mclk' in line:
-          level = int(line[line.find('level'):].split(' ')[1])
+          level = int(line[line.find('level'):].split(':')[1])
           gpu_clk[gpu_idx]['mclk'] = level
 
     sclk = gpu_clk[gpu_num]['sclk']

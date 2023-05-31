@@ -30,7 +30,6 @@ sys.path.append("../tuna")
 sys.path.append("tuna")
 
 from tuna.machine import Machine
-from tuna.sql import DbCursor
 
 
 def config_cpus(m):
@@ -41,42 +40,27 @@ def config_cpus(m):
 
 def config_gpus(m):
   for i, gpu in enumerate(m.gpus):
+    assert (gpu == m.get_gpu(i))
     assert (gpu['rinfo']['Device Type'] == 'GPU')
     assert (m.chk_gpu_status(i))
     m.get_gpu_clock(i)
     #print('{}: {}'.format(i, m.chk_gpu_status(i)))
 
+def write_read_bytes(m):
+  contents = bytes('8756abd', 'utf-8')
+  tmpfile = m.write_file(contents, is_temp=True)
+  retval = m.read_file(tmpfile, byteread=True)
+  assert (contents == retval)
+
 
 def test_machine():
-  res = None
-  with DbCursor() as cur:
-    select_text = "SELECT id, hostname, avail_gpus, user, password, port, arch, num_cu, sclk, mclk, ipmi_ip, ipmi_port, ipmi_user, ipmi_password, ipmi_inaccessible FROM machine WHERE available = TRUE LIMIT 1"
-    cur.execute(select_text)
-    res = cur.fetchall()
-  assert (len(res) > 0)
-
-  keys = {}
-  for machine_id, hostname, avail_gpus, user, password, port, arch, num_cu, sclk, mclk, ipmi_ip, ipmi_port, ipmi_user, ipmi_password, ipmi_inaccessible in res:
-
-    keys = {
-        'id': machine_id,
-        'hostname': hostname,
-        'user': user,
-        'password': password,
-        'port': port,
-        'arch': arch,
-        'num_cu': num_cu,
-        'avail_gpus': avail_gpus,
-        'sclk': sclk,
-        'mclk': mclk,
-        'ipmi_ip': ipmi_ip,
-        'ipmi_port': ipmi_port,
-        'ipmi_user': ipmi_user,
-        'ipmi_password': ipmi_password,
-        'ipmi_inaccessible': ipmi_inaccessible
-    }
+  keys = {
+      'local_machine': True
+  }
 
   m = Machine(**keys)
 
   config_cpus(m)
   config_gpus(m)
+
+  write_read_bytes(m)

@@ -343,6 +343,27 @@ def test_target_merge():
     err_found = True
   assert err_found
 
+  #with solver indexed format
+  master_list = {
+    '992-7-7-1x1-128-7-7-8-0x0-1x1-1x1-0-NCHW-FP16-F':{
+      'ConvMlirIgemmFwdXdlops' : '0.01904,0,miopenConvolutionFwdAlgoImplicitGEMM',
+      'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm' : '0.024,0,miopenConvolutionFwdAlgoImplicitGEMM',
+      'ConvAsmImplicitGemmGTCDynamicFwdXdlops' : '0.04512,0,miopenConvolutionFwdAlgoImplicitGEMM',
+      'ConvAsm1x1U' : '0.0528,0,miopenConvolutionFwdAlgoDirect'
+    },
+    '992-7-7-1x1-128-7-7-8-0x0-1x1-1x1-0-NCHW-FP32-F':{
+      'ConvMlirIgemmFwdXdlops' : '0.02704,0,miopenConvolutionFwdAlgoImplicitGEMM',
+      'ConvAsm1x1U' : '0.031041,0,miopenConvolutionFwdAlgoDirect',
+      'ConvOclDirectFwd1x1' : '0.03552,0,miopenConvolutionFwdAlgoDirect',
+      'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm' : '0.04192,0,miopenConvolutionFwdAlgoImplicitGEMM'
+    }
+  }
+  key = '992-7-7-1x1-128-7-7-8-0x0-1x1-1x1-0-NCHW-FP16-F'
+  vals = {'NewBest' : '0.0001,0,Best'}
+  keep_keys = False
+  target_merge(master_list, key, vals, keep_keys)
+  assert (master_list[key] == vals)
+
 
 def test_update_master_list():
 
