@@ -233,7 +233,7 @@ def test_fin_evaluator():
 
   with DbSession() as session:
     session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
-                                         .filter(dbt.job_table.state=='new')\
+                                         .filter(dbt.job_table.state=='compiled')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_eval')\
                                          .filter(dbt.job_table.session==dbt.session_id)\
                                          .update({dbt.job_table.state: 'evaluated'})
@@ -242,13 +242,14 @@ def test_fin_evaluator():
   #test get_job false branch
   kwargs = get_kwargs(dbt)
   fin_eval = FinEvaluator(**kwargs)
-  ans = fin_eval.get_job('new', 'eval_start', False)
+  ans = fin_eval.get_job('compiled', 'eval_start', False)
   assert (ans is False)
 
+  job_first = job_query.first()
   with DbSession() as session:
-    fin_eval.job = job_query.first()
+    fin_eval.job = job_first
     fin_eval.config = session.query(dbt.config_table)\
-                            .filter(dbt.config_table.id == job_query.first().config).first()
+                            .filter(dbt.config_table.id == job_first.config).first()
 
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
@@ -258,3 +259,16 @@ def test_fin_evaluator():
   for obj in status:
     print(obj)
     assert (obj['success'] == True)
+
+  with DbSession() as session:
+    session.query(
+        dbt.job_table).filter(dbt.job_table.id == fin_eval.job.id).update(
+            {dbt.job_table.state: 'compiled'})
+    session.commit()
+    assert ('compiled' == session.query(dbt.job_table.state).filter(
+        dbt.job_table.id == fin_eval.job.id).first()[0].name)
+
+  fin_eval.close_job()
+  with DbSession() as session:
+    assert ('evaluated' == session.query(dbt.job_table.state).filter(
+        dbt.job_table.id == fin_eval.job.id).first()[0].name)
