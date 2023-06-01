@@ -36,10 +36,7 @@ from sqlalchemy import Column, Integer, DateTime, text
 class BASE():
   """Base class for our own common functionalities among tables"""
 
-  def __init__(self):
-    self.__table__ = None
-    self._table_args__ = None
-
+  __table__: Column = None
   __table_args__: Dict[str, str] = {'mysql_engine': 'InnoDB'}
   __mapper_args__: Dict[str, bool] = {'always_refresh': True}
 
