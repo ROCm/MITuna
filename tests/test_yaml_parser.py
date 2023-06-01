@@ -67,13 +67,14 @@ def multiple_yamls():
   except subprocess.CalledProcessError as subp_err:
     print(f"Subprocess error: {subp_err}")
     subp_fail = True
+    print(f"{subp_err}")
 
   assert subp_fail == False
 
 
 def parse_miopen_yaml1(miopen_yaml, miopen):
   yaml_files = parse_yaml(miopen_yaml, miopen)
-  assert len(yaml_files) == 4
+  assert len(yaml_files) == 6
 
   yaml_dicts = []
   #reading in initial yaml file split in 2 yaml files
@@ -142,13 +143,42 @@ def parse_miopen_yaml1(miopen_yaml, miopen):
       'restart_machine': False,
       'session_id': 1
   }
+  dict5 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'export_db': {
+          'file_name': 'fdb_nhwc.txt'
+      },
+      'label': 'Example',
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
+  dict6 = {
+      'arch': 'gfx908',
+      'config_type': 'convolution',
+      'docker_name': 'my_docker_name',
+      'update_golden': {
+          'base_golden_v': 1.0,
+          'golden_v': 1.1
+      },
+      'label': 'Example',
+      'num_cu': 120,
+      'remote_machine': False,
+      'restart_machine': False,
+      'session_id': 1
+  }
 
-  print(yaml_dicts[3])
-  print(dict4)
+  print(yaml_dicts[4])
+  print(dict5)
   assert (yaml_dicts[0] == dict1)
   assert (yaml_dicts[1] == dict2)
   assert (yaml_dicts[2] == dict3)
   assert (yaml_dicts[3] == dict4)
+  assert (yaml_dicts[4] == dict5)
+  assert (yaml_dicts[5] == dict6)
 
 
 def parse_miopen_yaml2(miopen_yaml, miopen):
