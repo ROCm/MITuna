@@ -51,8 +51,8 @@ from tuna.utils.miopen_utility import load_machines
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 
-
 solver_id_map = get_solver_ids()
+
 
 def get_kwargs(dbt):
   num_gpus = Value('i', 1)
@@ -146,6 +146,7 @@ def add_fake_fdb_entries(job_query, dbt):
 
     session.commit()
 
+
 def test_fin_evaluator():
   miopen = MIOpen()
   miopen.args = GoFishArgs()
@@ -160,11 +161,13 @@ def test_fin_evaluator():
   assert (fin_worker.get_solvers())
 
   add_cfgs()
-  dbt = MIOpenDBTables(config_type=ConfigType.convolution, session_id=miopen.args.session_id)
+  dbt = MIOpenDBTables(config_type=ConfigType.convolution,
+                       session_id=miopen.args.session_id)
 
   #set all applicable
   with DbSession() as session:
-    configs = session.query(dbt.config_tags_table.config).filter(dbt.config_tags_table.tag == 'tuna_pytest_fin_eval').all()
+    configs = session.query(dbt.config_tags_table.config).filter(
+        dbt.config_tags_table.tag == 'tuna_pytest_fin_eval').all()
     configs = [x[0] for x in configs]
     print(configs)
     for solver in solver_id_map.values():
@@ -182,12 +185,12 @@ def test_fin_evaluator():
   add_fin_find_eval_job(miopen.args.session_id, dbt)
 
   with DbSession() as session:
-    job_query = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)
+    job_query = session.query(
+        dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)
     job_query.update({dbt.job_table.state: 'compiled'})
     session.commit()
 
     add_fake_fdb_entries(job_query, dbt)
-
 
   # test get_job true branch
   kwargs = get_kwargs(dbt)
@@ -242,7 +245,6 @@ def test_fin_evaluator():
   ans = fin_eval.get_job('new', 'eval_start', False)
   assert (ans is False)
 
-
   with DbSession() as session:
     fin_eval.job = job_query.first()
     fin_eval.config = session.query(dbt.config_table)\
@@ -255,5 +257,4 @@ def test_fin_evaluator():
   status = fin_eval.process_fdb_eval(fin_json)
   for obj in status:
     print(obj)
-    assert(obj['success'] == True)
-
+    assert (obj['success'] == True)
