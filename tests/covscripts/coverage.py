@@ -83,7 +83,7 @@ def branch(root_dir, coverage_file_name_txt, coverage_file_name_json):
   code_cov_diff = (prev_cov - cur_cov)
   if code_cov_diff > 0.5:
     raise ValueError(
-        f"Code Coverage Diffrence is Decreased by more than 0.5%%. Prev:{prev_cov}, cur: {cur_cov}"
+        f"Code Coverage Decreased by more than 0.5. Prev:{prev_cov}, cur: {cur_cov}"
     )
 
 
