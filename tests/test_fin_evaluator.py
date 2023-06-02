@@ -115,12 +115,12 @@ def add_fin_find_eval_job(session_id, dbt):
   return add_jobs(args, dbt, logger)
 
 
-def add_fake_fdb_entries(job_query, dbt):
+def add_fake_fdb_entries(job_query, dbt, kernel_group):
 
   with DbSession() as session:
     kernel_obj = dbt.kernel_cache()
 
-    kernel_obj.kernel_group = 1
+    kernel_obj.kernel_group = kernel_group
     kernel_obj.kernel_name = 'placeholder'
     kernel_obj.kernel_args = 'no-args'
     kernel_obj.kernel_blob = bytes('nothing_here', 'utf-8')
@@ -141,11 +141,10 @@ def add_fake_fdb_entries(job_query, dbt):
       fdb_entry.params = 'nil'
       fdb_entry.kernel_time = -1
       fdb_entry.workspace_sz = 0
-      fdb_entry.kernel_group = 1
+      fdb_entry.kernel_group = kernel_group
       session.add(fdb_entry)
 
     session.commit()
-
 
 def test_fin_evaluator():
   miopen = MIOpen()
@@ -190,7 +189,7 @@ def test_fin_evaluator():
     job_query.update({dbt.job_table.state: 'compiled'})
     session.commit()
 
-    add_fake_fdb_entries(job_query, dbt)
+    add_fake_fdb_entries(job_query, dbt, job_query.first().id)
 
   # test get_job true branch
   kwargs = get_kwargs(dbt)
@@ -245,6 +244,7 @@ def test_fin_evaluator():
   ans = fin_eval.get_job('compiled', 'eval_start', False)
   assert (ans is False)
 
+  #test FinEvaluator process results
   job_first = job_query.first()
   with DbSession() as session:
     fin_eval.job = job_first
@@ -260,6 +260,7 @@ def test_fin_evaluator():
     print(obj)
     assert (obj['success'] == True)
 
+  #test FinEvaluator close_job
   with DbSession() as session:
     session.query(
         dbt.job_table).filter(dbt.job_table.id == fin_eval.job.id).update(
