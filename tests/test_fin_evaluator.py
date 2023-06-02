@@ -146,6 +146,7 @@ def add_fake_fdb_entries(job_query, dbt, kernel_group):
 
     session.commit()
 
+
 def test_fin_evaluator():
   miopen = MIOpen()
   miopen.args = GoFishArgs()
