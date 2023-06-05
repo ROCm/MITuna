@@ -55,6 +55,7 @@ from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
 from tuna.connection import Connection
+from tuna.miopen.db.miopen_tables import JobMixin
 from tuna.utils.utility import SimpleDict
 
 MAX_JOB_RETRIES = 10
@@ -117,10 +118,7 @@ class WorkerInterface(Process):
     self.set_logger(logger_name)
     connect_db()
 
-    self.job: SimpleDict = SimpleDict()
-    self.job.id: int
-    self.job.state: str
-    self.job.reason: str
+    self.job: JobMixin = SimpleDict()
 
     try:
       self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
@@ -132,6 +130,10 @@ class WorkerInterface(Process):
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
+
+  def step(self) -> bool:
+    """Overloaded method.Defined in conv&bn driver child class"""
+    raise NotImplementedError("Not implemented")
 
   def set_logger(self, logger_name: str) -> None:
     """Build logger with given name"""
@@ -217,7 +219,7 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_from_tuple(self, job_tuple: str) -> Optional[str]:
+  def get_job_from_tuple(self, job_tuple: str) -> Union[str, JobMixin, None]:
     """find job table in a job tuple"""
     tble: str
     if has_attr_set(job_tuple, self.job_attr):
@@ -253,11 +255,13 @@ class WorkerInterface(Process):
       except TypeError:
         session.refresh(obj_tuple)
 
-  def job_queue_push(self, job_rows: List[Tuple[SimpleDict, ...]]) -> None:
+  def job_queue_push(self, job_rows: List[Tuple[JobMixin, SimpleDict]]) -> None:
     """load job_queue with info for job ids"""
-    for job_tuple in job_rows:  #type: ignore
+    job: JobMixin
+    job_tuple: JobMixin
+    for job_tuple in job_rows:
       self.job_queue.put(job_tuple)
-      job = self.get_job_from_tuple(job_tuple)  #type: ignore
+      job = self.get_job_from_tuple(job_tuple)
       if job is not None:
         self.logger.info("Put job %s %s %s", self.job.id, self.job.state,
                          self.job.reason)
@@ -271,12 +275,12 @@ class WorkerInterface(Process):
   #pylint: disable=too-many-branches
   def get_job(self, find_state: str, set_state: str, imply_end: bool) -> bool:
     """Interface function to get new job for builder/evaluator"""
-    job_rows: List[Tuple[SimpleDict, ...]]
-    job_tables: List[Tuple[SimpleDict, ...]]
+    job_rows: JobMixin
+    job_tables: JobMixin
     job_set_attr: List[str]
     session: DbSession
     ids: list
-    row: str
+    row: JobMixin
 
     for idx in range(NUM_SQL_RETRIES):
       try:
@@ -293,10 +297,10 @@ class WorkerInterface(Process):
                 return False
 
               job_tables = self.get_job_tables(job_rows)
-              ids = [row.id for row in job_tables]  #type: ignore
+              ids = [row.id for row in job_tables]
               self.logger.info("%s jobs %s", find_state, ids)
               for self.job in job_tables:
-                self.job.state = set_state  #type: ignore
+                self.job.state = set_state
 
                 job_set_attr = ['state']
                 query: str = gen_update_query(self.job, job_set_attr,
@@ -490,7 +494,7 @@ class WorkerInterface(Process):
       except queue.Empty:
         break
 
-  def run(self) -> bool:  #type: ignore
+  def run(self) -> Optional[bool]:  #type: ignore[override]
     """Main run function of WorkerInterface Process"""
     self.machine.set_logger(self.logger)
     usage: float
@@ -521,7 +525,7 @@ class WorkerInterface(Process):
           continue
         # the step member is defined in the derived class
         # pylint: disable=E1101
-        ret: bool = self.step()  #type: ignore
+        ret: bool = self.step()
         self.logger.info("proc %s step %s", self.gpu_id, ret)
         if not ret:
           self.logger.warning('No more steps, quiting...')
