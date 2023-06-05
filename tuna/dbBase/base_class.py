@@ -40,15 +40,13 @@ class BASE():
   __table_args__: Dict[str, str] = {'mysql_engine': 'InnoDB'}
   __mapper_args__: Dict[str, bool] = {'always_refresh': True}
 
-  id: Column = Column(Integer, primary_key=True)
-  insert_ts: Column = Column(DateTime,
-                             nullable=False,
-                             server_default=sqla_func.now())
-  update_ts: Column = Column(
+  id = Column(Integer, primary_key=True)
+  insert_ts = Column(DateTime, nullable=False, server_default=sqla_func.now())
+  update_ts = Column(
       DateTime,
       nullable=False,
       server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
-  valid: str = Column(TINYINT(1), nullable=False, server_default="1")
+  valid = Column(TINYINT(1), nullable=False, server_default="1")
 
   def to_dict(self,
               ommit_ts: bool = True,
