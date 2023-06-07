@@ -31,14 +31,15 @@ from sqlalchemy.ext.declarative.api import DeclarativeMeta
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy import Column, Integer, DateTime, text
+from sqlalchemy.schema import Table
 
 
 class BASE():
   """Base class for our own common functionalities among tables"""
 
-  __table__: Column = None
-  __table_args__: Dict[str, str] = {'mysql_engine': 'InnoDB'}
-  __mapper_args__: Dict[str, bool] = {'always_refresh': True}
+  __table__: Table = None
+  __table_args__: Dict[str, Any] = {'mysql_engine': 'InnoDB'}
+  __mapper_args__: Dict[str, Any] = {'always_refresh': True}
 
   id = Column(Integer, primary_key=True)
   insert_ts = Column(DateTime, nullable=False, server_default=sqla_func.now())
