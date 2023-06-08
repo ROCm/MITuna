@@ -26,6 +26,8 @@
 ###############################################################################
 """ Module for creating DB tables"""
 import enum
+from typing import List, Tuple
+from sqlalchemy.schema import Table
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum
 from sqlalchemy.ext.declarative import declared_attr
@@ -41,19 +43,21 @@ class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
-  new = 1
-  running = 3
-  completed = 4
-  error = 5
+  new: int = 1
+  running: int = 3
+  completed: int = 4
+  error: int = 5
 
 
 class Job(BASE):
   """Represents class for job table"""
-  __tablename__ = "job"
-  __table_args__ = (UniqueConstraint('reason', 'session', name="uq_idx"),)
+  __tablename__: Table = "job"
+  __table_args__: Tuple[str] = (UniqueConstraint('reason',
+                                                 'session',
+                                                 name="uq_idx"),)
 
   @declared_attr
-  def session(self):
+  def session(self) -> Column:
     """session key"""
     return Column(Integer, ForeignKey("session_example.id"), nullable=False)
 
@@ -65,9 +69,9 @@ class Job(BASE):
   machine_id = Column(Integer, nullable=False, server_default="-1")
 
 
-def get_tables():
+def get_tables() -> List[str]:
   """Returns a list of all Example lib DB tables"""
-  tables = []
+  tables: List[str] = []
   tables.append(SessionExample())
   tables.append(Machine(local_machine=True))
   tables.append(Job())
