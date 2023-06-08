@@ -27,7 +27,9 @@
 """Example library, integrated with MITuna, runs 'rocminfo' cmd"""
 
 import sys
+import argparse
 
+from typing import Dict, Any, List, Optional
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.utils.miopen_utility import load_machines
@@ -45,15 +47,16 @@ class Example(MITunaInterface):
     super().__init__(library=Library.EXAMPLE)
     self.args = None
 
-  def parse_args(self):
+  def parse_args(self) -> None:
     # pylint: disable=too-many-statements
     """Function to parse arguments"""
+    parser: argparse.Namespace
     parser = setup_arg_parser('Example library integrated with MITuna', [
         TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
-    group = parser.add_mutually_exclusive_group()
+    group: argparse.Namespace = parser.add_mutually_exclusive_group()
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',
@@ -79,17 +82,17 @@ class Example(MITunaInterface):
 
     args_check(self.args, parser)
 
-  def launch_worker(self, gpu_idx, f_vals, worker_lst):
+  def launch_worker(self, gpu_idx: int, f_vals: Dict[str, Any], \
+                    worker_lst: List[str]) -> bool:
     """! Function to launch worker
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param worker_lst List containing worker instances
-      @param args The command line arguments
-      @retturn ret Boolean value
+      @return ret Boolean value
     """
 
-    kwargs = self.get_kwargs(gpu_idx, f_vals)
-    worker = ExampleWorker(**kwargs)
+    kwargs: Dict[str, Any] = self.get_kwargs(gpu_idx, f_vals)
+    worker: ExampleWorker = ExampleWorker(**kwargs)
     if self.args.init_session:
       SessionExample().add_new_session(self.args, worker)
       return False
@@ -98,13 +101,12 @@ class Example(MITunaInterface):
     worker_lst.append(worker)
     return True
 
-  def compose_worker_list(self, machines):
+  def compose_worker_list(self, machines) -> Optional[List[str]]:
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
-      @param res DB query return item containg available machines
-      @param args The command line arguments
+      @param machines containg available machines
     """
-    worker_lst = []
+    worker_lst: List[str] = []
     for machine in machines:
       if self.args.restart_machine:
         machine.restart_server(wait=False)
@@ -112,11 +114,11 @@ class Example(MITunaInterface):
 
       #determine number of processes by compute capacity
       # pylint: disable=duplicate-code
-      worker_ids = super().get_num_procs(machine)
+      worker_ids: range = super().get_num_procs(machine)
       if len(worker_ids) == 0:
         return None
 
-      f_vals = super().get_f_vals(machine, worker_ids)
+      f_vals: Dict[str, Any] = super().get_f_vals(machine, worker_ids)
 
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
@@ -125,13 +127,13 @@ class Example(MITunaInterface):
 
     return worker_lst
 
-  def add_tables(self):
-    ret_t = create_tables(get_tables())
+  def add_tables(self) -> bool:
+    ret_t: bool = create_tables(get_tables())
     self.logger.info('DB creation successful: %s', ret_t)
 
     return True
 
-  def run(self):
+  def run(self) -> Optional[List]:
     # pylint: disable=duplicate-code
     """Main function to launch library"""
     res = None
@@ -143,20 +145,20 @@ class Example(MITunaInterface):
     res = self.compose_worker_list(machines)
     return res
 
-  def get_envmt(self):
+  def get_envmt(self) -> List[str]:
     # pylint: disable=unused-argument
     """! Function to construct environment var
        @param args The command line arguments
     """
-    envmt = []
+    envmt: List[str] = []
     return envmt
 
-  def get_kwargs(self, gpu_idx, f_vals):
+  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param args The command line arguments
     """
-    kwargs = super().get_kwargs(gpu_idx, f_vals)
+    kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
 
     return kwargs

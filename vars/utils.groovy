@@ -607,6 +607,7 @@ def runLint() {
             sh "mypy tuna/parse_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/tables_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/sql.py --ignore-missing-imports"
+            sh "mypy tuna/example/example_lib.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }
