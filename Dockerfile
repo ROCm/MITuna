@@ -106,7 +106,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=b4e0a67333ee4bbcbbec1203a0260feff2882cfb
+ARG MIOPEN_BRANCH=0a38343feec6dd484d1f14b418eea4017780edad
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -144,7 +144,7 @@ ARG FIN_TOKEN=
 RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=748c1c0ce2696d25b530f531423b85d85f9284a5
+ARG FIN_BRANCH=55c154d374cef086daeddc18226910b90555bf18
 RUN git pull && git checkout $FIN_BRANCH
 # Install dependencies
 RUN cmake -P install_deps.cmake 
