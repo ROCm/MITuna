@@ -219,9 +219,9 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_from_tuple(self, job_tuple: str) -> Union[str, JobMixin, None]:
+  def get_job_from_tuple(self, job_tuple: str) -> Optional[SimpleDict]:
     """find job table in a job tuple"""
-    tble: str
+    tble: SimpleDict
     if has_attr_set(job_tuple, self.job_attr):
       return job_tuple
 
@@ -231,8 +231,7 @@ class WorkerInterface(Process):
     return None
 
   def get_job_tables(
-      self, job_rows: List[Tuple[SimpleDict,
-                                 ...]]) -> List[Tuple[SimpleDict, ...]]:
+      self, job_rows: List[Tuple[SimpleDict, ...]]) -> List[SimpleDict]:
     """find job tables in query results"""
     if has_attr_set(job_rows[0], self.job_attr):
       job_tables: List[Tuple[SimpleDict, ...]] = job_rows
@@ -255,7 +254,7 @@ class WorkerInterface(Process):
       except TypeError:
         session.refresh(obj_tuple)
 
-  def job_queue_push(self, job_rows: List[Tuple[JobMixin, SimpleDict]]) -> None:
+  def job_queue_push(self, job_rows: List[Tuple[SimpleDict, ...]]) -> None:
     """load job_queue with info for job ids"""
     job: JobMixin
     job_tuple: JobMixin
@@ -275,12 +274,12 @@ class WorkerInterface(Process):
   #pylint: disable=too-many-branches
   def get_job(self, find_state: str, set_state: str, imply_end: bool) -> bool:
     """Interface function to get new job for builder/evaluator"""
-    job_rows: JobMixin
-    job_tables: JobMixin
+    job_rows: List[Tuple[SimpleDict, ...]]
+    job_tables: List[SimpleDict]
     job_set_attr: List[str]
     session: DbSession
     ids: list
-    row: JobMixin
+    row: SimpleDict
 
     for idx in range(NUM_SQL_RETRIES):
       try:
@@ -299,11 +298,11 @@ class WorkerInterface(Process):
               job_tables = self.get_job_tables(job_rows)
               ids = [row.id for row in job_tables]
               self.logger.info("%s jobs %s", find_state, ids)
-              for self.job in job_tables:
-                self.job.state = set_state
+              for job in job_tables:
+                job.state = set_state
 
                 job_set_attr = ['state']
-                query: str = gen_update_query(self.job, job_set_attr,
+                query: str = gen_update_query(job, job_set_attr,
                                               self.dbt.job_table.__tablename__)
                 session.execute(query)
 
