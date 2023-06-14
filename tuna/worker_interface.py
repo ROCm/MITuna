@@ -261,8 +261,7 @@ class WorkerInterface(Process):
     for job_tuple in job_rows:
       self.job_queue.put(job_tuple)
       job = self.get_job_from_tuple(job_tuple)
-      if job is not None:
-        self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
+      self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
   def job_queue_pop(self) -> None:
     """load job from top of job queue"""
