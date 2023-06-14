@@ -138,14 +138,13 @@ RUN if [ $BACKEND = "OpenCL" ]; then \
 RUN make -j $(nproc)
 RUN make install
 
-ARG FIN_DIR=/root/dFin
-ARG FIN_TOKEN=
-#Clone Fin 
-RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
+ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=55c154d374cef086daeddc18226910b90555bf18
-RUN git pull && git checkout $FIN_BRANCH
+ARG FIN_BRANCH=
+RUN if ! [ -z $FIN_BRANCH ]; then \
+        git pull && git checkout $FIN_BRANCH \
+    fi
 # Install dependencies
 RUN cmake -P install_deps.cmake 
 
