@@ -27,7 +27,7 @@
 """ Module for creating DB tables interfaces"""
 from typing import Dict, Any, List
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.declarative.api import DeclarativeMeta
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy import Column, Integer, DateTime, text
