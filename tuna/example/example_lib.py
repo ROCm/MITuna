@@ -29,7 +29,7 @@
 import sys
 import argparse
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.utils.miopen_utility import load_machines
@@ -50,13 +50,14 @@ class Example(MITunaInterface):
   def parse_args(self) -> None:
     # pylint: disable=too-many-statements
     """Function to parse arguments"""
-    parser: argparse.Namespace
+    parser: argparse.ArgumentParser
     parser = setup_arg_parser('Example library integrated with MITuna', [
         TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
-    group: argparse.Namespace = parser.add_mutually_exclusive_group()
+    group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
+    )
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',
@@ -114,7 +115,7 @@ class Example(MITunaInterface):
 
       #determine number of processes by compute capacity
       # pylint: disable=duplicate-code
-      worker_ids: range = super().get_num_procs(machine)
+      worker_ids: List = super().get_num_procs(machine)
       if len(worker_ids) == 0:
         return None
 
@@ -136,12 +137,12 @@ class Example(MITunaInterface):
   def run(self) -> Optional[List]:
     # pylint: disable=duplicate-code
     """Main function to launch library"""
-    res = None
+    res: Union[List[str], None]
     self.parse_args()
     if self.args.add_tables:
       self.add_tables()
       return None
-    machines = load_machines(self.args)
+    machines: int = load_machines(self.args)
     res = self.compose_worker_list(machines)
     return res
 
