@@ -112,7 +112,6 @@ RUN git pull && git checkout $MIOPEN_BRANCH
 ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
 # Install dependencies
-#issue with upstream for composable kernel install
 RUN cmake -P install_deps.cmake --minimum
 
 RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
@@ -136,18 +135,19 @@ RUN if [ $BACKEND = "OpenCL" ]; then \
 RUN make -j $(nproc)
 RUN make install
 
-ARG FIN_DIR=/root/dFin
-ARG FIN_TOKEN=
-#Clone Fin 
-RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
+#Build Fin
+WORKDIR $MIOPEN_DIR
+RUN git submodule update --init --recursive
+ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=55c154d374cef086daeddc18226910b90555bf18
-RUN git pull && git checkout $FIN_BRANCH
+ARG FIN_BRANCH=
+RUN if ! [ -z $FIN_BRANCH ]; then \
+        git pull && git checkout $FIN_BRANCH; \
+    fi
 # Install dependencies
 RUN cmake -P install_deps.cmake 
 
-#Build Fin
 WORKDIR $FIN_DIR/_hip
 RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$MIOPEN_DEPS $FIN_DIR
 
