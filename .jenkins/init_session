@@ -38,7 +38,7 @@ def initSession(){
 
   def num_session2 = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
   println "Number of ${job_label} sessions: ${num_session2}"
-  if(num_session.toInteger() <= num_session2.toInteger()){
+  if(num_session.toInteger() >= num_session2.toInteger()){
       error("Session is not correctly initialized with the reason:${job_label}")
   }
 }
