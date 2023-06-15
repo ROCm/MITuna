@@ -27,7 +27,6 @@
 """ Module for creating DB tables"""
 import enum
 from typing import List, Tuple
-from sqlalchemy.schema import Table
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum
 from sqlalchemy.ext.declarative import declared_attr
@@ -43,15 +42,15 @@ class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
-  new: int = 1
-  running: int = 3
-  completed: int = 4
-  error: int = 5
+  new = 1
+  running = 3
+  completed = 4
+  error = 5
 
 
 class Job(BASE):
   """Represents class for job table"""
-  __tablename__: Table = "job"
+  __tablename__: str = "job"
   __table_args__: Tuple[str] = (UniqueConstraint('reason',
                                                  'session',
                                                  name="uq_idx"),)
@@ -71,7 +70,7 @@ class Job(BASE):
 
 def get_tables() -> List[str]:
   """Returns a list of all Example lib DB tables"""
-  tables: List[str] = []
+  tables: List[BASE] = []
   tables.append(SessionExample())
   tables.append(Machine(local_machine=True))
   tables.append(Job())
