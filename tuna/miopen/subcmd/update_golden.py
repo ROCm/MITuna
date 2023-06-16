@@ -244,7 +244,7 @@ def run_update_golden(args: argparse.Namespace, logger: logging.Logger):
       session_retry(session, gold_session_update, functools.partial(actuator2),
                     logger)
 
-  LOGGER.info('Finished Updating conv_golden %s', args.golden_v)
+  logger.info('Finished Updating conv_golden %s', args.golden_v)
 
   if args.create_perf_table:
     logger.info('Updating conv perf DB table')
