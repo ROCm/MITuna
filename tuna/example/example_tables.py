@@ -51,9 +51,9 @@ class JobEnum(enum.Enum):
 class Job(BASE):
   """Represents class for job table"""
   __tablename__: str = "job"
-  __table_args__: Tuple[str] = (UniqueConstraint('reason',
-                                                 'session',
-                                                 name="uq_idx"),)
+  __table_args__: Tuple[UniqueConstraint] = (UniqueConstraint('reason',
+                                                              'session',
+                                                              name="uq_idx"),)
 
   @declared_attr
   def session(self) -> Column:
