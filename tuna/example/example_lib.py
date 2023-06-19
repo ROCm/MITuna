@@ -33,6 +33,8 @@ from typing import Dict, Any, List, Optional, Union
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.utils.miopen_utility import load_machines
+from tuna.machine import Machine
+
 from tuna.libraries import Library
 from tuna.utils.db_utility import create_tables
 from tuna.example.example_tables import get_tables
@@ -142,7 +144,7 @@ class Example(MITunaInterface):
     if self.args.add_tables:
       self.add_tables()
       return None
-    machines: int = load_machines(self.args)
+    machines: List[Machine] = load_machines(self.args)
     res = self.compose_worker_list(machines)
     return res
 
