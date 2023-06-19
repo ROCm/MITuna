@@ -37,12 +37,11 @@ from datetime import datetime
 import socket
 import random
 import string
-from time import sleep
 from io import StringIO
+from time import sleep
 from typing import List, Tuple, Union, Set, Callable, cast, Optional
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
-from paramiko.channel import ChannelStderrFile
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
@@ -370,17 +369,18 @@ class WorkerInterface(Process):
 
   def exec_command(self, cmd: str) -> Tuple[int, StringIO, StringIO]:
     """execute on native machine"""
+    ret_code: int
+    out: StringIO
+    err: StringIO
+
     ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
-    if err is not None and hasattr(err, 'channel'):
-      self.logger.info(err)
-      err.channel.settimeout(LOG_TIMEOUT)
     return ret_code, out, err
 
-  def exec_docker_cmd(self, cmd: str) -> Tuple[int, str, ChannelStderrFile]:
+  def exec_docker_cmd(self, cmd: str) -> Tuple[int, StringIO, StringIO]:
     """forward command execution to machine method"""
     ret_code: int
     out: StringIO
-    err: ChannelStderrFile
+    err: StringIO
     read_line: str
 
     ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
@@ -390,35 +390,32 @@ class WorkerInterface(Process):
       self.logger.info('Error executing docker cmd: %s \n err: %s', cmd,
                        err.read())
 
-    if err is not None and hasattr(err, 'channel'):
-      err.channel.settimeout(LOG_TIMEOUT)
-      self.logger.info(err)
-    return ret_code, read_line, err
+    return ret_code, out, err
 
-  def get_miopen_v(self) -> str:
+  def get_miopen_v(self) -> StringIO:
     """Interface function to get new branch hash"""
-    commit_hash: str
+    commit_hash: StringIO
     _, commit_hash, _ = self.exec_docker_cmd(
         "cat /opt/rocm/miopen/include/miopen/version.h "
         "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
     self.logger.info('Got branch commit hash: %s', commit_hash)
     return commit_hash
 
-  def get_rocm_v(self) -> str:
+  def get_rocm_v(self) -> StringIO:
     """Interface function to get rocm version info"""
-    rocm_ver: str
+    rocm_ver: StringIO
     _, rocm_ver, _ = self.exec_docker_cmd("cat /opt/rocm/.info/version")
     self.logger.info('Got rocm version: %s', rocm_ver)
     return rocm_ver
 
   def check_env(self) -> bool:
     """Checking that presumed rocm/miopen_v corresponds to the env rocm/miopen_v"""
-    env_rocm_v: str = self.get_rocm_v()
+    env_rocm_v: StringIO = self.get_rocm_v()
     if self.dbt.session.rocm_v != env_rocm_v:
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
       )
-    env_miopen_v: str = self.get_miopen_v()
+    env_miopen_v: StringIO = self.get_miopen_v()
     if self.dbt.session.miopen_v != env_miopen_v:
       raise ValueError(
           f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
@@ -541,18 +538,18 @@ class WorkerInterface(Process):
 
     return True
 
-  def run_command(self, cmd: str) -> Tuple[int, str]:
+  def run_command(self, cmd: str) -> Tuple[int, StringIO]:
     """Run cmd and return ret_code"""
     ret_code: int
-    out: str
-    err: ChannelStderrFile
+    out: StringIO
+    err: StringIO
     for i in range(MAX_JOB_RETRIES):
       ret_code, out, err = self.exec_docker_cmd(cmd)
 
       if ret_code != 0:
         self.logger.error('Error executing command: %s', ' '.join(cmd))
         if err:
-          err_str: bytes = err.read()
+          err_str: str = err.read()
           self.logger.error('%s : %s', ret_code, err_str)
           if "disk I/O error" in cast(str, err_str):
             self.logger.error('fin retry : %u', i)
