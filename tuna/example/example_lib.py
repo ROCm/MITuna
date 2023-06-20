@@ -29,7 +29,8 @@
 import sys
 import argparse
 
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, Iterable
+from collections.abc import Sequence
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.utils.miopen_utility import load_machines
@@ -47,7 +48,7 @@ class Example(MITunaInterface):
 
   def __init__(self):
     super().__init__(library=Library.EXAMPLE)
-    self.args = None
+    self.args: argparse.Namespace = None
 
   def parse_args(self) -> None:
     # pylint: disable=too-many-statements
@@ -91,7 +92,7 @@ class Example(MITunaInterface):
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param worker_lst List containing worker instances
-      @return ret Boolean value
+      @return Boolean value
     """
 
     kwargs: Dict[str, Any] = self.get_kwargs(gpu_idx, f_vals)
@@ -104,12 +105,13 @@ class Example(MITunaInterface):
     worker_lst.append(worker)
     return True
 
-  def compose_worker_list(self, machines) -> Optional[List[str]]:
+  def compose_worker_list(self, machines) -> Optional[List[ExampleWorker]]:
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
       @param machines containg available machines
+      @returns list of actual available machine list
     """
-    worker_lst: List[str] = []
+    worker_lst: List[ExampleWorker] = []
     for machine in machines:
       if self.args.restart_machine:
         machine.restart_server(wait=False)
@@ -117,13 +119,14 @@ class Example(MITunaInterface):
 
       #determine number of processes by compute capacity
       # pylint: disable=duplicate-code
-      worker_ids: List = super().get_num_procs(machine)
-      if len(worker_ids) == 0:
+      worker_ids: Union[Iterable, None] = super().get_num_procs(machine)
+      if (isinstance(worker_ids, Sequence) and len(worker_ids) == 0 and
+          not worker_ids):
         return None
 
       f_vals: Dict[str, Any] = super().get_f_vals(machine, worker_ids)
 
-      for gpu_idx in worker_ids:
+      for gpu_idx in worker_ids or []:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst):
           break
@@ -138,7 +141,7 @@ class Example(MITunaInterface):
 
   def run(self) -> Optional[List]:
     # pylint: disable=duplicate-code
-    """Main function to launch library"""
+    """Main run function of example_lib"""
     res: Union[List[str], None]
     self.parse_args()
     if self.args.add_tables:
@@ -151,7 +154,6 @@ class Example(MITunaInterface):
   def get_envmt(self) -> List[str]:
     # pylint: disable=unused-argument
     """! Function to construct environment var
-       @param args The command line arguments
     """
     envmt: List[str] = []
     return envmt
@@ -159,8 +161,7 @@ class Example(MITunaInterface):
   def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
-      @param f_vals Dict containing runtime information
-      @param args The command line arguments
+      @param f_vals Dict containing process specific runtime information
     """
     kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
 
