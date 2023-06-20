@@ -376,7 +376,7 @@ class WorkerInterface(Process):
     ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
     return ret_code, out, err
 
-  def exec_docker_cmd(self, cmd: str) -> Tuple[int, StringIO, StringIO]:
+  def exec_docker_cmd(self, cmd: str) -> Tuple[int, str, StringIO]:
     """forward command execution to machine method"""
     ret_code: int
     out: StringIO
@@ -390,7 +390,7 @@ class WorkerInterface(Process):
       self.logger.info('Error executing docker cmd: %s \n err: %s', cmd,
                        err.read())
 
-    return ret_code, out, err
+    return ret_code, read_line, err
 
   def get_miopen_v(self) -> str:
     """Interface function to get new branch hash"""
@@ -538,10 +538,10 @@ class WorkerInterface(Process):
 
     return True
 
-  def run_command(self, cmd: str) -> Tuple[int, StringIO]:
+  def run_command(self, cmd: str) -> Tuple[int, str]:
     """Run cmd and return ret_code"""
     ret_code: int
-    out: StringIO
+    out: str
     err: StringIO
     for i in range(MAX_JOB_RETRIES):
       ret_code, out, err = self.exec_docker_cmd(cmd)
