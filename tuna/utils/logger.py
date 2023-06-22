@@ -27,6 +27,8 @@
 """logger file"""
 import logging
 import os
+
+from typing import Union
 from tuna.miopen.utils.metadata import TUNA_LOG_DIR
 
 
@@ -36,7 +38,8 @@ def setup_logger(logger_name: str = 'Tuna',
   """std setup for tuna logger"""
   log_level: str = os.environ.get('TUNA_LOGLEVEL', 'INFO').upper()
   logging.basicConfig(level=log_level)
-  logger: logging.Logger = logging.getLogger(logger_name)
+  logger: Union[logging.Logger,
+                logging.RootLogger] = logging.getLogger(logger_name)
   log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
   formatter: logging.Formatter = logging.Formatter(
       '%(asctime)s - %(name)s - %(levelname)s -  [%(filename)s:%(lineno)d] - %(message)s'
@@ -58,10 +61,11 @@ def setup_logger(logger_name: str = 'Tuna',
   return logger
 
 
-def set_usr_logger(self, logger_name: str) -> None:
-  """Build logger with user defined name"""
+def set_usr_logger(logger_name: str) -> logging.Logger:
+  """utility function to create worker interface logger object"""
   log_level: str = os.environ.get('TUNA_WOKER_INTERFACE_LOGLEVEL', "INFO")
-  lgr: logging.Logger = logging.getLogger(logger_name)
+  lgr: Union[logging.Logger,
+             logging.RootLogger] = logging.getLogger(logger_name)
   log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
   fmt: logging.Formatter = logging.Formatter(
       '%(lineno)d - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -74,12 +78,4 @@ def set_usr_logger(self, logger_name: str) -> None:
   lgr.addHandler(file_handler)
   lgr.addHandler(stream_handler)
   lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
-  self.logger = lgr
-
-
-def set_mc_subproc_logger(self, logger: logging.Logger) -> bool:
-  """set logging for machine, use this to associate the machine with a subprocess"""
-  pid: int = os.getpid()
-  self.log_list[pid] = logger
-  self.logger.info('Set logger for process %u', pid)
-  return True
+  return lgr

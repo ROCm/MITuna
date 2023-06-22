@@ -50,7 +50,7 @@ from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
 from tuna.utils.utility import SimpleDict
-from tuna.utils.logger import set_usr_logger, set_mc_subproc_logger
+from tuna.utils.logger import set_usr_logger
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -93,6 +93,8 @@ class WorkerInterface(Process):
     self.label = None
     self.session_id = None
 
+    self.logger: logging.Logger
+
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
@@ -108,8 +110,10 @@ class WorkerInterface(Process):
                             f"{self.hostname}_{self.machine.port}p")
     if not os.path.exists(dir_name):
       os.makedirs(dir_name)
-    logger_name = os.path.join(dir_name, str(self.gpu_id))
+
+    logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
+
     connect_db()
 
     self.job = SimpleDict()
@@ -439,7 +443,7 @@ class WorkerInterface(Process):
   def run(self):
     """Main run function of WorkerInterface Process"""
 
-    self.logger.set_mc_subproc_logger(self.logger)
+    self.machine.set_logger(self.logger)
     try:
       self.cnx = self.machine.connect(chk_abort_file)
 

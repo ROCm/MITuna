@@ -142,6 +142,13 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     self.logger.info("avail gpus: %s", self.avail_gpus)
 
+  def set_logger(self, logger: logging.Logger) -> bool:
+    """set logging for machine, use this to associate the machine with a subprocess"""
+    pid: int = os.getpid()
+    self.log_list[pid] = logger
+    self.logger.info('Set logger for process %u', pid)
+    return True
+
   def get_logger(self) -> logging.Logger:
     """return the logger for the current process"""
     pid: int = os.getpid()
