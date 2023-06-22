@@ -180,11 +180,5 @@ ENV PYTHONPATH=/tuna
 
 RUN python3 setup.py install
 
-# Install SolverAnalytics dependencies (this require root access, so,
-# the dependencies must be installed here, and can't be installed in Jenkinsfile)
-RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git
-RUN pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt
-RUN rm -rf SolverAnalytics
-
 # reset WORKDIR to /tuna
 WORKDIR /tuna
