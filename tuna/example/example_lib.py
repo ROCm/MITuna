@@ -29,8 +29,7 @@
 import sys
 import argparse
 
-from typing import Dict, Any, List, Optional, Union, Iterable
-from collections.abc import Sequence
+from typing import Dict, Any, List, Optional
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.utils.miopen_utility import load_machines
@@ -87,7 +86,7 @@ class Example(MITunaInterface):
     args_check(self.args, parser)
 
   def launch_worker(self, gpu_idx: int, f_vals: Dict[str, Any], \
-                    worker_lst: List[str]) -> bool:
+                    worker_lst: List[ExampleWorker]) -> bool:
     """! Function to launch worker
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
@@ -108,8 +107,8 @@ class Example(MITunaInterface):
   def compose_worker_list(self, machines) -> Optional[List[ExampleWorker]]:
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
-      @param machines containg available machines
-      @returns list of actual available machine list
+      @param machines list of available machine objects
+      @returns list of worker objects
     """
     worker_lst: List[ExampleWorker] = []
     for machine in machines:
@@ -119,14 +118,13 @@ class Example(MITunaInterface):
 
       #determine number of processes by compute capacity
       # pylint: disable=duplicate-code
-      worker_ids: Union[Iterable, None] = super().get_num_procs(machine)
-      if (isinstance(worker_ids, Sequence) and len(worker_ids) == 0 and
-          not worker_ids):
+      worker_ids: List = super().get_num_procs(machine)
+      if len(worker_ids) == 0:
         return None
 
       f_vals: Dict[str, Any] = super().get_f_vals(machine, worker_ids)
 
-      for gpu_idx in worker_ids or []:
+      for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst):
           break
@@ -134,15 +132,16 @@ class Example(MITunaInterface):
     return worker_lst
 
   def add_tables(self) -> bool:
+    """Generates the library specific schema to the connected SQL server."""
     ret_t: bool = create_tables(get_tables())
     self.logger.info('DB creation successful: %s', ret_t)
 
     return True
 
-  def run(self) -> Optional[List]:
+  def run(self) -> Optional[List[ExampleWorker]]:
     # pylint: disable=duplicate-code
     """Main run function of example_lib"""
-    res: Union[List[str], None]
+    res: Optional[List[ExampleWorker]]
     self.parse_args()
     if self.args.add_tables:
       self.add_tables()
