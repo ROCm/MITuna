@@ -146,17 +146,16 @@ class FinClass(WorkerInterface):
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 
-  def compose_work_objs(
-      self, session: DbSession,
-      conds: List[str]) -> List[Tuple[SimpleDict, SimpleDict]]:
+  def compose_work_objs(self, session: DbSession,
+                        cmds: List[str]) -> List[Tuple[SimpleDict, SimpleDict]]:
     """query for job and config tuple"""
     ret = []
     if self.fin_steps:
-      conds.append(f"fin_step like '%{self.fin_steps[0]}%'")
+      cmds.append(f"fin_step like '%{self.fin_steps[0]}%'")
     else:
-      conds.append("fin_step='not_fin'")
+      cmds.append("fin_step='not_fin'")
 
-    job_entries = super().compose_work_objs(session, conds)
+    job_entries = super().compose_work_objs(session, cmds)
 
     if job_entries:
       id_str = ','.join([str(job[0].config) for job in job_entries])
