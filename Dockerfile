@@ -5,7 +5,7 @@ ARG ROCM_PRE=0
 
 FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION='5.5 50'
+ARG ROCMVERSION='5.6 45'
 ARG OSDB_BKC_VERSION=
 # Add rocm repository
 RUN apt-get update
