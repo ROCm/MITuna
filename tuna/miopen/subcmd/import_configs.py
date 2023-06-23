@@ -67,7 +67,7 @@ def tag_config_v2(driver: DriverBase,
         Updates counter for tagged configs"""
   c_id = None
   if new_cf is None:
-    c_id = driver.get_db_obj(keep_id=True)
+    c_id = driver.get_db_obj(keep_id=True).id
   else:
     c_id = new_cf.id
 
