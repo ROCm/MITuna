@@ -322,7 +322,7 @@ def loadJobTest() {
 
 def solverAnalyticsTest(){
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
-    tuna_docker.inside("--privileged --network host  --dns 8.8.8.8") {
+    tuna_docker.inside("-u root --network host  --dns 8.8.8.8") {
         checkout scm
         // enviornment setup
         env.TUNA_DB_HOSTNAME = "${db_host}"
