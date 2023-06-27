@@ -44,14 +44,6 @@ pipeline {
            }
            }
         }
-        stage("solver analytics test") {
-        agent{  label "tunatest" }
-        steps {
-          script {
-            utils.solverAnalyticsTest()
-            }
-            }
-        }
         stage("fin get solver"){
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -130,6 +122,14 @@ pipeline {
         steps{
             script {
             utils.perfEval_gfx908()
+            }
+            }
+        }
+        stage("solver analytics test") {
+        agent{  label "tunatest" }
+        steps {
+          script {
+            utils.solverAnalyticsTest()
             }
             }
         }
