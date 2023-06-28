@@ -169,35 +169,35 @@ class WorkerInterface(Process):
     self.last_reset = datetime.now()
 
   def compose_work_objs(self, session: DbSession,
-                        cmds: List[str]) -> List[SimpleDict]:
+                        conds: List[str]) -> List[Tuple[SimpleDict, ...]]:
     """Query a job list for update"""
-    cmd_str = ' AND '.join(cmds)
-    if cmd_str:
-      cmd_str = f"WHERE {cmd_str}"
-    cmd_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
+    cond_str = ' AND '.join(conds)
+    if cond_str:
+      cond_str = f"WHERE {cond_str}"
+    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
     #try once without waiting for lock
-    no_lock = cmd_str + " SKIP LOCKED"
+    no_lock = cond_str + " SKIP LOCKED"
     entries = gen_select_objs(session, self.job_attr,
                               self.dbt.job_table.__tablename__, no_lock)
     if not entries:
       entries = gen_select_objs(session, self.job_attr,
-                                self.dbt.job_table.__tablename__, cmd_str)
+                                self.dbt.job_table.__tablename__, cond_str)
 
     return [(job,) for job in entries]
 
   def get_job_objs(self, session: DbSession,
-                   find_state: str) -> List[SimpleDict]:
+                   find_state: str) -> List[Tuple[SimpleDict, ...]]:
     """Get list of job objects"""
-    entries: List[SimpleDict]
-    cmds: list = [f"session={self.dbt.session.id}", "valid=1"]
+    entries: List[Tuple[SimpleDict, ...]]
+    conds: list = [f"session={self.dbt.session.id}", "valid=1"]
 
     if self.label:
-      cmds.append(f"reason='{self.label}'")
+      conds.append(f"reason='{self.label}'")
 
-    cmds.append(f"retries<{MAX_JOB_RETRIES}")
-    cmds.append(f"state='{find_state}'")
+    conds.append(f"retries<{MAX_JOB_RETRIES}")
+    conds.append(f"state='{find_state}'")
 
-    entries = self.compose_work_objs(session, cmds)
+    entries = self.compose_work_objs(session, conds)
     return entries
 
   def queue_end_reset(self) -> None:
@@ -218,7 +218,8 @@ class WorkerInterface(Process):
       return False
     return True
 
-  def get_job_from_tuple(self, job_tuple: SimpleDict) -> Optional[SimpleDict]:
+  def get_job_from_tuple(
+      self, job_tuple: Tuple[SimpleDict, ...]) -> Optional[SimpleDict]:
     """find job table in a job tuple"""
     tble: SimpleDict
     if has_attr_set(job_tuple, self.job_attr):
@@ -229,13 +230,14 @@ class WorkerInterface(Process):
         return tble
     return None
 
-  def get_job_tables(self, job_rows: List[SimpleDict]) -> List[SimpleDict]:
+  def get_job_tables(
+      self, job_rows: List[Tuple[SimpleDict, ...]]) -> List[SimpleDict]:
     """find job tables in query results"""
     if has_attr_set(job_rows[0], self.job_attr):
       job_tables: List[SimpleDict] = job_rows
     else:
       job_i: int = 0
-      tble: str
+      tble: SimpleDict
       for i, tble in enumerate(job_rows[0]):
         if has_attr_set(tble, self.job_attr):
           job_i = i
@@ -243,10 +245,10 @@ class WorkerInterface(Process):
       job_tables = [row[job_i] for row in job_rows]
     return job_tables
 
-  def job_queue_push(self, job_rows: List[SimpleDict]) -> None:
+  def job_queue_push(self, job_rows: List[Tuple[SimpleDict, ...]]) -> None:
     """load job_queue with info for job ids"""
     job: SimpleDict
-    job_tuple: SimpleDict
+    job_tuple: Tuple[SimpleDict, ...]
     for job_tuple in job_rows:
       self.job_queue.put(job_tuple)
       job = self.get_job_from_tuple(job_tuple)
@@ -261,7 +263,7 @@ class WorkerInterface(Process):
   #pylint: disable=too-many-branches
   def get_job(self, find_state: str, set_state: str, imply_end: bool) -> bool:
     """Interface function to get new job for builder/evaluator"""
-    job_rows: List[SimpleDict]
+    job_rows: List[Tuple[SimpleDict, ...]]
     job_tables: List[SimpleDict]
     job_set_attr: List[str]
     session: DbSession
@@ -350,37 +352,50 @@ class WorkerInterface(Process):
       query: str = gen_update_query(self.job, job_set_attr,
                                     self.dbt.job_table.__tablename__)
 
-      def callback():
+      def callback() -> bool:
         session.execute(query)
         session.commit()
         return True
 
       assert session_retry(session, callback, lambda x: x(), self.logger)
 
-  def exec_command(self, cmd: str) -> Tuple[int, StringIO, StringIO]:
+  def exec_command(self, cmd: str) -> Tuple[int, str, StringIO]:
     """execute on native machine"""
     ret_code: int
     out: StringIO
     err: StringIO
+    line: str = str()
 
     ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
-    return ret_code, out, err
+    if out:
+      line = out.read().strip()
+    if not line and err:
+      self.logger.info('Error executing exec cmd: %s \n err: %s', cmd,
+                       err.read())
+    if ((not out or ret_code != 0) and (err is not None)):
+      self.logger.error('Err code : %s', ret_code)
+      ret_code = 0
+
+    return ret_code, line, err
 
   def exec_docker_cmd(self, cmd: str) -> Tuple[int, str, StringIO]:
     """forward command execution to machine method"""
     ret_code: int
     out: StringIO
     err: StringIO
-    read_line: str
+    line: str = str()
 
     ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
-      read_line = out.read().strip()
-    if not read_line and err:
+      line = out.read().strip()
+    if not line and err:
       self.logger.info('Error executing docker cmd: %s \n err: %s', cmd,
                        err.read())
+    if (not out or ret_code != 0) and (err is not None):
+      self.logger.error('Error code : %s', ret_code)
+      ret_code = 0
 
-    return ret_code, read_line, err
+    return ret_code, line, err
 
   def get_miopen_v(self) -> str:
     """Interface function to get new branch hash"""
@@ -478,8 +493,12 @@ class WorkerInterface(Process):
       except queue.Empty:
         break
 
-  def run(self) -> bool:  #type: ignore
-    """Main run function of WorkerInterface Process"""
+  def run(self) -> bool:  #type: ignore[override]
+    """
+    Main run function of WorkerInterface Process
+    #type: ignore[override] - parent class returns None type.
+    """
+
     self.machine.set_logger(self.logger)
     usage: float
     try:
