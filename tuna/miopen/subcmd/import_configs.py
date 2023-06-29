@@ -28,7 +28,7 @@
 import os
 import logging
 import argparse
-from typing import Any, Optional, Union, Tuple
+from typing import Any, Optional, Union, Tuple, List
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -163,8 +163,16 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
   counts: dict = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
+  unique_lines: List[str] = []
   with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+    line_cnt=0
     for line in infile:
+      line_cnt+=1
+      line = line.strip()
+      if not line in unique_lines:
+        unique_lines.append(line)
+        logger.info("parsed: %u, unique: %u", line_cnt, len(unique_lines))
+    for line in unique_lines:
       try:
         parse_line(args, line, counts, dbt, logger)
       except ValueError as err:
@@ -360,7 +368,7 @@ def run_import_configs(args: argparse.Namespace,
   set_import_cfg_batches(args)
   counts = import_cfgs(args, dbt, logger)
   #tagging imported configs with benchmark
-  add_benchmark(args, dbt, logger)
+  #add_benchmark(args, dbt, logger)
 
   logger.info('New configs added: %u', counts['cnt_configs'])
   if args.tag or args.tag_only:
