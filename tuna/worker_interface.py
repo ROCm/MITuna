@@ -130,8 +130,7 @@ class WorkerInterface(Process):
     self.cnx: Connection = self.machine.connect(chk_abort_file)
 
   def step(self) -> bool:
-    """Overloaded method.Defined in fin_eval,ex_worker,
-    fin_class, fin_builder class"""
+    """Regular run loop operation, to be overloaded in class specialization """
     raise NotImplementedError("Not implemented")
 
   def set_logger(self, logger_name: str) -> None:
