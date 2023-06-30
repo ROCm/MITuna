@@ -26,8 +26,7 @@
 ###############################################################################
 """Module that represents the WorkerInterface class interface"""
 
-from multiprocessing import Process
-from multiprocessing.synchronize import Lock
+from multiprocessing import Process, Lock
 try:
   import queue
 except ImportError:
@@ -42,7 +41,7 @@ import random
 import string
 from io import StringIO
 from time import sleep
-from typing import List, Tuple, Union, Callable, Optional, Set
+from typing import List, Tuple, Union, Set, Callable, Optional
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -82,8 +81,7 @@ class WorkerInterface(Process):
         'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
     ])
 
-    self.__dict__.update((key, None) for key in allowed_keys)
-
+    self.reset_interval: bool = None
     #system vars
     self.machine: Machine = None
     #multiprocess vars
@@ -102,8 +100,9 @@ class WorkerInterface(Process):
     self.label: str = None
     self.session_id: int = None
 
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+    for key, value in kwargs.items():
+      if key in allowed_keys:
+        setattr(self, key, value)
 
     self.logger: logging.Logger
 
