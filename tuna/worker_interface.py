@@ -363,38 +363,32 @@ class WorkerInterface(Process):
     ret_code: int
     out: StringIO
     err: StringIO
-    line: str = str()
+    strout: str = str()
 
     ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
-      line = out.read().strip()
-    if not line and err:
-      self.logger.info('Error executing exec cmd: %s \n err: %s', cmd,
-                       err.read())
-    if ((not out or ret_code != 0) and (err is not None)):
-      self.logger.error('Err code : %s', ret_code)
-      ret_code = 0
-
-    return ret_code, line, err
+      strout = out.read().strip()
+    if (ret_code != 0 or not out) and err:
+      self.logger.info('Error executing cmd: %s \n code: %u err: %s', cmd,
+                       ret_code, err.read())
+    
+    return ret_code, strout, err
 
   def exec_docker_cmd(self, cmd: str) -> Tuple[int, str, StringIO]:
     """forward command execution to machine method"""
     ret_code: int
     out: StringIO
     err: StringIO
-    line: str = str()
+    strout: str = str()
 
     ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
-      line = out.read().strip()
-    if not line and err:
-      self.logger.info('Error executing docker cmd: %s \n err: %s', cmd,
-                       err.read())
-    if (not out or ret_code != 0) and (err is not None):
-      self.logger.error('Error code : %s', ret_code)
-      ret_code = 0
+      strout = out.read().strip()
+    if (ret_code != 0 or not out) and err:
+      self.logger.info('Error executing cmd: %s \n code: %u err: %s', cmd,
+                       ret_code, err.read())
 
-    return ret_code, line, err
+    return ret_code, strout, err
 
   def get_miopen_v(self) -> str:
     """Interface function to get new branch hash"""
