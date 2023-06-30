@@ -39,7 +39,7 @@ import random
 import string
 from io import StringIO
 from time import sleep
-from typing import List, Tuple, Union, Set, Callable, cast, Optional
+from typing import List, Tuple, Union, Set, Callable, Optional
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -371,7 +371,7 @@ class WorkerInterface(Process):
     if (ret_code != 0 or not out) and err:
       self.logger.info('Error executing cmd: %s \n code: %u err: %s', cmd,
                        ret_code, err.read())
-    
+
     return ret_code, strout, err
 
   def exec_docker_cmd(self, cmd: str) -> Tuple[int, str, StringIO]:
@@ -551,7 +551,7 @@ class WorkerInterface(Process):
         if err:
           err_str: str = err.read()
           self.logger.error('%s : %s', ret_code, err_str)
-          if "disk I/O error" in cast(str, err_str):
+          if "disk I/O error" in err_str:
             self.logger.error('fin retry : %u', i)
             sleep(random.randint(1, 10))
           else:
