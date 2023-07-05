@@ -609,6 +609,7 @@ def runLint() {
             sh "mypy tuna/sql.py --ignore-missing-imports"
             sh "mypy tuna/dbBase/sql_alchemy.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/dbBase/base_class.py --ignore-missing-imports"
+            sh "mypy tuna/example/example_worker.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }
