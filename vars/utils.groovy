@@ -322,7 +322,7 @@ def loadJobTest() {
 
 def solverAnalyticsTest(){
     def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
-    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+    tuna_docker.inside("-u root --network host  --dns 8.8.8.8") {
         checkout scm
         // enviornment setup
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -338,6 +338,7 @@ def solverAnalyticsTest(){
         // install SolverAnalytics
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
+        sh "pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt"
 
         // run SolverAnalytics tests
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
