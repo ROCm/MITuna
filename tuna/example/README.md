@@ -33,7 +33,7 @@ used to add new jobs and track the tuning data, post execution step.
 
 The third step is:
 ```
-./tuna/example/load_job.py -a gfx908 -n 120 -l my_lable --session_id 1
+./tuna/example/load_job.py -a gfx908 -n 120 -l my_label --session_id 1
 
 ```
 This steps loads jobs in the *job* table. These jobs will be picked up for execution in the
