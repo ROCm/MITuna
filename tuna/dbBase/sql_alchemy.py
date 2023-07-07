@@ -25,6 +25,11 @@
 #
 ###############################################################################
 """ Database resource manager """
+
+from typing import Optional, Type
+from types import TracebackType
+from sqlalchemy.orm.session import Session
+from mysql.connector.cursor import MySQLCursor
 from tuna.db_engine import SESSION_FACTORY
 
 
@@ -32,18 +37,11 @@ class DbConnection():
   """ Resource manager class for a SQL connection """
 
   def __init__(self):
-    '''
-        Importing in a function may be a thorny subject.
-        Please see
-        http://stackoverflow.com/questions/477096/python-import-coding-style/4789963#4789963
-        for my reason to use this.
-        '''
-    self.session = None
+    self.session: Session = None
 
-  def get_session(self):
+  def get_session(self) -> Session:
     """ return a cached connection if one exists, else create a new one
     and return that instead """
-
     if self.session is not None and self.session.is_active():
       return self.session
 
@@ -61,14 +59,16 @@ class DbSession():
   """Resource manager class for a SQL cursor"""
 
   def __init__(self):
-    self.cnx = None
-    self.sql_session = None
-    self.cur = None
+    self.cnx: DbConnection = None
+    self.sql_session: Session = None
+    self.cur: MySQLCursor = None
 
-  def __enter__(self):
+  def __enter__(self) -> Session:
     self.cnx = DbConnection()
     self.sql_session = self.cnx.get_session()
     return self.sql_session
 
-  def __exit__(self, type_t, value, traceback):
+  def __exit__(self, type_t: Optional[Type[BaseException]],
+               value: Optional[BaseException], \
+               traceback: Optional[TracebackType]) -> None:
     self.sql_session.close()

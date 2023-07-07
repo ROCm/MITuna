@@ -50,6 +50,7 @@ from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
 from tuna.utils.db_utility import connect_db
 from tuna.utils.utility import SimpleDict
+from tuna.utils.logger import set_usr_logger
 
 MAX_JOB_RETRIES = 10
 LOG_TIMEOUT = 10 * 60.0  # in seconds
@@ -92,6 +93,8 @@ class WorkerInterface(Process):
     self.label = None
     self.session_id = None
 
+    self.logger: logging.Logger
+
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
@@ -107,8 +110,10 @@ class WorkerInterface(Process):
                             f"{self.hostname}_{self.machine.port}p")
     if not os.path.exists(dir_name):
       os.makedirs(dir_name)
-    logger_name = os.path.join(dir_name, str(self.gpu_id))
-    self.set_logger(logger_name)
+
+    logger_name: str = os.path.join(dir_name, str(self.gpu_id))
+    self.logger = set_usr_logger(logger_name)
+
     connect_db()
 
     self.job = SimpleDict()
@@ -122,25 +127,6 @@ class WorkerInterface(Process):
     #call machine.connect and machine.set_logger in run (inside the subprocess)
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx = self.machine.connect(chk_abort_file)
-
-  def set_logger(self, logger_name):
-    """Build logger with given name"""
-    # JD: This needs to be moved to logger.py
-    log_level = os.environ.get('TUNA_LOGLEVEL', None)
-    lgr = logging.getLogger(logger_name)
-    log_file = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
-    fmt = logging.Formatter(
-        '%(lineno)d - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(log_file, mode='a')
-    file_handler.setFormatter(fmt)
-    file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(fmt)
-    stream_handler.setLevel(logging.INFO)
-    lgr.addHandler(file_handler)
-    lgr.addHandler(stream_handler)
-    lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
-    self.logger = lgr
 
   def set_db_tables(self):
     """Initialize tables"""
