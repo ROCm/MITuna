@@ -206,7 +206,10 @@ def get_load_job_parser(with_yaml: bool = True) -> jsonargparse.ArgumentParser:
                       required=True,
                       help='Label to annontate the jobs.',
                       default='new')
-  parser.add_argument('--fin_steps', dest='fin_steps', type=str, default=None)
+  parser.add_argument('--fin_steps',
+                      dest='fin_steps',
+                      type=str,
+                      default='not_fin')
   parser.add_argument(
       '--session_id',
       required=True,

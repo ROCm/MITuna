@@ -5,7 +5,7 @@ ARG ROCM_PRE=0
 
 FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION='5.5 50'
+ARG ROCMVERSION='5.6 45'
 ARG OSDB_BKC_VERSION=
 # Add rocm repository
 RUN apt-get update
@@ -106,7 +106,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=0a38343feec6dd484d1f14b418eea4017780edad
+ARG MIOPEN_BRANCH=fd9eff7509a064cfb44023d7cd47f7fde9d45af3
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -123,7 +123,7 @@ WORKDIR $MIOPEN_DIR/build
 ARG MIOPEN_CACHE_DIR=/tmp/${TUNA_USER}/cache
 ARG MIOPEN_USER_DB_PATH=/tmp/$TUNA_USER/config/miopen
 ARG MIOPEN_USE_MLIR=On
-ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DUSE_FIN=Off" 
+ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DUSE_FIN=Off"
 
 RUN echo "MIOPEN: Selected $BACKEND backend."
 RUN if [ $BACKEND = "OpenCL" ]; then \
@@ -179,12 +179,6 @@ WORKDIR /tuna
 ENV PYTHONPATH=/tuna
 
 RUN python3 setup.py install
-
-# Install SolverAnalytics dependencies (this require root access, so,
-# the dependencies must be installed here, and can't be installed in Jenkinsfile)
-#RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git
-#RUN pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt
-#RUN rm -rf SolverAnalytics
 
 # reset WORKDIR to /tuna
 WORKDIR /tuna

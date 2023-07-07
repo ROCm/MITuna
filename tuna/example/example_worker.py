@@ -29,6 +29,7 @@ rocminfo command"""
 from time import sleep
 import random
 
+from typing import Dict, Any, Optional, List
 from tuna.worker_interface import WorkerInterface
 from tuna.example.tables import ExampleDBTables
 
@@ -37,17 +38,17 @@ class ExampleWorker(WorkerInterface):
   """ The Example class implementes the worker class. Its purpose is to run a command. It picks up
   new jobs and when completed, sets the state to completed. """
 
-  def __init__(self, **kwargs):
+  def __init__(self, **kwargs: Dict[str, Any]) -> None:
     """Constructor"""
-    self.dbt = None
+    self.dbt: ExampleDBTables = None
     super().__init__(**kwargs)
     self.set_db_tables()
 
-  def set_db_tables(self):
+  def set_db_tables(self) -> None:
     """Initialize tables"""
     self.dbt = ExampleDBTables(session_id=self.session_id)
 
-  def step(self):
+  def step(self) -> bool:
     """Main functionality of the worker class. It picks up jobs in new state and executes them"""
 
     if not self.get_job("new", "running", False):
@@ -55,17 +56,17 @@ class ExampleWorker(WorkerInterface):
       sleep(random.randint(1, 10))
       return False
 
-    failed_job = False
+    failed_job: bool = False
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('running')
-    cmd_output = None
-    err_str = ''
+    cmd_output: Optional[str] = None
+    err_str: str = ''
     try:
       cmd_output = self.run_cmd()
     except ValueError as verr:
       self.logger.info(verr)
       failed_job = True
-      err_str = verr
+      err_str = str(verr)
 
     if failed_job:
       self.set_job_state('errored', result=err_str)
@@ -74,11 +75,12 @@ class ExampleWorker(WorkerInterface):
 
     return True
 
-  def run_cmd(self):
+  def run_cmd(self) -> str:
     """Run the actual workload"""
-    cmd = []
+    cmd: List = []
+    out: str
 
-    env_str = " ".join(self.envmt)
+    env_str: str = " ".join(self.envmt)
     cmd.append(env_str)
     cmd.append(' /opt/rocm/bin/rocminfo')
 
