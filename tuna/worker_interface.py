@@ -25,10 +25,13 @@
 #
 ###############################################################################
 """Module that represents the WorkerInterface class interface"""
-from multiprocessing import Process, Lock
+
+from multiprocessing import Process, Queue
+from multiprocessing.synchronize import Lock
 try:
   import queue
 except ImportError:
+  #ignore -to handle queue ImportError in python3
   import Queue as queue  #type: ignore
 
 import logging
@@ -39,7 +42,7 @@ import random
 import string
 from io import StringIO
 from time import sleep
-from typing import List, Tuple, Union, Set, Callable, Optional
+from typing import List, Tuple, Union, Callable, Optional
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -56,9 +59,6 @@ from tuna.utils.db_utility import connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 
-MAX_JOB_RETRIES = 10
-LOG_TIMEOUT = 10 * 60.0  # in seconds
-
 
 class WorkerInterface(Process):
   """ Interface class extended by Builder and Evaluator. The purpose of this class is to define
@@ -68,28 +68,31 @@ class WorkerInterface(Process):
   # pylint: disable=too-many-public-methods
   # pylint: disable=too-many-statements
 
+  MAX_JOB_RETRIES = 10
+  LOG_TIMEOUT = 10 * 60.0  # in seconds
+
   def __init__(self, **kwargs):
     """Constructor"""
     super().__init__()
 
-    allowed_keys: Set = set([
-        'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
-        'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
-    ])
-    self.__dict__.update((key, None) for key in allowed_keys)
+    #allowed_keys: Set[str] = set([
+    #    'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
+    #    'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
+    #    'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
+    #])
 
+    self.reset_interval: int = None
     #system vars
     self.machine: Machine = None
     #multiprocess vars
     self.gpu_id: int = None
     self.num_procs = None
     self.barred = None
-    self.bar_lock = Lock()
-    self.job_queue = None
-    self.job_queue_lock = Lock()
-    self.result_queue = None
-    self.result_queue_lock = Lock()
+    self.bar_lock: Lock = Lock()
+    self.job_queue: Queue = None
+    self.job_queue_lock: Lock = Lock()
+    self.result_queue: Queue = None
+    self.result_queue_lock: Lock = Lock()
     self.end_jobs = None
     #job detail vars
     self.envmt: List = []
@@ -97,14 +100,16 @@ class WorkerInterface(Process):
     self.label: str = None
     self.session_id: int = None
 
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+    for key, value in kwargs.items():
+      setattr(self, key, value)
 
     #initialize tables
     self.set_db_tables()
 
     self.hostname: str = self.machine.hostname
+
     self.claim_num: int = self.num_procs.value * 3
+
     self.last_reset: datetime = datetime.now()
 
     dir_name: str = os.path.join(TUNA_LOG_DIR,
@@ -119,7 +124,9 @@ class WorkerInterface(Process):
     self.job: SimpleDict = SimpleDict()
 
     try:
-      self.job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+      self.job_attr: List[str] = [
+          column.name for column in inspect(self.dbt.job_table).c
+      ]
       self.job_attr.remove("insert_ts")
       self.job_attr.remove("update_ts")
     except NoInspectionAvailable as error:
@@ -188,12 +195,12 @@ class WorkerInterface(Process):
                    find_state: str) -> List[Tuple[SimpleDict, ...]]:
     """Get list of job objects"""
     entries: List[Tuple[SimpleDict, ...]]
-    conds: list = [f"session={self.dbt.session.id}", "valid=1"]
+    conds: List[str] = [f"session={self.dbt.session.id}", "valid=1"]
 
     if self.label:
       conds.append(f"reason='{self.label}'")
 
-    conds.append(f"retries<{MAX_JOB_RETRIES}")
+    conds.append(f"retries<{self.MAX_JOB_RETRIES}")
     conds.append(f"state='{find_state}'")
 
     entries = self.compose_work_objs(session, conds)
@@ -321,7 +328,8 @@ class WorkerInterface(Process):
         NUM_SQL_RETRIES, self.hostname, self.gpu_id)
     return False
 
-  # This should take a session obj as an input to remove the creation of an extraneous session
+  #TODO_: This should take a session obj as an input to remove the creation of an extraneous
+  # session
   def set_job_state(self,
                     state: str,
                     increment_retries: bool = False,
@@ -365,7 +373,7 @@ class WorkerInterface(Process):
     err: StringIO
     strout: str = str()
 
-    ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
+    ret_code, out, err = self.cnx.exec_command(cmd, timeout=self.LOG_TIMEOUT)
     if out:
       strout = out.read().strip()
     if (ret_code != 0 or not out) and err:
@@ -381,7 +389,8 @@ class WorkerInterface(Process):
     err: StringIO
     strout: str = str()
 
-    ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
+    ret_code, out, err = self.machine.exec_command(cmd,
+                                                   timeout=self.LOG_TIMEOUT)
     if out:
       strout = out.read().strip()
     if (ret_code != 0 or not out) and err:
@@ -543,7 +552,7 @@ class WorkerInterface(Process):
     ret_code: int
     out: str
     err: StringIO
-    for i in range(MAX_JOB_RETRIES):
+    for i in range(self.MAX_JOB_RETRIES):
       ret_code, out, err = self.exec_docker_cmd(cmd)
 
       if ret_code != 0:
@@ -561,7 +570,4 @@ class WorkerInterface(Process):
           break
       else:
         break
-
-    if ret_code != 0:
-      ret_code = 0
     return ret_code, out
