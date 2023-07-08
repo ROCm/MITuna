@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that represents the WorkerInterface class interface"""
 
-from multiprocessing import Process, Queue
+from multiprocessing import Process
 from multiprocessing.synchronize import Lock
 try:
   import queue
@@ -42,7 +42,7 @@ import random
 import string
 from io import StringIO
 from time import sleep
-from typing import List, Tuple, Union, Callable, Optional
+from typing import List, Tuple, Union, Callable, Optional, Set
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -58,6 +58,7 @@ from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_se
 from tuna.utils.db_utility import connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
+from tuna.utils.logger import set_usr_logger
 
 
 class WorkerInterface(Process):
@@ -75,11 +76,11 @@ class WorkerInterface(Process):
     """Constructor"""
     super().__init__()
 
-    #allowed_keys: Set[str] = set([
-    #    'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
-    #    'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-    #    'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
-    #])
+    allowed_keys: Set[str] = set([
+        'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
+        'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
+        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
+    ])
 
     self.reset_interval: int = None
     #system vars
@@ -88,11 +89,11 @@ class WorkerInterface(Process):
     self.gpu_id: int = None
     self.num_procs = None
     self.barred = None
-    self.bar_lock: Lock = Lock()
-    self.job_queue: Queue = None
-    self.job_queue_lock: Lock = Lock()
-    self.result_queue: Queue = None
-    self.result_queue_lock: Lock = Lock()
+    self.bar_lock = Lock()
+    self.job_queue = None
+    self.job_queue_lock = Lock()
+    self.result_queue = None
+    self.result_queue_lock = Lock()
     self.end_jobs = None
     #job detail vars
     self.envmt: List = []
@@ -101,7 +102,10 @@ class WorkerInterface(Process):
     self.session_id: int = None
 
     for key, value in kwargs.items():
-      setattr(self, key, value)
+      if key in allowed_keys:
+        setattr(self, key, value)
+
+    self.logger: logging.Logger
 
     #initialize tables
     self.set_db_tables()
@@ -117,8 +121,10 @@ class WorkerInterface(Process):
                                  f"{self.hostname}_{self.machine.port}p")
     if not os.path.exists(dir_name):
       os.makedirs(dir_name)
+
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
-    self.set_logger(logger_name)
+    self.logger = set_usr_logger(logger_name)
+
     connect_db()
 
     self.job: SimpleDict = SimpleDict()
@@ -140,32 +146,7 @@ class WorkerInterface(Process):
     """Regular run loop operation, to be overloaded in class specialization """
     raise NotImplementedError("Not implemented")
 
-  def set_logger(self, logger_name: str) -> None:
-    """Build logger with given name"""
-    # JD: This needs to be moved to logger.py
-
-    lgr: logging.Logger
-    fmt: logging.Formatter
-    file_handler: logging.FileHandler
-    stream_handler: logging.StreamHandler
-
-    log_level = os.environ.get('TUNA_LOGLEVEL', None)
-    lgr = logging.getLogger(logger_name)
-    log_file = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
-    fmt = logging.Formatter(
-        '%(lineno)d - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler(log_file, mode='a')
-    file_handler.setFormatter(fmt)
-    file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(fmt)
-    stream_handler.setLevel(logging.INFO)
-    lgr.addHandler(file_handler)
-    lgr.addHandler(stream_handler)
-    lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
-    self.logger = lgr
-
-  def set_db_tables(self) -> None:
+  def set_db_tables(self):
     """Initialize tables"""
     self.dbt: DBTablesInterface = DBTablesInterface(session_id=self.session_id)
 

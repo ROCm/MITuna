@@ -5,7 +5,7 @@ ARG ROCM_PRE=0
 
 FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION='5.5 50'
+ARG ROCMVERSION='5.6 45'
 ARG OSDB_BKC_VERSION=
 # Add rocm repository
 RUN apt-get update
@@ -38,6 +38,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     apt-utils \
     sshpass \
     build-essential \
+    bzip2 \
+    lbzip2 \
     cmake \ 
     curl \
     doxygen \
@@ -104,14 +106,12 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=b4e0a67333ee4bbcbbec1203a0260feff2882cfb
+ARG MIOPEN_BRANCH=fd9eff7509a064cfb44023d7cd47f7fde9d45af3
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
 # Install dependencies
-#issue with upstream for composable kernel install
-RUN sed -i "s#[^\n]*composable_kernel[^\n]*##g" requirements.txt
 RUN cmake -P install_deps.cmake --minimum
 
 RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
@@ -123,7 +123,7 @@ WORKDIR $MIOPEN_DIR/build
 ARG MIOPEN_CACHE_DIR=/tmp/${TUNA_USER}/cache
 ARG MIOPEN_USER_DB_PATH=/tmp/$TUNA_USER/config/miopen
 ARG MIOPEN_USE_MLIR=On
-ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DMIOPEN_USE_COMPOSABLEKERNEL=Off -DUSE_FIN=Off"
+ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DUSE_FIN=Off"
 
 RUN echo "MIOPEN: Selected $BACKEND backend."
 RUN if [ $BACKEND = "OpenCL" ]; then \
@@ -135,18 +135,19 @@ RUN if [ $BACKEND = "OpenCL" ]; then \
 RUN make -j $(nproc)
 RUN make install
 
-ARG FIN_DIR=/root/dFin
-ARG FIN_TOKEN=
-#Clone Fin 
-RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/Fin.git $FIN_DIR
+#Build Fin
+WORKDIR $MIOPEN_DIR
+RUN git submodule update --init --recursive
+ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=4b1aecb98258252c9fb5e8e028722c9a245b98cb
-RUN git pull && git checkout $FIN_BRANCH
+ARG FIN_BRANCH=
+RUN if ! [ -z $FIN_BRANCH ]; then \
+        git pull && git checkout $FIN_BRANCH; \
+    fi
 # Install dependencies
 RUN cmake -P install_deps.cmake 
 
-#Build Fin
 WORKDIR $FIN_DIR/_hip
 RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$MIOPEN_DEPS $FIN_DIR
 
@@ -178,12 +179,6 @@ WORKDIR /tuna
 ENV PYTHONPATH=/tuna
 
 RUN python3 setup.py install
-
-# Install SolverAnalytics dependencies (this require root access, so,
-# the dependencies must be installed here, and can't be installed in Jenkinsfile)
-RUN git clone https://$FIN_TOKEN:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git
-RUN pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt
-RUN rm -rf SolverAnalytics
 
 # reset WORKDIR to /tuna
 WORKDIR /tuna
