@@ -82,7 +82,8 @@ class WorkerInterface(Process):
         'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
     ])
 
-    self.reset_interval: int = None
+    self.__dict__.update((key, None) for key in allowed_keys)
+
     #system vars
     self.machine: Machine = None
     #multiprocess vars
@@ -101,9 +102,8 @@ class WorkerInterface(Process):
     self.label: str = None
     self.session_id: int = None
 
-    for key, value in kwargs.items():
-      if key in allowed_keys:
-        setattr(self, key, value)
+    self.__dict__.update(
+        (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
     self.logger: logging.Logger
 
@@ -111,9 +111,7 @@ class WorkerInterface(Process):
     self.set_db_tables()
 
     self.hostname: str = self.machine.hostname
-
     self.claim_num: int = self.num_procs.value * 3
-
     self.last_reset: datetime = datetime.now()
 
     dir_name: str = os.path.join(TUNA_LOG_DIR,
