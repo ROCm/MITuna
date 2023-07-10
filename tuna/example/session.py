@@ -30,6 +30,7 @@ import argparse
 from typing import Tuple
 from sqlalchemy import UniqueConstraint
 
+from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
 from tuna.dbBase.base_class import BASE
 from tuna.session_mixin import SessionMixin
@@ -48,7 +49,8 @@ class SessionExample(BASE, SessionMixin):
                                                               "docker",
                                                               name="uq_idx"),)
 
-  def get_query(self, sess: SessionMixin, sess_obj, entry) -> Query:
+  def get_query(self, sess: Session, sess_obj: SessionMixin,
+                entry: argparse.Namespace) -> Query:
     """get session matching this object"""
     query = sess.query(sess_obj.id)\
         .filter(sess_obj.arch == entry.arch)\
