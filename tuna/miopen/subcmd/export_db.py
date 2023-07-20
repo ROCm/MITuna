@@ -254,7 +254,8 @@ def build_miopen_kdb(dbt: MIOpenDBTables, find_db, logger: logging.Logger):
       entries.sort(key=lambda x: float(x.kernel_time))
       fastest_slv = entries[0]
       query = session.query(dbt.kernel_cache)\
-          .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)
+          .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)\
+          .filter(dbt.kernel_cache.valid == 1)
       for kinder in query.all():
         num_kdb_blobs += 1
         kern_db.append(kinder)
