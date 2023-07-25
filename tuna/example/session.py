@@ -25,25 +25,32 @@
 #
 ###############################################################################
 """Session table and its associate functionality"""
+
+import argparse
+from typing import Tuple
 from sqlalchemy import UniqueConstraint
 
+from sqlalchemy.orm.session import Session
+from sqlalchemy.orm.query import Query
 from tuna.dbBase.base_class import BASE
 from tuna.session_mixin import SessionMixin
+from tuna.worker_interface import WorkerInterface
 
 
 class SessionExample(BASE, SessionMixin):
   """Session table to keep track of tunning sesions"""
   #pylint: disable=attribute-defined-outside-init
 
-  __tablename__ = "session_example"
-  __table_args__ = (UniqueConstraint("arch",
-                                     "num_cu",
-                                     "rocm_v",
-                                     "reason",
-                                     "docker",
-                                     name="uq_idx"),)
+  __tablename__: str = "session_example"
+  __table_args__: Tuple[UniqueConstraint] = (UniqueConstraint("arch",
+                                                              "num_cu",
+                                                              "rocm_v",
+                                                              "reason",
+                                                              "docker",
+                                                              name="uq_idx"),)
 
-  def get_query(self, sess, sess_obj, entry):
+  def get_query(self, sess: Session, sess_obj: SessionMixin,
+                entry: argparse.Namespace) -> Query:
     """get session matching this object"""
     query = sess.query(sess_obj.id)\
         .filter(sess_obj.arch == entry.arch)\
@@ -54,7 +61,8 @@ class SessionExample(BASE, SessionMixin):
 
     return query
 
-  def add_new_session(self, args, worker):
+  def add_new_session(self, args: argparse.Namespace,
+                      worker: WorkerInterface) -> int:
     """Add new session entry"""
     super().add_new_session(args, worker)
     return self.insert_session()
