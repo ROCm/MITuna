@@ -26,7 +26,7 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 from multiprocessing import Value, Lock, Queue as mpQueue
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from io import StringIO
 import logging
 import argparse
@@ -124,9 +124,9 @@ class MITunaInterface():
     """Add library specific tables"""
     return self.add_tables()
 
-  def get_num_procs(self, machine: Machine) -> Optional[range]:
+  def get_num_procs(self, machine: Machine) -> List:
     """Determine number of processes by compute capacity"""
-    worker_ids: Optional[range] = None
+    worker_ids: List = []
     num_procs: int
     env: Dict[str, Any]
     env = get_env_vars()
@@ -135,12 +135,12 @@ class MITunaInterface():
     else:
       num_procs = int(machine.get_num_cpus() * .6)
 
-    worker_ids = range(num_procs)
+    worker_ids = list(range(num_procs))
 
     if len(worker_ids) == 0:
       self.logger.error('num_procs must be bigger than zero to launch worker')
       self.logger.error('Cannot launch worker on machine: %s', machine.id)
-      worker_ids = None
+      worker_ids = []
 
     return worker_ids
 
