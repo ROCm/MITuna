@@ -165,9 +165,9 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
   counts['cnt_tagged_configs'] = set()
   unique_lines: List[str] = []
   with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
-    line_cnt=0
+    line_cnt = 0
     for line in infile:
-      line_cnt+=1
+      line_cnt += 1
       line = line.strip()
       if not line in unique_lines:
         unique_lines.append(line)
