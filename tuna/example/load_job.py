@@ -70,6 +70,7 @@ def add_jobs(args, dbt):
       job.valid = 1
       job.reason = args.label
       job.session = args.session_id
+      job.config = args.config
       session.add(job)
       session.commit()
       counts += 1
