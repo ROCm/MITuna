@@ -5,7 +5,7 @@ attrs==19.3.0
 backcall==0.1.0
 bcrypt==3.1.4
 breathe==4.30.0
-cryptography==39.0.1
+cryptography==41.0.2
 decorator==4.3.0
 docutils<0.17 # sphinx-rtd-theme 0.5.2 requires docutils<0.17
 flask==2.2.5
