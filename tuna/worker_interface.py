@@ -158,7 +158,7 @@ class WorkerInterface(Process):
     cond_str = ' AND '.join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
-    cond_str += f" ORDER BY retries ASC LIMIT {self.claim_num} FOR UPDATE"
+    cond_str += f" ORDER BY retries,config ASC LIMIT {self.claim_num} FOR UPDATE"
     #try once without waiting for lock
     no_lock = cond_str + " SKIP LOCKED"
     entries = gen_select_objs(session, self.job_attr,
