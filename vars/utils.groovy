@@ -892,7 +892,7 @@ def evaluate(params)
     eval_cmd += ' --dynamic_solvers_only'
   }
 
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"// || scontrol requeue \$SLURM_JOB_ID'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
 }
 
 def doxygen() {
