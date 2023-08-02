@@ -30,12 +30,15 @@
 
 import enum
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
-from sqlalchemy import Text, Enum
+from sqlalchemy import Text, Enum, Float, DateTime, orm
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.sql import func as sqla_func
 
 from tuna.dbBase.base_class import BASE
-from tuna.machine import Machine
+#from tuna.machine import Machine
 from tuna.session_mixin import SessionMixin
+from tuna.utils.logger import setup_logger
+from tuna.tables_interface import DBTablesInterface
 
 #pylint: disable=too-few-public-methods
 
@@ -172,46 +175,74 @@ class ConvolutionResults():  # pylint: disable=too-many-instance-attributes
   def parse(self, decoded_line):
     """parse logger output line for find db data """
     retval = False
-    if '[SetValues]' in decoded_line:
-      message = decoded_line.split('[SetValues]')[1]
-      key = message.split(',')[0].strip()
-
-      if key != '':
-        fdb = {}
-        direction = key.split('-')[-1][:1]
-        lead_str = 'content inserted: '
-        #each entry has 5 fields, 0 - alg:slv, 1 - kernel_time, 2 - workspace size,
-        #3 - alg, 4 - kernel cache key
-        idx_start = message.index(lead_str) + len(lead_str)
-        slv_info = message[idx_start:]
-        columns = slv_info.split(',')
-        while len(columns) >= FDB_SLV_NUM_FIELDS:
-          (_, slv) = columns[0].split(':')
-          if slv not in self.fdb_slv_dir:
-            self.fdb_slv_dir[slv] = {}
-          if direction not in self.fdb_slv_dir[slv]:
-            self.fdb_slv_dir[slv][direction] = {}
-            if 'ktimes' not in self.fdb_slv_dir[slv][direction]:
-              self.fdb_slv_dir[slv][direction]['ktimes'] = []
-
-          fdb = self.fdb_slv_dir[slv][direction]
-
-          fdb['fdb_key'] = key
-          kernel_time = float(columns[1])
-          fdb['workspace_size'] = int(columns[2])
-          fdb['alg_lib'] = columns[3]
-          fdb['kcache_key'] = columns[4]
-          fdb['is_ocl'] = 0
-          if 'MIOpen(OpenCL)' in decoded_line:
-            fdb['is_ocl'] = 1
-
-          fdb['ktimes'].append(kernel_time)
-
-          self.fdb_slv_dir[slv][direction] = fdb
-
-          retval = True
-
-          for _ in range(FDB_SLV_NUM_FIELDS):
-            columns.pop(0)
+#     if '[SetValues]' in decoded_line:
+#       message = decoded_line.split('[SetValues]')[1]
+#       key = message.split(',')[0].strip()
+#
+#       if key != '':
+#         fdb = {}
+#         direction = key.split('-')[-1][:1]
+#         lead_str = 'content inserted: '
+#         #each entry has 5 fields, 0 - alg:slv, 1 - kernel_time, 2 - workspace size,
+#         #3 - alg, 4 - kernel cache key
+#         idx_start = message.index(lead_str) + len(lead_str)
+#         slv_info = message[idx_start:]
+#         columns = slv_info.split(',')
+#         while len(columns) >= FDB_SLV_NUM_FIELDS:
+#           (_, slv) = columns[0].split(':')
+#           if slv not in self.fdb_slv_dir:
+#             self.fdb_slv_dir[slv] = {}
+#           if direction not in self.fdb_slv_dir[slv]:
+#             self.fdb_slv_dir[slv][direction] = {}
+#             if 'ktimes' not in self.fdb_slv_dir[slv][direction]:
+#               self.fdb_slv_dir[slv][direction]['ktimes'] = []
+#
+#           fdb = self.fdb_slv_dir[slv][direction]
+#
+#           fdb['fdb_key'] = key
+#           kernel_time = float(columns[1])
+#           fdb['workspace_size'] = int(columns[2])
+#           fdb['alg_lib'] = columns[3]
+#           fdb['kcache_key'] = columns[4]
+#           fdb['is_ocl'] = 0
+#           if 'MIOpen(OpenCL)' in decoded_line:
+#             fdb['is_ocl'] = 1
+#
+#           fdb['ktimes'].append(kernel_time)
+#
+#           self.fdb_slv_dir[slv][direction] = fdb
+#
+#           retval = True
+#
+#           for _ in range(FDB_SLV_NUM_FIELDS):
+#             columns.pop(0)
 
     return retval
+
+
+#pylint: disable=too-few-public-methods
+class RocMLIRDBTables(DBTablesInterface):
+  """Represents db tables for rocMLIR lib"""
+
+  def __init__(self, **kwargs):
+    """Constructor"""
+    super().__init__(**kwargs)
+    allowed_keys = set(['config_type', 'session_id'])
+
+    self.config_type = None
+    self.job_table = None
+    self.session_table = SessionRocMLIR
+    self.config_table = None
+    self.results = None
+
+    self.__dict__.update(
+        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+    self.set_tables()
+
+  def set_tables(self, sess_class=SessionRocMLIR):
+    """Set appropriate tables based on requirements"""
+    super().set_tables(sess_class)
+    # +++pf:  branch on self.config_type when we have GEMM, too.
+    self.job_table = ConvolutionJob
+    self.config_table = ConvolutionConfig
+    self.results = ConvolutionResults
