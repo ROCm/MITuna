@@ -95,7 +95,7 @@ class JobMixin():
   @declared_attr
   def session(self):
     """session key, as a function to connect at run time"""
-    return Column(Integer, ForeignKey("session.id"), nullable=False)
+    return Column(Integer, ForeignKey("session_rocmlir.id"), nullable=False)
 
   reason = Column(String(length=60), nullable=False, server_default="")
   state = Column(Enum(JobEnum), nullable=False, server_default="new")
@@ -147,10 +147,10 @@ class ConvolutionConfig(BASE):
   kernel_repeats = Column(Integer, nullable=False, server_default="0")
 
 
-class ConvolutionResults():  # pylint: disable=too-many-instance-attributes
+class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
   """Collects the results of convolution tuning.
   """
-  __tablename__ = "conv_results"
+  __tablename__ = "rocmlir_conv_results"
   __table_args__ = (UniqueConstraint("config",
                                      "session",
                                      name="uq_idx"),)
@@ -163,7 +163,7 @@ class ConvolutionResults():  # pylint: disable=too-many-instance-attributes
   @declared_attr
   def session(self):
     """session column"""
-    return Column(Integer, ForeignKey("session.id"), nullable=False)
+    return Column(Integer, ForeignKey("session_rocmlir.id"), nullable=False)
 
   config = Column(Integer, ForeignKey("rocmlir_conv_config.id"), nullable=False)
 
@@ -260,9 +260,8 @@ def get_tables() -> List[BASE]:
   tables: List[BASE] = []
   tables.append(SessionRocMLIR())
   tables.append(Machine(local_machine=True))
-  tables.append(ConvolutionJob())
   tables.append(ConvolutionConfig())
-# +++pf: not yet completely implemented
-#  tables.append(ConvolutionResults())
+  tables.append(ConvolutionJob())
+  tables.append(ConvolutionResults())
 
   return tables

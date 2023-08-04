@@ -41,10 +41,10 @@ from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 
 
 class RocMLIR(MITunaInterface):
-  """Class to support an example of 'romcinfo' run"""
+  """Class to support a rocMLIR tuning run"""
 
   def __init__(self):
-    super().__init__(library=Library.EXAMPLE)
+    super().__init__(library=Library.ROCMLIR)
     self.args: argparse.Namespace = None
 
   def parse_args(self) -> None:
