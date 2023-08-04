@@ -84,3 +84,10 @@ class RocMLIRWorker(WorkerInterface):
     retcode,out = super().run_command(cmd)
 
     return retcode,out
+
+  def get_mlir_v(self) -> str:
+    """Interface function to get mlir version info"""
+    #_, mlir_ver, _ = self.exec_docker_cmd("cat /opt/rocm/.info/version")
+    mlir_ver = "mlir_v-not-yet-implemented"
+    self.logger.info('Got mlir version: %s', mlir_ver)
+    return mlir_ver

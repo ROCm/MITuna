@@ -30,15 +30,18 @@ from typing import Union, Dict, Any
 from tuna.libraries import Library
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example
+from tuna.rocmlir.rocmlir_lib import RocMLIR
 
 
-def get_library(args: Dict[str, Any]) -> Union[Example, MIOpen]:
+def get_library(args: Dict[str, Any]) -> Union[Example, MIOpen, RocMLIR]:
   """Factory method to get lib based on args"""
-  library: Union[Example, MIOpen]
+  library: Union[Example, MIOpen, RocMLIR]
   if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
     library = MIOpen()
   elif args['lib'].value == Library.EXAMPLE.value:
     library = Example()
+  elif args['lib'].value == Library.ROCMLIR.value:
+    library = RocMLIR()
   else:
     raise ValueError("Not implemented")
 

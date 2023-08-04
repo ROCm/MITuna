@@ -29,13 +29,14 @@
 """
 
 import enum
+from typing import List
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum, Float, DateTime, orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.sql import func as sqla_func
 
 from tuna.dbBase.base_class import BASE
-#from tuna.machine import Machine
+from tuna.machine import Machine
 from tuna.session_mixin import SessionMixin
 from tuna.utils.logger import setup_logger
 from tuna.tables_interface import DBTablesInterface
@@ -52,7 +53,7 @@ class SessionRocMLIR(BASE, SessionMixin):
   __table_args__ = (UniqueConstraint("arch",
                                      "num_cu",
                                      "rocm_v",
-                                     "mlir_v"
+                                     "mlir_v",
                                      "reason",
                                      name="uq_idx"),)
 
@@ -70,6 +71,12 @@ class SessionRocMLIR(BASE, SessionMixin):
   def add_new_session(self, args, worker):
     """Add new session entry"""
     super().add_new_session(args, worker)
+
+    if hasattr(args, 'mlir_v') and args.mlir_v:
+      self.mlir_v = args.mlir_v
+    else:
+      self.mlir_v = worker.get_mlir_v()
+
     return self.insert_session()
 
 
@@ -105,18 +112,18 @@ class JobMixin():
 
 class ConvolutionJob(BASE, JobMixin):
   """Represents convolutions job table"""
-  __tablename__ = "conv_job"
+  __tablename__ = "rocmlir_conv_job"
   __table_args__ = (UniqueConstraint('config', 'session', name="uq_idx"),)
 
   config = Column(Integer,
-                  ForeignKey("conv_config.id"),
+                  ForeignKey("rocmlir_conv_config.id"),
                   nullable=False,
                   index=True)
 
 
 class ConvolutionConfig(BASE):
   """Represents convolution config table"""
-  __tablename__ = "conv_config"
+  __tablename__ = "rocmlir_conv_config"
 
   data_type = Column(String(length=60), nullable=False, server_default="")
   fil_layout = Column(String(60), nullable=False, server_default="NCHW")
@@ -143,7 +150,7 @@ class ConvolutionConfig(BASE):
 class ConvolutionResults():  # pylint: disable=too-many-instance-attributes
   """Collects the results of convolution tuning.
   """
-  __tablename__ = "conv_find_db"
+  __tablename__ = "conv_results"
   __table_args__ = (UniqueConstraint("config",
                                      "session",
                                      name="uq_idx"),)
@@ -151,14 +158,14 @@ class ConvolutionResults():  # pylint: disable=too-many-instance-attributes
   @orm.reconstructor
   def __init__(self, **kwargs):
     self.logger = kwargs['logger'] if 'logger' in kwargs else setup_logger(
-        'find_db')
+        'results')
 
   @declared_attr
   def session(self):
     """session column"""
     return Column(Integer, ForeignKey("session.id"), nullable=False)
 
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
+  config = Column(Integer, ForeignKey("rocmlir_conv_config.id"), nullable=False)
 
   perf_config = Column(Text, nullable=False)
   kernel_time = Column(Float, nullable=False)
@@ -246,3 +253,16 @@ class RocMLIRDBTables(DBTablesInterface):
     self.job_table = ConvolutionJob
     self.config_table = ConvolutionConfig
     self.results = ConvolutionResults
+
+
+def get_tables() -> List[BASE]:
+  """Returns a list of all Example lib DB tables"""
+  tables: List[BASE] = []
+  tables.append(SessionRocMLIR())
+  tables.append(Machine(local_machine=True))
+  tables.append(ConvolutionJob())
+  tables.append(ConvolutionConfig())
+# +++pf: not yet completely implemented
+#  tables.append(ConvolutionResults())
+
+  return tables
