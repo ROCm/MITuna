@@ -39,7 +39,6 @@ from tuna.miopen.db.miopen_tables import GoldenMixin
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
-from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite
 from tuna.miopen.utils.analyze_parse_db import mysql_to_sqlite_cfg
@@ -287,7 +286,6 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
       "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
 
   ins_list = []
-  arch_ext = arch2targetid(arch)
   for kern in kern_db:
     name = kern.kernel_name
     args = kern.kernel_args
@@ -296,7 +294,7 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
       name += ".o"
     if not "-mcpu=" in args:
       if not name.endswith('.mlir.o'):
-        args += f" -mcpu={arch_ext}"
+        args += f" -mcpu={arch}"
 
     ins_key = (name, args)
     if ins_key not in ins_list:
