@@ -671,7 +671,7 @@ class FinClass(WorkerInterface):
     if 'time' in fdb_obj:
       fdb_entry.kernel_time = fdb_obj['time']
 
-    fdb_entry.kernel_group = self.job.id
+    fdb_entry.kernel_group = fdb_entry.id
 
     return fdb_entry
 
@@ -737,6 +737,13 @@ class FinClass(WorkerInterface):
             assert len(self.pending) == 1
             self.pending.pop()
             query = gen_insert_query(fdb_entry, self.fdb_attr,
+                                     self.dbt.find_db_table.__tablename__)
+            session.execute(query)
+
+            fdb_entry = self.__update_fdb_entry(
+                session, self.solver_id_map[fdb_obj['solver_name']])
+            fdb_entry.kernel_group = fdb_entry.id
+            query = gen_update_query(fdb_entry, ['kernel_group'],
                                      self.dbt.find_db_table.__tablename__)
             session.execute(query)
 
