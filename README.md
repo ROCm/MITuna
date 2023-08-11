@@ -70,7 +70,7 @@ Enter the Tuna directory
 ```
 cd MITuna
 ```
-Create a virtual envornment, and activate it (by sourcing its `activate` script)
+Create a virtual environment, and activate it (by sourcing its `activate` script)
 ```
 python3.9 -m venv myvenv
 source myvenv/bin/activate

@@ -45,10 +45,13 @@ DATA_TYPES = ['-t f32', '-t f16', '-t i8']
 LAYOUTS = ['NHWC', 'NCHW']
 
 
-def getConvConfigurations(fileName):
+def get_conv_configurations(filename):
+  """Read conv-configs from filename and expand into all combinations of
+     direction, type, and layout.
+  """
   configs = []
-  with open(fileName, 'r') as configFile:
-    lines = configFile.readlines()
+  with open(filename, 'r', encoding='utf8') as config_file:
+    lines = config_file.readlines()
 
     # All combinations of conv direction, type and layouts
     for direction, datatype, layout, line in \
@@ -88,14 +91,16 @@ def getConvConfigurations(fileName):
       if "-O" in line:
         output_layout = ""
 
-      oneConfig = f"{datatype}{direction}{filter_layout}{input_layout}{output_layout}{line}"
-      if oneConfig not in configs:
-        configs.append(oneConfig)
+      one_config = f"{datatype}{direction}{filter_layout}{input_layout}{output_layout}{line}"
+      if one_config not in configs:
+        configs.append(one_config)
 
   return configs
 
 
-def parse_line(args, line, dbt, logger):
+def parse_line(line, dbt):
+  """Parse a command-line-style conv config into a ConvolutionConfig object."""
+
   print(f"Parsing line {line}")
 
   # '-t 1' means 'enable timing' which is confused with -t for type.
@@ -103,8 +108,8 @@ def parse_line(args, line, dbt, logger):
 
   # Convert the line ("-n 256 -c 1024 -H 14 ...") to dict of flag and value.
   i = iter(line.split())
-  d = dict(zip(i, i))
-  print(f"d = {d}")
+  options = dict(zip(i, i))
+  print(f"options = {options}")
 
   # Mapping of flag to field name.
   # -F 1 -n 2 -c 1280 -H 32 -W 32 -k 640 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1
@@ -137,7 +142,7 @@ def parse_line(args, line, dbt, logger):
   #   convbfp16 is bf16, convint8 is i8
 
   config = dbt.config_table(kernel_repeats=1)
-  for flag, value in d.items():
+  for flag, value in options.items():
     field = fields[flag]
     print(f"flag is '{flag}', value is '{value}', field is '{field}'")
     if field:
@@ -151,10 +156,10 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
   """import configs to mysql from file with driver invocations"""
   connect_db()
 
-  configs = getConvConfigurations(os.path.expanduser(args.file_name))
+  configs = get_conv_configurations(os.path.expanduser(args.file_name))
   for line in configs:
     try:
-      config = parse_line(args, line, dbt, logger)
+      config = parse_line(line, dbt)
 
       with DbSession() as session:
         try:
@@ -172,6 +177,7 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
 
 
 def main():
+  """Import conv-configs file into database rocmlir_conv_config table."""
   parser = argparse.ArgumentParser()
   parser.add_argument('-f',
                       '--file_name',

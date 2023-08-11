@@ -179,6 +179,7 @@ class ConvolutionConfig(BASE):
   }
 
   def config_string(self):
+    """Return config as a flag/value string suitable for tuningRunner.py."""
     string = "conv "                    # +++pf:  of course generalise for gemm
     for field, value in self.to_dict().items():
       flag = self.options[field]
@@ -218,7 +219,7 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
     return query
 
   # +++pf:  rewrite me for tuningRunner.py output!
-  def parse(self, decoded_line):
+  def parse(self):  #, decoded_line):
     """parse logger output line for find db data """
     retval = False
     #     if '[SetValues]' in decoded_line:
