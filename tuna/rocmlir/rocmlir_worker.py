@@ -28,6 +28,7 @@ tuningRunner.py command"""
 from time import sleep
 import random
 
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 
@@ -75,12 +76,15 @@ class RocMLIRWorker(WorkerInterface):
   def run_cmd(self):
     """Run the actual workload"""
     env_str = " ".join(self.envmt)
-    # +++pf:  (1) need to learn how to reach ConvolutionConfig object from
-    #             self.job.
-    #         (2) need to implement printed-rep for ConvolutionConfig.  See
-    #             doc string in tuningRunner.py main for what I have in mind.
+    with DbSession() as session:
+      cft = self.dbt.config_table
+      query = session.query(cft).filter(cft.id == self.job.config)
+      config = query.all()
+      if len(config) > 1:
+        raise ValueError(f"More than one config matching ID {self.job.config}")
+      config_string = config[0].config_string()
     cmd = env_str + f" python3 ./bin/tuningRunner.py --operation conv \
-                     --config={self.job.config.config_string()}"
+                     --config='{config_string}' --mlir-build-dir `pwd`"
     retcode,out = super().run_command(cmd)
 
     return retcode,out

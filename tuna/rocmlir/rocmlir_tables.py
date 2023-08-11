@@ -23,7 +23,6 @@
 # SOFTWARE.
 #
 ###############################################################################
-
 """ The necessary tables for rocMLIR tuning integration.
     Copied and adapted from example and miopen support.
 """
@@ -42,6 +41,7 @@ from tuna.utils.logger import setup_logger
 from tuna.tables_interface import DBTablesInterface
 
 #pylint: disable=too-few-public-methods
+
 
 class SessionRocMLIR(BASE, SessionMixin):
   """Session table to keep track of tuning sessions"""
@@ -88,6 +88,7 @@ class JobEnum(enum.Enum):
   running = 3
   completed = 4
   error = 5
+
 
 class JobMixin():
   """Essential attributes for all jobs in the job tables"""
@@ -146,14 +147,52 @@ class ConvolutionConfig(BASE):
   group_size = Column(Integer, nullable=False, server_default="0")
   kernel_repeats = Column(Integer, nullable=False, server_default="0")
 
+  def __repr__(self) -> str:
+    return f"ConvolutionConfig {self.to_dict()}"
+
+  options = {
+    'direction': '-F',
+    'fil_layout': '-f',
+    'in_layout': '-I',
+    'out_layout': '-O',
+    'batchsize': '-n',
+    'in_channels': '-c',
+    'in_h': '-H',
+    'in_w': '-W',
+    'out_channels': '-k',
+    'fil_h': '-y',
+    'fil_w': '-x',
+    'pad_h': '-p',
+    'pad_w': '-q',
+    'conv_stride_h': '-u',
+    'conv_stride_w': '-v',
+    'dilation_h': '-l',
+    'dilation_w': '-j',
+    'group_size': '-g',
+    'data_type': '-t',
+# getopt in ConvConfiguration.fromCommandLine only does single-char options.
+# Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
+#    'kernel_repeats': '--kernel-repeats',
+    'kernel_repeats': None,
+    'id': None,
+    'valid': None
+  }
+
+  def config_string(self):
+    string = "conv "                    # +++pf:  of course generalise for gemm
+    for field, value in self.to_dict().items():
+      flag = self.options[field]
+      if flag:
+        string += f"{flag} {value} "
+    string += "-m conv"
+    return string
+
 
 class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
   """Collects the results of convolution tuning.
   """
   __tablename__ = "rocmlir_conv_results"
-  __table_args__ = (UniqueConstraint("config",
-                                     "session",
-                                     name="uq_idx"),)
+  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
 
   @orm.reconstructor
   def __init__(self, **kwargs):
@@ -182,47 +221,47 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
   def parse(self, decoded_line):
     """parse logger output line for find db data """
     retval = False
-#     if '[SetValues]' in decoded_line:
-#       message = decoded_line.split('[SetValues]')[1]
-#       key = message.split(',')[0].strip()
-#
-#       if key != '':
-#         fdb = {}
-#         direction = key.split('-')[-1][:1]
-#         lead_str = 'content inserted: '
-#         #each entry has 5 fields, 0 - alg:slv, 1 - kernel_time, 2 - workspace size,
-#         #3 - alg, 4 - kernel cache key
-#         idx_start = message.index(lead_str) + len(lead_str)
-#         slv_info = message[idx_start:]
-#         columns = slv_info.split(',')
-#         while len(columns) >= FDB_SLV_NUM_FIELDS:
-#           (_, slv) = columns[0].split(':')
-#           if slv not in self.fdb_slv_dir:
-#             self.fdb_slv_dir[slv] = {}
-#           if direction not in self.fdb_slv_dir[slv]:
-#             self.fdb_slv_dir[slv][direction] = {}
-#             if 'ktimes' not in self.fdb_slv_dir[slv][direction]:
-#               self.fdb_slv_dir[slv][direction]['ktimes'] = []
-#
-#           fdb = self.fdb_slv_dir[slv][direction]
-#
-#           fdb['fdb_key'] = key
-#           kernel_time = float(columns[1])
-#           fdb['workspace_size'] = int(columns[2])
-#           fdb['alg_lib'] = columns[3]
-#           fdb['kcache_key'] = columns[4]
-#           fdb['is_ocl'] = 0
-#           if 'MIOpen(OpenCL)' in decoded_line:
-#             fdb['is_ocl'] = 1
-#
-#           fdb['ktimes'].append(kernel_time)
-#
-#           self.fdb_slv_dir[slv][direction] = fdb
-#
-#           retval = True
-#
-#           for _ in range(FDB_SLV_NUM_FIELDS):
-#             columns.pop(0)
+    #     if '[SetValues]' in decoded_line:
+    #       message = decoded_line.split('[SetValues]')[1]
+    #       key = message.split(',')[0].strip()
+    #
+    #       if key != '':
+    #         fdb = {}
+    #         direction = key.split('-')[-1][:1]
+    #         lead_str = 'content inserted: '
+    #         #each entry has 5 fields, 0 - alg:slv, 1 - kernel_time, 2 - workspace size,
+    #         #3 - alg, 4 - kernel cache key
+    #         idx_start = message.index(lead_str) + len(lead_str)
+    #         slv_info = message[idx_start:]
+    #         columns = slv_info.split(',')
+    #         while len(columns) >= FDB_SLV_NUM_FIELDS:
+    #           (_, slv) = columns[0].split(':')
+    #           if slv not in self.fdb_slv_dir:
+    #             self.fdb_slv_dir[slv] = {}
+    #           if direction not in self.fdb_slv_dir[slv]:
+    #             self.fdb_slv_dir[slv][direction] = {}
+    #             if 'ktimes' not in self.fdb_slv_dir[slv][direction]:
+    #               self.fdb_slv_dir[slv][direction]['ktimes'] = []
+    #
+    #           fdb = self.fdb_slv_dir[slv][direction]
+    #
+    #           fdb['fdb_key'] = key
+    #           kernel_time = float(columns[1])
+    #           fdb['workspace_size'] = int(columns[2])
+    #           fdb['alg_lib'] = columns[3]
+    #           fdb['kcache_key'] = columns[4]
+    #           fdb['is_ocl'] = 0
+    #           if 'MIOpen(OpenCL)' in decoded_line:
+    #             fdb['is_ocl'] = 1
+    #
+    #           fdb['ktimes'].append(kernel_time)
+    #
+    #           self.fdb_slv_dir[slv][direction] = fdb
+    #
+    #           retval = True
+    #
+    #           for _ in range(FDB_SLV_NUM_FIELDS):
+    #             columns.pop(0)
 
     return retval
 

@@ -74,7 +74,7 @@ def add_jobs(args, dbt):
     for config in res:
       try:
         job = dbt.job_table(state='new', valid=1, reason=args.label,
-                            session=args.session_id, config=args.config)
+                            session=args.session_id, config=config.id)
         session.add(job)
         session.commit()
         counts += 1
