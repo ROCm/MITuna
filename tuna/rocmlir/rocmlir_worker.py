@@ -47,6 +47,9 @@ class RocMLIRWorker(WorkerInterface):
     """Initialize tables"""
     self.dbt = RocMLIRDBTables(session_id=self.session_id)
 
+  def output_filename(self):
+    return f"tuning-results-{self.job.id}.tsv"
+
   def step(self):
     """Main functionality of the worker class. It picks up jobs in new state and executes them"""
 
@@ -69,7 +72,11 @@ class RocMLIRWorker(WorkerInterface):
         self.logger.info(msg)
         self.set_job_state('errored', result=msg)
       else:
-        self.set_job_state('completed', result=cmd_output)
+        with open(self.output_filename(), 'r', encoding='utf8') as results:
+          # +++pf: work around weird substitution bug.
+          # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
+          string = results.read().replace(':', '\:')
+          self.set_job_state('completed', result=string)
 
     return True
 
@@ -84,7 +91,11 @@ class RocMLIRWorker(WorkerInterface):
         raise ValueError(f"More than one config matching ID {self.job.config}")
       config_string = config[0].config_string()
     cmd = env_str + f" python3 ./bin/tuningRunner.py --operation conv \
-                     --config='{config_string}' --mlir-build-dir `pwd`"
+                     --config='{config_string}' --mlir-build-dir `pwd` \
+                     --output={self.output_filename()}"
+# +++pf:  the --device hack causes verification failures
+#                                                        \
+#                      --rocmlir_gen_flags='--device=0'"
     retcode,out = super().run_command(cmd)
 
     return retcode,out
