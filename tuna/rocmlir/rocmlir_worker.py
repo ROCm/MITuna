@@ -92,10 +92,8 @@ class RocMLIRWorker(WorkerInterface):
       config_string = config[0].config_string()
     cmd = env_str + f" python3 ./bin/tuningRunner.py --operation conv \
                      --config='{config_string}' --mlir-build-dir `pwd` \
-                     --output={self.output_filename()}"
-# +++pf:  the --device hack causes verification failures
-#                                                        \
-#                      --rocmlir_gen_flags='--device=0'"
+                     --output={self.output_filename()}" \
+                     --rocmlir_gen_flags='--device={self.gpu_id}'"
     retcode,out = super().run_command(cmd)
 
     return retcode,out

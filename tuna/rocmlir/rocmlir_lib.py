@@ -115,8 +115,9 @@ class RocMLIR(MITunaInterface):
         continue
 
       #determine number of processes by compute capacity
-      # pylint: disable=duplicate-code
-      worker_ids: List = super().get_num_procs(machine)
+      #worker_ids: List = super().get_num_procs(machine)
+      # +++pf: Use get_avail_gpus() when --device works in run_cmd.
+      worker_ids: List = machine.get_avail_gpus()
       if len(worker_ids) == 0:
         return None
 
