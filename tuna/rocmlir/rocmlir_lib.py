@@ -38,6 +38,8 @@ from tuna.libraries import Library
 from tuna.utils.db_utility import create_tables
 from tuna.rocmlir.rocmlir_tables import get_tables, SessionRocMLIR
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
+from tuna.miopen.db.build_schema import recreate_triggers
+from tuna.rocmlir.triggers import get_timestamp_trigger
 
 
 class RocMLIR(MITunaInterface):
@@ -115,8 +117,6 @@ class RocMLIR(MITunaInterface):
         continue
 
       #determine number of processes by compute capacity
-      #worker_ids: List = super().get_num_procs(machine)
-      # +++pf: Use get_avail_gpus() when --device works in run_cmd.
       worker_ids: List = machine.get_avail_gpus()
       if len(worker_ids) == 0:
         return None
@@ -133,8 +133,8 @@ class RocMLIR(MITunaInterface):
   def add_tables(self) -> bool:
     """Generates the library specific schema to the connected SQL server."""
     ret_t: bool = create_tables(get_tables())
+    recreate_triggers(['timestamp_trigger'], get_timestamp_trigger())
     self.logger.info('DB creation successful: %s', ret_t)
-
     return True
 
   def run(self) -> Optional[List[RocMLIRWorker]]:

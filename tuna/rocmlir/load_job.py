@@ -64,6 +64,14 @@ def add_jobs(args, dbt):
   """ Add jobs based on args query specified"""
   counts = 0
   with DbSession() as session:
+    query = session.query(dbt.session_table.reason) \
+                   .filter(dbt.session_table.valid == 1,
+                           dbt.session_table.id == args.session_id)
+    reasons = query.all()
+    if len(reasons) > 1:
+      raise ValueError(f"More than one session matching ID {args.session_id}")
+    reason = reasons[0].reason
+
     query = session.query(dbt.config_table.id)\
                    .filter(dbt.config_table.valid == 1)
     res = query.all()
@@ -73,7 +81,7 @@ def add_jobs(args, dbt):
 
     for config in res:
       try:
-        job = dbt.job_table(state='new', valid=1, reason=args.label,
+        job = dbt.job_table(state='new', valid=1, reason=reason,
                             session=args.session_id, config=config.id)
         session.add(job)
         session.commit()

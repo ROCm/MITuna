@@ -25,12 +25,19 @@
 ###############################################################################
 """Builder class implements the worker interface. The purpose of this class is to run the
 tuningRunner.py command"""
+
+import sys
+import os
 from time import sleep
 import random
+import functools
+
+from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
+from tuna.utils.db_utility import session_retry, gen_insert_query
 
 
 class RocMLIRWorker(WorkerInterface):
@@ -42,10 +49,53 @@ class RocMLIRWorker(WorkerInterface):
     self.dbt = None
     super().__init__(**kwargs)
     self.set_db_tables()
+    self.result_attr = [column.name for column in inspect(self.dbt.results).c]
+    self.result_attr.remove("insert_ts")
+    self.result_attr.remove("update_ts")
 
   def set_db_tables(self):
     """Initialize tables"""
     self.dbt = RocMLIRDBTables(session_id=self.session_id)
+
+  def update_result_table(self, session, result_str):
+    """update results table with individual result entry"""
+    obj = self.dbt.results()
+
+    arch, config, perfConfig = obj.parse(result_str)
+
+    print(f"arch = '{arch}', config = '{config}', perfConfig = '{perfConfig}'", file=sys.stderr)
+
+    obj.valid = 1
+    obj.session = self.dbt.session.id
+    obj.arch = arch
+    obj.config = self.job.config
+    obj.config_str = config
+    obj.perf_config = perfConfig
+    obj.kernel_time = -1                # +++pf: not in .tsv file
+
+    self.logger.info('Inserting results for job_id=%s', self.job.id)
+    query = gen_insert_query(obj, self.result_attr,
+                             self.dbt.results.__tablename__)
+    session.execute(query)
+    session.commit()
+    return True
+
+  def process_result(self, result_str: str):
+    """process tuning-run results"""
+    status = []
+    with DbSession() as session:
+
+      def actuator(func, result_str):
+        return func(session, result_str)
+
+      #retry returns false on failure, callback return on success
+      ret = session_retry(session, self.update_result_table,
+                          functools.partial(actuator, result_str=result_str),
+                          self.logger)
+      if not ret:
+        self.logger.warning('RocMLIR:  Unable to update database')
+
+    return status
 
   def output_filename(self):
     return f"tuning-results-{self.job.id}.tsv"
@@ -72,11 +122,17 @@ class RocMLIRWorker(WorkerInterface):
         self.logger.info(msg)
         self.set_job_state('errored', result=msg)
       else:
-        with open(self.output_filename(), 'r', encoding='utf8') as results:
-          # +++pf: work around weird substitution bug.
-          # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
-          string = results.read().replace(':', '\:')
-          self.set_job_state('completed', result=string)
+        try:
+          with open(self.output_filename(), 'r', encoding='utf8') as results:
+            # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
+            string = results.read().replace(':', '\:')
+            self.set_job_state('completed', result=string)
+            self.process_result(string)
+          os.remove(self.output_filename())
+        except Exception as exc:
+          self.logger.warning('Exception occurred while saving results of job %s:  %s',
+                              self.job.id, exc)
+          self.set_job_state('errored', result=exc)
 
     return True
 

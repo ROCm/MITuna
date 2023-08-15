@@ -27,6 +27,7 @@
     Copied and adapted from example and miopen support.
 """
 
+import sys
 import enum
 from typing import List
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
@@ -197,8 +198,10 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
 
   @orm.reconstructor
   def __init__(self, **kwargs):
-    self.logger = kwargs['logger'] if 'logger' in kwargs else setup_logger(
-        'results')
+    if 'logger' in kwargs:
+      self.logger = kwargs['logger']
+    else:
+      self.logger = setup_logger('results')
 
   @declared_attr
   def session(self):
@@ -206,6 +209,7 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
     return Column(Integer, ForeignKey("session_rocmlir.id"), nullable=False)
 
   config = Column(Integer, ForeignKey("rocmlir_conv_config.id"), nullable=False)
+  config_str = Column(Text, nullable=False)
 
   perf_config = Column(Text, nullable=False)
   kernel_time = Column(Float, nullable=False)
@@ -219,53 +223,11 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
     return query
 
   # +++pf:  rewrite me for tuningRunner.py output!
-  def parse(self):  #, decoded_line):
-    """parse logger output line for find db data """
-    retval = False
-    #     if '[SetValues]' in decoded_line:
-    #       message = decoded_line.split('[SetValues]')[1]
-    #       key = message.split(',')[0].strip()
-    #
-    #       if key != '':
-    #         fdb = {}
-    #         direction = key.split('-')[-1][:1]
-    #         lead_str = 'content inserted: '
-    #         #each entry has 5 fields, 0 - alg:slv, 1 - kernel_time, 2 - workspace size,
-    #         #3 - alg, 4 - kernel cache key
-    #         idx_start = message.index(lead_str) + len(lead_str)
-    #         slv_info = message[idx_start:]
-    #         columns = slv_info.split(',')
-    #         while len(columns) >= FDB_SLV_NUM_FIELDS:
-    #           (_, slv) = columns[0].split(':')
-    #           if slv not in self.fdb_slv_dir:
-    #             self.fdb_slv_dir[slv] = {}
-    #           if direction not in self.fdb_slv_dir[slv]:
-    #             self.fdb_slv_dir[slv][direction] = {}
-    #             if 'ktimes' not in self.fdb_slv_dir[slv][direction]:
-    #               self.fdb_slv_dir[slv][direction]['ktimes'] = []
-    #
-    #           fdb = self.fdb_slv_dir[slv][direction]
-    #
-    #           fdb['fdb_key'] = key
-    #           kernel_time = float(columns[1])
-    #           fdb['workspace_size'] = int(columns[2])
-    #           fdb['alg_lib'] = columns[3]
-    #           fdb['kcache_key'] = columns[4]
-    #           fdb['is_ocl'] = 0
-    #           if 'MIOpen(OpenCL)' in decoded_line:
-    #             fdb['is_ocl'] = 1
-    #
-    #           fdb['ktimes'].append(kernel_time)
-    #
-    #           self.fdb_slv_dir[slv][direction] = fdb
-    #
-    #           retval = True
-    #
-    #           for _ in range(FDB_SLV_NUM_FIELDS):
-    #             columns.pop(0)
-
-    return retval
-
+  def parse(self, lines):
+    """parse logger output line for result data """
+    line = lines.splitlines()[-1]
+    print(f"line being parsed is '{line}'", file=sys.stderr)
+    return line.split('\t')
 
 #pylint: disable=too-few-public-methods
 class RocMLIRDBTables(DBTablesInterface):
