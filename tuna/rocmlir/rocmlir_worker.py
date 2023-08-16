@@ -61,9 +61,10 @@ class RocMLIRWorker(WorkerInterface):
     """update results table with individual result entry"""
     obj = self.dbt.results()
 
-    arch, config, perfConfig = obj.parse(result_str)
+    arch, config, perfConfig, tflops = obj.parse(result_str)
 
-    print(f"arch = '{arch}', config = '{config}', perfConfig = '{perfConfig}'", file=sys.stderr)
+    print(f"arch = '{arch}', config = '{config}', perfConfig = '{perfConfig}', tflops = {tflops}",
+          file=sys.stderr)
 
     obj.valid = 1
     obj.session = self.dbt.session.id
@@ -71,7 +72,7 @@ class RocMLIRWorker(WorkerInterface):
     obj.config = self.job.config
     obj.config_str = config
     obj.perf_config = perfConfig
-    obj.kernel_time = -1                # +++pf: not in .tsv file
+    obj.kernel_tflops = tflops
 
     self.logger.info('Inserting results for job_id=%s', self.job.id)
     query = gen_insert_query(obj, self.result_attr,
@@ -132,7 +133,7 @@ class RocMLIRWorker(WorkerInterface):
         except Exception as exc:
           self.logger.warning('Exception occurred while saving results of job %s:  %s',
                               self.job.id, exc)
-          self.set_job_state('errored', result=exc)
+          self.set_job_state('errored', result=repr(exc))
 
     return True
 
@@ -148,7 +149,7 @@ class RocMLIRWorker(WorkerInterface):
       config_string = config[0].config_string()
     cmd = env_str + f" python3 ./bin/tuningRunner.py --operation conv \
                      --config='{config_string}' --mlir-build-dir `pwd` \
-                     --output={self.output_filename()} \
+                     --output={self.output_filename()} --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}'"
     retcode,out = super().run_command(cmd)
 

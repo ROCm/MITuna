@@ -212,7 +212,7 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
   config_str = Column(Text, nullable=False)
 
   perf_config = Column(Text, nullable=False)
-  kernel_time = Column(Float, nullable=False)
+  kernel_tflops = Column(Float, nullable=False)
 
   def get_query(self, sess, result_obj, session_id):
     """Construct a Db query for the find object
