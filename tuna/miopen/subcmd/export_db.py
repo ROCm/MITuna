@@ -93,27 +93,23 @@ def get_filename(arch: str,
 def get_base_query(dbt: MIOpenDBTables, args: argparse.Namespace,
                    logger: logging.Logger):
   """ general query for fdb/pdb results """
-  src_table = dbt.find_db_table
-  if args.golden_v is not None:
-    src_table = dbt.golden_table
-
   with DbSession() as session:
-    query = session.query(src_table, dbt.config_table)
+    query = session.query(args.src_table, dbt.config_table)
     if args.golden_v is not None:
-      query = query.filter(src_table.golden_miopen_v == args.golden_v)\
-              .filter(src_table.arch == args.arch)
+      query = query.filter(args.src_table.golden_miopen_v == args.golden_v)\
+              .filter(args.src_table.arch == args.arch)
       if args.num_cu:
-        query = query.filter(src_table.num_cu == args.num_cu)
+        query = query.filter(args.src_table.num_cu == args.num_cu)
       logger.info("golden_miopen_v: %s, arch: %s, num_cu: %s", args.golden_v,
                   args.arch, args.num_cu)
     else:
-      query = query.filter(src_table.session == dbt.session.id)
+      query = query.filter(args.src_table.session == dbt.session.id)
       logger.info("rocm_v : %s", dbt.session.rocm_v)
       logger.info("miopen_v : %s", dbt.session.miopen_v)
 
-    query = query.filter(src_table.valid == 1)\
-        .filter(src_table.opencl == args.opencl)\
-        .filter(src_table.config == dbt.config_table.id)
+    query = query.filter(args.src_table.valid == 1)\
+        .filter(args.src_table.opencl == args.opencl)\
+        .filter(args.src_table.config == dbt.config_table.id)
 
     if args.config_tag:
       logger.info("config_tag : %s", args.config_tag)
@@ -127,19 +123,15 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
                   logger: logging.Logger):
   """ Helper function to create find db query
   """
-  src_table = dbt.find_db_table
-  if args.golden_v is not None:
-    src_table = dbt.golden_table
-
   query = get_base_query(dbt, args, logger)
-  query = query.filter(src_table.kernel_time != -1)\
-      .filter(src_table.workspace_sz != -1)
+  query = query.filter(args.src_table.kernel_time != -1)\
+      .filter(args.src_table.workspace_sz != -1)
 
-  if src_table == dbt.golden_table:
-    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc(),
-                           src_table.num_cu.asc())
+  if args.src_table == dbt.golden_table:
+    query = query.order_by(args.src_table.fdb_key, args.src_table.update_ts.desc(),
+                           args.src_table.num_cu.asc())
   else:
-    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
+    query = query.order_by(args.src_table.fdb_key, args.src_table.update_ts.desc())
 
   return query
 
@@ -147,13 +139,9 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
 def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
                   logger: logging.Logger):
   """Compose query to get perf_db rows based on filters from args"""
-  src_table = dbt.find_db_table
-  if args.golden_v is not None:
-    src_table = dbt.golden_table
-
   query = get_fdb_query(dbt, args, logger)
-  query = query.filter(src_table.params != '')\
-      .filter(src_table.solver == dbt.solver_table.id)\
+  query = query.filter(args.src_table.params != '')\
+      .filter(args.src_table.solver == dbt.solver_table.id)\
       .filter(dbt.solver_table.tunable == 1)
 
   return query
@@ -180,7 +168,7 @@ def add_entry_to_solvers(fdb_entry: Union[GoldenMixin, FindDBMixin],
   return True
 
 
-def build_miopen_fdb(query, logger):
+def build_miopen_fdb(query, logger: logging.Logger) -> OrderedDict:
   """return dict with key: fdb_key + alg_lib, val: solver list"""
   find_db: OrderedDict = OrderedDict()
   solvers: Dict[str, Dict[str, Any]] = {}
@@ -248,13 +236,14 @@ def build_miopen_kdb(dbt: MIOpenDBTables, find_db, logger: logging.Logger):
   with DbSession() as session:
     total = len(find_db.items())
     last_pcnt = 0
-    for _, entries in find_db.items():
+    for fdb_key, entries in find_db.items():
       num_fdb_entries += 1
       entries.sort(key=lambda x: float(x.kernel_time))
       fastest_slv = entries[0]
       query = session.query(dbt.kernel_cache)\
           .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)\
           .filter(dbt.kernel_cache.valid == 1)
+      #logger.warning("adding fdb_key:%s, config:%s, solver:%s, kernel groups: %s", fdb_key, fastest_slv.config, fastest_slv.solver, fastest_slv.kernel_group)
       for kinder in query.all():
         num_kdb_blobs += 1
         kern_db.append(kinder)
@@ -314,12 +303,31 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
 
 
 def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace,
-               logger: logging.Logger):
+               logger: logging.Logger, skew_fdbs=True):
   """
   Function to export the kernel cache
   """
   query = get_fdb_query(dbt, args, logger)
-  miopen_fdb = build_miopen_fdb(query, logger)
+
+  miopen_fdb: OrderedDict = OrderedDict()
+  if skew_fdbs and not args.num_cu:
+    with DbSession() as session:
+      db_entries = query.all()
+      fdb_ids = []
+      for fdb_entry, _ in db_entries:
+        fdb_ids.append(fdb_entry.id)
+
+      skews = [int(x[0]) for x in session.query(args.src_table.num_cu).distinct()\
+                .filter(args.src_table.id.in_(fdb_ids)).all()]
+      logger.info("skews %s", skews)
+
+    for num_cu in skews:
+      cu_query = query.filter(args.src_table.num_cu == num_cu)
+      miopen_fdb_skew = build_miopen_fdb(cu_query, logger)
+      for key, value in miopen_fdb_skew.items():
+        miopen_fdb[f"{key}_cu{num_cu}"] = value
+  else:
+    miopen_fdb = build_miopen_fdb(query, logger)
 
   logger.info("Building kdb.")
   kern_db = build_miopen_kdb(dbt, miopen_fdb, logger)
@@ -456,6 +464,10 @@ def run_export_db(args: argparse.Namespace, logger: logging.Logger):
       args.num_cu = dbt.session.num_cu
     except ValueError as terr:
       logger.error(terr)
+
+  args.src_table = dbt.find_db_table
+  if args.golden_v is not None:
+    args.src_table = dbt.golden_table
 
   if args.find_db:
     result_file = export_fdb(dbt, args, logger)
