@@ -25,6 +25,7 @@
 ###############################################################################
 """Database triggers for timestamps."""
 
+
 def get_timestamp_trigger():
   """setting up for job table triggers"""
   trigger_timestamp = """CREATE trigger timestamp_trigger before UPDATE on rocmlir_conv_job

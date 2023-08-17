@@ -63,8 +63,9 @@ class RocMLIRWorker(WorkerInterface):
 
     arch, config, perf_config, tflops = obj.parse(result_str)
 
-    print(f"arch = '{arch}', config = '{config}', perf_config = '{perf_config}', tflops = {tflops}",
-          file=sys.stderr)
+    print(
+        f"arch = '{arch}', config = '{config}', perf_config = '{perf_config}', tflops = {tflops}",
+        file=sys.stderr)
 
     obj.valid = 1
     obj.session = self.dbt.session.id
@@ -114,7 +115,7 @@ class RocMLIRWorker(WorkerInterface):
     self.set_job_state('running')
 
     try:
-      retcode,cmd_output = self.run_cmd()
+      retcode, cmd_output = self.run_cmd()
     except ValueError as verr:
       self.logger.info(verr)
       self.set_job_state('errored', result=verr)
@@ -133,8 +134,9 @@ class RocMLIRWorker(WorkerInterface):
           os.remove(self.output_filename())
         except OSError as exc:
           # Most often FileNotFoundError.
-          self.logger.warning('Exception occurred while saving results of job %s:  %s',
-                              self.job.id, exc)
+          self.logger.warning(
+              'Exception occurred while saving results of job %s:  %s',
+              self.job.id, exc)
           self.set_job_state('errored', result=repr(exc))
 
     return True
@@ -153,9 +155,10 @@ class RocMLIRWorker(WorkerInterface):
                      --config='{config_string}' --mlir-build-dir `pwd` \
                      --output={self.output_filename()} --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}'"
-    retcode,out = super().run_command(cmd)
 
-    return retcode,out
+    retcode, out = super().run_command(cmd)
+
+    return retcode, out
 
   def get_mlir_v(self) -> str:
     """Interface function to get mlir version info"""

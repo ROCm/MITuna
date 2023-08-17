@@ -152,36 +152,36 @@ class ConvolutionConfig(BASE):
     return f"ConvolutionConfig {self.to_dict()}"
 
   options = {
-    'direction': '-F',
-    'fil_layout': '-f',
-    'in_layout': '-I',
-    'out_layout': '-O',
-    'batchsize': '-n',
-    'in_channels': '-c',
-    'in_h': '-H',
-    'in_w': '-W',
-    'out_channels': '-k',
-    'fil_h': '-y',
-    'fil_w': '-x',
-    'pad_h': '-p',
-    'pad_w': '-q',
-    'conv_stride_h': '-u',
-    'conv_stride_w': '-v',
-    'dilation_h': '-l',
-    'dilation_w': '-j',
-    'group_size': '-g',
-    'data_type': '-t',
-# getopt in ConvConfiguration.fromCommandLine only does single-char options.
-# Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
-#    'kernel_repeats': '--kernel-repeats',
-    'kernel_repeats': None,
-    'id': None,
-    'valid': None
+      'direction': '-F',
+      'fil_layout': '-f',
+      'in_layout': '-I',
+      'out_layout': '-O',
+      'batchsize': '-n',
+      'in_channels': '-c',
+      'in_h': '-H',
+      'in_w': '-W',
+      'out_channels': '-k',
+      'fil_h': '-y',
+      'fil_w': '-x',
+      'pad_h': '-p',
+      'pad_w': '-q',
+      'conv_stride_h': '-u',
+      'conv_stride_w': '-v',
+      'dilation_h': '-l',
+      'dilation_w': '-j',
+      'group_size': '-g',
+      'data_type': '-t',
+      # getopt in ConvConfiguration.fromCommandLine only does single-char options.
+      # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
+      #    'kernel_repeats': '--kernel-repeats',
+      'kernel_repeats': None,
+      'id': None,
+      'valid': None
   }
 
   def config_string(self):
     """Return config as a flag/value string suitable for tuningRunner.py."""
-    string = "conv "                    # +++pf:  of course generalise for gemm
+    string = "conv "  # +++pf:  of course generalise for gemm
     for field, value in self.to_dict().items():
       flag = self.options[field]
       if flag:
@@ -228,6 +228,7 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
     line = lines.splitlines()[-1]
     print(f"line being parsed is '{line}'", file=sys.stderr)
     return line.split('\t')
+
 
 #pylint: disable=too-few-public-methods
 class RocMLIRDBTables(DBTablesInterface):

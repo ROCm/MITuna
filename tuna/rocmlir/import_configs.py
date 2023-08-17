@@ -109,7 +109,7 @@ def parse_line(line, dbt):
   # Convert the line ("-n 256 -c 1024 -H 14 ...") to dict of flag and value.
   i = iter(line.split())
   options = dict(zip(i, i))
-#  print(f"options = {options}")
+  #  print(f"options = {options}")
 
   # Mapping of flag to field name.
   # -F 1 -n 2 -c 1280 -H 32 -W 32 -k 640 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1
