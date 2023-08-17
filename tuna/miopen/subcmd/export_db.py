@@ -53,6 +53,8 @@ ID_SOLVER_MAP = None
 
 
 def require_id_solvers():
+  """Initialise ID_SOLVER_MAP from database"""
+  global ID_SOLVER_MAP  # pylint: disable=global-statement
   if not ID_SOLVER_MAP:
     _, ID_SOLVER_MAP = get_id_solvers()
 
