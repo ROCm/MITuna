@@ -55,6 +55,7 @@ def require_id_solvers():
   if not ID_SOLVER_MAP:
     _, ID_SOLVER_MAP = get_id_solvers()
 
+
 def arg_export_db(args: argparse.Namespace, logger: logging.Logger):
   """export db args for exportdb"""
   if args.golden_v and not args.arch:
