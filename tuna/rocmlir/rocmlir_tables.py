@@ -151,6 +151,9 @@ class ConvolutionConfig(BASE):
   def __repr__(self) -> str:
     return f"ConvolutionConfig {self.to_dict()}"
 
+  # This dict maps field names, which are also the long option names, to
+  # the short forms used in the configs.  Necessary to turn a
+  # ConvolutionConfig back into a string that we can pass to the runner.
   options = {
       'direction': '-F',
       'fil_layout': '-f',

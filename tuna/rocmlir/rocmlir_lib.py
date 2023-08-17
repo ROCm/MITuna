@@ -23,7 +23,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""RocMLIR library, integrated with MITuna, runs 'rocminfo' cmd"""
+"""RocMLIR library, integrated with MITuna, runs 'tuningRunner.py' cmd"""
 
 import sys
 import argparse
