@@ -38,7 +38,6 @@ from tuna.sql import DbCursor
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from utils import CfgImportArgs
 
-
 SAMPLE_CONV_CONFIGS = """
 # This section of the file comes from resnet50-miopen-configs
 -n 256 -c 1024 -H 14 -W 14 -k 2048 -y 1 -x 1 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1

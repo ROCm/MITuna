@@ -82,7 +82,8 @@ def test_add_session_rocmlir():
   assert (sess_id)
 
   with DbSession() as session:
-    res = session.query(SessionRocMLIR).filter(SessionRocMLIR.id == sess_id).one()
+    res = session.query(SessionRocMLIR).filter(
+        SessionRocMLIR.id == sess_id).one()
     assert (res)
     assert (res.reason == "my_dummy_label")
     assert (res.rocm_v)
