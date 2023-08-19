@@ -121,7 +121,8 @@ class RocMLIRWorker(WorkerInterface):
       self.set_job_state('errored', result=verr)
     else:
       if retcode != 0:
-        msg = f"Error code {retcode}, output {cmd_output}"
+        quoted_output = cmd_output.replace("'", r"\'")
+        msg = f"Error code {retcode}, output {quoted_output}"
         self.logger.info(msg)
         self.set_job_state('errored', result=msg)
       else:
