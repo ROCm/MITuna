@@ -532,6 +532,7 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
         sshagent (credentials: ['bastion-ssh-key']) {
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_rocmlir.py -s"
         }
         sh "coverage report -m"
         sh "python3 -m coverage json"
