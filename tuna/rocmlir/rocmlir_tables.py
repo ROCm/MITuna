@@ -34,7 +34,9 @@ from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum, Float, DateTime, orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.sql import func as sqla_func
+from sqlalchemy.inspection import inspect
 
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
 from tuna.session_mixin import SessionMixin
@@ -264,10 +266,18 @@ class RocMLIRDBTables(DBTablesInterface):
 def get_tables() -> List[BASE]:
   """Returns a list of all Example lib DB tables"""
   tables: List[BASE] = []
-  tables.append(SessionRocMLIR())
-  tables.append(Machine(local_machine=True))
-  tables.append(ConvolutionConfig())
-  tables.append(ConvolutionJob())
-  tables.append(ConvolutionResults())
+  with DbSession() as session:
+    engine = session.bind
+    connect = session.connection()
+    def append_if_not_exists(table):
+      # Note: this changes in sqlalchemy 1.4.
+      if not inspect(engine).dialect.has_table(connect, table.__tablename__):
+        tables.append(table)
+
+    append_if_not_exists(SessionRocMLIR())
+    append_if_not_exists(Machine(local_machine=True))
+    append_if_not_exists(ConvolutionConfig())
+    append_if_not_exists(ConvolutionJob())
+    append_if_not_exists(ConvolutionResults())
 
   return tables
