@@ -36,6 +36,7 @@ from tuna.utils.logger import setup_logger
 from tuna.rocmlir.import_configs import import_cfgs
 from tuna.sql import DbCursor
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
+from tuna.rocmlir.rocmlir_lib import RocMLIR
 from utils import CfgImportArgs
 
 SAMPLE_CONV_CONFIGS = """
@@ -56,6 +57,9 @@ def test_importconfigs_rocmlir():
 
 
 def test_import_conv():
+  rocmlir = RocMLIR()
+  assert (rocmlir.add_tables())
+
   dbt = RocMLIRDBTables(session_id=None)
   logger = setup_logger('test_importconfigs')
   find_configs = "SELECT count(*) FROM rocmlir_conv_config;"
