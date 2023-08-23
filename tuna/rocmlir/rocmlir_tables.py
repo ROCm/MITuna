@@ -285,6 +285,7 @@ def get_tables() -> List[BASE]:
 
   return tables
 
+
 def clear_tables():
   """Get a clean state in the dase."""
   dbt = RocMLIRDBTables(session_id=None)
