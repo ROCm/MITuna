@@ -269,6 +269,7 @@ def get_tables() -> List[BASE]:
   with DbSession() as session:
     engine = session.bind
     connect = session.connection()
+
     def append_if_not_exists(table):
       # Note: this changes in sqlalchemy 1.4.
       if not inspect(engine).dialect.has_table(connect, table.__tablename__):
