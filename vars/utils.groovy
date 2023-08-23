@@ -479,6 +479,10 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_example.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_yaml_parser.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_load_job.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_add_session_rocmlir.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_load_job_rocmlir.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_importconfigs_rocmlir.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_rocmlir.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -528,7 +532,6 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
         sshagent (credentials: ['bastion-ssh-key']) {
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
-           sh "python3 -m coverage run -a -m pytest tests/test_rocmlir.py -s"
         }
         sh "coverage report -m"
         sh "python3 -m coverage json"
@@ -566,7 +569,7 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/worker/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
@@ -616,6 +619,11 @@ def runLint() {
             sh "mypy tuna/dbBase/base_class.py --ignore-missing-imports"
             sh "mypy tuna/example/session.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/example/example_worker.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/import_configs.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/load_job.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/rocmlir_lib.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/rocmlir_tables.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/rocmlir_worker.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }
