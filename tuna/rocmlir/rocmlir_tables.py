@@ -32,6 +32,7 @@ import enum
 from typing import List
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum, Float, DateTime, orm
+from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.inspection import inspect
@@ -283,3 +284,12 @@ def get_tables() -> List[BASE]:
     append_if_not_exists(ConvolutionResults())
 
   return tables
+
+def clear_tables():
+  """Get a clean state in the dase."""
+  dbt = RocMLIRDBTables(session_id=None)
+  with DbSession() as session:
+    session.execute(sql_delete(dbt.job_table))
+    session.execute(sql_delete(dbt.session_table))
+    session.execute(sql_delete(dbt.config_table))
+    session.execute(sql_delete(dbt.results))

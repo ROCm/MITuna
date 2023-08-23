@@ -26,7 +26,6 @@
 
 import os
 import sys
-import time
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -38,7 +37,7 @@ from tuna.rocmlir.rocmlir_lib import RocMLIR
 from utils import ExampleArgs
 from tuna.utils.miopen_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.rocmlir.rocmlir_tables import SessionRocMLIR, ConvolutionJob, RocMLIRDBTables
+from tuna.rocmlir.rocmlir_tables import SessionRocMLIR, ConvolutionJob, RocMLIRDBTables, clear_tables
 from tuna.rocmlir.load_job import add_jobs
 from tuna.rocmlir.import_configs import import_cfgs
 from utils import CfgImportArgs
@@ -47,15 +46,13 @@ SAMPLE_CONV_CONFIGS = """
 -F 1 -n 256 -c 1024 -H 14 -W 14 -k 2048 -y 1 -x 1 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1
 """
 
-
 def test_rocmlir():
   logger = setup_logger('test_rocmlir')
   dbt = RocMLIRDBTables(session_id=None)
 
   rocmlir = RocMLIR()
-  rocmlir.args = ExampleArgs()
-  rocmlir.args.init_session = True
   assert (rocmlir.add_tables())
+  clear_tables()
 
   # To get some sample configs imported.
   with open("test-conv-configs", 'w') as f:
@@ -65,6 +62,8 @@ def test_rocmlir():
   count = import_cfgs(args, dbt, logger)
   assert count == 6
 
+  rocmlir.args = ExampleArgs()
+  rocmlir.args.init_session = True
   rocmlir.args.label = 'test_rocmlir'
   machines = load_machines(rocmlir.args)
   # With .init_session True, launch_worker adds a session and bails.

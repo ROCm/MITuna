@@ -480,8 +480,8 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_yaml_parser.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_load_job.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_add_session_rocmlir.py -s"
-           sh "python3 -m coverage run -a -m pytest tests/test_load_job_rocmlir.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_importconfigs_rocmlir.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_load_job_rocmlir.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_rocmlir.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
