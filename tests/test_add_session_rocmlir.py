@@ -38,11 +38,13 @@ from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.rocmlir.rocmlir_tables import SessionRocMLIR
+from tuna.rocmlir.rocmlir_lib import RocMLIR
 from utils import DummyArgs
 
 
 def test_add_session_rocmlir():
-  res = None
+  rocmlir = RocMLIR()
+  assert (rocmlir.add_tables())
 
   num_gpus = Value('i', 1)
   v = Value('i', 0)
