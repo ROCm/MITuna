@@ -177,6 +177,7 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
 
 def main():
   """Import conv-configs file into database rocmlir_conv_config table."""
+  # pylint: disable=duplicate-code
   parser = argparse.ArgumentParser()
   parser.add_argument('-f',
                       '--file_name',

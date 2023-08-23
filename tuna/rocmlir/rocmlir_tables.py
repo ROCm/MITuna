@@ -49,6 +49,7 @@ from tuna.tables_interface import DBTablesInterface
 class SessionRocMLIR(BASE, SessionMixin):
   """Session table to keep track of tuning sessions"""
   #pylint: disable=attribute-defined-outside-init
+  #pylint: disable=duplicate-code
 
   mlir_v = Column(String(length=64), nullable=False)
 

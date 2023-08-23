@@ -28,6 +28,7 @@
 Script for adding jobs to the MySQL database
 """
 
+# pylint: disable=duplicate-code
 from sqlalchemy.exc import IntegrityError
 
 from tuna.utils.logger import setup_logger
@@ -79,6 +80,7 @@ def add_jobs(args, dbt):
     if not res:
       LOGGER.error('No applicable configs found for args %s', args.__dict__)
 
+    # pylint: disable=duplicate-code
     for config in res:
       try:
         job = dbt.job_table(state='new',
@@ -98,6 +100,7 @@ def add_jobs(args, dbt):
 
 def main():
   """ main """
+  # pylint: disable=duplicate-code
   args = parse_args()
   connect_db()
 
