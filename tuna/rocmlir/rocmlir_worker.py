@@ -84,7 +84,6 @@ class RocMLIRWorker(WorkerInterface):
 
   def process_result(self, result_str: str):
     """process tuning-run results"""
-    status = []
     with DbSession() as session:
 
       def actuator(func, result_str):
@@ -96,8 +95,7 @@ class RocMLIRWorker(WorkerInterface):
                           self.logger)
       if not ret:
         self.logger.warning('RocMLIR:  Unable to update database')
-
-    return status
+      return ret
 
   def output_filename(self):
     """Canonical name for tuningRunner.py output for a job."""
