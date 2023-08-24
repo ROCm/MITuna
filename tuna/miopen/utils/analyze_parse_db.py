@@ -199,13 +199,14 @@ def get_sqlite_cfg_dict(fdb_key: str) -> dict:
   basic_fwd = basic_fwd + fdb_key[fdb_key.rfind('-') + 2:]
   #add = for parsing function to treat like fdb
   basic_fwd = basic_fwd + '='
-  direction = fdb_key[fdb_key.rfind('-')+1]
+  direction = fdb_key[fdb_key.rfind('-') + 1]
   cfg, data_type, _ = get_fds_from_cmd(basic_fwd)
   cfg['direction'] = direction
   cfg['layout'] = cfg['out_layout']
   cfg['data_type'] = data_type
   cfg['bias'] = 0
   return cfg
+
 
 def mysql_to_sqlite_cfg(in_perf_cfg: dict) -> dict:
   """convert values to represent sqlite config table"""
