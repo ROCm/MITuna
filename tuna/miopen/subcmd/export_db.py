@@ -243,8 +243,6 @@ def build_miopen_kdb(dbt: MIOpenDBTables, find_db, logger: logging.Logger):
       query = session.query(dbt.kernel_cache)\
           .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)\
           .filter(dbt.kernel_cache.valid == 1)
-      #logger.warning("adding fdb_key:%s, config:%s, solver:%s, kernel groups: %s",
-      #fdb_key, fastest_slv.config, fastest_slv.solver, fastest_slv.kernel_group)
       for kinder in query.all():
         num_kdb_blobs += 1
         kern_db.append(kinder)

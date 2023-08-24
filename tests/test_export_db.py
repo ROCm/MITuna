@@ -217,12 +217,12 @@ def test_get_sqlite_cfg_dict():
   assert cfg_dict['pad_d'] == 0
   assert cfg_dict['pad_h'] == 1
   assert cfg_dict['pad_w'] == 1
-  assert cfg_dict['dilation_d'] == 1
-  assert cfg_dict['dilation_h'] == 1
-  assert cfg_dict['dilation_w'] == 1
   assert cfg_dict['conv_stride_d'] == 1
   assert cfg_dict['conv_stride_h'] == 1
   assert cfg_dict['conv_stride_w'] == 1
+  assert cfg_dict['dilation_d'] == 1
+  assert cfg_dict['dilation_h'] == 1
+  assert cfg_dict['dilation_w'] == 1
   assert cfg_dict['in_layout'] == 'NCDHW'
   assert cfg_dict['out_layout'] == 'NCDHW'
   assert cfg_dict['fil_layout'] == 'NCDHW'
@@ -248,12 +248,12 @@ def test_get_sqlite_cfg_dict():
   assert cfg_dict['pad_d'] == 13
   assert cfg_dict['pad_h'] == 14
   assert cfg_dict['pad_w'] == 15
-  assert cfg_dict['dilation_d'] == 16
-  assert cfg_dict['dilation_h'] == 17
-  assert cfg_dict['dilation_w'] == 18
-  assert cfg_dict['conv_stride_d'] == 19
-  assert cfg_dict['conv_stride_h'] == 20
-  assert cfg_dict['conv_stride_w'] == 21
+  assert cfg_dict['conv_stride_d'] == 16
+  assert cfg_dict['conv_stride_h'] == 17
+  assert cfg_dict['conv_stride_w'] == 18
+  assert cfg_dict['dilation_d'] == 19
+  assert cfg_dict['dilation_h'] == 20
+  assert cfg_dict['dilation_w'] == 21
   assert cfg_dict['in_layout'] == 'NCDHW'
   assert cfg_dict['out_layout'] == 'NCDHW'
   assert cfg_dict['fil_layout'] == 'NCDHW'
@@ -279,12 +279,12 @@ def test_get_sqlite_cfg_dict():
   assert cfg_dict['pad_d'] == 13
   assert cfg_dict['pad_h'] == 14
   assert cfg_dict['pad_w'] == 15
-  assert cfg_dict['dilation_d'] == 16
-  assert cfg_dict['dilation_h'] == 17
-  assert cfg_dict['dilation_w'] == 18
-  assert cfg_dict['conv_stride_d'] == 19
-  assert cfg_dict['conv_stride_h'] == 20
-  assert cfg_dict['conv_stride_w'] == 21
+  assert cfg_dict['conv_stride_d'] == 16
+  assert cfg_dict['conv_stride_h'] == 17
+  assert cfg_dict['conv_stride_w'] == 18
+  assert cfg_dict['dilation_d'] == 19
+  assert cfg_dict['dilation_h'] == 20
+  assert cfg_dict['dilation_w'] == 21
   assert cfg_dict['in_layout'] == 'NCDHW'
   assert cfg_dict['out_layout'] == 'NCDHW'
   assert cfg_dict['fil_layout'] == 'NCDHW'
