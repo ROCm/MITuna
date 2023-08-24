@@ -169,7 +169,7 @@ def add_entry_to_solvers(fdb_entry: Union[GoldenMixin, FindDBMixin],
 
 
 def build_miopen_fdb(query, logger: logging.Logger) -> OrderedDict:
-  """return dict with key: fdb_key + alg_lib, val: solver list"""
+  """return dict with key: fdb_key, val: list of fdb entries"""
   find_db: OrderedDict = OrderedDict()
   solvers: Dict[str, Dict[str, Any]] = {}
   db_entries = query.all()
@@ -243,7 +243,8 @@ def build_miopen_kdb(dbt: MIOpenDBTables, find_db, logger: logging.Logger):
       query = session.query(dbt.kernel_cache)\
           .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)\
           .filter(dbt.kernel_cache.valid == 1)
-      #logger.warning("adding fdb_key:%s, config:%s, solver:%s, kernel groups: %s", fdb_key, fastest_slv.config, fastest_slv.solver, fastest_slv.kernel_group)
+      #logger.warning("adding fdb_key:%s, config:%s, solver:%s, kernel groups: %s",
+      #fdb_key, fastest_slv.config, fastest_slv.solver, fastest_slv.kernel_group)
       for kinder in query.all():
         num_kdb_blobs += 1
         kern_db.append(kinder)
@@ -302,6 +303,29 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
   return file_name
 
 
+def build_miopen_fdb_skews(args: argparse.Namespace, query,
+                           logger: logging.Logger) -> OrderedDict:
+  """return dict with key: fdb_key + num_cu, val: list of fdb entries"""
+  miopen_fdb: OrderedDict = OrderedDict()
+  with DbSession() as session:
+    db_entries = query.all()
+    fdb_ids = []
+    for fdb_entry, _ in db_entries:
+      fdb_ids.append(fdb_entry.id)
+
+    skews = [int(x[0]) for x in session.query(args.src_table.num_cu).distinct()\
+              .filter(args.src_table.id.in_(fdb_ids)).all()]
+    logger.info("skews %s", skews)
+
+  for num_cu in skews:
+    cu_query = query.filter(args.src_table.num_cu == num_cu)
+    miopen_fdb_skew = build_miopen_fdb(cu_query, logger)
+    for key, value in miopen_fdb_skew.items():
+      miopen_fdb[f"{key}_cu{num_cu}"] = value
+
+  return miopen_fdb
+
+
 def export_kdb(dbt: MIOpenDBTables,
                args: argparse.Namespace,
                logger: logging.Logger,
@@ -313,21 +337,7 @@ def export_kdb(dbt: MIOpenDBTables,
 
   miopen_fdb: OrderedDict = OrderedDict()
   if skew_fdbs and not args.num_cu:
-    with DbSession() as session:
-      db_entries = query.all()
-      fdb_ids = []
-      for fdb_entry, _ in db_entries:
-        fdb_ids.append(fdb_entry.id)
-
-      skews = [int(x[0]) for x in session.query(args.src_table.num_cu).distinct()\
-                .filter(args.src_table.id.in_(fdb_ids)).all()]
-      logger.info("skews %s", skews)
-
-    for num_cu in skews:
-      cu_query = query.filter(args.src_table.num_cu == num_cu)
-      miopen_fdb_skew = build_miopen_fdb(cu_query, logger)
-      for key, value in miopen_fdb_skew.items():
-        miopen_fdb[f"{key}_cu{num_cu}"] = value
+    miopen_fdb = build_miopen_fdb_skews(args, query, logger)
   else:
     miopen_fdb = build_miopen_fdb(query, logger)
 
