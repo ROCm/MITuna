@@ -32,6 +32,7 @@ import sqlite3
 from typing import Any, List, Tuple
 from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.metadata import SQLITE_CONFIG_COLS, ARCH_NUM_CU_LIST
+from tuna.miopen.utils.parsing import get_fds_from_cmd
 
 LOGGER = setup_logger('AnalyzeParseDB')
 
@@ -190,6 +191,21 @@ def parse_pdb_filename(fname: str) -> Tuple[str, int]:
 
   return (arch, num_cu)
 
+
+def get_sqlite_cfg_dict(fdb_key: str) -> dict:
+  """get sqlite pdb config from fdb key"""
+  #replace direction with F to allow parsing as stored by sqlite pdb
+  basic_fwd = fdb_key[0:fdb_key.rfind('-') + 1] + 'F'
+  basic_fwd = basic_fwd + fdb_key[fdb_key.rfind('-') + 2:]
+  #add = for parsing function to treat like fdb
+  basic_fwd = basic_fwd + '='
+  direction = fdb_key[fdb_key.rfind('-')+1]
+  cfg, data_type, _ = get_fds_from_cmd(basic_fwd)
+  cfg['direction'] = direction
+  cfg['layout'] = cfg['out_layout']
+  cfg['data_type'] = data_type
+  cfg['bias'] = 0
+  return cfg
 
 def mysql_to_sqlite_cfg(in_perf_cfg: dict) -> dict:
   """convert values to represent sqlite config table"""

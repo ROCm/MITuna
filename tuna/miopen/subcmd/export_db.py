@@ -41,9 +41,7 @@ from tuna.miopen.utils.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
 from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite
-from tuna.miopen.utils.analyze_parse_db import mysql_to_sqlite_cfg
-from tuna.miopen.utils.parsing import parse_pdb_key
-from tuna.miopen.worker.fin_utils import compose_config_obj
+from tuna.miopen.utils.analyze_parse_db import get_sqlite_cfg_dict
 from tuna.miopen.parse_miopen_args import get_export_db_parser
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
@@ -371,23 +369,6 @@ def create_sqlite_tables(arch, num_cu, filename=None):
   return cnx, local_path
 
 
-def get_cfg_dict(cfg_entry, tensor_entry):
-  """compose config_dict"""
-  cfg_dict = compose_config_obj(cfg_entry)
-
-  if cfg_entry.valid == 1:
-    cfg_dict = mysql_to_sqlite_cfg(cfg_dict)
-
-  ext_dict = tensor_entry.to_dict(ommit_valid=True)
-  ext_dict.pop('id')
-  cfg_dict.update(ext_dict)
-
-  #bias is always 0
-  cfg_dict['bias'] = 0
-
-  return dict(cfg_dict)
-
-
 def insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id):
   """insert perf_db entry into sqlite"""
   perf_db_dict = perf_db_entry.to_dict()
@@ -430,15 +411,7 @@ def populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
   if cfg_entry.id in cfg_map:
     ins_cfg_id = cfg_map[cfg_entry.id]
   else:
-    cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
-
-    #override cfg layout with fdb key layout
-    if perf_db_entry.fdb_key:
-      fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
-      key_layout = vals[fds.index('out_layout')]
-      if cfg_dict['layout'] != key_layout:
-        raise ValueError("Out layout doesn't match fdb_key"\
-                         f" {cfg_dict['layout']} != {key_layout}")
+    cfg_dict = get_sqlite_cfg_dict(perf_db_entry.fdb_key)
 
     #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
     ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
