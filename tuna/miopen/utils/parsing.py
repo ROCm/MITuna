@@ -95,7 +95,7 @@ def parse_2d(key, group_count):  #pylint: disable=too-many-locals
   direction = tmp[len(tmp) - 1]
   precision = tmp[len(tmp) - 2]
 
-  if direction.startswith('F'):
+  if direction == 'F':
     in_channels = tmp[0]
     in_h = tmp[1]
     in_w = tmp[2]
@@ -146,7 +146,7 @@ def parse_3d(key, group_count):  #pylint: disable=too-many-locals
   direction = tmp[len(tmp) - 1]
   precision = tmp[len(tmp) - 2]
 
-  if direction.startswith('F'):
+  if direction == 'F':
     in_channels = tmp[0]
     in_d = tmp[1]
     in_h = tmp[2]
