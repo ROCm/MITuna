@@ -69,6 +69,10 @@ if args.session_id:
   args.arch = dbt.session.arch
   args.num_cu = dbt.session.num_cu
 
+args.src_table = dbt.find_db_table
+if args.golden_v is not None:
+  args.src_table = dbt.golden_table
+
 logger = logging.getLogger("test_logger")
 
 
