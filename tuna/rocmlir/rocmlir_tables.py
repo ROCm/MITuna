@@ -31,7 +31,7 @@ import sys
 import enum
 from typing import List
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
-from sqlalchemy import Text, Enum, Float, DateTime, orm
+from sqlalchemy import Text, Enum, Float, DateTime, orm, Boolean
 from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.sql import func as sqla_func
@@ -237,6 +237,102 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
     return line.split('\t')
 
 
+class GEMMJob(BASE, JobMixin):
+  """Represents gemm job table"""
+  __tablename__ = "rocmlir_gemm_job"
+  __table_args__ = (UniqueConstraint('config', 'session', name="uq_idx"),)
+
+  config = Column(Integer,
+                  ForeignKey("rocmlir_gemm_config.id"),
+                  nullable=False,
+                  index=True)
+
+
+class GEMMConfig(BASE):
+  """Represents GEMM config table"""
+  __tablename__ = "rocmlir_gemm_config"
+
+  data_type = Column(String(length=60), nullable=False, server_default="")
+  out_data_type = Column(String(length=60), nullable=False, server_default="")
+  group_size = Column(Integer, nullable=False, server_default="0")
+  m = Column(Integer, nullable=False, server_default="0")
+  n = Column(Integer, nullable=False, server_default="0")
+  k = Column(Integer, nullable=False, server_default="0")
+  transpose_A = Column(Boolean, nullable=False, server_default="0")
+  transpose_B = Column(Boolean, nullable=False, server_default="0")
+  kernel_repeats = Column(Integer, nullable=False, server_default="0")
+
+  def __repr__(self) -> str:
+    return f"GEMMConfig {self.to_dict()}"
+
+  # This dict maps field names, which are also the long option names, to
+  # the short forms used in the configs.  Necessary to turn a
+  # GEMMConfig back into a string that we can pass to the runner.
+  options = {
+    'transpose_A': '-transA',
+    'transpose_B': '-transB',
+    'group_size': '-groupsize',
+    'm': '-m',
+    'n': '-n',
+    'k': '-k',
+    'data_type': '-t',
+    'out_data_type': '-out_datatype',
+    # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
+    #    'kernel_repeats': '--kernel-repeats',
+    'kernel_repeats': None,
+    'id': None,
+    'valid': None
+  }
+
+  def config_string(self):
+    """Return config as a flag/value string suitable for tuningRunner.py."""
+    string = ""
+    for field, value in self.to_dict().items():
+      flag = self.options[field]
+      if flag:
+        string += f"{flag} {value} "
+    return string
+
+class GEMMResults(BASE):  # pylint: disable=too-many-instance-attributes
+  """Collects the results of GEMM tuning.
+  """
+  __tablename__ = "rocmlir_gemm_results"
+  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
+
+  @orm.reconstructor
+  def __init__(self, **kwargs):
+    if 'logger' in kwargs:
+      self.logger = kwargs['logger']
+    else:
+      self.logger = setup_logger('results')
+
+  @declared_attr
+  def session(self):
+    """session column"""
+    return Column(Integer, ForeignKey("session_rocmlir.id"), nullable=False)
+
+  config = Column(Integer, ForeignKey("rocmlir_gemm_config.id"), nullable=False)
+  config_str = Column(Text, nullable=False)
+
+  perf_config = Column(Text, nullable=False)
+  kernel_tflops = Column(Float, nullable=False)
+
+  def get_query(self, sess, result_obj, session_id):
+    """Construct a Db query for the find object
+    """
+    query = sess.query(result_obj).filter(result_obj.session == session_id,
+                                          result_obj.config == self.config)
+    self.logger.info("result query %s-%s", session_id, self.config)
+    return query
+
+  # +++pf:  rewrite me for tuningRunner.py output!
+  def parse(self, lines):
+    """parse logger output line for result data """
+    line = lines.splitlines()[-1]
+    print(f"line being parsed is '{line}'", file=sys.stderr)
+    return line.split('\t')
+
+
 #pylint: disable=too-few-public-methods
 class RocMLIRDBTables(DBTablesInterface):
   """Represents db tables for rocMLIR lib"""
@@ -266,7 +362,7 @@ class RocMLIRDBTables(DBTablesInterface):
 
 
 def get_tables() -> List[BASE]:
-  """Returns a list of all Example lib DB tables"""
+  """Returns a list of all RocMLIR lib DB tables"""
   tables: List[BASE] = []
   with DbSession() as session:
     engine = session.bind
@@ -282,12 +378,15 @@ def get_tables() -> List[BASE]:
     append_if_not_exists(ConvolutionConfig())
     append_if_not_exists(ConvolutionJob())
     append_if_not_exists(ConvolutionResults())
+    append_if_not_exists(GEMMConfig())
+    append_if_not_exists(GEMMJob())
+    append_if_not_exists(GEMMResults())
 
   return tables
 
 
 def clear_tables():
-  """Get a clean state in the dase."""
+  """Get a clean state in the database."""
   dbt = RocMLIRDBTables(session_id=None)
   with DbSession() as session:
     session.execute(sql_delete(dbt.job_table))
