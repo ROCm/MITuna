@@ -637,11 +637,14 @@ def get_tables() -> List[BASE]:
   return tables
 
 
-def clear_tables():
+def clear_tables(config_type):
   """Get a clean state in the database."""
-  dbt = RocMLIRDBTables(session_id=None)
+  if config_type == "convolution":
+    dbt = RocMLIRDBTablesConv(session_id=None)
+  else:
+    dbt = RocMLIRDBTablesGEMM(session_id=None)
   with DbSession() as session:
-    session.execute(sql_delete(dbt.job_table))
-    session.execute(sql_delete(dbt.session_table))
-    session.execute(sql_delete(dbt.config_table))
     session.execute(sql_delete(dbt.results))
+    session.execute(sql_delete(dbt.job_table))
+    session.execute(sql_delete(dbt.config_table))
+    session.execute(sql_delete(dbt.session_table))

@@ -31,6 +31,8 @@ import os
 from time import sleep
 import random
 import functools
+import logging
+from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random
 
 from sqlalchemy.inspection import inspect
 
@@ -53,6 +55,11 @@ class RocMLIRWorker(WorkerInterface):
     self.result_attr = [column.name for column in inspect(self.dbt.results).c]
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
+
+
+# Can either have one of these, or --device below, but no combinations.
+#     self.envmt.append(f"ROCR_VISIBLE_DEVICES={self.gpu_id}")
+#     self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
 
   def set_db_tables(self):
     """Initialize tables"""
@@ -119,30 +126,39 @@ class RocMLIRWorker(WorkerInterface):
     self.set_job_state('running')
 
     try:
-      retcode, cmd_output = self.run_cmd()
-    except ValueError as verr:
-      self.logger.info(verr)
-      self.set_job_state('errored', result=verr)
-    else:
-      if retcode != 0:
-        quoted_output = cmd_output.replace("'", r"\'")
-        msg = f"Error code {retcode}, output {quoted_output}"
-        self.logger.info(msg)
-        self.set_job_state('errored', result=msg)
-      else:
-        try:
-          with open(self.output_filename(), 'r', encoding='utf8') as results:
-            # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
-            string = results.read().replace(':', r'\:')
-            self.set_job_state('completed', result=string)
-            self.process_result(string)
-          os.remove(self.output_filename())
-        except OSError as exc:
-          # Most often FileNotFoundError.
-          self.logger.warning(
-              'Exception occurred while saving results of job %s:  %s',
-              self.job.id, exc)
-          self.set_job_state('errored', result=repr(exc))
+      # Retry three times in the case of unhandled exceptions, logging them.
+      for attempt in Retrying(stop=stop_after_attempt(3),
+                              reraise=True,
+                              wait=wait_random(min=5, max=30),
+                              before_sleep=before_sleep_log(
+                                  self.logger, logging.DEBUG)):
+        with attempt:
+          try:
+            retcode, cmd_output = self.run_cmd()
+          except ValueError as verr:
+            self.logger.info(verr)
+            self.set_job_state('errored', result=verr)
+          else:
+            if retcode != 0:
+              quoted_output = cmd_output.replace("'", r"\'")
+              msg = f"Error code {retcode}, output {quoted_output}"
+              self.logger.info(msg)
+              self.set_job_state('errored', result=msg)
+            else:
+              with open(self.output_filename(), 'r',
+                        encoding='utf8') as results:
+                # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
+                string = results.read().replace(':', r'\:')
+                self.set_job_state('completed', result=string)
+                self.process_result(string)
+              os.remove(self.output_filename())
+    # pylint: disable=broad-exception-caught
+    # Not sure what to expect beyond OSError.
+    except Exception as exc:
+      self.logger.warning(
+          'Exception occurred while saving results of job %s:  %s', self.job.id,
+          exc)
+      self.set_job_state('errored', result=str(exc).replace("'", r"\'"))
 
     return True
 
