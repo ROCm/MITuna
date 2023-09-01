@@ -248,13 +248,9 @@ class ConvolutionConfig(BASE):
               setattr(self, field, value)
 
 
-class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
-  """Collects the results of convolution tuning."""
+class ResultsMixin():  # pylint: disable=too-many-instance-attributes
+  """Collects the results of tuning."""
 
-  __tablename__ = "rocmlir_conv_results"
-  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
-
-  @orm.reconstructor
   def __init__(self, **kwargs):
     if 'logger' in kwargs:
       self.logger = kwargs['logger']
@@ -266,7 +262,6 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
     """session column"""
     return Column(Integer, ForeignKey("session_rocmlir.id"), nullable=False)
 
-  config = Column(Integer, ForeignKey("rocmlir_conv_config.id"), nullable=False)
   config_str = Column(Text, nullable=False)
 
   perf_config = Column(Text, nullable=False)
@@ -280,12 +275,30 @@ class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
     self.logger.info("result query %s-%s", session_id, self.config)
     return query
 
-  # +++pf:  rewrite me for tuningRunner.py output!
   def parse(self, lines):
     """parse logger output line for result data """
     line = lines.splitlines()[-1]
     print(f"line being parsed is '{line}'", file=sys.stderr)
     return line.split('\t')
+
+  def export_as_tsv(self, filename, session_id, append=False):
+    with open(filename, 'w') as f:
+      print("# arch\ttestVector\tperfConfig", file=f)
+      with DbSession as sess:
+        query = sess.query(self.id).filter(self.valid == 1,
+                                           self.session == session_id)
+        res = query.all()
+        for row in res:
+          print(f"{row.arch}\t{row.config_str}\t{row.perf_config}", file=f)
+
+
+class ConvolutionResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attributes
+  """Collects the results of convolution tuning."""
+
+  __tablename__ = "rocmlir_conv_results"
+  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
+
+  config = Column(Integer, ForeignKey("rocmlir_conv_config.id"), nullable=False, index=True)
 
 
 class GEMMJob(BASE, JobMixin):
@@ -379,44 +392,13 @@ class GEMMConfig(BASE):
           setattr(self, field, value)
 
 
-class GEMMResults(BASE):  # pylint: disable=too-many-instance-attributes
-  """Collects the results of GEMM tuning.
-  """
+class GEMMResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attributes
+  """Collects the results of GEMM tuning."""
+
   __tablename__ = "rocmlir_gemm_results"
   __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
 
-  @orm.reconstructor
-  def __init__(self, **kwargs):
-    if 'logger' in kwargs:
-      self.logger = kwargs['logger']
-    else:
-      self.logger = setup_logger('results')
-
-  @declared_attr
-  def session(self):
-    """session column"""
-    return Column(Integer, ForeignKey("session_rocmlir.id"), nullable=False)
-
-  config = Column(Integer, ForeignKey("rocmlir_gemm_config.id"), nullable=False)
-  config_str = Column(Text, nullable=False)
-
-  perf_config = Column(Text, nullable=False)
-  kernel_tflops = Column(Float, nullable=False)
-
-  def get_query(self, sess, result_obj, session_id):
-    """Construct a Db query for the find object
-    """
-    query = sess.query(result_obj).filter(result_obj.session == session_id,
-                                          result_obj.config == self.config)
-    self.logger.info("result query %s-%s", session_id, self.config)
-    return query
-
-  # +++pf:  rewrite me for tuningRunner.py output!
-  def parse(self, lines):
-    """parse logger output line for result data """
-    line = lines.splitlines()[-1]
-    print(f"line being parsed is '{line}'", file=sys.stderr)
-    return line.split('\t')
+  config = Column(Integer, ForeignKey("rocmlir_gemm_config.id"), nullable=False, index=True)
 
 
 #pylint: disable=too-few-public-methods
