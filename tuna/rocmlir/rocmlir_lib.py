@@ -66,6 +66,11 @@ class RocMLIR(MITunaInterface):
                         default='convolution',
                         choices=['convolution', 'gemm'], # +++pf: eventually an Enum
                         type=str)
+    parser.add_argument('--load_factor',
+                        dest='load_factor',
+                        help='How many workers per GPU',
+                        default=1,
+                        type=float)
 
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
     )
@@ -128,6 +133,17 @@ class RocMLIR(MITunaInterface):
 
       #determine number of processes by compute capacity
       worker_ids: List = machine.get_avail_gpus()
+      lf = self.args.load_factor
+      if lf > 1:
+        # LF>1 means multiple workers per GPU.
+        new_ids = []
+        for n in range(round(lf)):
+          new_ids.extend(worker_ids)
+        worker_ids = new_ids
+      else:
+        # LF<1 means use that fraction of GPUs.
+        worker_ids = worker_ids[:round(len(worker_ids)*lf)]
+
       if len(worker_ids) == 0:
         return None
 
