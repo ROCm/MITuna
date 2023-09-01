@@ -36,7 +36,7 @@ from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, RocMLIRDBTablesGEMM
 from tuna.utils.db_utility import session_retry, gen_insert_query
 
 
@@ -47,15 +47,21 @@ class RocMLIRWorker(WorkerInterface):
   def __init__(self, **kwargs):
     """Constructor"""
     self.dbt = None
+    self.config_type = kwargs['config_type']
     super().__init__(**kwargs)
-    self.set_db_tables()
+#    self.set_db_tables()
     self.result_attr = [column.name for column in inspect(self.dbt.results).c]
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
 
   def set_db_tables(self):
     """Initialize tables"""
-    self.dbt = RocMLIRDBTables(session_id=self.session_id)
+#     print("my set-db-tables")
+#     print(f"config-type is {self.config_type}")
+    if self.config_type == "convolution":
+      self.dbt = RocMLIRDBTablesConv(session_id=self.session_id)
+    else:
+      self.dbt = RocMLIRDBTablesGEMM(session_id=self.session_id)
 
   def update_result_table(self, session, result_str):
     """update results table with individual result entry"""
@@ -150,7 +156,11 @@ class RocMLIRWorker(WorkerInterface):
       if len(config) > 1:
         raise ValueError(f"More than one config matching ID {self.job.config}")
       config_string = config[0].config_string()
-    cmd = env_str + f" python3 ./bin/tuningRunner.py --operation conv \
+    if self.config_type == 'convolution':
+      special_args = "--operation conv"
+    else:
+      special_args = "--operation gemm"
+    cmd = env_str + f" python3 ./bin/tuningRunner.py {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
                      --output={self.output_filename()} --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}'"

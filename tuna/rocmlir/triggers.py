@@ -28,7 +28,7 @@
 
 def get_timestamp_trigger():
   """setting up for job table triggers"""
-  trigger_timestamp = """CREATE trigger timestamp_trigger before UPDATE on rocmlir_conv_job
+  trigger_template = """CREATE trigger {op}_timestamp_trigger before UPDATE on rocmlir_{op}_job
   for each row
   begin
    if NEW.state='running' then set NEW.compile_start=now();
@@ -37,4 +37,4 @@ def get_timestamp_trigger():
    end if;
   end;"""
 
-  return [trigger_timestamp]
+  return [trigger_template.format(op='conv'), trigger_template.format(op='gemm')]

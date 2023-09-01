@@ -60,6 +60,13 @@ class RocMLIR(MITunaInterface):
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
+    parser.add_argument('--config_type',
+                        dest='config_type',
+                        help='Specify configuration type',
+                        default='convolution',
+                        choices=['convolution', 'gemm'], # +++pf: eventually an Enum
+                        type=str)
+
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
     )
     group.add_argument('--add_tables',
@@ -68,12 +75,11 @@ class RocMLIR(MITunaInterface):
                        help='Add RocMLIR library specific tables')
 
     # pylint: disable=duplicate-code
-    group.add_argument(
-        '-e',
-        '--execute',
-        dest='execute',
-        action='store_true',
-        help='Run jobs from the job tables based on arch, num_cu and session_id'
+    group.add_argument('-e',
+                       '--execute',
+                       dest='execute',
+                       action='store_true',
+                       help='Run jobs from the job tables based on arch, num_cu and session_id'
     )
 
     group.add_argument('--init_session',
@@ -139,7 +145,8 @@ class RocMLIR(MITunaInterface):
     # pylint: disable=duplicate-code
     """Generates the library specific schema to the connected SQL server."""
     ret_t: bool = create_tables(get_tables())
-    recreate_triggers(['timestamp_trigger'], get_timestamp_trigger())
+    recreate_triggers(['conv_timestamp_trigger', 'gemm_timestamp_trigger'],
+                      get_timestamp_trigger())
     self.logger.info('DB creation successful: %s', ret_t)
     return True
 
@@ -169,5 +176,9 @@ class RocMLIR(MITunaInterface):
       @param f_vals Dict containing process specific runtime information
     """
     kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
+
+    if self.args.config_type is None:
+      self.args.config_type = "convolution" # +++pf: eventually an Enum
+    kwargs['config_type'] = self.args.config_type
 
     return kwargs

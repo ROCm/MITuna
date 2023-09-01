@@ -35,7 +35,7 @@ from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, RocMLIRDBTablesGEMM
 
 LOGGER = setup_logger('rocmlir_load_jobs')
 
@@ -53,6 +53,12 @@ def parse_args():
                       required=True,
                       help='Label to annotate the jobs.',
                       default='new')
+  parser.add_argument('--config_type',
+                      dest='config_type',
+                      help='Specify configuration type',
+                      default='convolution',
+                      choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
+                      type=str)
 
   args = parser.parse_args()
   if not args.session_id:
@@ -69,6 +75,8 @@ def add_jobs(args, dbt):
                    .filter(dbt.session_table.valid == 1,
                            dbt.session_table.id == args.session_id)
     reasons = query.all()
+    if not reasons:
+      raise ValueError(f"No session matching ID {args.session_id}")
     if len(reasons) > 1:
       raise ValueError(f"More than one session matching ID {args.session_id}")
     reason = reasons[0].reason
@@ -100,13 +108,15 @@ def add_jobs(args, dbt):
 
 def main():
   """ main """
-  # pylint: disable=duplicate-code
+
   args = parse_args()
+  if args.config_type == "convolution":
+    dbt = RocMLIRDBTablesConv(session_id=None)
+  else:
+    dbt = RocMLIRDBTablesGEMM(session_id=None)
+
   connect_db()
-
-  dbt = RocMLIRDBTables(session_id=None)
   cnt = add_jobs(args, dbt)
-
   print(f"New jobs added: {cnt}")
 
 

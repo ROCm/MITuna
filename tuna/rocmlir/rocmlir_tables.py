@@ -29,6 +29,8 @@
 
 import sys
 import enum
+import itertools
+
 from typing import List
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum, Float, DateTime, orm, Boolean
@@ -196,10 +198,59 @@ class ConvolutionConfig(BASE):
     string += "-m conv"
     return string
 
+  def parse_line(self, line):
+      """Parse a command-line-style conv config into a ConvolutionConfig object."""
+
+      print(f"Parsing line {line}")
+
+      # '-t 1' means 'enable timing' which is confused with -t for type.
+      line = line.replace("-t 1", "")
+
+      # Convert the line ("-n 256 -c 1024 -H 14 ...") to dict of flag and value.
+      i = iter(line.split())
+      options = dict(zip(i, i))
+      #  print(f"options = {options}")
+
+      # Mapping of flag to field name.
+      # -F 1 -n 2 -c 1280 -H 32 -W 32 -k 640 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1
+      fields = {
+        '-F': 'direction',
+          '-f': 'fil_layout',
+          '-I': 'in_layout',
+          '-O': 'out_layout',
+          '-n': 'batchsize',
+          '-c': 'in_channels',
+          '-H': 'in_h',
+          '-W': 'in_w',
+          '-k': 'out_channels',
+          '-y': 'fil_h',
+          '-x': 'fil_w',
+          '-p': 'pad_h',
+          '-q': 'pad_w',
+          '-u': 'conv_stride_h',
+          '-v': 'conv_stride_w',
+          '-l': 'dilation_h',
+          '-j': 'dilation_w',
+          '-g': 'group_size',
+          '-m': None,
+          '-t': 'data_type'
+      }
+      # kernel-repeats has no flag, but perfRunner.py uses 5.
+      # ConvConfiguration.fromCommandLine accepts but skips -m and -t.
+      #   -m is operation and -t is (I think) -time from MIOpenDriver.
+      # data_type is inferred from operation -- conv is f32, convfp16 is f16,
+      #   convbfp16 is bf16, convint8 is i8
+
+      self.kernel_repeats = 1
+      for flag, value in options.items():
+          field = fields[flag]
+          if field:
+              setattr(self, field, value)
+
 
 class ConvolutionResults(BASE):  # pylint: disable=too-many-instance-attributes
-  """Collects the results of convolution tuning.
-  """
+  """Collects the results of convolution tuning."""
+
   __tablename__ = "rocmlir_conv_results"
   __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
 
@@ -271,7 +322,7 @@ class GEMMConfig(BASE):
   options = {
     'transpose_A': '-transA',
     'transpose_B': '-transB',
-    'group_size': '-groupsize',
+    'group_size': '-g',
     'm': '-m',
     'n': '-n',
     'k': '-k',
@@ -291,7 +342,42 @@ class GEMMConfig(BASE):
       flag = self.options[field]
       if flag:
         string += f"{flag} {value} "
-    return string
+    return string.strip()
+
+  def parse_line(self, line):
+      """Parse a command-line-style gemm config into a GEMMConfig object."""
+
+      print(f"Parsing line {line}")
+
+      # Convert the line ("-n 256 -c 1024 -H 14 ...") to dict of flag and value.
+      i = iter(line.split())
+      options = dict(zip(i, i))
+      #  print(f"options = {options}")
+
+      # Mapping of flag to field name.
+      # -transA false -transB false -g 64 -m 1024 -n 384 -k 1024
+      fields = {
+          '-transA': 'transpose_A',
+          '-transB': 'transpose_B',
+          '-g': 'group_size',
+          '-m': 'm',
+          '-n': 'n',
+          '-k': 'k',
+          '-t': 'data_type',
+          '-out_datatype': 'out_data_type'
+      }
+      # kernel-repeats has no flag, but perfRunner.py uses 5.
+
+      self.kernel_repeats = 1
+      for flag, value in options.items():
+        if value == "true":
+          value = 1
+        if value == "false":
+          value = 0
+        field = fields[flag]
+        if field:
+          setattr(self, field, value)
+
 
 class GEMMResults(BASE):  # pylint: disable=too-many-instance-attributes
   """Collects the results of GEMM tuning.
@@ -355,10 +441,147 @@ class RocMLIRDBTables(DBTablesInterface):
   def set_tables(self, sess_class=SessionRocMLIR):
     """Set appropriate tables based on requirements"""
     super().set_tables(sess_class)
+
+class RocMLIRDBTablesConv(RocMLIRDBTables):
+  """Represents db tables for rocMLIR lib when op is conv"""
+
+  def set_tables(self, sess_class=SessionRocMLIR):
+    """Set appropriate tables based on requirements"""
+    super().set_tables(sess_class)
     # +++pf:  branch on self.config_type when we have GEMM, too.
     self.job_table = ConvolutionJob
     self.config_table = ConvolutionConfig
     self.results = ConvolutionResults
+
+  ## Adapted from perfRunner.getConvConfigurations.
+
+  def get_configurations(self, filename):
+      """Read conv-configs from filename and expand into all combinations of
+         direction, type, and layout.
+      """
+
+      #DIRECTIONS = ['-F 1', '-F 2', '-F 4']
+      # temporarily disable backward-data until rocmlir-tuning-driver can handle multi-kernel code
+      DIRECTIONS = ['-F 1', '-F 4']
+      DATA_TYPES = ['-t f32', '-t f16', '-t i8']
+      LAYOUTS = ['NHWC', 'NCHW']
+
+      configs = []
+      with open(filename, 'r', encoding='utf8') as config_file:
+          lines = config_file.readlines()
+
+          # All combinations of conv direction, type and layouts
+          for direction, datatype, layout, line in \
+                  itertools.product(DIRECTIONS, DATA_TYPES, LAYOUTS, lines):
+              line = line.strip()
+
+              # Skip empty lines
+              if len(line) == 0 or line[0] == '#':
+                  continue
+              # Skip int8 non-fwd convolutions
+              if datatype == '-t i8' and direction != '-F 1':
+                  continue
+
+              # Skip datatype if already in
+              datatype = f"{datatype} "
+              # check for the presense of a positional arg
+              if line[0][0] != "-":
+                  datatype = ""
+
+              # Skip direction if already in
+              direction = f"{direction} "
+              if "-F" in line:
+                  direction = ""
+
+              # Skip filter layout if already in
+              filter_layout = f"-f {layout} "
+              if "-f" in line:
+                  filter_layout = ""
+
+              # Skip input layout if already in
+              input_layout = f"-I {layout} "
+              if "-I" in line:
+                  input_layout = ""
+
+              # Skip output layout if already in
+              output_layout = f"-O {layout} "
+              if "-O" in line:
+                  output_layout = ""
+
+              one_config = f"{datatype}{direction}{filter_layout}{input_layout}{output_layout}{line}"
+              if one_config not in configs:
+                  configs.append(one_config)
+
+      return configs
+
+
+class RocMLIRDBTablesGEMM(RocMLIRDBTables):
+  """Represents db tables for rocMLIR lib when op is conv"""
+
+  def set_tables(self, sess_class=SessionRocMLIR):
+    """Set appropriate tables based on requirements"""
+    super().set_tables(sess_class)
+    # +++pf:  branch on self.config_type when we have GEMM, too.
+    self.job_table = GEMMJob
+    self.config_table = GEMMConfig
+    self.results = GEMMResults
+
+  ## Adapted from perfRunner.getGemmConfigurations.
+
+  def get_configurations(self, filename):
+      """Read gemm-configs from filename and expand into all combinations of
+         type and transpose.
+      """
+
+      DATA_TYPES = ['f32', 'f16', 'i8']
+
+      configs = []
+      with open(filename, 'r', encoding='utf8') as config_file:
+          lines = config_file.readlines()
+
+          # All combinations of types and transposition (A and B)
+          for datatype, transA, transB, line in \
+                  itertools.product(DATA_TYPES, ['false', 'true'], ['false', 'true'], lines):
+              line = line.strip()
+
+              # Skip empty lines
+              if len(line) == 0 or line[0] == '#':
+                  continue
+
+              # We need trailing spaces here to account for the concat below
+              # Skip type if already in
+              dataTypeString = ""
+              if "-t " not in line:
+                  dataTypeString = f"-t {datatype} "
+
+              # Skip transA if already in
+              transAString = ""
+              if "-transA " not in line:
+                  transAString = f"-transA {transA} "
+
+              # Skip transB if already in
+              transBString = ""
+              if "-transB " not in line:
+                  transBString = f"-transB {transB} "
+
+              # Skip out_datatype if already in
+              outDataTypeString = ""
+              if "-out_datatype" not in line:
+                   outDataTypeString = f"-out_datatype {datatype} "
+
+              # Strip to avoid spurious spaces
+              oneConfig = f"{dataTypeString}{outDataTypeString}{transAString}{transBString}{line}".strip()
+              if oneConfig not in configs:
+                  configs.append(oneConfig)
+
+              # Special case to get both i8_i8 and i8_i32, w/o --data-type or output-type-map.
+              if "-out_datatype" not in line and datatype == 'i8':
+                outDataTypeString = f"-out_datatype i32 "
+                oneConfig = f"{dataTypeString}{outDataTypeString}{transAString}{transBString}{line}".strip()
+                if oneConfig not in configs:
+                  configs.append(oneConfig)
+
+      return configs
 
 
 def get_tables() -> List[BASE]:
