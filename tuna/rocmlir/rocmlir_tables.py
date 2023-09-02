@@ -179,7 +179,6 @@ class ConvolutionConfig(BASE):
       'dilation_h': '-l',
       'dilation_w': '-j',
       'group_size': '-g',
-      'data_type': '-t',
       # getopt in ConvConfiguration.fromCommandLine only does single-char options.
       # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
       #    'kernel_repeats': '--kernel-repeats',
@@ -190,7 +189,15 @@ class ConvolutionConfig(BASE):
 
   def config_string(self):
     """Return config as a flag/value string suitable for tuningRunner.py."""
-    string = "conv "
+    string = "conv"
+    if self.data_type == 'f16':
+      string += 'fp16'
+    elif self.data_type == 'i8':
+      string += 'int8'
+    elif self.data_type == 'bf16':
+      string += 'bfp16'
+    string += " "
+
 #     for field, value in self.to_dict().items():
 #       flag = self.options[field]
 #       if flag:
@@ -200,7 +207,7 @@ class ConvolutionConfig(BASE):
       value = getattr(self, field, None)
       if value is not None and flag is not None:
         string += f"{flag} {value} "
-    string += "-m conv"
+    string += "-m conv -t 1"
     return string
 
   def parse_line(self, line):
@@ -211,8 +218,9 @@ class ConvolutionConfig(BASE):
       # '-t 1' means 'enable timing' which is confused with -t for type.
       line = line.replace("-t 1", "")
 
-      # Convert the line ("-n 256 -c 1024 -H 14 ...") to dict of flag and value.
+      # Convert the line ("conv -n 256 -c 1024 -H 14 ...") to dict of flag and value.
       i = iter(line.split())
+      op = next(i)
       options = dict(zip(i, i))
       #  print(f"options = {options}")
 
@@ -220,25 +228,24 @@ class ConvolutionConfig(BASE):
       # -F 1 -n 2 -c 1280 -H 32 -W 32 -k 640 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1
       fields = {
         '-F': 'direction',
-          '-f': 'fil_layout',
-          '-I': 'in_layout',
-          '-O': 'out_layout',
-          '-n': 'batchsize',
-          '-c': 'in_channels',
-          '-H': 'in_h',
-          '-W': 'in_w',
-          '-k': 'out_channels',
-          '-y': 'fil_h',
-          '-x': 'fil_w',
-          '-p': 'pad_h',
-          '-q': 'pad_w',
-          '-u': 'conv_stride_h',
-          '-v': 'conv_stride_w',
-          '-l': 'dilation_h',
-          '-j': 'dilation_w',
-          '-g': 'group_size',
-          '-m': None,
-          '-t': 'data_type'
+        '-f': 'fil_layout',
+        '-I': 'in_layout',
+        '-O': 'out_layout',
+        '-n': 'batchsize',
+        '-c': 'in_channels',
+        '-H': 'in_h',
+        '-W': 'in_w',
+        '-k': 'out_channels',
+        '-y': 'fil_h',
+        '-x': 'fil_w',
+        '-p': 'pad_h',
+        '-q': 'pad_w',
+        '-u': 'conv_stride_h',
+        '-v': 'conv_stride_w',
+        '-l': 'dilation_h',
+        '-j': 'dilation_w',
+        '-g': 'group_size',
+        '-m': None
       }
       # kernel-repeats has no flag, but perfRunner.py uses 5.
       # ConvConfiguration.fromCommandLine accepts but skips -m and -t.
@@ -246,6 +253,13 @@ class ConvolutionConfig(BASE):
       # data_type is inferred from operation -- conv is f32, convfp16 is f16,
       #   convbfp16 is bf16, convint8 is i8
 
+      self.data_type = 'f32'
+      if op == 'convfp16':
+        self.data_type = 'f16'
+      elif op == 'convint8':
+        self.data_type = 'i8'
+      elif op == 'convbfp16':
+        self.data_type = 'bf16'
       self.kernel_repeats = 1
       for flag, value in options.items():
           field = fields[flag]
@@ -459,7 +473,7 @@ class RocMLIRDBTablesConv(RocMLIRDBTables):
       #DIRECTIONS = ['-F 1', '-F 2', '-F 4']
       # temporarily disable backward-data until rocmlir-tuning-driver can handle multi-kernel code
       DIRECTIONS = ['-F 1', '-F 4']
-      DATA_TYPES = ['-t f32', '-t f16', '-t i8']
+      DATA_TYPES = ['conv', 'convfp16', 'convint8']
       LAYOUTS = ['NHWC', 'NCHW']
 
       configs = []
@@ -475,7 +489,7 @@ class RocMLIRDBTablesConv(RocMLIRDBTables):
               if len(line) == 0 or line[0] == '#':
                   continue
               # Skip int8 non-fwd convolutions
-              if datatype == '-t i8' and direction != '-F 1':
+              if datatype == 'convint8' and direction != '-F 1':
                   continue
 
               # Skip datatype if already in
