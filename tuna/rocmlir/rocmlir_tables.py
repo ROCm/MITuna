@@ -190,7 +190,7 @@ class ConvolutionConfig(BASE):
 
   def config_string(self):
     """Return config as a flag/value string suitable for tuningRunner.py."""
-    string = "conv "  # +++pf:  of course generalise for gemm
+    string = "conv "
 #     for field, value in self.to_dict().items():
 #       flag = self.options[field]
 #       if flag:
@@ -198,7 +198,7 @@ class ConvolutionConfig(BASE):
     # In options order for canonicalisation, kind of.
     for field, flag in self.options.items():
       value = getattr(self, field, None)
-      if value:
+      if value is not None and flag is not None:
         string += f"{flag} {value} "
     string += "-m conv"
     return string
@@ -342,14 +342,14 @@ class GEMMConfig(BASE):
   # the short forms used in the configs.  Necessary to turn a
   # GEMMConfig back into a string that we can pass to the runner.
   options = {
+    'data_type': '-t',
+    'out_data_type': '-out_datatype',
     'transpose_A': '-transA',
     'transpose_B': '-transB',
     'group_size': '-g',
     'm': '-m',
     'n': '-n',
     'k': '-k',
-    'data_type': '-t',
-    'out_data_type': '-out_datatype',
     # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
     #    'kernel_repeats': '--kernel-repeats',
     'kernel_repeats': None,
@@ -367,7 +367,7 @@ class GEMMConfig(BASE):
     # In options order for canonicalisation, kind of.
     for field, flag in self.options.items():
       value = getattr(self, field, None)
-      if value:
+      if value is not None and flag is not None:
         string += f"{flag} {value} "
     return string.strip()
 
