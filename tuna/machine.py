@@ -251,7 +251,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
             sub = stack.pop()
 
         if ':' in decoded_line:
-          cols = decoded_line.split(':')
+          cols = decoded_line.split(':', 1)
           field = cols[0].strip()
           val = cols[1].strip()
           if val == '':
@@ -293,9 +293,15 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     for i in alist:
       agent = agents[i]
       if agent['Device Type'] == 'GPU':
+        arch = agent['Name']
+        try:
+          arch = agent['ISA Info']['ISA 1']['Name']
+          arch = arch.replace('amdgcn-amd-amdhsa--', '')
+        except KeyError:
+          pass
         details = {
             'rinfo': agent,
-            'arch': agent['Name'],
+            'arch': arch,
             'num_cu': int(agent['Compute Unit'])
         }
         self.gpus.append(details)

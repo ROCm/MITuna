@@ -41,7 +41,7 @@ LOGGER: logging.Logger = setup_logger('session')
 class SessionMixin():
   """Session Mixin to provide interface for the session table"""
 
-  arch: str = Column(String(length=20), nullable=False, server_default="")
+  arch: str = Column(String(length=30), nullable=False, server_default="")
   num_cu: int = Column(Integer, nullable=False)
   rocm_v: str = Column(String(length=64), nullable=False)
   reason: str = Column(String(length=60), nullable=False)
