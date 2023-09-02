@@ -33,7 +33,7 @@ import itertools
 
 from typing import List
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
-from sqlalchemy import Text, Enum, Float, DateTime, orm, Boolean
+from sqlalchemy import Text, Enum, Float, DateTime, Boolean
 from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.sql import func as sqla_func
@@ -191,9 +191,14 @@ class ConvolutionConfig(BASE):
   def config_string(self):
     """Return config as a flag/value string suitable for tuningRunner.py."""
     string = "conv "  # +++pf:  of course generalise for gemm
-    for field, value in self.to_dict().items():
-      flag = self.options[field]
-      if flag:
+#     for field, value in self.to_dict().items():
+#       flag = self.options[field]
+#       if flag:
+#         string += f"{flag} {value} "
+    # In options order for canonicalisation, kind of.
+    for field, flag in self.options.items():
+      value = getattr(self, field, None)
+      if value:
         string += f"{flag} {value} "
     string += "-m conv"
     return string
@@ -281,15 +286,19 @@ class ResultsMixin():  # pylint: disable=too-many-instance-attributes
     print(f"line being parsed is '{line}'", file=sys.stderr)
     return line.split('\t')
 
-  def export_as_tsv(self, filename, session_id, append=False):
-    with open(filename, 'w') as f:
+  def export_as_tsv(self, filename, dbt, append=False):
+    arch = dbt.session.arch
+    session_id = dbt.session_id
+
+    with open(filename, 'a' if append else 'w') as f:
       print("# arch\ttestVector\tperfConfig", file=f)
-      with DbSession as sess:
-        query = sess.query(self.id).filter(self.valid == 1,
-                                           self.session == session_id)
+      with DbSession() as sess:
+        tbl = dbt.results
+        query = sess.query(tbl).filter(tbl.session == session_id, tbl.valid == 1)
         res = query.all()
         for row in res:
-          print(f"{row.arch}\t{row.config_str}\t{row.perf_config}", file=f)
+          print(f"{arch}\t{row.config_str}\t{row.perf_config}", file=f)
+        return len(res)
 
 
 class ConvolutionResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attributes
@@ -351,9 +360,14 @@ class GEMMConfig(BASE):
   def config_string(self):
     """Return config as a flag/value string suitable for tuningRunner.py."""
     string = ""
-    for field, value in self.to_dict().items():
-      flag = self.options[field]
-      if flag:
+#     for field, value in self.to_dict().items():
+#       flag = self.options[field]
+#       if flag:
+#         string += f"{flag} {value} "
+    # In options order for canonicalisation, kind of.
+    for field, flag in self.options.items():
+      value = getattr(self, field, None)
+      if value:
         string += f"{flag} {value} "
     return string.strip()
 
@@ -558,7 +572,7 @@ class RocMLIRDBTablesGEMM(RocMLIRDBTables):
 
               # Special case to get both i8_i8 and i8_i32, w/o --data-type or output-type-map.
               if "-out_datatype" not in line and datatype == 'i8':
-                outDataTypeString = f"-out_datatype i32 "
+                outDataTypeString = "-out_datatype i32 "
                 oneConfig = f"{dataTypeString}{outDataTypeString}{transAString}{transBString}{line}".strip()
                 if oneConfig not in configs:
                   configs.append(oneConfig)

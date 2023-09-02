@@ -40,12 +40,6 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
                 logger: logging.Logger):
     """import configs to mysql from file with driver invocations"""
     connect_db()
-
-    # +++pf:  this will matter for gemm
-    #
-    #        datatypes, outputTypeMap = parseDataTypes(parsed_args.data_type)
-    #        configs = getGemmConfigurations(paths.configuration_file_path, datatypes, outputTypeMap)
-
     configs = dbt.get_configurations(os.path.expanduser(args.file_name))
     for line in configs:
         try:
