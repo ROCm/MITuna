@@ -28,15 +28,16 @@
 Script for adding jobs to the MySQL database
 """
 
+# pylint: disable=duplicate-code
 from sqlalchemy.exc import IntegrityError
 
 from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.example.tables import ExampleDBTables
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 
-LOGGER = setup_logger('example_load_jobs')
+LOGGER = setup_logger('rocmlir_load_jobs')
 
 
 def parse_args():
@@ -64,29 +65,46 @@ def add_jobs(args, dbt):
   """ Add jobs based on args query specified"""
   counts = 0
   with DbSession() as session:
-    try:
-      job = dbt.job_table()
-      job.state = 'new'
-      job.valid = 1
-      job.reason = args.label
-      job.session = args.session_id
-      job.config = args.config
-      session.add(job)
-      session.commit()
-      counts += 1
-    except IntegrityError as err:
-      session.rollback()
-      LOGGER.warning('Integrity Error while adding new job: %s', err)
+    query = session.query(dbt.session_table.reason) \
+                   .filter(dbt.session_table.valid == 1,
+                           dbt.session_table.id == args.session_id)
+    reasons = query.all()
+    if len(reasons) > 1:
+      raise ValueError(f"More than one session matching ID {args.session_id}")
+    reason = reasons[0].reason
 
-  return counts
+    query = session.query(dbt.config_table.id)\
+                   .filter(dbt.config_table.valid == 1)
+    res = query.all()
+
+    if not res:
+      LOGGER.error('No applicable configs found for args %s', args.__dict__)
+
+    # pylint: disable=duplicate-code
+    for config in res:
+      try:
+        job = dbt.job_table(state='new',
+                            valid=1,
+                            reason=reason,
+                            session=args.session_id,
+                            config=config.id)
+        session.add(job)
+        session.commit()
+        counts += 1
+      except IntegrityError as err:
+        session.rollback()
+        LOGGER.warning('Integrity Error while adding new job: %s', err)
+
+    return counts
 
 
 def main():
   """ main """
+  # pylint: disable=duplicate-code
   args = parse_args()
   connect_db()
 
-  dbt = ExampleDBTables(session_id=None)
+  dbt = RocMLIRDBTables(session_id=None)
   cnt = add_jobs(args, dbt)
 
   print(f"New jobs added: {cnt}")

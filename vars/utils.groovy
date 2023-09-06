@@ -46,7 +46,7 @@ def buildSchema(){
 
 def cleanup() {
     def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
-    sh "${cmd}"        
+    sh "${cmd}"
 }
 
 def getMachine() {
@@ -179,7 +179,7 @@ def finFindCompile(){
         if (num_compiled_jobs != num_jobs){
             error("Unable to compile find jobs using Fin")
         }
-        
+
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def num_cfg_nhwc = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg_nhwc}"
@@ -459,9 +459,9 @@ def pytestSuite1() {
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
-        sshagent (credentials: ['bastion-ssh-key']) {   
+        sshagent (credentials: ['bastion-ssh-key']) {
            sh "coverage erase"
-           sh "python3 -m coverage run -a -m pytest tests/test_export_db.py -s"            
+           sh "python3 -m coverage run -a -m pytest tests/test_export_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_abort_file.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_analyze_parse_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_connection.py -s"
@@ -479,6 +479,10 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_example.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_yaml_parser.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_load_job.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_add_session_rocmlir.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_importconfigs_rocmlir.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_load_job_rocmlir.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_rocmlir.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
@@ -504,7 +508,7 @@ def pytestSuite2() {
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
-        sshagent (credentials: ['bastion-ssh-key']) {                 
+        sshagent (credentials: ['bastion-ssh-key']) {
            // test fin builder and test fin builder conv in sequence
            sh "python3 -m coverage run -a -m pytest tests/test_worker.py -s"
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
@@ -525,7 +529,7 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        sshagent (credentials: ['bastion-ssh-key']) {                 
+        sshagent (credentials: ['bastion-ssh-key']) {
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
         }
@@ -565,7 +569,7 @@ def runLint() {
           checkout scm
           def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
           tuna_docker.inside("") {
-            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/worker/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
@@ -615,6 +619,11 @@ def runLint() {
             sh "mypy tuna/dbBase/base_class.py --ignore-missing-imports"
             sh "mypy tuna/example/session.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/example/example_worker.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/import_configs.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/load_job.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/rocmlir_lib.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/rocmlir_tables.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/rocmlir/rocmlir_worker.py --ignore-missing-imports --follow-imports=skip"
           }
     }
 }
@@ -638,7 +647,7 @@ def getDockerName(backend)
 }
 
 def LoadJobs()
-{ 
+{
   def script_args = ''
   def new_label = ''
   if(params.job_label == '')
@@ -684,7 +693,7 @@ def LoadJobs()
   tuna_docker.inside("${docker_run_args}") {
       env.PYTHONPATH=env.WORKSPACE
       env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-      env.TUNA_LOGLEVEL="${tuna_loglevel}" 
+      env.TUNA_LOGLEVEL="${tuna_loglevel}"
 
       echo "./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
       sh "python3 ./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
@@ -805,7 +814,7 @@ def compile()
       env.TUNA_LOGLEVEL="${tuna_loglevel}"
       sh "pwd"
   }
-  // push the image 
+  // push the image
   tuna_docker.push()
   env_list = params.env.split(' ')
   for(item in env_list)
@@ -909,4 +918,3 @@ def doxygen() {
           }
     }
 }
-

@@ -46,7 +46,14 @@ from tuna.miopen.parse_miopen_args import get_export_db_parser
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
 
-_, ID_SOLVER_MAP = get_id_solvers()
+ID_SOLVER_MAP = None
+
+
+def require_id_solvers():
+  """Initialise ID_SOLVER_MAP from database"""
+  global ID_SOLVER_MAP  # pylint: disable=global-statement
+  if not ID_SOLVER_MAP:
+    _, ID_SOLVER_MAP = get_id_solvers()
 
 
 def arg_export_db(args: argparse.Namespace, logger: logging.Logger):
@@ -185,6 +192,7 @@ def build_miopen_fdb(query, logger: logging.Logger) -> OrderedDict:
       else:
         lst.append(fdb_entry)
 
+  require_id_solvers()
   for _, entries in find_db.items():
     entries.sort(key=lambda x: (float(x.kernel_time), ID_SOLVER_MAP[x.solver]))
     while len(entries) > 4:
@@ -199,6 +207,7 @@ def write_fdb(arch, num_cu, ocl, find_db, filename=None):
   """
   file_name = get_filename(arch, num_cu, filename, ocl, DB_Type.FIND_DB)
 
+  require_id_solvers()
   with open(file_name, 'w') as out:  # pylint: disable=unspecified-encoding
     for key, solvers in sorted(find_db.items(), key=lambda kv: kv[0]):
       solvers.sort(
@@ -389,6 +398,7 @@ def insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id):
   perf_db_dict = {
       k: v for k, v in perf_db_dict.items() if k in SQLITE_PERF_DB_COLS
   }
+  require_id_solvers()
   perf_db_dict['solver'] = ID_SOLVER_MAP[perf_db_dict['solver']]
 
   insert_solver_sqlite(cnx, perf_db_dict)

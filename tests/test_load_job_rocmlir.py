@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,25 +23,36 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Factory method to get library"""
 
-from typing import Union, Dict, Any
-from tuna.libraries import Library
-from tuna.miopen.miopen_lib import MIOpen
-from tuna.example.example_lib import Example
-from tuna.rocmlir.rocmlir_lib import RocMLIR
+import os
+import sys
+import argparse
+import logging
+import random
+
+sys.path.append("../tuna")
+sys.path.append("tuna")
+
+this_path = os.path.dirname(__file__)
+
+from tuna.sql import DbCursor
+from tests.test_importconfigs_rocmlir import test_importconfigs_rocmlir
+from tuna.rocmlir.load_job import add_jobs
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, clear_tables
 
 
-def get_library(args: Dict[str, Any]) -> Union[Example, MIOpen, RocMLIR]:
-  """Factory method to get lib based on args"""
-  library: Union[Example, MIOpen, RocMLIR]
-  if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
-    library = MIOpen()
-  elif args['lib'].value == Library.EXAMPLE.value:
-    library = Example()
-  elif args['lib'].value == Library.ROCMLIR.value:
-    library = RocMLIR()
-  else:
-    raise ValueError("Not implemented")
+def test_cfg_compose():
+  """check the config query function for args tags and cmd intake"""
+  clear_tables()
+  test_importconfigs_rocmlir()  # to get the configs in place
+  # +++pf: init a session, too.
+  count_configs = "SELECT count(*) FROM rocmlir_conv_config;"
+  with DbCursor() as cur:
+    cur.execute(count_configs)
+    res = cur.fetchall()
+    config_count = res[0][0]
 
-  return library
+  dbt = RocMLIRDBTables(session=None)
+  args = argparse.Namespace(session_id=1)
+  job_count = add_jobs(args, dbt)
+  assert job_count == config_count
