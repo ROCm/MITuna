@@ -39,12 +39,9 @@ from tuna.miopen.db.miopen_tables import GoldenMixin
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import get_id_solvers, DB_Type
-from tuna.utils.utility import arch2targetid
 from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_sqlite
-from tuna.miopen.utils.analyze_parse_db import mysql_to_sqlite_cfg
-from tuna.miopen.utils.parsing import parse_pdb_key
-from tuna.miopen.worker.fin_utils import compose_config_obj
+from tuna.miopen.utils.analyze_parse_db import get_sqlite_cfg_dict
 from tuna.miopen.parse_miopen_args import get_export_db_parser
 
 DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
@@ -101,27 +98,23 @@ def get_filename(arch: str,
 def get_base_query(dbt: MIOpenDBTables, args: argparse.Namespace,
                    logger: logging.Logger):
   """ general query for fdb/pdb results """
-  src_table = dbt.find_db_table
-  if args.golden_v is not None:
-    src_table = dbt.golden_table
-
   with DbSession() as session:
-    query = session.query(src_table, dbt.config_table)
+    query = session.query(args.src_table, dbt.config_table)
     if args.golden_v is not None:
-      query = query.filter(src_table.golden_miopen_v == args.golden_v)\
-              .filter(src_table.arch == args.arch)
+      query = query.filter(args.src_table.golden_miopen_v == args.golden_v)\
+              .filter(args.src_table.arch == args.arch)
       if args.num_cu:
-        query = query.filter(src_table.num_cu == args.num_cu)
+        query = query.filter(args.src_table.num_cu == args.num_cu)
       logger.info("golden_miopen_v: %s, arch: %s, num_cu: %s", args.golden_v,
                   args.arch, args.num_cu)
     else:
-      query = query.filter(src_table.session == dbt.session.id)
+      query = query.filter(args.src_table.session == dbt.session.id)
       logger.info("rocm_v : %s", dbt.session.rocm_v)
       logger.info("miopen_v : %s", dbt.session.miopen_v)
 
-    query = query.filter(src_table.valid == 1)\
-        .filter(src_table.opencl == args.opencl)\
-        .filter(src_table.config == dbt.config_table.id)
+    query = query.filter(args.src_table.valid == 1)\
+        .filter(args.src_table.opencl == args.opencl)\
+        .filter(args.src_table.config == dbt.config_table.id)
 
     if args.config_tag:
       logger.info("config_tag : %s", args.config_tag)
@@ -135,19 +128,17 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
                   logger: logging.Logger):
   """ Helper function to create find db query
   """
-  src_table = dbt.find_db_table
-  if args.golden_v is not None:
-    src_table = dbt.golden_table
-
   query = get_base_query(dbt, args, logger)
-  query = query.filter(src_table.kernel_time != -1)\
-      .filter(src_table.workspace_sz != -1)
+  query = query.filter(args.src_table.kernel_time != -1)\
+      .filter(args.src_table.workspace_sz != -1)
 
-  if src_table == dbt.golden_table:
-    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc(),
-                           src_table.num_cu.asc())
+  if args.src_table == dbt.golden_table:
+    query = query.order_by(args.src_table.fdb_key,
+                           args.src_table.update_ts.desc(),
+                           args.src_table.num_cu.asc())
   else:
-    query = query.order_by(src_table.fdb_key, src_table.update_ts.desc())
+    query = query.order_by(args.src_table.fdb_key,
+                           args.src_table.update_ts.desc())
 
   return query
 
@@ -155,13 +146,9 @@ def get_fdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
 def get_pdb_query(dbt: MIOpenDBTables, args: argparse.Namespace,
                   logger: logging.Logger):
   """Compose query to get perf_db rows based on filters from args"""
-  src_table = dbt.find_db_table
-  if args.golden_v is not None:
-    src_table = dbt.golden_table
-
   query = get_fdb_query(dbt, args, logger)
-  query = query.filter(src_table.params != '')\
-      .filter(src_table.solver == dbt.solver_table.id)\
+  query = query.filter(args.src_table.params != '')\
+      .filter(args.src_table.solver == dbt.solver_table.id)\
       .filter(dbt.solver_table.tunable == 1)
 
   return query
@@ -188,8 +175,8 @@ def add_entry_to_solvers(fdb_entry: Union[GoldenMixin, FindDBMixin],
   return True
 
 
-def build_miopen_fdb(query, logger):
-  """return dict with key: fdb_key + alg_lib, val: solver list"""
+def build_miopen_fdb(query, logger: logging.Logger) -> OrderedDict:
+  """return dict with key: fdb_key, val: list of fdb entries"""
   find_db: OrderedDict = OrderedDict()
   solvers: Dict[str, Dict[str, Any]] = {}
   db_entries = query.all()
@@ -296,7 +283,6 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
       "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
 
   ins_list = []
-  arch_ext = arch2targetid(arch)
   for kern in kern_db:
     name = kern.kernel_name
     args = kern.kernel_args
@@ -305,7 +291,7 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
       name += ".o"
     if not "-mcpu=" in args:
       if not name.endswith('.mlir.o'):
-        args += f" -mcpu={arch_ext}"
+        args += f" -mcpu={arch}"
 
     ins_key = (name, args)
     if ins_key not in ins_list:
@@ -324,13 +310,43 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
   return file_name
 
 
-def export_kdb(dbt: MIOpenDBTables, args: argparse.Namespace,
-               logger: logging.Logger):
+def build_miopen_fdb_skews(args: argparse.Namespace, query,
+                           logger: logging.Logger) -> OrderedDict:
+  """return dict with key: fdb_key + num_cu, val: list of fdb entries"""
+  miopen_fdb: OrderedDict = OrderedDict()
+  with DbSession() as session:
+    db_entries = query.all()
+    fdb_ids = []
+    for fdb_entry, _ in db_entries:
+      fdb_ids.append(fdb_entry.id)
+
+    skews = [int(x[0]) for x in session.query(args.src_table.num_cu).distinct()\
+              .filter(args.src_table.id.in_(fdb_ids)).all()]
+    logger.info("skews %s", skews)
+
+  for num_cu in skews:
+    cu_query = query.filter(args.src_table.num_cu == num_cu)
+    miopen_fdb_skew = build_miopen_fdb(cu_query, logger)
+    for key, value in miopen_fdb_skew.items():
+      miopen_fdb[f"{key}_cu{num_cu}"] = value
+
+  return miopen_fdb
+
+
+def export_kdb(dbt: MIOpenDBTables,
+               args: argparse.Namespace,
+               logger: logging.Logger,
+               skew_fdbs=True):
   """
   Function to export the kernel cache
   """
   query = get_fdb_query(dbt, args, logger)
-  miopen_fdb = build_miopen_fdb(query, logger)
+
+  miopen_fdb: OrderedDict = OrderedDict()
+  if skew_fdbs and not args.num_cu:
+    miopen_fdb = build_miopen_fdb_skews(args, query, logger)
+  else:
+    miopen_fdb = build_miopen_fdb(query, logger)
 
   logger.info("Building kdb.")
   kern_db = build_miopen_kdb(dbt, miopen_fdb, logger)
@@ -372,23 +388,6 @@ def create_sqlite_tables(arch, num_cu, filename=None):
   cur.close()
   cnx.commit()
   return cnx, local_path
-
-
-def get_cfg_dict(cfg_entry, tensor_entry):
-  """compose config_dict"""
-  cfg_dict = compose_config_obj(cfg_entry)
-
-  if cfg_entry.valid == 1:
-    cfg_dict = mysql_to_sqlite_cfg(cfg_dict)
-
-  ext_dict = tensor_entry.to_dict(ommit_valid=True)
-  ext_dict.pop('id')
-  cfg_dict.update(ext_dict)
-
-  #bias is always 0
-  cfg_dict['bias'] = 0
-
-  return dict(cfg_dict)
 
 
 def insert_perf_db_sqlite(cnx, perf_db_entry, ins_cfg_id):
@@ -434,15 +433,7 @@ def populate_sqlite(cfg_map, num_perf, cnx, perf_db_entry, cfg_entry,
   if cfg_entry.id in cfg_map:
     ins_cfg_id = cfg_map[cfg_entry.id]
   else:
-    cfg_dict = get_cfg_dict(cfg_entry, cfg_entry.input_t)
-
-    #override cfg layout with fdb key layout
-    if perf_db_entry.fdb_key:
-      fds, vals, _, _ = parse_pdb_key(perf_db_entry.fdb_key)
-      key_layout = vals[fds.index('out_layout')]
-      if cfg_dict['layout'] != key_layout:
-        raise ValueError("Out layout doesn't match fdb_key"\
-                         f" {cfg_dict['layout']} != {key_layout}")
+    cfg_dict = get_sqlite_cfg_dict(perf_db_entry.fdb_key)
 
     #filters cfg_dict by SQLITE_CONFIG_COLS, inserts cfg if missing
     ins_cfg_id = get_config_sqlite(cnx, cfg_dict)
@@ -468,6 +459,10 @@ def run_export_db(args: argparse.Namespace, logger: logging.Logger):
       args.num_cu = dbt.session.num_cu
     except ValueError as terr:
       logger.error(terr)
+
+  args.src_table = dbt.find_db_table
+  if args.golden_v is not None:
+    args.src_table = dbt.golden_table
 
   if args.find_db:
     result_file = export_fdb(dbt, args, logger)

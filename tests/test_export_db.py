@@ -43,7 +43,8 @@ from tuna.miopen.subcmd.export_db import (get_filename, get_base_query,
                                           build_miopen_fdb, write_fdb,
                                           export_fdb, build_miopen_kdb,
                                           insert_perf_db_sqlite,
-                                          create_sqlite_tables, get_cfg_dict)
+                                          create_sqlite_tables)
+from tuna.miopen.utils.analyze_parse_db import get_sqlite_cfg_dict
 from tuna.utils.db_utility import DB_Type
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
@@ -67,6 +68,10 @@ dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 if args.session_id:
   args.arch = dbt.session.arch
   args.num_cu = dbt.session.num_cu
+
+args.src_table = dbt.find_db_table
+if args.golden_v is not None:
+  args.src_table = dbt.golden_table
 
 logger = logging.getLogger("test_logger")
 
@@ -168,18 +173,126 @@ def test_insert_perf_db_sqlite():
   ), f"expected inserted data {tuple(itertools.islice(expected_data.values(),2))}, but got {inserted_data}"
 
 
-def test_get_cfg_dict():
+def test_get_sqlite_cfg_dict():
+  fdb_key = '1-161-700-5x20-32-81-350-2-2x9-2x2-1x1-0-NCHW-BF16-F'
+  cfg_dict = get_sqlite_cfg_dict(fdb_key)
 
-  cfg_entry = CfgEntry()
-  tensor_entry = TensorEntry()
+  assert cfg_dict['spatial_dim'] == 2
+  assert cfg_dict['in_channels'] == 1
+  assert cfg_dict['in_h'] == 161
+  assert cfg_dict['in_w'] == 700
+  assert cfg_dict['fil_h'] == 5
+  assert cfg_dict['fil_w'] == 20
+  assert cfg_dict['out_channels'] == 32
 
-  cfg_dict = get_cfg_dict(cfg_entry, tensor_entry)
+  assert cfg_dict['batchsize'] == 2
+  assert cfg_dict['pad_h'] == 2
+  assert cfg_dict['pad_w'] == 9
+  assert cfg_dict['conv_stride_h'] == 2
+  assert cfg_dict['conv_stride_w'] == 2
+  assert cfg_dict['dilation_h'] == 1
+  assert cfg_dict['dilation_w'] == 1
+  assert cfg_dict['in_layout'] == 'NCHW'
+  assert cfg_dict['out_layout'] == 'NCHW'
+  assert cfg_dict['fil_layout'] == 'NCHW'
+  assert cfg_dict['group_count'] == 1
+  assert cfg_dict['direction'] == 'F'
+  assert cfg_dict['layout'] == 'NCHW'
+  assert cfg_dict['data_type'] == 'BF16'
+  assert cfg_dict['bias'] == 0
 
-  assert isinstance(cfg_dict, dict)
-  assert 'tensor_id_1' in cfg_dict
-  assert 'tensor_id_2' in cfg_dict
-  assert cfg_dict['tensor_id_1'] == 'cfg_value_1'
-  assert cfg_dict['tensor_id_2'] == 'cfg_value_2'
+  fdb_key = '1024-1-14-14-1x3x3-1024-1-14-14-128-0x1x1-1x1x1-1x1x1-0-NCDHW-FP32-W_g32'
+  cfg_dict = get_sqlite_cfg_dict(fdb_key)
+
+  assert cfg_dict['in_channels'] == 1024
+  assert cfg_dict['in_d'] == 1
+  assert cfg_dict['in_h'] == 14
+  assert cfg_dict['in_w'] == 14
+  assert cfg_dict['fil_d'] == 1
+  assert cfg_dict['fil_h'] == 3
+  assert cfg_dict['fil_w'] == 3
+  assert cfg_dict['out_channels'] == 1024
+
+  assert cfg_dict['batchsize'] == 128
+  assert cfg_dict['pad_d'] == 0
+  assert cfg_dict['pad_h'] == 1
+  assert cfg_dict['pad_w'] == 1
+  assert cfg_dict['conv_stride_d'] == 1
+  assert cfg_dict['conv_stride_h'] == 1
+  assert cfg_dict['conv_stride_w'] == 1
+  assert cfg_dict['dilation_d'] == 1
+  assert cfg_dict['dilation_h'] == 1
+  assert cfg_dict['dilation_w'] == 1
+  assert cfg_dict['in_layout'] == 'NCDHW'
+  assert cfg_dict['out_layout'] == 'NCDHW'
+  assert cfg_dict['fil_layout'] == 'NCDHW'
+  assert cfg_dict['group_count'] == 32
+  assert cfg_dict['direction'] == 'W'
+  assert cfg_dict['layout'] == 'NCDHW'
+  assert cfg_dict['data_type'] == 'FP32'
+  assert cfg_dict['bias'] == 0
+
+  fdb_key = '1-2-3-4-5x6x7-8-9-10-11-12-13x14x15-16x17x18-19x20x21-22-NCDHW-FP32-W_g32'
+  cfg_dict = get_sqlite_cfg_dict(fdb_key)
+
+  assert cfg_dict['in_channels'] == 1
+  assert cfg_dict['in_d'] == 2
+  assert cfg_dict['in_h'] == 3
+  assert cfg_dict['in_w'] == 4
+  assert cfg_dict['fil_d'] == 5
+  assert cfg_dict['fil_h'] == 6
+  assert cfg_dict['fil_w'] == 7
+  assert cfg_dict['out_channels'] == 8
+
+  assert cfg_dict['batchsize'] == 12
+  assert cfg_dict['pad_d'] == 13
+  assert cfg_dict['pad_h'] == 14
+  assert cfg_dict['pad_w'] == 15
+  assert cfg_dict['conv_stride_d'] == 16
+  assert cfg_dict['conv_stride_h'] == 17
+  assert cfg_dict['conv_stride_w'] == 18
+  assert cfg_dict['dilation_d'] == 19
+  assert cfg_dict['dilation_h'] == 20
+  assert cfg_dict['dilation_w'] == 21
+  assert cfg_dict['in_layout'] == 'NCDHW'
+  assert cfg_dict['out_layout'] == 'NCDHW'
+  assert cfg_dict['fil_layout'] == 'NCDHW'
+  assert cfg_dict['group_count'] == 32
+  assert cfg_dict['direction'] == 'W'
+  assert cfg_dict['layout'] == 'NCDHW'
+  assert cfg_dict['data_type'] == 'FP32'
+  assert cfg_dict['bias'] == 0
+
+  fdb_key = '1-2-3-4-5x6x7-8-9-10-11-12-13x14x15-16x17x18-19x20x21-22-NCDHW-FP32-F'
+  cfg_dict = get_sqlite_cfg_dict(fdb_key)
+
+  assert cfg_dict['in_channels'] == 1
+  assert cfg_dict['in_d'] == 2
+  assert cfg_dict['in_h'] == 3
+  assert cfg_dict['in_w'] == 4
+  assert cfg_dict['fil_d'] == 5
+  assert cfg_dict['fil_h'] == 6
+  assert cfg_dict['fil_w'] == 7
+  assert cfg_dict['out_channels'] == 8
+
+  assert cfg_dict['batchsize'] == 12
+  assert cfg_dict['pad_d'] == 13
+  assert cfg_dict['pad_h'] == 14
+  assert cfg_dict['pad_w'] == 15
+  assert cfg_dict['conv_stride_d'] == 16
+  assert cfg_dict['conv_stride_h'] == 17
+  assert cfg_dict['conv_stride_w'] == 18
+  assert cfg_dict['dilation_d'] == 19
+  assert cfg_dict['dilation_h'] == 20
+  assert cfg_dict['dilation_w'] == 21
+  assert cfg_dict['in_layout'] == 'NCDHW'
+  assert cfg_dict['out_layout'] == 'NCDHW'
+  assert cfg_dict['fil_layout'] == 'NCDHW'
+  assert cfg_dict['group_count'] == 1
+  assert cfg_dict['direction'] == 'F'
+  assert cfg_dict['layout'] == 'NCDHW'
+  assert cfg_dict['data_type'] == 'FP32'
+  assert cfg_dict['bias'] == 0
 
 
 def test_export_db():

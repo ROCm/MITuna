@@ -58,9 +58,12 @@ def parse_pdb_key(key):
   if search(pattern_3d, key):
     vals, precision, direction = parse_3d(key, group_count)
     fds = FDS_3D
+    vals.append('3')
   else:
     vals, precision, direction = parse_2d(key, group_count)
     fds = FDS_2D
+    vals.append('2')
+  fds.append('spatial_dim')
 
   vals2 = []
   for val in vals:
@@ -107,7 +110,7 @@ def parse_2d(key, group_count):  #pylint: disable=too-many-locals
   fil_h, fil_w = tmp[3].split('x')
   batchsize = tmp[7]
   pad_h, pad_w = tmp[8].split('x')
-  conv_stride_w, conv_stride_h = tmp[9].split('x')
+  conv_stride_h, conv_stride_w = tmp[9].split('x')
   dilation_h, dilation_w = tmp[10].split('x')
   # unused bias = tmp[11]
   # unused layout = tmp[12]
@@ -160,7 +163,7 @@ def parse_3d(key, group_count):  #pylint: disable=too-many-locals
   fil_d, fil_h, fil_w = tmp[4].split('x')
   batchsize = tmp[9]
   pad_d, pad_h, pad_w = tmp[10].split('x')
-  conv_stride_d, conv_stride_w, conv_stride_h = tmp[11].split('x')
+  conv_stride_d, conv_stride_h, conv_stride_w = tmp[11].split('x')
   dilation_d, dilation_h, dilation_w = tmp[12].split('x')
   # unused bias = tmp[13]
 
@@ -209,7 +212,7 @@ def set_forward_dir(lst, fds_dict, output_h, output_w, precision):
   lst.append(str(int(output_w)))
   lst.append(str(fds_dict['batchsize']))
   lst.append(f"{fds_dict['pad_h']}x{fds_dict['pad_w']}")
-  lst.append(f"{fds_dict['conv_stride_w']}x{fds_dict['conv_stride_h']}")
+  lst.append(f"{fds_dict['conv_stride_h']}x{fds_dict['conv_stride_w']}")
   lst.append(f"{fds_dict['dilation_h']}x{fds_dict['dilation_w']}")
   lst.append('0')  # bias
   lst.append('NCHW')  # only supported format
@@ -230,7 +233,7 @@ def set_nonforward_dir(lst, fds_dict, output_h, output_w, precision, direction):
   lst.append(str(fds_dict['in_w']))
   lst.append(str(fds_dict['batchsize']))
   lst.append(f"{fds_dict['pad_h']}x{fds_dict['pad_w']}")
-  lst.append(f"{fds_dict['conv_stride_w']}x{fds_dict['conv_stride_h']}")
+  lst.append(f"{fds_dict['conv_stride_h']}x{fds_dict['conv_stride_w']}")
   lst.append(f"{fds_dict['dilation_h']}x{fds_dict['dilation_w']}")
   lst.append('0')  # bias
   lst.append('NCHW')  # only supported format
@@ -249,12 +252,12 @@ def get_pdb_key(fds_dict, precision, direction='F'):
   fil_w = int(fds_dict['fil_w'])
   pad_h = int(fds_dict['pad_h'])
   pad_w = int(fds_dict['pad_w'])
-  conv_stride_w = int(fds_dict['conv_stride_w'])
   conv_stride_h = int(fds_dict['conv_stride_h'])
+  conv_stride_w = int(fds_dict['conv_stride_w'])
 
   try:
-    output_h = ((in_h - fil_h + 2 * pad_h) / conv_stride_w) + 1
-    output_w = ((in_w - fil_w + 2 * pad_w) / conv_stride_h) + 1
+    output_h = ((in_h - fil_h + 2 * pad_h) / conv_stride_h) + 1
+    output_w = ((in_w - fil_w + 2 * pad_w) / conv_stride_w) + 1
   except ZeroDivisionError as zerr:
     LOGGER.error(zerr)
     raise ValueError('Zero Division Error caught') from zerr
