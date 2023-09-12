@@ -83,13 +83,13 @@ def add_jobs(args, dbt):
 
     query = session.query(dbt.config_table.id)\
                    .filter(dbt.config_table.valid == 1)
-    res = query.all()
+    configs = query.all()
 
-    if not res:
+    if not configs:
       LOGGER.error('No applicable configs found for args %s', args.__dict__)
 
     # pylint: disable=duplicate-code
-    for config in res:
+    for config in configs:
       try:
         job = dbt.job_table(state='new',
                             valid=1,
