@@ -29,6 +29,7 @@ import jsonargparse
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.db.benchmark import FrameworkEnum, ModelEnum
 
+
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """Return parser for import_configs subcommand"""
