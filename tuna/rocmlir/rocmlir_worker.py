@@ -67,10 +67,10 @@ class RocMLIRWorker(WorkerInterface):
     """update results table with individual result entry"""
     obj = self.dbt.results()
 
-    arch, config, perf_config, tflops = obj.parse(result_str)
+    arch, num_cu, config, perf_config, tflops = obj.parse(result_str)
 
     print(
-        f"arch = '{arch}', config = '{config}', perf_config = '{perf_config}', tflops = {tflops}",
+        f"arch = '{arch}', num_cu = '{num_cu}', config = '{config}', perf_config = '{perf_config}', tflops = {tflops}",
         file=sys.stderr)
 
     obj.valid = 1
@@ -172,6 +172,7 @@ class RocMLIRWorker(WorkerInterface):
   def get_mlir_v(self) -> str:
     """Interface function to get mlir version info"""
     #_, mlir_ver, _ = self.exec_docker_cmd("cat /opt/rocm/.info/version")
+    # git rev-parse HEAD
     mlir_ver = "mlir_v-not-yet-implemented"
     self.logger.info('Got mlir version: %s', mlir_ver)
     return mlir_ver
