@@ -26,7 +26,13 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 from multiprocessing import Value, Lock, Queue as mpQueue
-
+from typing import Optional, Dict, Any, List
+from io import StringIO
+import logging
+import argparse
+from paramiko.channel import ChannelFile
+from tuna.worker_interface import WorkerInterface
+from tuna.machine import Machine
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
@@ -36,18 +42,22 @@ class MITunaInterface():
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
-  def __init__(self, library=Library.MIOPEN):
-    self.library = library
+  def __init__(self, library=Library.MIOPEN) -> None:
 
-    self.logger = setup_logger(logger_name=self.library.value,
-                               add_streamhandler=True)
-    self.args = None
+    self.library: Library = library
 
-  def check_docker(self, worker, dockername="miopentuna"):
+    self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
+                                               add_streamhandler=True)
+    self.args: argparse.Namespace
+
+  def check_docker(self,
+                   worker: WorkerInterface,
+                   dockername="miopentuna") -> None:
     """! Checking for docker
       @param worker The worker interface instance
       @param dockername The name of the docker
     """
+    out2: ChannelFile
     self.logger.warning("docker not installed or requires sudo .... ")
     _, out2, _ = worker.exec_command("sudo docker info")
     while not out2.channel.exit_status_ready():
@@ -56,21 +66,23 @@ class MITunaInterface():
       self.logger.warning(
           "docker not installed or failed to run with sudo .... ")
     else:
+      out: StringIO = StringIO()
+      line: Optional[str] = None
       _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
-      line = None
       for line in out.readlines():
-        if line.find(dockername) != -1:
-          self.logger.warning('%s docker image exists', dockername)
-          break
+        if line is not None:
+          if line.find(dockername) != -1:
+            self.logger.warning('%s docker image exists', dockername)
+            break
       if line is None:
         self.logger.warning('%s docker image does not exist', dockername)
 
   def check_status(self,
-                   worker,
-                   b_first,
-                   gpu_idx,
-                   machine,
-                   dockername="miopentuna"):
+                   worker: WorkerInterface,
+                   b_first: int,
+                   gpu_idx: int,
+                   machine: Machine,
+                   dockername: str = "miopentuna") -> bool:
     """! Function to check gpu_status
       @param worker The worker interface instance
       @param b_first Flag to keep track of visited GPU
@@ -97,40 +109,44 @@ class MITunaInterface():
       self.check_docker(worker, dockername)
     else:
       _, out, _ = worker.exec_command(f"docker images | grep {dockername}")
-      line = None
+      line: Optional[str] = None
       for line in out.readlines():
-        if line.find(dockername) != -1:
-          self.logger.warning('%s docker image exists', dockername)
-          break
-      if line is None:
-        self.logger.warning('%s docker image does not exist', dockername)
+        if line is not None:
+          if line.find(dockername) != -1:
+            self.logger.warning('%s docker image exists', dockername)
+            break
+        else:
+          self.logger.warning('%s docker image does not exist', dockername)
 
     return True
 
-  def add_tables(self):
+  def add_tables(self) -> bool:
     """Add library specific tables"""
     return self.add_tables()
 
-  def get_num_procs(self, machine):
+  def get_num_procs(self, machine: Machine) -> List:
     """Determine number of processes by compute capacity"""
-    worker_ids = None
+    worker_ids: List = []
+    num_procs: int
+    env: Dict[str, Any]
     env = get_env_vars()
     if env['slurm_cpus'] > 0:
       num_procs = int(env['slurm_cpus'])
     else:
       num_procs = int(machine.get_num_cpus() * .6)
 
-    worker_ids = range(num_procs)
+    worker_ids = list(range(num_procs))
 
     if len(worker_ids) == 0:
       self.logger.error('num_procs must be bigger than zero to launch worker')
       self.logger.error('Cannot launch worker on machine: %s', machine.id)
-      worker_ids = None
+      worker_ids = []
 
     return worker_ids
 
-  def get_f_vals(self, machine, worker_ids):
+  def get_f_vals(self, machine: Machine, worker_ids: range) -> Dict[str, Any]:
     """Determine kwargs for worker_interface"""
+    f_vals: Dict[str, Any]
     f_vals = self.compose_f_vals(machine)
     f_vals["num_procs"] = Value('i', len(worker_ids))
     f_vals['envmt'] = self.get_envmt()
@@ -140,12 +156,12 @@ class MITunaInterface():
     """Get runtime envmt"""
     raise NotImplementedError("Not implemented")
 
-  def compose_f_vals(self, machine):
+  def compose_f_vals(self, machine: Machine) -> Dict[str, Any]:
     """! Compose dict for WorkerInterface constructor
       @param args The command line arguments
       @param machine Machine instance
     """
-    f_vals = {}
+    f_vals: Dict[str, Any] = {}
     f_vals["barred"] = Value('i', 0)
     f_vals["bar_lock"] = Lock()
     #multiprocess queue for jobs, shared on machine
@@ -159,12 +175,13 @@ class MITunaInterface():
 
     return f_vals
 
-  def get_kwargs(self, gpu_idx, f_vals):
+  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
     """
-    envmt = f_vals["envmt"].copy()
+    envmt: Dict[str, Any] = f_vals["envmt"].copy()
+    kwargs: Dict[str, Any] = {}
 
     kwargs = {
         'machine': f_vals["machine"],

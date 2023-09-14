@@ -173,7 +173,7 @@ class FinEvaluator(FinClass):
   def get_fin_input(self):
     """ Populate the input for fin and write to a tempfile on machine
     """
-    steps = ['alloc_buf', self.fin_steps[0]]
+    steps = ['alloc_buf', 'fill_buf', self.fin_steps[0]]
     fjob = fin_job(steps, self.dynamic_solvers_only, self.job, self.config,
                    self.dbt)
 

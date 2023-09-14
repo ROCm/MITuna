@@ -2,7 +2,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,31 +24,35 @@
 #
 ###############################################################################
 
+import os
 import sys
+import argparse
+import logging
+import random
 
+sys.path.append("../tuna")
 sys.path.append("tuna")
-from tuna.machine_management_interface import MachineManagementInterface, MgmtBackend
-'''
-def test_ipmi():
-  mmi = MachineManagementInterface(mgmt_ip='192.168.1.74',
-                                   mgmt_port=623,
-                                   mgmt_user='admin',
-                                   mgmt_password='admin',
-                                   backend=MgmtBackend.IPMI)
-  exit_status = mmi.run_ipmi_command('chassis status')
-  assert (exit_status == 0)
-  assert (MachineManagementInterface.gateway_session is not None)
-  mmi.server_status()
-'''
-'''
-def test_bmc():
-  mmi = MachineManagementInterface(mgmt_ip='192.168.65.100',
-                                   mgmt_port=22,
-                                   mgmt_user='admin',
-                                   mgmt_password='admin',
-                                   backend=MgmtBackend.OpenBMC)
-  exit_status = mmi.run_bmc_command('chassisstate')
-  assert (exit_status == 0)
-  assert (MachineManagementInterface.obmc_tunnels)
-  mmi.server_status()
-'''
+
+this_path = os.path.dirname(__file__)
+
+from tuna.sql import DbCursor
+from tests.test_importconfigs_rocmlir import test_importconfigs_rocmlir
+from tuna.rocmlir.load_job import add_jobs
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, clear_tables
+
+
+def test_cfg_compose():
+  """check the config query function for args tags and cmd intake"""
+  clear_tables()
+  test_importconfigs_rocmlir()  # to get the configs in place
+  # +++pf: init a session, too.
+  count_configs = "SELECT count(*) FROM rocmlir_conv_config;"
+  with DbCursor() as cur:
+    cur.execute(count_configs)
+    res = cur.fetchall()
+    config_count = res[0][0]
+
+  dbt = RocMLIRDBTables(session=None)
+  args = argparse.Namespace(session_id=1)
+  job_count = add_jobs(args, dbt)
+  assert job_count == config_count

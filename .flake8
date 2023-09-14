@@ -1,0 +1,5 @@
+[flake8]
+# To match the approved yapf.
+indent-size = 2
+# Let doc strings be uncapitalised and not end in periods.
+extend-ignore = D400,D403

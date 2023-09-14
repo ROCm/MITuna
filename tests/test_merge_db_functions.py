@@ -34,7 +34,7 @@ sys.path.append("tuna")
 this_path = os.path.dirname(__file__)
 
 from tuna.miopen.subcmd.merge_db import parse_jobline, parse_text_fdb_name, parse_text_pdb_name
-from tuna.miopen.subcmd.merge_db import best_solver, target_merge
+from tuna.miopen.subcmd.merge_db import target_merge
 from tuna.miopen.subcmd.merge_db import update_master_list, write_merge_results
 from tuna.miopen.subcmd.merge_db import merge_text_file
 from tuna.miopen.subcmd.merge_db import get_sqlite_table
@@ -132,45 +132,6 @@ def test_load_master_list():
         'miopenConvolutionFwdAlgoGEMM':
             'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
     })
-
-
-def test_best_solver():
-
-  fdb_key = ({
-      'miopenConvolutionFwdAlgoImplicitGEMM':
-          'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm, 0.02352,0,miopenConvolutionFwdAlgoImplicitGEMM,not used',
-      'miopenConvolutionFwdAlgoWinograd':
-          'ConvBinWinogradRxSf2x3g1,0.03856,0,miopenConvolutionFwdAlgoWinograd,not used',
-      'miopenConvolutionFwdAlgoGEMM':
-          'GemmFwdRest,0.05712,2749200,miopenConvolutionFwdAlgoGEMM,not used'
-  })
-
-  solver, time = best_solver(fdb_key)
-
-  assert (len(solver) != 0)
-  assert (float(time) != 0)
-  assert (solver == 'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm')
-  assert (time == 0.02352)
-
-  #Sample solver name as space
-  test_value = ({
-      'miopenConvolutionFwdAlgoImplicitGEMM':
-          ' ,0.00000,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
-  })
-
-  new_solver, new_time = best_solver(test_value)
-
-  assert new_solver.isspace()
-  assert (new_solver == ' ')
-
-  #Sample solver name as None
-  test_value = ({
-      'miopenConvolutionFwdAlgoImplicitGEMM':
-          'None,0.00000,0,miopenConvolutionFwdAlgoImplicitGEMM,not used'
-  })
-
-  new_solver, new_time = best_solver(test_value)
-  assert (new_solver == 'None')
 
 
 def test_target_merge():
@@ -381,6 +342,35 @@ def test_target_merge():
   except ValueError:
     err_found = True
   assert err_found
+
+  #with solver indexed format
+  master_list = {
+      '992-7-7-1x1-128-7-7-8-0x0-1x1-1x1-0-NCHW-FP16-F': {
+          'ConvMlirIgemmFwdXdlops':
+              '0.01904,0,miopenConvolutionFwdAlgoImplicitGEMM',
+          'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm':
+              '0.024,0,miopenConvolutionFwdAlgoImplicitGEMM',
+          'ConvAsmImplicitGemmGTCDynamicFwdXdlops':
+              '0.04512,0,miopenConvolutionFwdAlgoImplicitGEMM',
+          'ConvAsm1x1U':
+              '0.0528,0,miopenConvolutionFwdAlgoDirect'
+      },
+      '992-7-7-1x1-128-7-7-8-0x0-1x1-1x1-0-NCHW-FP32-F': {
+          'ConvMlirIgemmFwdXdlops':
+              '0.02704,0,miopenConvolutionFwdAlgoImplicitGEMM',
+          'ConvAsm1x1U':
+              '0.031041,0,miopenConvolutionFwdAlgoDirect',
+          'ConvOclDirectFwd1x1':
+              '0.03552,0,miopenConvolutionFwdAlgoDirect',
+          'ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm':
+              '0.04192,0,miopenConvolutionFwdAlgoImplicitGEMM'
+      }
+  }
+  key = '992-7-7-1x1-128-7-7-8-0x0-1x1-1x1-0-NCHW-FP16-F'
+  vals = {'NewBest': '0.0001,0,Best'}
+  keep_keys = False
+  target_merge(master_list, key, vals, keep_keys)
+  assert (master_list[key] == vals)
 
 
 def test_update_master_list():

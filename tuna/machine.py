@@ -57,6 +57,7 @@ CLINFO: str = '/opt/rocm/opencl/bin/clinfo'
 
 class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   """class for maintaining machine characteristics and interactions """
+
   __tablename__: str = "machine"
   hostname: str = Column(Text, nullable=False)
   port: int = Column(INTEGER(11, unsigned=True),
@@ -81,6 +82,8 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
   @orm.reconstructor
   def __init__(self, **kwargs: dict) -> None:
+
+    super().__init__()
     #for the sake of pylint, this is explicitly populated
     allowed_keys: Set = set([
         'id', 'hostname', 'user', 'password', 'port', 'ipmi_ip', 'ipmi_port',
@@ -416,10 +419,10 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         if gpu_idx >= len(gpu_clk):
           gpu_clk.append({})
         if 'sclk' in line:
-          level = int(line[line.find('level'):].split(' ')[1])
+          level = int(line[line.find('level'):].split(':')[1])
           gpu_clk[gpu_idx]['sclk'] = level
         if 'mclk' in line:
-          level = int(line[line.find('level'):].split(' ')[1])
+          level = int(line[line.find('level'):].split(':')[1])
           gpu_clk[gpu_idx]['mclk'] = level
 
     sclk = gpu_clk[gpu_num]['sclk']

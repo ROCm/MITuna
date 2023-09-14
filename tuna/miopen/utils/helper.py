@@ -193,7 +193,6 @@ def get_db_id(db_elems, config_table):
   with DbSession() as session:
     try:
       res = session.execute(query).fetchall()
-      session.commit()
     except IntegrityError as err:
       session.rollback()
       LOGGER.error("Error occurred: %s \n", err)

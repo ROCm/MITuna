@@ -26,10 +26,13 @@
 ###############################################################################
 """! @brief Script to populate the golden table based on session_id"""
 import functools
+import logging
+import argparse
+from typing import Dict, Any
 from sqlalchemy.sql.expression import func as sqlfunc
 from sqlalchemy.exc import OperationalError
 
-from tuna.parse_args import TunaArgs, setup_arg_parser
+from tuna.miopen.parse_miopen_args import get_update_golden_parser
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.db.session import Session
@@ -37,58 +40,22 @@ from tuna.utils.db_utility import session_retry
 from tuna.utils.logger import setup_logger
 from tuna.db_engine import ENGINE
 
-# Setup logging
-LOGGER = setup_logger('update_golden')
 
-
-def parse_args():
-  """! Function to parse arguments"""
-  parser = setup_arg_parser('Populate golden table based on session_id',
-                            [TunaArgs.CONFIG_TYPE])
-  parser.add_argument('--golden_v',
-                      dest='golden_v',
-                      type=int,
-                      default=None,
-                      required=True,
-                      help='target golden miopen version to write')
-  parser.add_argument('--base_golden_v',
-                      dest='base_golden_v',
-                      type=int,
-                      default=None,
-                      required=False,
-                      help='previous golden miopen version for initialization')
-  parser.add_argument('--session_id',
-                      required=False,
-                      dest='session_id',
-                      type=int,
-                      help='Tuning session to be imported to golden table.')
-  parser.add_argument('-o',
-                      '--overwrite',
-                      dest='overwrite',
-                      action='store_true',
-                      default=False,
-                      help='Write over existing golden version.')
-  parser.add_argument('--create_perf_table',
-                      dest='create_perf_table',
-                      action='store_true',
-                      default=False,
-                      help='Create performance table.')
-
-  args = parser.parse_args()
-
+def arg_update_golden(args: argparse.Namespace, logger: logging.Logger):
+  """update golden args for update golden"""
   if not args.base_golden_v and not args.session_id:
     dbt = MIOpenDBTables(session_id=args.session_id,
                          config_type=args.config_type)
-    ver = latest_golden_v(dbt)
+    ver = latest_golden_v(dbt, logger)
     if ver != -1:
-      parser.error(
+      args.error(
           'Specify --base_golden_v or --session_id to select tuning data to use for update'
       )
 
   return args
 
 
-def get_golden_query(dbt, golden_version):
+def get_golden_query(dbt: MIOpenDBTables, golden_version: int):
   """! Compose query to get all entries for a golden miopen version"""
   with DbSession() as session:
     query = session.query(dbt.golden_table)\
@@ -98,7 +65,7 @@ def get_golden_query(dbt, golden_version):
   return query
 
 
-def latest_golden_v(dbt):
+def latest_golden_v(dbt: MIOpenDBTables, logger: logging.Logger):
   """Get highest golden version in the table """
   version = -1
   with DbSession() as session:
@@ -109,12 +76,12 @@ def latest_golden_v(dbt):
 
   if version is None:
     version = -1
-  LOGGER.warning(version)
+  logger.warning(version)
 
   return version
 
 
-def sess_info(session):
+def sess_info(session: DbSession):
   """ get map for session id to arch / num_cu """
   sess_map = {}
   query = session.query(Session.id, Session.arch, Session.num_cu)
@@ -124,16 +91,16 @@ def sess_info(session):
   return sess_map
 
 
-def verify_no_duplicates(entries):
+def verify_no_duplicates(entries, logger: logging.Logger):
   """ check entries for duplicates (error in fdb) """
   with DbSession() as session:
     sess_map = sess_info(session)
-  test_set = {}
+  test_set: Dict[Any, Any] = {}
   for entry in entries:
     arch, num_cu = sess_map[entry.session]
     key = f"{entry.config}-{entry.solver}-{arch}-{num_cu}"
     if key in test_set:
-      LOGGER.error(
+      logger.error(
           "Overlap on key! %s (fdb_key %s, params %s) vs (fdb_key %s, params %s)",
           key, test_set[key].fdb_key, test_set[key].params, entry.fdb_key,
           entry.params)
@@ -143,7 +110,7 @@ def verify_no_duplicates(entries):
   return True
 
 
-def get_perf_str(args, table_name):
+def get_perf_str(args: argparse.Namespace, table_name):
   """Create perf table SQL query and return"""
   new_table = f"""
   create table {table_name} as select a.config, a.num_cu, a.arch, b.k1 as k1, c.k1 as k2,
@@ -162,7 +129,7 @@ def get_perf_str(args, table_name):
   return new_table
 
 
-def create_perf_table(args):
+def create_perf_table(args: argparse.Namespace, logger: logging.Logger):
   """Create new perf_table"""
   if args.golden_v == 0:
     table_name = "conv_gv0"
@@ -176,11 +143,11 @@ def create_perf_table(args):
   with ENGINE.connect() as conn:
     try:
       conn.execute(f'drop table if exists {table_name}')
-      LOGGER.info('Creating new performance table %s', table_name)
+      logger.info('Creating new performance table %s', table_name)
       conn.execute(get_perf_str(args, table_name))
-      LOGGER.info('Done creating new performance table %s', table_name)
+      logger.info('Done creating new performance table %s', table_name)
     except OperationalError as oerr:
-      LOGGER.info('%s \n', oerr)
+      logger.info('%s \n', oerr)
       return False
 
   return True
@@ -189,10 +156,11 @@ def create_perf_table(args):
 def gold_base_update(session: DbSession,
                      gold_v: int,
                      base_gold_v: int,
+                     logger: logging.Logger,
                      overwrite: bool = False):
   """copy over data in conv_golden from previous golden version"""
   if overwrite:
-    LOGGER.info("Updating golden version %s -> %s.", base_gold_v, gold_v)
+    logger.info("Updating golden version %s -> %s.", base_gold_v, gold_v)
     update_q = "update conv_golden as cg inner join conv_golden as ps on cg.config=ps.config"\
     " and cg.fdb_key=ps.fdb_key and cg.alg_lib=ps.alg_lib and cg.opencl=ps.opencl"\
     " and cg.solver=ps.solver and ps.arch=cg.arch and ps.num_cu=cg.num_cu"\
@@ -200,16 +168,16 @@ def gold_base_update(session: DbSession,
     ", cg.kernel_time=ps.kernel_time, cg.kernel_group=ps.kernel_group, cg.session=ps.session"\
     f" where cg.golden_miopen_v={gold_v} and ps.golden_miopen_v={base_gold_v} and ps.valid=1"\
     " and ps.kernel_time>=0;"
-    LOGGER.info(update_q)
+    logger.info(update_q)
     session.execute(update_q)
 
-  LOGGER.info("Inserting golden version %s -> %s.", base_gold_v, gold_v)
+  logger.info("Inserting golden version %s -> %s.", base_gold_v, gold_v)
   insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
   ", fdb_key, params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
   f" select valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   f" from conv_golden where golden_miopen_v={base_gold_v} and valid=1 and kernel_time>=0;"
-  LOGGER.info(insert_q)
+  logger.info(insert_q)
   session.execute(insert_q)
   session.commit()
 
@@ -219,10 +187,11 @@ def gold_base_update(session: DbSession,
 def gold_session_update(session: DbSession,
                         gold_v: int,
                         tune_s: int,
+                        logger: logging.Logger,
                         overwrite: bool = True):
   """copy data to conv_golden from tuning session in conv_find_db"""
   if overwrite:
-    LOGGER.info("Gold %s Update with session %s.", gold_v, tune_s)
+    logger.info("Gold %s Update with session %s.", gold_v, tune_s)
     update_q = "update conv_golden as cg inner join conv_find_db as ps on cg.config=ps.config"\
     " and cg.fdb_key=ps.fdb_key and cg.alg_lib=ps.alg_lib and cg.opencl=ps.opencl"\
     " and cg.solver=ps.solver"\
@@ -233,7 +202,7 @@ def gold_session_update(session: DbSession,
     " and ps.kernel_time>=0;"
     session.execute(update_q)
 
-  LOGGER.info("Gold %s Insert session %s.", gold_v, tune_s)
+  logger.info("Gold %s Insert session %s.", gold_v, tune_s)
   insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
   ", fdb_key, params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
   f" select cfd.valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
@@ -246,9 +215,8 @@ def gold_session_update(session: DbSession,
   return True
 
 
-def main():
-  """! Main function"""
-  args = parse_args()
+def run_update_golden(args: argparse.Namespace, logger: logging.Logger):
+  """run update golden script"""
   dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
   gold_db = get_golden_query(dbt, args.golden_v).first()
@@ -261,24 +229,33 @@ def main():
     if args.base_golden_v:
 
       def actuator1(func):
-        return func(session, args.golden_v, args.base_golden_v, args.overwrite)
+        return func(session, args.golden_v, args.base_golden_v, logger,
+                    args.overwrite)
 
       session_retry(session, gold_base_update, functools.partial(actuator1),
-                    LOGGER)
+                    logger)
 
     if args.session_id:
 
       def actuator2(func):
-        return func(session, args.golden_v, args.session_id, args.overwrite)
+        return func(session, args.golden_v, args.session_id, logger,
+                    args.overwrite)
 
       session_retry(session, gold_session_update, functools.partial(actuator2),
-                    LOGGER)
+                    logger)
+
+  logger.info('Finished Updating conv_golden %s', args.golden_v)
 
   if args.create_perf_table:
-    LOGGER.info('Updating conv perf DB table')
-    create_perf_table(args)
+    logger.info('Updating conv perf DB table')
+    create_perf_table(args, logger)
 
-  return True
+
+def main():
+  """! Main function"""
+  parser = get_update_golden_parser()
+  args = parser.parse_args()
+  run_update_golden(args, setup_logger('update_golden'))
 
 
 if __name__ == '__main__':

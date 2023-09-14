@@ -90,7 +90,7 @@ def create_tables(all_tables):
     except (OperationalError, ProgrammingError) as err:
       LOGGER.warning('Err occurred %s \n For table: %s.', err, table)
       LOGGER.warning(
-          'Schema migration not implemented, please udpate schema manually')
+          'Schema migration not implemented, please update schema manually')
       continue
 
   return True
@@ -182,7 +182,7 @@ def get_attr_vals(obj, attr_list):
 
 
 def gen_update_query(obj, attribs, tablename):
-  """Create an update query strig to table with tablename for an object (obj)
+  """Create an update query string to table with tablename for an object (obj)
   for the attributes in attribs"""
   set_arr = []
   attr_vals = get_attr_vals(obj, attribs)

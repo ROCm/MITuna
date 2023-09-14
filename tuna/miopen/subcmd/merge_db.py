@@ -30,13 +30,11 @@ import argparse
 import sqlite3
 from shutil import copyfile
 
-from tuna.miopen.utils.parsing import parse_pdb_key, build_driver_cmd
 from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.analyze_parse_db import parse_pdb_filename, insert_solver_sqlite
 from tuna.miopen.utils.analyze_parse_db import get_config_sqlite
 from tuna.miopen.utils.analyze_parse_db import get_sqlite_row, get_sqlite_table, get_sqlite_data
 from tuna.miopen.utils.helper import prune_cfg_dims
-from tuna.miopen.utils.metadata import DIR_MAP
 
 LOGGER = setup_logger('merge_pdb')
 
@@ -194,19 +192,6 @@ def load_master_list(master_file):
   return master_list
 
 
-def best_solver(vals):
-  """returns the fastest solver"""
-  min_time = float("inf")
-  b_solver = None
-  for val in vals.values():
-    solver, time, _, _, _ = val.split(',')
-    if float(time) < min_time:
-      min_time = float(time)
-      b_solver = solver
-
-  return b_solver, min_time
-
-
 def target_merge(master_list, key, vals, keep_keys):
   """merge for explicit target file"""
   #Error handling of Ivalid input parameter types
@@ -217,25 +202,12 @@ def target_merge(master_list, key, vals, keep_keys):
   if not (master_list and isinstance(master_list, dict)):
     raise ValueError(f'Invalid master_list: {master_list}')
 
-  fds, fds_val, precision, direction = parse_pdb_key(key)
-  driver_cmd = build_driver_cmd(fds, fds_val, precision, DIR_MAP[direction])
   if key not in master_list:
-    LOGGER.info('%s: Missing Key \n %s', key, driver_cmd)
     master_list[key] = {}
-  else:
-    old_solver, old_time = best_solver(master_list[key])
-    new_solver, new_time = best_solver(vals)
-
-    LOGGER.info(
-        '%s: solver_change: %s, speedup: %s, Old Solver: (%s, %s), New Solver: (%s, %s) \n %s',
-        key, old_solver != new_solver,
-        float(new_time) < float(old_time), old_solver, old_time, new_solver,
-        new_time, driver_cmd)
 
   if keep_keys:
     #keep old key values
-    for alg, param in vals.items():
-      master_list[key][alg] = param
+    master_list[key].update(vals)
   else:
     #don't keep old key values
     master_list[key] = vals
@@ -254,6 +226,15 @@ def update_master_list(master_list, local_paths, mids, keep_keys):
           target_merge(master_list, key, vals, keep_keys)
 
 
+def is_float(num):
+  """Test if string can be interpreted as a float"""
+  try:
+    float(num)
+    return True
+  except ValueError:
+    return False
+
+
 def write_merge_results(master_list, final_file, copy_files):
   """write merge results to file"""
   # serialize the file out
@@ -261,9 +242,18 @@ def write_merge_results(master_list, final_file, copy_files):
   with open(final_file, "w") as out_file:  # pylint: disable=unspecified-encoding
     for perfdb_key, solvers in sorted(master_list.items(),
                                       key=lambda kv: kv[0]):
+
       params = []
-      for solver_id, solver_params in sorted(
-          solvers.items(), key=lambda kv: (float(kv[1].split(',')[1]), kv[0])):
+      if is_float(list(solvers.values())[0].split(',')[0]):
+        #for solver indexed, idx 0 is time
+        sorted_slv = sorted(solvers.items(),
+                            key=lambda kv: (float(kv[1].split(',')[0]), kv[0]))
+      else:
+        #for alg indexed, idx 1 is time
+        sorted_slv = sorted(solvers.items(),
+                            key=lambda kv: (float(kv[1].split(',')[1]), kv[0]))
+
+      for solver_id, solver_params in sorted_slv:
         params.append(f'{solver_id}:{solver_params}')
       # pylint: disable-next=consider-using-f-string ; more readble
       perf_line = '{}={}'.format(perfdb_key, ';'.join(params))

@@ -34,6 +34,7 @@ class Library(Enum):
   # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
   MIOPEN: str = 'miopen'
   EXAMPLE: str = 'example'
+  ROCMLIR: str = 'rocmlir'
 
   def __str__(self) -> str:
     return self.value

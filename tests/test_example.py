@@ -60,6 +60,7 @@ def test_example():
   example.args.session_id = 1
   example.args.execute = True
   example.args.label = 'test_example'
+  example.args.config = 1
   num_jobs = add_jobs(example.args, dbt)
   assert num_jobs
 

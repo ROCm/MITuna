@@ -25,54 +25,50 @@
 ###############################################################################
 
 import sys
-from tuna.miopen.subcmd.update_golden import gold_base_update, gold_session_update, create_perf_table, verify_no_duplicates, latest_golden_v
+import logging
+from tuna.miopen.subcmd.update_golden import (
+    arg_update_golden, get_golden_query, gold_base_update, gold_session_update,
+    create_perf_table, verify_no_duplicates, latest_golden_v)
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.miopen_tables import ConvolutionGolden
 from tuna.miopen.db.find_db import ConvolutionFindDB
-from utils import add_test_session, DummyArgs
+from utils import add_test_session, DummyArgs, build_fdb_entry
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
+logger = logging.getLogger("update_golden_test_logger")
+session_id = add_test_session(arch='gfx908',
+                              num_cu=120,
+                              label='pytest_update_golden')
+res = None
+args = DummyArgs()
+args.session_id = session_id
+args.config_type = ConfigType.convolution
+args.base_golden_v = 1.0
+args.golden_version = 1.1
+dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
 
-def build_fdb_entry(session_id):
-  fdb_entry = ConvolutionFindDB()
-  fdb_entry.config = 1
-  fdb_entry.solver = 1
-  fdb_entry.session = session_id
-  fdb_entry.opencl = False
 
-  fdb_entry.fdb_key = 'key'
-  fdb_entry.alg_lib = 'Test'
-  fdb_entry.params = 'param'
-  fdb_entry.workspace_sz = 0
-  fdb_entry.valid = True
-  fdb_entry.kernel_time = 11111
-  fdb_entry.kernel_group = 1
-
-  return fdb_entry
+def test_args_golden():
+  results = arg_update_golden(args, logger)
+  assert results is not None
+  assert results.base_golden_v == args.base_golden_v
 
 
 def test_update_golden():
-  session_id = add_test_session()
   fdb_entry = build_fdb_entry(session_id)
   with DbSession() as session:
     session.add(fdb_entry)
     session.commit()
 
-  res = None
-  args = DummyArgs()
-  args.session_id = session_id
-  args.config_type = ConfigType.convolution
-  dbt = MIOpenDBTables(session_id=args.session_id, config_type=args.config_type)
-
-  gld_v1 = latest_golden_v(dbt) + 1
+  gld_v1 = latest_golden_v(dbt, logger) + 1
   args.golden_v = gld_v1
 
   with DbSession() as session:
-    assert gold_session_update(session, gld_v1, session_id, True)
+    assert gold_session_update(session, gld_v1, session_id, logger, True)
     query = session.query(ConvolutionGolden)\
                     .filter(ConvolutionGolden.golden_miopen_v == gld_v1)\
                     .filter(ConvolutionGolden.session == session_id)
@@ -81,7 +77,7 @@ def test_update_golden():
     assert res[0].params == 'param'
 
     gld_v2 = gld_v1 + 1
-    assert gold_base_update(session, gld_v2, gld_v1, True)
+    assert gold_base_update(session, gld_v2, gld_v1, logger, True)
     query = session.query(ConvolutionGolden)\
                     .filter(ConvolutionGolden.golden_miopen_v == gld_v2)\
                     .filter(ConvolutionGolden.session == session_id)
@@ -92,30 +88,32 @@ def test_update_golden():
 
   entries = session.query(ConvolutionFindDB)\
                   .filter(ConvolutionFindDB.session == session_id).all()
-  assert verify_no_duplicates(entries)
+  assert verify_no_duplicates(entries, logger)
 
   fdb_entry2 = build_fdb_entry(session_id)
   fdb_entry2.config = 2
   entries.append(fdb_entry2)
-  assert verify_no_duplicates(entries)
+  assert verify_no_duplicates(entries, logger)
 
   fdb_entry3 = build_fdb_entry(session_id)
   fdb_entry3.solver = 2
   entries.append(fdb_entry3)
-  assert verify_no_duplicates(entries)
+  assert verify_no_duplicates(entries, logger)
 
-  session_id2 = add_test_session(arch='gfx90a', num_cu=110)
+  session_id2 = add_test_session(arch='gfx90a',
+                                 num_cu=110,
+                                 label='pytest_update_golden2')
   fdb_entry4 = build_fdb_entry(session_id2)
   entries.append(fdb_entry4)
-  assert verify_no_duplicates(entries)
+  assert verify_no_duplicates(entries, logger)
 
   fdb_entry5 = build_fdb_entry(session_id)
   fdb_entry5.params = 'something'
   entries.append(fdb_entry5)
-  assert verify_no_duplicates(entries) == False
+  assert verify_no_duplicates(entries, logger) == False
 
   args.create_perf_table = True
-  assert create_perf_table(args)
+  assert create_perf_table(args, logger)
 
 
 def copy(dest, src):
