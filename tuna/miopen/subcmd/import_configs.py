@@ -35,7 +35,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db, ENGINE
 from tuna.utils.logger import setup_logger
-from tuna.subcmd.parse_subtuna_args import get_import_cfg_parser
+from tuna.subcmd.parse_subtuna_args import get_import_cfg_parser_miopen
 from tuna.miopen.db.tables import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.driver.base import DriverBase
@@ -379,7 +379,7 @@ def run_import_configs(args: argparse.Namespace,
 
 def main():
   """ main """
-  parser = get_import_cfg_parser(with_yaml=False)
+  parser = get_import_cfg_parser_miopen(with_yaml=False)
   args = parser.parse_args()
   run_import_configs(args, setup_logger('import_configs'))
 

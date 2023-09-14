@@ -28,6 +28,7 @@
 import jsonargparse
 from tuna.parse_args import TunaArgs, setup_arg_parser
 
+
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """Return parser for import_configs subcommand"""
@@ -38,7 +39,7 @@ def get_import_cfg_parser(
       with_yaml=with_yaml)
 
   group = parser.add_mutually_exclusive_group()
-  
+
   group.add_argument('--print_models',
                      dest='print_models',
                      action='store_true',
