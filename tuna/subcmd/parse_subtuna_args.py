@@ -27,8 +27,6 @@
 """Module to represent MIOpen subcommands parsers"""
 import jsonargparse
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.miopen.db.benchmark import FrameworkEnum, ModelEnum
-
 
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
@@ -40,16 +38,7 @@ def get_import_cfg_parser(
       with_yaml=with_yaml)
 
   group = parser.add_mutually_exclusive_group()
-
-  group.add_argument(
-      '--add_framework',
-      dest='add_framework',
-      choices=[frm.value for frm in FrameworkEnum],
-      help='Populate framework table with new framework and version')
-  group.add_argument('--add_model',
-                     dest='add_model',
-                     choices=[model.value for model in ModelEnum],
-                     help='Populate table with new model and version')
+  
   group.add_argument('--print_models',
                      dest='print_models',
                      action='store_true',
@@ -89,11 +78,6 @@ def get_import_cfg_parser(
                       type=str,
                       dest='file_name',
                       help='File to import')
-  parser.add_argument('-F',
-                      '--framework',
-                      dest='framework',
-                      choices=[frm.value for frm in FrameworkEnum],
-                      help='Specify framework.')
   parser.add_argument('--fw_version',
                       dest='fw_version',
                       type=int,
@@ -112,11 +96,6 @@ def get_import_cfg_parser(
       dest='mark_recurrent',
       action="store_true",
       help='Indicate whether you want the configs to be marked as recurrent')
-  parser.add_argument('-m',
-                      '--model',
-                      dest='model',
-                      choices=[model.value for model in ModelEnum],
-                      help='Specify model')
   parser.add_argument('--md_version',
                       dest='md_version',
                       type=int,
