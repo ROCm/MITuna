@@ -164,7 +164,7 @@ class DriverConvolution(DriverBase):
 
     if keep_id:
       dict_copy = c_dict.copy()
-      dict_copy.pop('driver', None)
+      dict_copy.pop('driver')
       c_dict['id'] = get_db_id(dict_copy, ConvolutionConfig)
 
     return c_dict

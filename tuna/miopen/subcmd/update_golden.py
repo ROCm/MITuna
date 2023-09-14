@@ -227,6 +227,7 @@ def run_update_golden(args: argparse.Namespace, logger: logging.Logger):
 
   with DbSession() as session:
     if args.base_golden_v:
+
       def actuator1(func):
         return func(session, args.golden_v, args.base_golden_v, logger,
                     args.overwrite)
@@ -235,6 +236,7 @@ def run_update_golden(args: argparse.Namespace, logger: logging.Logger):
                     logger)
 
     if args.session_id:
+
       def actuator2(func):
         return func(session, args.golden_v, args.session_id, logger,
                     args.overwrite)
