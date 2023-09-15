@@ -44,7 +44,7 @@ from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
 from tuna.miopen.subcmd.export_db import run_export_db
 from tuna.miopen.subcmd.update_golden import run_update_golden
-from tuna.miopen.parse_miopen_args import get_import_cfg_parser
+from tuna.miopen.parse_miopen_args import get_import_cfg_parser_miopen
 from tuna.miopen.parse_miopen_args import get_load_job_parser
 from tuna.miopen.parse_miopen_args import get_export_db_parser
 from tuna.miopen.parse_miopen_args import get_update_golden_parser
@@ -115,7 +115,7 @@ class MIOpen(MITunaInterface):
 
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
-                               get_import_cfg_parser(),
+                               get_import_cfg_parser_miopen(),
                                required=False)
 
     subcommands.add_subcommand('load_job',
