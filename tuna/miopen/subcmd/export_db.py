@@ -28,7 +28,7 @@
 import sqlite3
 import os
 from collections import OrderedDict
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List, Tuple
 import base64
 import argparse
 import logging
@@ -44,9 +44,9 @@ from tuna.miopen.utils.analyze_parse_db import get_config_sqlite, insert_solver_
 from tuna.miopen.utils.analyze_parse_db import get_sqlite_cfg_dict
 from tuna.miopen.parse_miopen_args import get_export_db_parser
 
-DIR_NAME = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
+DIR_NAME: dict = {'F': 'Fwd', 'B': 'BwdData', 'W': 'BwdWeights'}
 
-ID_SOLVER_MAP = None
+ID_SOLVER_MAP: dict = {}
 
 
 def require_id_solvers():
@@ -282,7 +282,7 @@ def write_kdb(arch, num_cu, kern_db, logger: logging.Logger, filename=None):
   cur.execute(
       "CREATE UNIQUE INDEX `idx_kern_db` ON kern_db(kernel_name, kernel_args);")
 
-  ins_list = []
+  ins_list: List[Tuple[str, str]] = []
   for kern in kern_db:
     name = kern.kernel_name
     args = kern.kernel_args
@@ -458,7 +458,7 @@ def run_export_db(args: argparse.Namespace, logger: logging.Logger):
       args.arch = dbt.session.arch
       args.num_cu = dbt.session.num_cu
     except ValueError as terr:
-      logger.error(terr)
+      logger.error(str(terr))
 
   args.src_table = dbt.find_db_table
   if args.golden_v is not None:
