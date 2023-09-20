@@ -302,16 +302,21 @@ class ResultsMixin():  # pylint: disable=too-many-instance-attributes
 
   def export_as_tsv(self, filename, dbt, append=False):
     arch = dbt.session.arch
+    num_cu = dbt.session.num_cu
     session_id = dbt.session_id
 
     with open(filename, 'a' if append else 'w') as f:
-      print("# arch\ttestVector\tperfConfig", file=f)
+      print("# arch\tnumCUs\ttestVector\tperfConfig (tuna)", file=f)
       with DbSession() as sess:
         tbl = dbt.results
         query = sess.query(tbl).filter(tbl.session == session_id, tbl.valid == 1)
         res = query.all()
         for row in res:
-          print(f"{arch}\t{row.config_str}\t{row.perf_config}", file=f)
+          # For detailed compatibility, downcase False and True.
+          config_str = row.config_str.replace("False", "false").replace("True", "true")
+          print(f"Arch = {arch}({num_cu} CUs), vector = '{config_str}', perfConfig = {row.perf_config}",
+                      file=sys.stderr)
+          print(f"{arch}\t{num_cu}\t{config_str}\t{row.perf_config}", file=f)
         return len(res)
 
 

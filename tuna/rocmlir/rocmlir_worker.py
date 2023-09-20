@@ -160,7 +160,7 @@ class RocMLIRWorker(WorkerInterface):
       special_args = "--operation conv"
     else:
       special_args = "--operation gemm"
-    cmd = env_str + f" python3 ./bin/tuningRunner.py {special_args} \
+    cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
                      --output={self.output_filename()} --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}'"
