@@ -178,7 +178,7 @@ class ConvolutionConfig(BASE):
       'conv_stride_w': '-v',
       'dilation_h': '-l',
       'dilation_w': '-j',
-      'group_size': '-g',
+      'group_size': '-m conv -g',       # Hack to get "-m conv -g 1"
       # getopt in ConvConfiguration.fromCommandLine only does single-char options.
       # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
       #    'kernel_repeats': '--kernel-repeats',
@@ -198,16 +198,12 @@ class ConvolutionConfig(BASE):
       string += 'bfp16'
     string += " "
 
-#     for field, value in self.to_dict().items():
-#       flag = self.options[field]
-#       if flag:
-#         string += f"{flag} {value} "
     # In options order for canonicalisation, kind of.
     for field, flag in self.options.items():
       value = getattr(self, field, None)
       if value is not None and flag is not None:
         string += f"{flag} {value} "
-    string += "-m conv -t 1"
+    string += "-t 1"                    # Dummy "enable timing" option.
     return string
 
   def parse_line(self, line):
