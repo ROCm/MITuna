@@ -143,7 +143,7 @@ WORKDIR $FIN_DIR
 # Can be a branch or a SHA
 ARG FIN_BRANCH="saud/mi300-support"
 RUN if ! [ -z $FIN_BRANCH ]; then \
-        git pull && git checkout $FIN_BRANCH; \
+        pwd && git pull && git checkout $FIN_BRANCH; \
     fi
 # Install dependencies
 RUN cmake -P install_deps.cmake 
