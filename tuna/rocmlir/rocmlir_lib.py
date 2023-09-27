@@ -135,16 +135,13 @@ class RocMLIR(MITunaInterface):
 
       #determine number of processes by compute capacity
       worker_ids: List = machine.get_avail_gpus()
-      lf = self.args.load_factor
-      if lf > 1:
+      factor = self.args.load_factor
+      if factor > 1:
         # LF>1 means multiple workers per GPU.
-        new_ids = []
-        for n in range(round(lf)):
-          new_ids.extend(worker_ids)
-        worker_ids = new_ids
+        worker_ids = worker_ids * round(factor)
       else:
         # LF<1 means use that fraction of GPUs.
-        worker_ids = worker_ids[:round(len(worker_ids) * lf)]
+        worker_ids = worker_ids[:round(len(worker_ids) * factor)]
 
       if len(worker_ids) == 0:
         return None

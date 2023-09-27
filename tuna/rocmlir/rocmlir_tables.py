@@ -216,7 +216,7 @@ class ConvolutionConfig(BASE):
 
     # Convert the line ("conv -n 256 -c 1024 -H 14 ...") to dict of flag and value.
     i = iter(line.split())
-    op = next(i)
+    operation = next(i)
     options = dict(zip(i, i))
     #  print(f"options = {options}")
 
@@ -250,11 +250,11 @@ class ConvolutionConfig(BASE):
     #   convbfp16 is bf16, convint8 is i8
 
     self.data_type = 'f32'
-    if op == 'convfp16':
+    if operation == 'convfp16':
       self.data_type = 'f16'
-    elif op == 'convint8':
+    elif operation == 'convint8':
       self.data_type = 'i8'
-    elif op == 'convbfp16':
+    elif operation == 'convbfp16':
       self.data_type = 'bf16'
     self.kernel_repeats = 1
     for flag, value in options.items():
@@ -297,12 +297,13 @@ class ResultsMixin():  # pylint: disable=too-many-instance-attributes
     return line.split('\t')
 
   def export_as_tsv(self, filename, dbt, append=False):
+    """Write the contents of the table as a .tsv file for perfRunner.py."""
     arch = dbt.session.arch
     num_cu = dbt.session.num_cu
     session_id = dbt.session_id
 
-    with open(filename, 'a' if append else 'w') as f:
-      print("# arch\tnumCUs\ttestVector\tperfConfig (tuna)", file=f)
+    with open(filename, 'a' if append else 'w', encoding='utf8') as out:
+      print("# arch\tnumCUs\ttestVector\tperfConfig (tuna)", file=out)
       with DbSession() as sess:
         tbl = dbt.results
         query = sess.query(tbl).filter(tbl.session == session_id,
@@ -313,9 +314,10 @@ class ResultsMixin():  # pylint: disable=too-many-instance-attributes
           config_str = row.config_str.replace("False",
                                               "false").replace("True", "true")
           print(
-              f"Arch = {arch}({num_cu} CUs), vector = '{config_str}', perfConfig = {row.perf_config}",
+              f"Arch = {arch}({num_cu} CUs), vector = '{config_str}', \
+                perfConfig = {row.perf_config}",
               file=sys.stderr)
-          print(f"{arch}\t{num_cu}\t{config_str}\t{row.perf_config}", file=f)
+          print(f"{arch}\t{num_cu}\t{config_str}\t{row.perf_config}", file=out)
         return len(res)
 
 
@@ -476,16 +478,16 @@ class RocMLIRDBTablesConv(RocMLIRDBTables):
 
   ## Adapted from perfRunner.getConvConfigurations.
 
+  #DIRECTIONS = ['-F 1', '-F 2', '-F 4']
+  # temporarily disable backward-data until rocmlir-tuning-driver can handle multi-kernel code
+  DIRECTIONS = ['-F 1', '-F 4']
+  DATA_TYPES = ['conv', 'convfp16', 'convint8']
+  LAYOUTS = ['NHWC', 'NCHW']
+
   def get_configurations(self, filename):
     """Read conv-configs from filename and expand into all combinations of
          direction, type, and layout.
       """
-
-    #DIRECTIONS = ['-F 1', '-F 2', '-F 4']
-    # temporarily disable backward-data until rocmlir-tuning-driver can handle multi-kernel code
-    DIRECTIONS = ['-F 1', '-F 4']
-    DATA_TYPES = ['conv', 'convfp16', 'convint8']
-    LAYOUTS = ['NHWC', 'NCHW']
 
     configs = []
     with open(filename, 'r', encoding='utf8') as config_file:
@@ -493,7 +495,8 @@ class RocMLIRDBTablesConv(RocMLIRDBTables):
 
       # All combinations of conv direction, type and layouts
       for direction, datatype, layout, line in \
-              itertools.product(DIRECTIONS, DATA_TYPES, LAYOUTS, lines):
+              itertools.product(self.DIRECTIONS, self.DATA_TYPES, self.LAYOUTS,
+                                lines):
         line = line.strip()
 
         # Skip empty lines
@@ -529,7 +532,8 @@ class RocMLIRDBTablesConv(RocMLIRDBTables):
         if "-O" in line:
           output_layout = ""
 
-        one_config = f"{datatype}{direction}{filter_layout}{input_layout}{output_layout}{line}"
+        one_config = f"{datatype}{direction}{filter_layout}\
+                       {input_layout}{output_layout}{line}"
         if one_config not in configs:
           configs.append(one_config)
 
@@ -549,12 +553,13 @@ class RocMLIRDBTablesGEMM(RocMLIRDBTables):
 
   ## Adapted from perfRunner.getGemmConfigurations.
 
+  DATA_TYPES = ['f32', 'f16', 'i8']
+
   def get_configurations(self, filename):
+    #pylint: disable=invalid-name
     """Read gemm-configs from filename and expand into all combinations of
          type and transpose.
       """
-
-    DATA_TYPES = ['f32', 'f16', 'i8']
 
     configs = []
     with open(filename, 'r', encoding='utf8') as config_file:
@@ -562,7 +567,8 @@ class RocMLIRDBTablesGEMM(RocMLIRDBTables):
 
       # All combinations of types and transposition (A and B)
       for datatype, transA, transB, line in \
-              itertools.product(DATA_TYPES, ['false', 'true'], ['false', 'true'], lines):
+              itertools.product(self.DATA_TYPES, ['false', 'true'],
+                                ['false', 'true'], lines):
         line = line.strip()
 
         # Skip empty lines
@@ -599,8 +605,8 @@ class RocMLIRDBTablesGEMM(RocMLIRDBTables):
         # Special case to get both i8_i8 and i8_i32, w/o --data-type or output-type-map.
         if "-out_datatype" not in line and datatype == 'i8':
           outDataTypeString = "-out_datatype i32 "
-          oneConfig = f"{dataTypeString}{outDataTypeString}{transAString}{transBString}{line}".strip(
-          )
+          oneConfig = f"{dataTypeString}{outDataTypeString}\
+                        {transAString}{transBString}{line}".strip()
           if oneConfig not in configs:
             configs.append(oneConfig)
 

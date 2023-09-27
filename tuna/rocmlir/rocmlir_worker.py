@@ -70,7 +70,8 @@ class RocMLIRWorker(WorkerInterface):
     arch, num_cu, config, perf_config, tflops = obj.parse(result_str)
 
     print(
-        f"arch = '{arch}', num_cu = '{num_cu}', config = '{config}', perf_config = '{perf_config}', tflops = {tflops}",
+        f"arch = '{arch}', num_cu = '{num_cu}', config = '{config}', \
+          perf_config = '{perf_config}', tflops = {tflops}",
         file=sys.stderr)
 
     obj.valid = 1
