@@ -313,10 +313,9 @@ class ResultsMixin():  # pylint: disable=too-many-instance-attributes
           # For detailed compatibility, downcase False and True.
           config_str = row.config_str.replace("False",
                                               "false").replace("True", "true")
-          print(
-              f"Arch = {arch}({num_cu} CUs), vector = '{config_str}', \
+          print(f"Arch = {arch}({num_cu} CUs), vector = '{config_str}', \
                 perfConfig = {row.perf_config}",
-              file=sys.stderr)
+                file=sys.stderr)
           print(f"{arch}\t{num_cu}\t{config_str}\t{row.perf_config}", file=out)
         return len(res)
 
@@ -534,6 +533,7 @@ class RocMLIRDBTablesConv(RocMLIRDBTables):
 
         one_config = f"{datatype}{direction}{filter_layout}\
                        {input_layout}{output_layout}{line}"
+
         if one_config not in configs:
           configs.append(one_config)
 
@@ -597,8 +597,8 @@ class RocMLIRDBTablesGEMM(RocMLIRDBTables):
           outDataTypeString = f"-out_datatype {datatype} "
 
         # Strip to avoid spurious spaces
-        oneConfig = f"{dataTypeString}{outDataTypeString}{transAString}{transBString}{line}".strip(
-        )
+        oneConfig = f"{dataTypeString}{outDataTypeString}\
+                      {transAString}{transBString}{line}".strip()
         if oneConfig not in configs:
           configs.append(oneConfig)
 
