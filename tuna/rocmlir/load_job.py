@@ -53,12 +53,13 @@ def parse_args():
                       required=True,
                       help='Label to annotate the jobs.',
                       default='new')
-  parser.add_argument('--config_type',
-                      dest='config_type',
-                      help='Specify configuration type',
-                      default='convolution',
-                      choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
-                      type=str)
+  parser.add_argument(
+      '--config_type',
+      dest='config_type',
+      help='Specify configuration type',
+      default='convolution',
+      choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
+      type=str)
 
   args = parser.parse_args()
   if not args.session_id:

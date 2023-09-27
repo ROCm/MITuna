@@ -49,15 +49,15 @@ class RocMLIRWorker(WorkerInterface):
     self.dbt = None
     self.config_type = kwargs['config_type']
     super().__init__(**kwargs)
-#    self.set_db_tables()
+    #    self.set_db_tables()
     self.result_attr = [column.name for column in inspect(self.dbt.results).c]
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
 
   def set_db_tables(self):
     """Initialize tables"""
-#     print("my set-db-tables")
-#     print(f"config-type is {self.config_type}")
+    #     print("my set-db-tables")
+    #     print(f"config-type is {self.config_type}")
     if self.config_type == "convolution":
       self.dbt = RocMLIRDBTablesConv(session_id=self.session_id)
     else:

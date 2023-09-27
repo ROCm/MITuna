@@ -31,33 +31,33 @@ from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, RocMLIRDBTablesGEMM
 
 
 def main():
-    """Import conv-configs file into database rocmlir_conv_config table."""
-    # pylint: disable=duplicate-code
-    parser = setup_arg_parser(
-      'Export perf-configs from MySQL db',
-      [TunaArgs.VERSION, TunaArgs.SESSION_ID])
-    parser.add_argument('-f',
-                        '--file_name',
-                        type=str,
-                        dest='file_name',
-                        help='File to import')
-    parser.add_argument('--config_type',
-                        dest='config_type',
-                        help='Specify configuration type',
-                        default='convolution',
-                        choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
-                        type=str)
-    parser.add_argument('--append',
-                        dest='append',
-                        action='store_true',
-                        help='Append to file instead of overwriting')
-    args = parser.parse_args()
-    if args.config_type == "convolution":
-      dbt = RocMLIRDBTablesConv(session_id=args.session_id)
-    else:
-      dbt = RocMLIRDBTablesGEMM(session_id=args.session_id)
-    dbt.results().export_as_tsv(args.file_name, dbt, args.append)
+  """Import conv-configs file into database rocmlir_conv_config table."""
+  # pylint: disable=duplicate-code
+  parser = setup_arg_parser('Export perf-configs from MySQL db',
+                            [TunaArgs.VERSION, TunaArgs.SESSION_ID])
+  parser.add_argument('-f',
+                      '--file_name',
+                      type=str,
+                      dest='file_name',
+                      help='File to import')
+  parser.add_argument(
+      '--config_type',
+      dest='config_type',
+      help='Specify configuration type',
+      default='convolution',
+      choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
+      type=str)
+  parser.add_argument('--append',
+                      dest='append',
+                      action='store_true',
+                      help='Append to file instead of overwriting')
+  args = parser.parse_args()
+  if args.config_type == "convolution":
+    dbt = RocMLIRDBTablesConv(session_id=args.session_id)
+  else:
+    dbt = RocMLIRDBTablesGEMM(session_id=args.session_id)
+  dbt.results().export_as_tsv(args.file_name, dbt, args.append)
 
 
 if __name__ == '__main__':
-    main()
+  main()

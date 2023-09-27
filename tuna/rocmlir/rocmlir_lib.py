@@ -60,12 +60,13 @@ class RocMLIR(MITunaInterface):
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
-    parser.add_argument('--config_type',
-                        dest='config_type',
-                        help='Specify configuration type',
-                        default='convolution',
-                        choices=['convolution', 'gemm'], # +++pf: eventually an Enum
-                        type=str)
+    parser.add_argument(
+        '--config_type',
+        dest='config_type',
+        help='Specify configuration type',
+        default='convolution',
+        choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
+        type=str)
     parser.add_argument('--load_factor',
                         dest='load_factor',
                         help='How many workers per GPU',
@@ -80,11 +81,12 @@ class RocMLIR(MITunaInterface):
                        help='Add RocMLIR library specific tables')
 
     # pylint: disable=duplicate-code
-    group.add_argument('-e',
-                       '--execute',
-                       dest='execute',
-                       action='store_true',
-                       help='Run jobs from the job tables based on arch, num_cu and session_id'
+    group.add_argument(
+        '-e',
+        '--execute',
+        dest='execute',
+        action='store_true',
+        help='Run jobs from the job tables based on arch, num_cu and session_id'
     )
 
     group.add_argument('--init_session',
@@ -142,7 +144,7 @@ class RocMLIR(MITunaInterface):
         worker_ids = new_ids
       else:
         # LF<1 means use that fraction of GPUs.
-        worker_ids = worker_ids[:round(len(worker_ids)*lf)]
+        worker_ids = worker_ids[:round(len(worker_ids) * lf)]
 
       if len(worker_ids) == 0:
         return None
@@ -194,7 +196,7 @@ class RocMLIR(MITunaInterface):
     kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
 
     if self.args.config_type is None:
-      self.args.config_type = "convolution" # +++pf: eventually an Enum
+      self.args.config_type = "convolution"  # +++pf: eventually an Enum
     kwargs['config_type'] = self.args.config_type
 
     return kwargs

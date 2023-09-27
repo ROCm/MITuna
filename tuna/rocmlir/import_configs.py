@@ -28,6 +28,7 @@
 import os
 import logging
 import argparse
+import sys
 
 from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
@@ -38,51 +39,53 @@ from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, RocMLIRDBTablesConv, Ro
 
 def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
                 logger: logging.Logger):
-    """import configs to mysql from file with driver invocations"""
-    connect_db()
-    configs = dbt.get_configurations(os.path.expanduser(args.file_name))
-    for line in configs:
+  """import configs to mysql from file with driver invocations"""
+  connect_db()
+  configs = dbt.get_configurations(os.path.expanduser(args.file_name))
+  print(configs, file=sys.stderr)
+  for line in configs:
+    try:
+      config = dbt.config_table()
+      config.parse_line(line)
+      with DbSession() as session:
         try:
-            config = dbt.config_table()
-            config.parse_line(line)
-            with DbSession() as session:
-                try:
-                    session.add(config)
-                    session.commit()
-                except IntegrityError as err:
-                    logger.warning("Error: %s", err)
-                    session.rollback()
+          session.add(config)
+          session.commit()
+        except IntegrityError as err:
+          logger.warning("Error: %s", err)
+          session.rollback()
 
-        except ValueError as err:
-            logger.warning(err)
+    except ValueError as err:
+      logger.warning(err)
 
-    return len(configs)
+  return len(configs)
 
 
 def main():
-    """Import conv-configs file into database rocmlir_conv_config table."""
-    # pylint: disable=duplicate-code
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-f',
-                        '--file_name',
-                        type=str,
-                        dest='file_name',
-                        help='File to import')
-    parser.add_argument('--config_type',
-                        dest='config_type',
-                        help='Specify configuration type',
-                        default='convolution',
-                        choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
-                        type=str)
-    args = parser.parse_args()
-    if args.config_type == "convolution":
-      dbt = RocMLIRDBTablesConv(session_id=None)
-    else:
-      dbt = RocMLIRDBTablesGEMM(session_id=None)
-    logger = setup_logger('import_configs')
-    counts = import_cfgs(args, dbt, logger)
-    logger.info('New configs added: %u', counts)
+  """Import conv-configs file into database rocmlir_conv_config table."""
+  # pylint: disable=duplicate-code
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-f',
+                      '--file_name',
+                      type=str,
+                      dest='file_name',
+                      help='File to import')
+  parser.add_argument(
+      '--config_type',
+      dest='config_type',
+      help='Specify configuration type',
+      default='convolution',
+      choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
+      type=str)
+  args = parser.parse_args()
+  if args.config_type == "convolution":
+    dbt = RocMLIRDBTablesConv(session_id=None)
+  else:
+    dbt = RocMLIRDBTablesGEMM(session_id=None)
+  logger = setup_logger('import_configs')
+  counts = import_cfgs(args, dbt, logger)
+  logger.info('New configs added: %u', counts)
 
 
 if __name__ == '__main__':
-    main()
+  main()

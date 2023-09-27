@@ -37,4 +37,7 @@ def get_timestamp_trigger():
    end if;
   end;"""
 
-  return [trigger_template.format(op='conv'), trigger_template.format(op='gemm')]
+  return [
+      trigger_template.format(op='conv'),
+      trigger_template.format(op='gemm')
+  ]
