@@ -141,7 +141,7 @@ RUN git submodule update --init --recursive
 ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH="saud/mi300-support"
+ARG FIN_BRANCH=
 RUN if ! [ -z $FIN_BRANCH ]; then \
         git pull && git checkout $FIN_BRANCH; \
     fi
