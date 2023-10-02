@@ -618,6 +618,7 @@ def runLint() {
             sh "mypy tuna/dbBase/sql_alchemy.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/dbBase/base_class.py --ignore-missing-imports"
             sh "mypy tuna/example/session.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/example/load_job.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/example/example_worker.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/rocmlir/import_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/rocmlir/load_job.py --ignore-missing-imports --follow-imports=skip"
