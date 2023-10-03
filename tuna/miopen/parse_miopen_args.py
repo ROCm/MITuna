@@ -29,7 +29,7 @@ import jsonargparse
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.db.benchmark import FrameworkEnum, ModelEnum
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
-from tuna.subcmd.parse_subtuna_args import get_import_cfg_parser
+from tuna.parse_args import get_import_cfg_parser
 
 
 def get_import_cfg_parser_miopen(

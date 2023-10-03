@@ -164,3 +164,97 @@ def args_check(args: argparse.Namespace, parser: argparse.Namespace) -> None:
     parser.error(
         "When setting up a new tunning session the following must be specified: "\
         "label.")
+
+
+def get_import_cfg_parser(
+    with_yaml: bool = True) -> jsonargparse.ArgumentParser:
+  """Return parser for import_configs subcommand"""
+
+  parser = setup_arg_parser(
+      'Import MIOpenDriver commands and MIOpen performance DB entries.',
+      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
+      with_yaml=with_yaml)
+
+  group = parser.add_mutually_exclusive_group()
+
+  group.add_argument('--print_models',
+                     dest='print_models',
+                     action='store_true',
+                     help='Print models from table')
+  group.add_argument('--add_benchmark',
+                     dest='add_benchmark',
+                     action='store_true',
+                     help='Insert new benchmark')
+
+  parser.add_argument('-b',
+                      '--batches',
+                      type=str,
+                      dest='batches',
+                      help='Batch sizes to iterate over in the given configs')
+  parser.add_argument('--batchsize',
+                      dest='batchsize',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model batchsize')
+  parser.add_argument(
+      '-c',
+      '--command',
+      type=str,
+      dest='command',
+      default=None,
+      help='Command override: run a different command on the imported configs',
+      choices=[None, 'conv', 'convfp16', 'convbfp16'])
+  parser.add_argument('-d',
+                      '--driver',
+                      dest='driver',
+                      type=str,
+                      default=None,
+                      help='Specify driver cmd')
+  parser.add_argument('-f',
+                      '--file_name',
+                      type=str,
+                      dest='file_name',
+                      help='File to import')
+  parser.add_argument('--fw_version',
+                      dest='fw_version',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify framework version')
+  parser.add_argument('-g',
+                      '--gpu_count',
+                      dest='gpu_count',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify number of gpus the benchmark runs on')
+  parser.add_argument(
+      '--mark_recurrent',
+      dest='mark_recurrent',
+      action="store_true",
+      help='Indicate whether you want the configs to be marked as recurrent')
+  parser.add_argument('--md_version',
+                      dest='md_version',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model version')
+  parser.add_argument('-t',
+                      '--tag',
+                      type=str,
+                      dest='tag',
+                      help='Tag to mark the origin of this \
+                      config, if config not present it will insert. No wildcard columns for \
+                      tagging.')
+  parser.add_argument(
+      '-T',
+      '--tag_only',
+      action='store_true',
+      dest='tag_only',
+      help=
+      'Tag to mark the origin of this config but skips the insert new config \
+                      step in case the config does not exist in the table. Wildcard columns \
+                      allowed for tagging')
+
+  return parser
