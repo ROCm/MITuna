@@ -24,56 +24,54 @@ RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
 ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
 ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
 
+RUN set -xe
+# Install dependencies
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    rocm-dev \
+    rocm-device-libs \
+    rocm-opencl \
+    rocm-opencl-dev \
+    rocm-cmake \
+    && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM $BASEIMAGE as dtuna-ver-1
 #do nothing, assume rocm is installed here
 
 
 FROM dtuna-ver-${ROCM_PRE} as final
+
 #finish building off previous image
 RUN set -xe
 
 # Install dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
     apt-utils \
-    sshpass \
     build-essential \
-    bzip2 \
-    lbzip2 \
     cmake \ 
     curl \
     doxygen \
-    g++ \
     gdb \
     git \
-    hip-rocclr \
-    jq \
+    lbzip2 \
     lcov \
-    libelf-dev \
     libncurses5-dev \
     libnuma-dev \
     libpthread-stubs0-dev \
-    llvm \
-    # miopengemm \
+    mysql-client \
+    openssh-server \
     pkg-config \
     python3 \
     python3-dev \
     python3-pip \
     python3-venv \
+    rocblas \
     software-properties-common \
     sqlite3 \
-    wget \
-    rocm-dev \
-    rocm-device-libs \
-    rocm-opencl \
-    rocm-opencl-dev \
-    rocm-cmake \
-    rocblas \
     vim \
-    zlib1g-dev \
-    openssh-server \
-    kmod \
-    mysql-client && \
+    wget \
+    && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -112,7 +110,7 @@ RUN git pull && git checkout $MIOPEN_BRANCH
 ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
 # Install dependencies
-RUN cmake -P install_deps.cmake --minimum
+RUN cmake -P install_deps.cmake --prefix $MIOPEN_DEPS
 
 RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
 
