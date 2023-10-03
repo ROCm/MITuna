@@ -166,6 +166,7 @@ def args_check(args: argparse.Namespace, parser: argparse.Namespace) -> None:
         "label.")
 
 
+# type: ignore
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """Return parser for import_configs subcommand"""
