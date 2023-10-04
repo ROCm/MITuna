@@ -70,6 +70,10 @@ class MIOpen(MITunaInterface):
             TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
             TunaArgs.DOCKER_NAME
         ])
+    parser.add_argument('--add_benchmark',
+                        dest='add_benchmark',
+                        action='store_true',
+                        help='Insert new benchmark')
     parser.add_argument(
         '--find_mode',
         dest='find_mode',

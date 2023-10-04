@@ -182,10 +182,6 @@ def get_import_cfg_parser(
                      dest='print_models',
                      action='store_true',
                      help='Print models from table')
-  group.add_argument('--add_benchmark',
-                     dest='add_benchmark',
-                     action='store_true',
-                     help='Insert new benchmark')
 
   parser.add_argument('-b',
                       '--batches',
