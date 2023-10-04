@@ -71,6 +71,14 @@ class MIOpen(MITunaInterface):
             TunaArgs.DOCKER_NAME
         ])
     parser.add_argument(
+        '-c',
+        '--command',
+        type=str,
+        dest='command',
+        default=None,
+        help='Command override: run a different command on the imported configs',
+        choices=[None, 'conv', 'convfp16', 'convbfp16'])
+    parser.add_argument(
         '--find_mode',
         dest='find_mode',
         type=int,
