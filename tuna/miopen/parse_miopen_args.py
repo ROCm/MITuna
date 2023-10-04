@@ -49,6 +49,33 @@ def get_import_cfg_parser_miopen(
                       dest='add_model',
                       choices=[model.value for model in ModelEnum],
                       help='Populate table with new model and version')
+  parser.add_argument(
+      '-c',
+      '--command',
+      type=str,
+      dest='command',
+      default=None,
+      help='Command override: run a different command on the imported configs',
+      choices=[None, 'conv', 'convfp16', 'convbfp16'])
+  parser.add_argument('-d',
+                      '--driver',
+                      dest='driver',
+                      type=str,
+                      default=None,
+                      help='Specify driver cmd')
+  parser.add_argument('-g',
+                      '--gpu_count',
+                      dest='gpu_count',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify number of gpus the benchmark runs on')
+  parser.add_argument('--md_version',
+                      dest='md_version',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model version')
   parser.add_argument('-F',
                       '--framework',
                       dest='framework',

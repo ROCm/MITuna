@@ -194,12 +194,6 @@ def get_import_cfg_parser(
                       default=None,
                       required=False,
                       help='Specify model batchsize')
-  parser.add_argument('-d',
-                      '--driver',
-                      dest='driver',
-                      type=str,
-                      default=None,
-                      help='Specify driver cmd')
   parser.add_argument('-f',
                       '--file_name',
                       type=str,
@@ -211,24 +205,11 @@ def get_import_cfg_parser(
                       default=None,
                       required=False,
                       help='Specify framework version')
-  parser.add_argument('-g',
-                      '--gpu_count',
-                      dest='gpu_count',
-                      type=int,
-                      default=None,
-                      required=False,
-                      help='Specify number of gpus the benchmark runs on')
   parser.add_argument(
       '--mark_recurrent',
       dest='mark_recurrent',
       action="store_true",
       help='Indicate whether you want the configs to be marked as recurrent')
-  parser.add_argument('--md_version',
-                      dest='md_version',
-                      type=int,
-                      default=None,
-                      required=False,
-                      help='Specify model version')
   parser.add_argument('-t',
                       '--tag',
                       type=str,
