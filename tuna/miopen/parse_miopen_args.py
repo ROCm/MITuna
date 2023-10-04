@@ -41,6 +41,10 @@ def get_import_cfg_parser_miopen(
       dest='add_framework',
       choices=[frm.value for frm in FrameworkEnum],
       help='Populate framework table with new framework and version')
+  parser.add_argument('--add_benchmark',
+                      dest='add_benchmark',
+                      action='store_true',
+                      help='Insert new benchmark')
   parser.add_argument('--add_model',
                       dest='add_model',
                       choices=[model.value for model in ModelEnum],
