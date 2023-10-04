@@ -27,6 +27,7 @@
 """ Module to centralize command line argument parsing """
 import sys
 import argparse
+import typing
 from enum import Enum
 from typing import List, Optional
 import jsonargparse
@@ -166,7 +167,7 @@ def args_check(args: argparse.Namespace, parser: argparse.Namespace) -> None:
         "label.")
 
 
-# type: ignore
+@typing.no_type_check
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """Return parser for import_configs subcommand"""
