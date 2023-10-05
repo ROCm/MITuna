@@ -38,12 +38,12 @@ this_path = os.path.dirname(__file__)
 from tuna.sql import DbCursor
 from tests.test_importconfigs_rocmlir import test_importconfigs_rocmlir
 from tuna.rocmlir.load_job import add_jobs
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, clear_tables
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, clear_tables
 
 
 def test_cfg_compose():
   """check the config query function for args tags and cmd intake"""
-  clear_tables()
+  clear_tables("convolution")
   test_importconfigs_rocmlir()  # to get the configs in place
   # +++pf: init a session, too.
   count_configs = "SELECT count(*) FROM rocmlir_conv_config;"
@@ -52,7 +52,7 @@ def test_cfg_compose():
     res = cur.fetchall()
     config_count = res[0][0]
 
-  dbt = RocMLIRDBTables(session=None)
+  dbt = RocMLIRDBTablesConv(session=None)
   args = argparse.Namespace(session_id=1)
   job_count = add_jobs(args, dbt)
   assert job_count == config_count

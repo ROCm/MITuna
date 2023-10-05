@@ -37,7 +37,7 @@ from tuna.rocmlir.rocmlir_lib import RocMLIR
 from utils import ExampleArgs
 from tuna.utils.miopen_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.rocmlir.rocmlir_tables import SessionRocMLIR, ConvolutionJob, RocMLIRDBTables, clear_tables
+from tuna.rocmlir.rocmlir_tables import SessionRocMLIR, ConvolutionJob, RocMLIRDBTablesConv, clear_tables
 from tuna.rocmlir.load_job import add_jobs
 from tuna.rocmlir.import_configs import import_cfgs
 from utils import CfgImportArgs
@@ -49,11 +49,11 @@ SAMPLE_CONV_CONFIGS = """
 
 def test_rocmlir():
   logger = setup_logger('test_rocmlir')
-  dbt = RocMLIRDBTables(session_id=None)
+  dbt = RocMLIRDBTablesConv(session_id=None)
 
   rocmlir = RocMLIR()
   assert (rocmlir.add_tables())
-  clear_tables()
+  clear_tables("convolution")
 
   # To get some sample configs imported.
   with open("test-conv-configs", 'w') as f:
@@ -66,6 +66,8 @@ def test_rocmlir():
   rocmlir.args = ExampleArgs()
   rocmlir.args.init_session = True
   rocmlir.args.label = 'test_rocmlir'
+  rocmlir.args.load_factor = 1
+  rocmlir.args.config_type = "convolution"
   machines = load_machines(rocmlir.args)
   # With .init_session True, launch_worker adds a session and bails.
   rocmlir.compose_worker_list(machines)

@@ -57,6 +57,7 @@ def test_add_session_rocmlir():
       'machine': machine,
       'gpu_id': 0,
       'num_procs': num_gpus,
+      'config_type': "convolution",
       'barred': v,
       'bar_lock': Lock(),
       'reset_interval': False,
