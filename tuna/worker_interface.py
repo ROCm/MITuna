@@ -49,8 +49,10 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 
 from tuna.abort import chk_abort_file
-from tuna.miopen.utils.metadata import TUNA_LOG_DIR
-from tuna.miopen.utils.metadata import NUM_SQL_RETRIES
+from tuna.utils.metadata import TUNA_LOG_DIR
+from tuna.utils.metadata import NUM_SQL_RETRIES
+from tuna.utils.metadata import MAX_JOB_RETRIES
+from tuna.utils.metadata import LOG_TIMEOUT
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
@@ -58,6 +60,7 @@ from tuna.utils.db_utility import connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
+from tuna.miopen.worker.fin_class import FinClass
 
 
 class WorkerInterface(Process):
@@ -67,9 +70,6 @@ class WorkerInterface(Process):
   # pylint: disable=too-many-instance-attributes
   # pylint: disable=too-many-public-methods
   # pylint: disable=too-many-statements
-
-  MAX_JOB_RETRIES = 10
-  LOG_TIMEOUT = 10 * 60.0  # in seconds
 
   def __init__(self, **kwargs):
     """Constructor"""
@@ -178,7 +178,7 @@ class WorkerInterface(Process):
     if self.label:
       conds.append(f"reason='{self.label}'")
 
-    conds.append(f"retries<{self.MAX_JOB_RETRIES}")
+    conds.append(f"retries<{MAX_JOB_RETRIES}")
     conds.append(f"state='{find_state}'")
 
     entries = self.compose_work_objs(session, conds)
@@ -351,7 +351,7 @@ class WorkerInterface(Process):
     err: StringIO
     strout: str = str()
 
-    ret_code, out, err = self.cnx.exec_command(cmd, timeout=self.LOG_TIMEOUT)
+    ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
       strout = out.read().strip()
     if (ret_code != 0 or not out) and err:
@@ -367,8 +367,7 @@ class WorkerInterface(Process):
     err: StringIO
     strout: str = str()
 
-    ret_code, out, err = self.machine.exec_command(cmd,
-                                                   timeout=self.LOG_TIMEOUT)
+    ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
       strout = out.read().strip()
     if (ret_code != 0 or not out) and err:
@@ -376,19 +375,6 @@ class WorkerInterface(Process):
                        ret_code, err.read())
 
     return ret_code, strout, err
-
-  def get_miopen_v(self) -> str:
-    """Interface function to get new branch hash"""
-    commit_hash: str
-    _, commit_hash, _ = self.exec_docker_cmd(
-        "cat /opt/rocm/include/miopen/version.h "
-        "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-    if "No such file" in commit_hash:
-      _, commit_hash, _ = self.exec_docker_cmd(
-          "cat /opt/rocm/miopen/include/miopen/version.h "
-          "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-    self.logger.info('Got branch commit hash: %s', commit_hash)
-    return commit_hash
 
   def get_rocm_v(self) -> str:
     """Interface function to get rocm version info"""
@@ -404,7 +390,7 @@ class WorkerInterface(Process):
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
       )
-    env_miopen_v: str = self.get_miopen_v()
+    env_miopen_v: str = FinClass.get_miopen_v(self)
     if self.dbt.session.miopen_v != env_miopen_v:
       raise ValueError(
           f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
@@ -534,7 +520,7 @@ class WorkerInterface(Process):
     ret_code: int
     out: str
     err: StringIO
-    for i in range(self.MAX_JOB_RETRIES):
+    for i in range(MAX_JOB_RETRIES):
       ret_code, out, err = self.exec_docker_cmd(cmd)
 
       if ret_code != 0:
