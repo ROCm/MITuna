@@ -52,10 +52,12 @@ class TunaArgs(Enum):
 
 def setup_arg_parser(desc: str,
                      arg_list: List[TunaArgs],
-                     parser: argparse.Namespace = None,
-                     with_yaml: bool = True) -> Optional[argparse.Namespace]:
+                     parser: Optional[jsonargparse.ArgumentParser] = None,
+                     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """ function to aggregate common command line args """
-  parser = jsonargparse.ArgumentParser(description=desc)
+  
+  if parser is None: 
+    parser = jsonargparse.ArgumentParser(description=desc)
 
   if parser is not None:
     if with_yaml:
@@ -167,7 +169,6 @@ def args_check(args: argparse.Namespace, parser: argparse.Namespace) -> None:
         "label.")
 
 
-@typing.no_type_check
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """Import configurations for module"""
