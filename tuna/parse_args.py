@@ -170,42 +170,12 @@ def args_check(args: argparse.Namespace, parser: argparse.Namespace) -> None:
 @typing.no_type_check
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
-  """Return parser for import_configs subcommand"""
+  """Return parent parser for import_configs subcommand"""
 
-  parser = setup_arg_parser(
-      'Import MIOpenDriver commands and MIOpen performance DB entries.',
-      [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
-      with_yaml=with_yaml)
+  parser = setup_arg_parser('Import Configs generic commands.',
+                            [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
+                            with_yaml=with_yaml)
 
-  group = parser.add_mutually_exclusive_group()
-
-  group.add_argument('--print_models',
-                     dest='print_models',
-                     action='store_true',
-                     help='Print models from table')
-
-  parser.add_argument('-b',
-                      '--batches',
-                      type=str,
-                      dest='batches',
-                      help='Batch sizes to iterate over in the given configs')
-  parser.add_argument('--batchsize',
-                      dest='batchsize',
-                      type=int,
-                      default=None,
-                      required=False,
-                      help='Specify model batchsize')
-  parser.add_argument('-f',
-                      '--file_name',
-                      type=str,
-                      dest='file_name',
-                      help='File to import')
-  parser.add_argument('--fw_version',
-                      dest='fw_version',
-                      type=int,
-                      default=None,
-                      required=False,
-                      help='Specify framework version')
   parser.add_argument(
       '--mark_recurrent',
       dest='mark_recurrent',

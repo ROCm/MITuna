@@ -36,19 +36,36 @@ def get_import_cfg_parser_miopen(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """Return parser for import_configs with MIOpen flavor subcommand"""
   parser = get_import_cfg_parser(with_yaml=with_yaml)
-  parser.add_argument(
+
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument(
       '--add_framework',
       dest='add_framework',
       choices=[frm.value for frm in FrameworkEnum],
       help='Populate framework table with new framework and version')
-  parser.add_argument('--add_benchmark',
-                      dest='add_benchmark',
-                      action='store_true',
-                      help='Insert new benchmark')
-  parser.add_argument('--add_model',
-                      dest='add_model',
-                      choices=[model.value for model in ModelEnum],
-                      help='Populate table with new model and version')
+  group.add_argument('--add_benchmark',
+                     dest='add_benchmark',
+                     action='store_true',
+                     help='Insert new benchmark')
+  group.add_argument('--add_model',
+                     dest='add_model',
+                     choices=[model.value for model in ModelEnum],
+                     help='Populate table with new model and version')
+  group.add_argument('--print_models',
+                     dest='print_models',
+                     action='store_true',
+                     help='Print models from table')
+  parser.add_argument('-f',
+                      '--file_name',
+                      type=str,
+                      dest='file_name',
+                      help='File to import')
+  parser.add_argument('--fw_version',
+                      dest='fw_version',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify framework version')
   parser.add_argument(
       '-c',
       '--command',
