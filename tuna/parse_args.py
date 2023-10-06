@@ -55,8 +55,8 @@ def setup_arg_parser(desc: str,
                      parser: Optional[jsonargparse.ArgumentParser] = None,
                      with_yaml: bool = True) -> jsonargparse.ArgumentParser:
   """ function to aggregate common command line args """
-  
-  if parser is None: 
+
+  if parser is None:
     parser = jsonargparse.ArgumentParser(description=desc)
 
   if parser is not None:
