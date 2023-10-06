@@ -55,6 +55,17 @@ def get_import_cfg_parser_miopen(
                      dest='print_models',
                      action='store_true',
                      help='Print models from table')
+  parser.add_argument('-b',
+                      '--batches',
+                      type=str,
+                      dest='batches',
+                      help='Batch sizes to iterate over in the given configs')
+  parser.add_argument('--batchsize',
+                      dest='batchsize',
+                      type=int,
+                      default=None,
+                      required=False,
+                      help='Specify model batchsize')
   parser.add_argument('-f',
                       '--file_name',
                       type=str,

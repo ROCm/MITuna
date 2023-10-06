@@ -170,7 +170,7 @@ def args_check(args: argparse.Namespace, parser: argparse.Namespace) -> None:
 @typing.no_type_check
 def get_import_cfg_parser(
     with_yaml: bool = True) -> jsonargparse.ArgumentParser:
-  """Return parent parser for import_configs subcommand"""
+  """Import configurations for module"""
 
   parser = setup_arg_parser('Import Configs generic commands.',
                             [TunaArgs.VERSION, TunaArgs.CONFIG_TYPE],
