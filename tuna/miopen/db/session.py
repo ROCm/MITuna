@@ -30,7 +30,7 @@ from sqlalchemy import Column, String, UniqueConstraint
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
 from tuna.session_mixin import SessionMixin
-from tuna.miopen.worker.fin_class import get_miopen_v
+from tuna.miopen.worker.fin_class import FinClass
 
 LOGGER = setup_logger('session_miopen')
 
@@ -40,6 +40,7 @@ class Session(BASE, SessionMixin):
   #pylint: disable=attribute-defined-outside-init
   #pylint: disable=too-many-instance-attributes
   #pylint: disable=no-name-in-module
+  #pylint: disable=no-value-for-parameter
 
   __tablename__ = "session"
   __table_args__ = (UniqueConstraint("arch",
@@ -73,6 +74,6 @@ class Session(BASE, SessionMixin):
     if hasattr(args, 'miopen_v') and args.miopen_v:
       self.miopen_v = args.miopen_v
     else:
-      self.miopen_v = get_miopen_v()
+      self.miopen_v = FinClass.get_miopen_v()
 
     return self.insert_session()
