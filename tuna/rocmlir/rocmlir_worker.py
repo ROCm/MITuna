@@ -38,7 +38,7 @@ from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, RocMLIRDBTablesGEMM
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.utils.db_utility import session_retry, gen_insert_query
 
 
@@ -63,12 +63,7 @@ class RocMLIRWorker(WorkerInterface):
 
   def set_db_tables(self):
     """Initialize tables"""
-    #     print("my set-db-tables")
-    #     print(f"config-type is {self.config_type}")
-    if self.config_type == "convolution":
-      self.dbt = RocMLIRDBTablesConv(session_id=self.session_id)
-    else:
-      self.dbt = RocMLIRDBTablesGEMM(session_id=self.session_id)
+    self.dbt = RocMLIRDBTables(session_id=self.session_id, config_type=self.config_type)
 
   def update_result_table(self, session, result_str):
     """update results table with individual result entry"""

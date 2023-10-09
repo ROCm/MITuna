@@ -35,7 +35,7 @@ from tuna.utils.logger import setup_logger
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, RocMLIRDBTablesGEMM
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 
 LOGGER = setup_logger('rocmlir_load_jobs')
 
@@ -111,11 +111,7 @@ def main():
   """ main """
 
   args = parse_args()
-  if args.config_type == "convolution":
-    dbt = RocMLIRDBTablesConv(session_id=None)
-  else:
-    dbt = RocMLIRDBTablesGEMM(session_id=None)
-
+  dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)
   connect_db()
   cnt = add_jobs(args, dbt)
   print(f"New jobs added: {cnt}")

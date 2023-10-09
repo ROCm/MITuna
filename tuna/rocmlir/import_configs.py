@@ -34,7 +34,7 @@ from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, RocMLIRDBTablesConv, RocMLIRDBTablesGEMM
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 
 
 def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
@@ -43,20 +43,20 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
   connect_db()
   configs = dbt.get_configurations(os.path.expanduser(args.file_name))
   print(configs, file=sys.stderr)
-  for line in configs:
-    try:
-      config = dbt.config_table()
-      config.parse_line(line)
-      with DbSession() as session:
-        try:
-          session.add(config)
-          session.commit()
-        except IntegrityError as err:
-          logger.warning("Error: %s", err)
-          session.rollback()
+  with DbSession() as session:
+    for line in configs:
+      try:
+        config = dbt.config_table()
+        config.parse_line(line)
+          try:
+            session.add(config)
+            session.commit()
+          except IntegrityError as err:
+            logger.warning("Error: %s", err)
+            session.rollback()
 
-    except ValueError as err:
-      logger.warning(err)
+      except ValueError as err:
+        logger.warning(err)
 
   return len(configs)
 
@@ -78,10 +78,7 @@ def main():
       choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
       type=str)
   args = parser.parse_args()
-  if args.config_type == "convolution":
-    dbt = RocMLIRDBTablesConv(session_id=None)
-  else:
-    dbt = RocMLIRDBTablesGEMM(session_id=None)
+  dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)
   logger = setup_logger('import_configs')
   counts = import_cfgs(args, dbt, logger)
   logger.info('New configs added: %u', counts)

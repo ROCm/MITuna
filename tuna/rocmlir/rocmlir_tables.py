@@ -262,6 +262,70 @@ class ConvolutionConfig(BASE):
       if field:
         setattr(self, field, value)
 
+  ## Adapted from perfRunner.getConvConfigurations.
+
+  #DIRECTIONS = ['-F 1', '-F 2', '-F 4']
+  # temporarily disable backward-data until rocmlir-tuning-driver can handle multi-kernel code
+  DIRECTIONS = ['-F 1', '-F 4']
+  DATA_TYPES = ['conv', 'convfp16', 'convint8']
+  LAYOUTS = ['NHWC', 'NCHW']
+
+  def get_configurations(self, filename):
+    """Read conv-configs from filename and expand into all combinations of
+         direction, type, and layout.
+      """
+
+    configs = []
+    with open(filename, 'r', encoding='utf8') as config_file:
+      lines = config_file.readlines()
+
+      # All combinations of conv direction, type and layouts
+      for direction, datatype, layout, line in \
+              itertools.product(self.DIRECTIONS, self.DATA_TYPES, self.LAYOUTS,
+                                lines):
+        line = line.strip()
+
+        # Skip empty lines
+        if len(line) == 0 or line[0] == '#':
+          continue
+        # Skip int8 non-fwd convolutions
+        if datatype == 'convint8' and direction != '-F 1':
+          continue
+
+        # Skip datatype if already in
+        datatype = f"{datatype} "
+        # check for the presense of a positional arg
+        if line[0][0] != "-":
+          datatype = ""
+
+        # Skip direction if already in
+        direction = f"{direction} "
+        if "-F" in line:
+          direction = ""
+
+        # Skip filter layout if already in
+        filter_layout = f"-f {layout} "
+        if "-f" in line:
+          filter_layout = ""
+
+        # Skip input layout if already in
+        input_layout = f"-I {layout} "
+        if "-I" in line:
+          input_layout = ""
+
+        # Skip output layout if already in
+        output_layout = f"-O {layout} "
+        if "-O" in line:
+          output_layout = ""
+
+        one_config = f"{datatype}{direction}{filter_layout}\
+                       {input_layout}{output_layout}{line}"
+
+        if one_config not in configs:
+          configs.append(one_config)
+
+    return configs
+
 
 class ResultsMixin():  # pylint: disable=too-many-instance-attributes
   """Collects the results of tuning."""
@@ -427,130 +491,6 @@ class GEMMConfig(BASE):
       if field:
         setattr(self, field, value)
 
-
-class GEMMResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attributes
-  """Collects the results of GEMM tuning."""
-
-  __tablename__ = "rocmlir_gemm_results"
-  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
-
-  config = Column(Integer,
-                  ForeignKey("rocmlir_gemm_config.id"),
-                  nullable=False,
-                  index=True)
-
-
-#pylint: disable=too-few-public-methods
-class RocMLIRDBTables(DBTablesInterface):
-  """Represents db tables for rocMLIR lib"""
-
-  def __init__(self, **kwargs):
-    """Constructor"""
-    super().__init__(**kwargs)
-    allowed_keys = set(['config_type', 'session_id'])
-
-    self.config_type = None
-    self.job_table = None
-    self.session_table = SessionRocMLIR
-    self.config_table = None
-    self.results = None
-
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
-    self.set_tables()
-
-  def set_tables(self, sess_class=SessionRocMLIR):
-    """Set appropriate tables based on requirements"""
-    super().set_tables(sess_class)
-
-
-class RocMLIRDBTablesConv(RocMLIRDBTables):
-  """Represents db tables for rocMLIR lib when op is conv"""
-
-  def set_tables(self, sess_class=SessionRocMLIR):
-    """Set appropriate tables based on requirements"""
-    super().set_tables(sess_class)
-    # +++pf:  branch on self.config_type when we have GEMM, too.
-    self.job_table = ConvolutionJob
-    self.config_table = ConvolutionConfig
-    self.results = ConvolutionResults
-
-  ## Adapted from perfRunner.getConvConfigurations.
-
-  #DIRECTIONS = ['-F 1', '-F 2', '-F 4']
-  # temporarily disable backward-data until rocmlir-tuning-driver can handle multi-kernel code
-  DIRECTIONS = ['-F 1', '-F 4']
-  DATA_TYPES = ['conv', 'convfp16', 'convint8']
-  LAYOUTS = ['NHWC', 'NCHW']
-
-  def get_configurations(self, filename):
-    """Read conv-configs from filename and expand into all combinations of
-         direction, type, and layout.
-      """
-
-    configs = []
-    with open(filename, 'r', encoding='utf8') as config_file:
-      lines = config_file.readlines()
-
-      # All combinations of conv direction, type and layouts
-      for direction, datatype, layout, line in \
-              itertools.product(self.DIRECTIONS, self.DATA_TYPES, self.LAYOUTS,
-                                lines):
-        line = line.strip()
-
-        # Skip empty lines
-        if len(line) == 0 or line[0] == '#':
-          continue
-        # Skip int8 non-fwd convolutions
-        if datatype == 'convint8' and direction != '-F 1':
-          continue
-
-        # Skip datatype if already in
-        datatype = f"{datatype} "
-        # check for the presense of a positional arg
-        if line[0][0] != "-":
-          datatype = ""
-
-        # Skip direction if already in
-        direction = f"{direction} "
-        if "-F" in line:
-          direction = ""
-
-        # Skip filter layout if already in
-        filter_layout = f"-f {layout} "
-        if "-f" in line:
-          filter_layout = ""
-
-        # Skip input layout if already in
-        input_layout = f"-I {layout} "
-        if "-I" in line:
-          input_layout = ""
-
-        # Skip output layout if already in
-        output_layout = f"-O {layout} "
-        if "-O" in line:
-          output_layout = ""
-
-        one_config = f"{datatype}{direction}{filter_layout}\
-                       {input_layout}{output_layout}{line}"
-
-        if one_config not in configs:
-          configs.append(one_config)
-
-    return configs
-
-
-class RocMLIRDBTablesGEMM(RocMLIRDBTables):
-  """Represents db tables for rocMLIR lib when op is conv"""
-
-  def set_tables(self, sess_class=SessionRocMLIR):
-    """Set appropriate tables based on requirements"""
-    super().set_tables(sess_class)
-    # +++pf:  branch on self.config_type when we have GEMM, too.
-    self.job_table = GEMMJob
-    self.config_table = GEMMConfig
-    self.results = GEMMResults
-
   ## Adapted from perfRunner.getGemmConfigurations.
 
   DATA_TYPES = ['f32', 'f16', 'i8']
@@ -611,6 +551,50 @@ class RocMLIRDBTablesGEMM(RocMLIRDBTables):
             configs.append(oneConfig)
 
     return configs
+
+
+class GEMMResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attributes
+  """Collects the results of GEMM tuning."""
+
+  __tablename__ = "rocmlir_gemm_results"
+  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
+
+  config = Column(Integer,
+                  ForeignKey("rocmlir_gemm_config.id"),
+                  nullable=False,
+                  index=True)
+
+
+#pylint: disable=too-few-public-methods
+class RocMLIRDBTables(DBTablesInterface):
+  """Represents db tables for rocMLIR lib"""
+
+  def __init__(self, **kwargs):
+    """Constructor"""
+    super().__init__(**kwargs)
+    allowed_keys = set(['config_type', 'session_id'])
+
+    self.config_type = None
+    self.job_table = None
+    self.session_table = SessionRocMLIR
+    self.config_table = None
+    self.results = None
+
+    self.__dict__.update(
+        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+    self.set_tables()
+
+  def set_tables(self, sess_class=SessionRocMLIR):
+    """Set appropriate tables based on requirements"""
+    super().set_tables(sess_class)
+    if self.args.config_type = "convolution":
+      self.job_table = ConvolutionJob
+      self.config_table = ConvolutionConfig
+      self.results = ConvolutionResults
+    else:
+      self.job_table = GEMMJob
+      self.config_table = GEMMConfig
+      self.results = GEMMResults
 
 
 def get_tables() -> List[BASE]:

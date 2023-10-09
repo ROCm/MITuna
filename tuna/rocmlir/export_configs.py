@@ -27,7 +27,7 @@
 """ Module for exporting configs for use in performance runs """
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, RocMLIRDBTablesGEMM
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 
 
 def main():
@@ -52,10 +52,7 @@ def main():
                       action='store_true',
                       help='Append to file instead of overwriting')
   args = parser.parse_args()
-  if args.config_type == "convolution":
-    dbt = RocMLIRDBTablesConv(session_id=args.session_id)
-  else:
-    dbt = RocMLIRDBTablesGEMM(session_id=args.session_id)
+  dbt = RocMLIRDBTables(session_id=args.session_id, config_type=args.config_type)
   dbt.results().export_as_tsv(args.file_name, dbt, args.append)
 
 
