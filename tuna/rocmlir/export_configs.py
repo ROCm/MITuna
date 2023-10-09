@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
+from tuna.rocmlir.config_type import ConfigType, CONVOLUTION, GEMM
 
 
 def main():
@@ -44,9 +45,9 @@ def main():
       '--config_type',
       dest='config_type',
       help='Specify configuration type',
-      default='convolution',
-      choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
-      type=str)
+      default=CONVOLUTION,
+      choices=[CONVOLUTION, GEMM],
+      type=ConfigType)
   parser.add_argument('--append',
                       dest='append',
                       action='store_true',

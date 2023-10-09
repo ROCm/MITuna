@@ -40,6 +40,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.utils.db_utility import session_retry, gen_insert_query
+from tuna.rocmlir.config_type import CONVOLUTION, GEMM
 
 
 class RocMLIRWorker(WorkerInterface):
@@ -162,15 +163,17 @@ class RocMLIRWorker(WorkerInterface):
     env_str = " ".join(self.envmt)
     with DbSession() as session:
       cft = self.dbt.config_table
-      query = session.query(cft).filter(cft.id == self.job.config)
-      config = query.all()
+      config = session.query(cft).filter(cft.id == self.job.config).all()
       if len(config) > 1:
         raise ValueError(f"More than one config matching ID {self.job.config}")
       config_string = config[0].config_string()
-    if self.config_type == 'convolution':
+    if self.config_type == CONVOLUTION:
       special_args = "--operation conv"
-    else:
+    elif self.config_type == GEMM:
       special_args = "--operation gemm"
+    else:
+      raise ValueError(f"Config type {self.config_type} not yet supported.")
+
     cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
                      --output={self.output_filename()} --tflops \

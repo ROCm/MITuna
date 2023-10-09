@@ -41,6 +41,7 @@ from tuna.rocmlir.rocmlir_tables import get_tables, SessionRocMLIR
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.miopen.db.build_schema import recreate_triggers
 from tuna.rocmlir.triggers import get_timestamp_trigger
+from tuna.rocmlir.config_type import ConfigType, CONVOLUTION, GEMM
 
 
 class RocMLIR(MITunaInterface):
@@ -61,20 +62,19 @@ class RocMLIR(MITunaInterface):
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
     parser.add_argument(
-        '--config_type',
-        dest='config_type',
-        help='Specify configuration type',
-        default='convolution',
-        choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
-        type=str)
+      '--config_type',
+      dest='config_type',
+      help='Specify configuration type',
+      default=CONVOLUTION,
+      choices=[CONVOLUTION, GEMM],
+      type=ConfigType)
     parser.add_argument('--load_factor',
                         dest='load_factor',
                         help='How many workers per GPU',
-                        default=1,
+                        default=1.0,
                         type=float)
 
-    group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
-    )
+    group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group()
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',
@@ -191,9 +191,6 @@ class RocMLIR(MITunaInterface):
       @param f_vals Dict containing process specific runtime information
     """
     kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
-
-    if self.args.config_type is None:
-      self.args.config_type = "convolution"  # +++pf: eventually an Enum
     kwargs['config_type'] = self.args.config_type
 
     return kwargs

@@ -45,6 +45,7 @@ from tuna.machine import Machine
 from tuna.session_mixin import SessionMixin
 from tuna.utils.logger import setup_logger
 from tuna.tables_interface import DBTablesInterface
+from tuna.rocmlir.config_type import CONVOLUTION, GEMM
 
 #pylint: disable=too-few-public-methods
 
@@ -587,14 +588,16 @@ class RocMLIRDBTables(DBTablesInterface):
   def set_tables(self, sess_class=SessionRocMLIR):
     """Set appropriate tables based on requirements"""
     super().set_tables(sess_class)
-    if self.args.config_type = "convolution":
+    if self.args.config_type == CONVOLUTION:
       self.job_table = ConvolutionJob
       self.config_table = ConvolutionConfig
       self.results = ConvolutionResults
-    else:
+    elif self.args.config_type == GEMM:
       self.job_table = GEMMJob
       self.config_table = GEMMConfig
       self.results = GEMMResults
+    else:
+      raise ValueError(f"Config type {self.args.config_type} not yet supported.")
 
 
 def get_tables() -> List[BASE]:

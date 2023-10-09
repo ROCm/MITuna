@@ -35,6 +35,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
+from tuna.rocmlir.config_type import ConfigType, CONVOLUTION, GEMM
 
 
 def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
@@ -74,9 +75,9 @@ def main():
       '--config_type',
       dest='config_type',
       help='Specify configuration type',
-      default='convolution',
-      choices=['convolution', 'gemm'],  # +++pf: eventually an Enum
-      type=str)
+      default=CONVOLUTION,
+      choices=[CONVOLUTION, GEMM],
+      type=ConfigType)
   args = parser.parse_args()
   dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)
   logger = setup_logger('import_configs')
