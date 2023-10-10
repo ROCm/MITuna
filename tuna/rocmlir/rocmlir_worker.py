@@ -40,7 +40,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.utils.db_utility import session_retry, gen_insert_query
-from tuna.rocmlir.config_type import CONVOLUTION, GEMM
+from tuna.rocmlir.config_type import ConfigType
 
 
 class RocMLIRWorker(WorkerInterface):
@@ -167,9 +167,9 @@ class RocMLIRWorker(WorkerInterface):
       if len(config) > 1:
         raise ValueError(f"More than one config matching ID {self.job.config}")
       config_string = config[0].config_string()
-    if self.config_type == CONVOLUTION:
+    if self.config_type == ConfigType.CONVOLUTION:
       special_args = "--operation conv"
-    elif self.config_type == GEMM:
+    elif self.config_type == ConfigType.GEMM:
       special_args = "--operation gemm"
     else:
       raise ValueError(f"Config type {self.config_type} not yet supported.")

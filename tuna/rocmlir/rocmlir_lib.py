@@ -41,7 +41,7 @@ from tuna.rocmlir.rocmlir_tables import get_tables, SessionRocMLIR
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.miopen.db.build_schema import recreate_triggers
 from tuna.rocmlir.triggers import get_timestamp_trigger
-from tuna.rocmlir.config_type import ConfigType, CONVOLUTION, GEMM
+from tuna.rocmlir.config_type import ConfigType
 
 
 class RocMLIR(MITunaInterface):
@@ -65,8 +65,8 @@ class RocMLIR(MITunaInterface):
       '--config_type',
       dest='config_type',
       help='Specify configuration type',
-      default=CONVOLUTION,
-      choices=[CONVOLUTION, GEMM],
+      default=ConfigType.CONVOLUTION,
+      choices=[ConfigType.CONVOLUTION, ConfigType.GEMM],
       type=ConfigType)
     parser.add_argument('--load_factor',
                         dest='load_factor',

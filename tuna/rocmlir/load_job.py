@@ -36,7 +36,7 @@ from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
-from tuna.rocmlir.config_type import ConfigType, CONVOLUTION, GEMM
+from tuna.rocmlir.config_type import ConfigType
 
 LOGGER = setup_logger('rocmlir_load_jobs')
 
@@ -58,8 +58,8 @@ def parse_args():
       '--config_type',
       dest='config_type',
       help='Specify configuration type',
-      default=CONVOLUTION,
-      choices=[CONVOLUTION, GEMM],
+      default=ConfigType.CONVOLUTION,
+      choices=[ConfigType.CONVOLUTION, ConfigType.GEMM],
       type=ConfigType)
 
   args = parser.parse_args()

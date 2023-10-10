@@ -28,7 +28,7 @@
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
-from tuna.rocmlir.config_type import ConfigType, CONVOLUTION, GEMM
+from tuna.rocmlir.config_type import ConfigType
 
 
 def main():
@@ -45,8 +45,8 @@ def main():
       '--config_type',
       dest='config_type',
       help='Specify configuration type',
-      default=CONVOLUTION,
-      choices=[CONVOLUTION, GEMM],
+      default=ConfigType.CONVOLUTION,
+      choices=[ConfigType.CONVOLUTION, ConfigType.GEMM],
       type=ConfigType)
   parser.add_argument('--append',
                       dest='append',
