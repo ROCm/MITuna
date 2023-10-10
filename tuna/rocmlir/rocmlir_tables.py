@@ -588,16 +588,16 @@ class RocMLIRDBTables(DBTablesInterface):
   def set_tables(self, sess_class=SessionRocMLIR):
     """Set appropriate tables based on requirements"""
     super().set_tables(sess_class)
-    if self.args.config_type == ConfigType.CONVOLUTION:
+    if self.config_type == ConfigType.CONVOLUTION:
       self.job_table = ConvolutionJob
       self.config_table = ConvolutionConfig
       self.results = ConvolutionResults
-    elif self.args.config_type == ConfigType.GEMM:
+    elif self.config_type == ConfigType.GEMM:
       self.job_table = GEMMJob
       self.config_table = GEMMConfig
       self.results = GEMMResults
     else:
-      raise ValueError(f"Config type {self.args.config_type} not yet supported.")
+      raise ValueError(f"Config type {self.config_type} not yet supported.")
 
 
 def get_tables() -> List[BASE]:
