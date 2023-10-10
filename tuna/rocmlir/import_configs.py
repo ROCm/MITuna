@@ -48,9 +48,10 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
   with DbSession() as session:
     for line in configs:
       try:
-        config = config_table.parse_line(line)
+        config_table = dbt.config_table()
+        config_table.parse_line(line)
         try:
-          session.add(config)
+          session.add(config_table)
           session.commit()
         except IntegrityError as err:
           logger.warning("Error: %s", err)
