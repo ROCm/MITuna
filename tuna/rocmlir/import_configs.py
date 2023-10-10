@@ -44,7 +44,7 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
   connect_db()
   config = dbt.config_table()
   configs = config.get_configurations(os.path.expanduser(args.file_name))
-  print(configs, file=sys.stderr)
+  #print(configs, file=sys.stderr)
   with DbSession() as session:
     for line in configs:
       try:
@@ -76,7 +76,7 @@ def main():
       dest='config_type',
       help='Specify configuration type',
       default=ConfigType.CONVOLUTION,
-      choices=[ConfigType.CONVOLUTION, ConfigType.GEMM],
+      choices=[cft.value for cft in ConfigType],
       type=ConfigType)
   args = parser.parse_args()
   dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)

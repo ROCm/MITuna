@@ -66,7 +66,7 @@ class RocMLIR(MITunaInterface):
       dest='config_type',
       help='Specify configuration type',
       default=ConfigType.CONVOLUTION,
-      choices=[ConfigType.CONVOLUTION, ConfigType.GEMM],
+      choices=[cft.value for cft in ConfigType],
       type=ConfigType)
     parser.add_argument('--load_factor',
                         dest='load_factor',

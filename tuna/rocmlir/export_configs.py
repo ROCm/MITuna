@@ -46,7 +46,7 @@ def main():
       dest='config_type',
       help='Specify configuration type',
       default=ConfigType.CONVOLUTION,
-      choices=[ConfigType.CONVOLUTION, ConfigType.GEMM],
+      choices=[cft.value for cft in ConfigType],
       type=ConfigType)
   parser.add_argument('--append',
                       dest='append',
