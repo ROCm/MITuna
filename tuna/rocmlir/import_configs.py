@@ -42,12 +42,12 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
                 logger: logging.Logger):
   """import configs to mysql from file with driver invocations"""
   connect_db()
-  configs = dbt.get_configurations(os.path.expanduser(args.file_name))
+  config = dbt.config_table()
+  configs = config.get_configurations(os.path.expanduser(args.file_name))
   print(configs, file=sys.stderr)
   with DbSession() as session:
     for line in configs:
       try:
-        config = dbt.config_table()
         config.parse_line(line)
         try:
           session.add(config)
