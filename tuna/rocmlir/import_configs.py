@@ -28,6 +28,7 @@
 import os
 import logging
 import argparse
+import jsonargparse
 import sys
 
 from sqlalchemy.exc import IntegrityError
@@ -65,7 +66,7 @@ def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
 def main():
   """Import conv-configs file into database rocmlir_conv_config table."""
   # pylint: disable=duplicate-code
-  parser = argparse.ArgumentParser()
+  parser = jsonargparse.ArgumentParser()
   parser.add_argument('-f',
                       '--file_name',
                       type=str,
@@ -74,8 +75,8 @@ def main():
   parser.add_argument('--config_type',
                       dest='config_type',
                       help='Specify configuration type',
-                      default=ConfigType.CONVOLUTION,
-                      choices=ConfigType,
+                      default=ConfigType.convolution,
+                      choices=[ct.name for ct in ConfigType],
                       type=ConfigType)
   args = parser.parse_args()
   dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)

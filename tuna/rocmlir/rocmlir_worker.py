@@ -167,9 +167,9 @@ class RocMLIRWorker(WorkerInterface):
       if len(config) > 1:
         raise ValueError(f"More than one config matching ID {self.job.config}")
       config_string = config[0].config_string()
-    if self.config_type == ConfigType.CONVOLUTION:
+    if self.config_type == ConfigType.convolution:
       special_args = "--operation conv"
-    elif self.config_type == ConfigType.GEMM:
+    elif self.config_type == ConfigType.gemm:
       special_args = "--operation gemm"
     else:
       raise ValueError(f"Config type {self.config_type} not yet supported.")

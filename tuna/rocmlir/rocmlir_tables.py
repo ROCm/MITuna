@@ -588,11 +588,11 @@ class RocMLIRDBTables(DBTablesInterface):
   def set_tables(self, sess_class=SessionRocMLIR):
     """Set appropriate tables based on requirements"""
     super().set_tables(sess_class)
-    if self.config_type == ConfigType.CONVOLUTION:
+    if self.config_type == ConfigType.convolution:
       self.job_table = ConvolutionJob
       self.config_table = ConvolutionConfig
       self.results = ConvolutionResults
-    elif self.config_type == ConfigType.GEMM:
+    elif self.config_type == ConfigType.gemm:
       self.job_table = GEMMJob
       self.config_table = GEMMConfig
       self.results = GEMMResults

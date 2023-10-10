@@ -57,8 +57,8 @@ def parse_args():
   parser.add_argument('--config_type',
                       dest='config_type',
                       help='Specify configuration type',
-                      default=ConfigType.CONVOLUTION,
-                      choices=ConfigType,
+                      default=ConfigType.convolution,
+                      choices=[ct.name for ct in ConfigType],
                       type=ConfigType)
 
   args = parser.parse_args()

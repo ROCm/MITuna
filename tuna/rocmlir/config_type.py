@@ -27,14 +27,4 @@
 """Module that encapsulates different configuration types supported by Tuna"""
 from enum import Enum
 
-
-#pylint: disable=too-few-public-methods
-class ConfigType(Enum):
-  """Enumerate supported configuration types"""
-  CONVOLUTION: str = "convolution"
-  GEMM: str = "gemm"
-  # Possibly in future.
-  #FUSION: str = "fusion"
-
-  def __str__(self):
-    return self.value
+ConfigType = Enum('ConfigType', ['convolution', 'gemm'])
