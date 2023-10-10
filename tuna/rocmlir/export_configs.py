@@ -41,13 +41,12 @@ def main():
                       type=str,
                       dest='file_name',
                       help='File to import')
-  parser.add_argument(
-      '--config_type',
-      dest='config_type',
-      help='Specify configuration type',
-      default=ConfigType.CONVOLUTION,
-      choices=[cft.value for cft in ConfigType],
-      type=ConfigType)
+  parser.add_argument('--config_type',
+                      dest='config_type',
+                      help='Specify configuration type',
+                      default=ConfigType.CONVOLUTION,
+                      choices=ConfigType,
+                      type=ConfigType)
   parser.add_argument('--append',
                       dest='append',
                       action='store_true',

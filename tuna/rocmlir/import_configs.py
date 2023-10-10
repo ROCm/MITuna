@@ -71,13 +71,12 @@ def main():
                       type=str,
                       dest='file_name',
                       help='File to import')
-  parser.add_argument(
-      '--config_type',
-      dest='config_type',
-      help='Specify configuration type',
-      default=ConfigType.CONVOLUTION,
-      choices=[cft.value for cft in ConfigType],
-      type=ConfigType)
+  parser.add_argument('--config_type',
+                      dest='config_type',
+                      help='Specify configuration type',
+                      default=ConfigType.CONVOLUTION,
+                      choices=ConfigType,
+                      type=ConfigType)
   args = parser.parse_args()
   dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)
   logger = setup_logger('import_configs')

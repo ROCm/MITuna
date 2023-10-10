@@ -61,13 +61,12 @@ class RocMLIR(MITunaInterface):
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
-    parser.add_argument(
-      '--config_type',
-      dest='config_type',
-      help='Specify configuration type',
-      default=ConfigType.CONVOLUTION,
-      choices=[cft.value for cft in ConfigType],
-      type=ConfigType)
+    parser.add_argument('--config_type',
+                        dest='config_type',
+                        help='Specify configuration type',
+                        default=ConfigType.CONVOLUTION,
+                        choices=ConfigType,
+                        type=ConfigType)
     parser.add_argument('--load_factor',
                         dest='load_factor',
                         help='How many workers per GPU',
