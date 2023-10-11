@@ -56,6 +56,7 @@ class SessionRocMLIR(BASE, SessionMixin):
   #pylint: disable=duplicate-code
 
   mlir_v = Column(String(length=64), nullable=False)
+  arch_full = Column(String(length=64), nullable=False)
 
   __tablename__ = "session_rocmlir"
   __table_args__ = (UniqueConstraint("arch",
@@ -84,6 +85,11 @@ class SessionRocMLIR(BASE, SessionMixin):
       self.mlir_v = args.mlir_v
     else:
       self.mlir_v = worker.get_mlir_v()
+
+    if hasattr(args, 'arch_full') and args.arch_full:
+      self.arch_full = args.arch_full
+    else:
+      self.arch_full = worker.machine.arch_full
 
     return self.insert_session()
 
@@ -363,7 +369,7 @@ class ResultsMixin():  # pylint: disable=too-many-instance-attributes
 
   def export_as_tsv(self, filename, dbt, append=False):
     """Write the contents of the table as a .tsv file for perfRunner.py."""
-    arch = dbt.session.arch
+    arch = dbt.session.arch_full
     num_cu = dbt.session.num_cu
     session_id = dbt.session_id
 

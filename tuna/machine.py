@@ -69,6 +69,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   password: str = Column(Text, nullable=False)
   avail_gpus: List[int] = Column(Text, nullable=False)
   arch: str = Column(Text, nullable=False)
+  arch_full = Column(Text, nullable=False)
   num_cu: int = Column(INTEGER, nullable=False, server_default="64")
   sclk: int = Column(INTEGER)
   mclk: int = Column(INTEGER)
@@ -293,15 +294,15 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     for i in alist:
       agent = agents[i]
       if agent['Device Type'] == 'GPU':
-        arch = agent['Name']
         try:
-          arch = agent['ISA Info']['ISA 1']['Name']
-          arch = arch.replace('amdgcn-amd-amdhsa--', '')
+          arch_full = agent['ISA Info']['ISA 1']['Name']
+          arch_full = arch_full.replace('amdgcn-amd-amdhsa--', '')
         except KeyError:
-          pass
+          arch_full = agent['Name']
         details = {
             'rinfo': agent,
-            'arch': arch,
+            'arch': agent['Name'],
+            'arch_full': arch_full,
             'num_cu': int(agent['Compute Unit'])
         }
         self.gpus.append(details)
