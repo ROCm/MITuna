@@ -28,7 +28,6 @@
 
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
-from tuna.rocmlir.config_type import ConfigType
 
 
 def main():
@@ -41,18 +40,12 @@ def main():
                       type=str,
                       dest='file_name',
                       help='File to import')
-  parser.add_argument('--config_type',
-                      dest='config_type',
-                      help='Specify configuration type',
-                      default=ConfigType.convolution,
-                      choices=[ct.name for ct in ConfigType],
-                      type=ConfigType)
   parser.add_argument('--append',
                       dest='append',
                       action='store_true',
                       help='Append to file instead of overwriting')
   args = parser.parse_args()
-  dbt = RocMLIRDBTables(session_id=args.session_id, config_type=args.config_type)
+  dbt = RocMLIRDBTables(session_id=args.session_id)
   dbt.results().export_as_tsv(args.file_name, dbt, args.append)
 
 

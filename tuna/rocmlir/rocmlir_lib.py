@@ -64,7 +64,7 @@ class RocMLIR(MITunaInterface):
     parser.add_argument('--config_type',
                         dest='config_type',
                         help='Specify configuration type',
-                        default=ConfigType.convolution,
+                        default=None,
                         choices=[ct.name for ct in ConfigType],
                         type=ConfigType)
     parser.add_argument('--load_factor',

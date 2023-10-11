@@ -50,9 +50,7 @@ class RocMLIRWorker(WorkerInterface):
   def __init__(self, **kwargs):
     """Constructor"""
     self.dbt = None
-    self.config_type = kwargs['config_type']
     super().__init__(**kwargs)
-    #    self.set_db_tables()
     self.result_attr = [column.name for column in inspect(self.dbt.results).c]
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
@@ -64,7 +62,7 @@ class RocMLIRWorker(WorkerInterface):
 
   def set_db_tables(self):
     """Initialize tables"""
-    self.dbt = RocMLIRDBTables(session_id=self.session_id, config_type=self.config_type)
+    self.dbt = RocMLIRDBTables(session_id=self.session_id)
 
   def update_result_table(self, session, result_str):
     """update results table with individual result entry"""
@@ -167,12 +165,12 @@ class RocMLIRWorker(WorkerInterface):
       if len(config) > 1:
         raise ValueError(f"More than one config matching ID {self.job.config}")
       config_string = config[0].config_string()
-    if self.config_type == ConfigType.convolution:
+    if self.dbt.config_type == ConfigType.convolution:
       special_args = "--operation conv"
-    elif self.config_type == ConfigType.gemm:
+    elif self.dbt.config_type == ConfigType.gemm:
       special_args = "--operation gemm"
     else:
-      raise ValueError(f"Config type {self.config_type} not yet supported.")
+      raise ValueError(f"Config type {self.dbt.config_type} not yet supported.")
 
     cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \

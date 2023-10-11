@@ -36,7 +36,6 @@ from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.db_utility import connect_db
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
-from tuna.rocmlir.config_type import ConfigType
 
 LOGGER = setup_logger('rocmlir_load_jobs')
 
@@ -54,12 +53,6 @@ def parse_args():
                       required=True,
                       help='Label to annotate the jobs.',
                       default='new')
-  parser.add_argument('--config_type',
-                      dest='config_type',
-                      help='Specify configuration type',
-                      default=ConfigType.convolution,
-                      choices=[ct.name for ct in ConfigType],
-                      type=ConfigType)
 
   args = parser.parse_args()
   if not args.session_id:
@@ -111,7 +104,7 @@ def main():
   """ main """
 
   args = parse_args()
-  dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)
+  dbt = RocMLIRDBTables(session_id=args.session_id)
   connect_db()
   cnt = add_jobs(args, dbt)
   print(f"New jobs added: {cnt}")
