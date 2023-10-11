@@ -69,7 +69,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   password: str = Column(Text, nullable=False)
   avail_gpus: List[int] = Column(Text, nullable=False)
   arch: str = Column(Text, nullable=False)
-  arch_full = Column(Text, nullable=False)
+  arch_full: str = Column(Text, nullable=False)
   num_cu: int = Column(INTEGER, nullable=False, server_default="64")
   sclk: int = Column(INTEGER)
   mclk: int = Column(INTEGER)
@@ -89,7 +89,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     allowed_keys: Set = set([
         'id', 'hostname', 'user', 'password', 'port', 'ipmi_ip', 'ipmi_port',
         'ipmi_user', 'ipmi_password', 'ipmi_inaccessible', 'sclk', 'mclk',
-        'arch', 'num_cu', 'avail_gpus', 'local_machine'
+        'arch', 'arch_full', 'num_cu', 'avail_gpus', 'local_machine'
     ])
     self.__dict__.update(
         (key, None) for key in allowed_keys if key not in self.__dict__)
@@ -119,6 +119,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
       if self.gpus:
         self.arch = self.gpus[0]['arch']
+        self.arch_full = self.gpus[0]['arch_full']
         self.num_cu = self.gpus[0]['num_cu']
         self.avail_gpus = list(range(len(self.gpus)))
     else:

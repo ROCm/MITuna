@@ -57,6 +57,8 @@ class SessionRocMLIR(BASE, SessionMixin):
 
   mlir_v = Column(String(length=64), nullable=False)
   arch_full = Column(String(length=64), nullable=False)
+  # For convenience of commands.
+  config_type = Column(Enum(ConfigType))
 
   __tablename__ = "session_rocmlir"
   __table_args__ = (UniqueConstraint("arch",
@@ -64,6 +66,7 @@ class SessionRocMLIR(BASE, SessionMixin):
                                      "rocm_v",
                                      "mlir_v",
                                      "reason",
+                                     "config_type",
                                      name="uq_idx"),)
 
   def get_query(self, sess, sess_obj, entry):
@@ -74,6 +77,7 @@ class SessionRocMLIR(BASE, SessionMixin):
         .filter(sess_obj.rocm_v == entry.rocm_v)\
         .filter(sess_obj.mlir_v == entry.mlir_v)\
         .filter(sess_obj.reason == entry.reason)\
+        .filter(sess_obj.config_type == entry.config_type)
 
     return query
 
@@ -90,6 +94,9 @@ class SessionRocMLIR(BASE, SessionMixin):
       self.arch_full = args.arch_full
     else:
       self.arch_full = worker.machine.arch_full
+
+    if hasattr(args, 'config_type') and args.config_type:
+      self.config_type = args.config_type
 
     return self.insert_session()
 
@@ -576,19 +583,16 @@ class GEMMResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attr
 class RocMLIRDBTables(DBTablesInterface):
   """Represents db tables for rocMLIR lib"""
 
-  def __init__(self, **kwargs):
+  def __init__(self, *, config_type=None, session_id, **kwargs):
     """Constructor"""
-    super().__init__(**kwargs)
-    allowed_keys = set(['config_type', 'session_id'])
+    super().__init__(config_type=config_type, session_id=session_id, **kwargs)
 
-    self.config_type = None
+    self.config_type = config_type or self.session.config_type
     self.job_table = None
     self.session_table = SessionRocMLIR
     self.config_table = None
     self.results = None
 
-    self.__dict__.update(
-        (key, value) for key, value in kwargs.items() if key in allowed_keys)
     self.set_tables()
 
   def set_tables(self, sess_class=SessionRocMLIR):

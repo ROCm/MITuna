@@ -185,8 +185,6 @@ class RocMLIRWorker(WorkerInterface):
 
   def get_mlir_v(self) -> str:
     """Interface function to get mlir version info"""
-    #_, mlir_ver, _ = self.exec_docker_cmd("cat /opt/rocm/.info/version")
-    # git rev-parse HEAD
-    mlir_ver = "mlir_v-not-yet-implemented"
-    self.logger.info('Got mlir version: %s', mlir_ver)
-    return mlir_ver
+    _, mlir_hash, _ = self.exec_docker_cmd("git rev-parse HEAD")
+    self.logger.info('Got mlir version: %s', mlir_hash)
+    return mlir_hash
