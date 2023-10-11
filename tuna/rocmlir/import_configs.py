@@ -29,7 +29,6 @@ import os
 import logging
 import argparse
 import jsonargparse
-import sys
 
 from sqlalchemy.exc import IntegrityError
 from tuna.dbBase.sql_alchemy import DbSession
