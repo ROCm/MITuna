@@ -74,7 +74,8 @@ class RocMLIR(MITunaInterface):
                         default=1.0,
                         type=float)
 
-    group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group()
+    group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
+    )
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',
@@ -171,7 +172,8 @@ class RocMLIR(MITunaInterface):
       for machine in machines:
         worker = RocMLIRWorker(config_type=self.args.config_type,
                                session_id=self.args.session_id,
-                               machine=machine, num_procs=Value('i', 0))
+                               machine=machine,
+                               num_procs=Value('i', 0))
         SessionRocMLIR().add_new_session(self.args, worker)
       return None
 

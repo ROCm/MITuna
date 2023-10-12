@@ -588,7 +588,8 @@ class RocMLIRDBTables(DBTablesInterface):
     super().__init__(config_type=config_type, session_id=session_id, **kwargs)
     super().set_tables(SessionRocMLIR)
 
-    self.config_type = config_type or (self.session and self.session.config_type)
+    self.config_type = config_type or (self.session and
+                                       self.session.config_type)
 
     self.job_table = None
     self.session_table = SessionRocMLIR
@@ -597,7 +598,7 @@ class RocMLIRDBTables(DBTablesInterface):
 
     self.set_tables()
 
-  def set_tables(self):
+  def set_tables(self, sess_class=None):
     """Set appropriate tables based on requirements"""
     if self.config_type == ConfigType.convolution:
       self.job_table = ConvolutionJob
