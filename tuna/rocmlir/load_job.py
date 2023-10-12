@@ -70,7 +70,7 @@ def add_jobs(args, dbt):
                            dbt.session_table.id == args.session_id)
     reasons = query.all()
     if not reasons:
-      raise ValueError(f"No session matching ID {args.session_id}")
+      raise ValueError(f"No valid session matching ID {args.session_id}")
     if len(reasons) > 1:
       raise ValueError(f"More than one session matching ID {args.session_id}")
     reason = reasons[0].reason

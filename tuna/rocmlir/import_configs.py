@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -69,6 +69,7 @@ def main():
   parser.add_argument('-f',
                       '--file_name',
                       type=str,
+                      required=True,
                       dest='file_name',
                       help='File to import')
   parser.add_argument('--config_type',

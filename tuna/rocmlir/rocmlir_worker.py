@@ -151,9 +151,8 @@ class RocMLIRWorker(WorkerInterface):
     # pylint: disable=broad-exception-caught
     # Not sure what to expect beyond OSError.
     except Exception as exc:
-      self.logger.warning(
-          'Exception occurred while saving results of job %s:  %s', self.job.id,
-          exc)
+      self.logger.warning('Exception occurred while running job %s:  %s',
+                          self.job.id, exc)
       self.set_job_state('errored', result=str(exc).replace("'", r"\'"))
 
     return True
@@ -173,6 +172,10 @@ class RocMLIRWorker(WorkerInterface):
       special_args = "--operation gemm"
     else:
       raise ValueError(f"Config type {self.dbt.config_type} not yet supported.")
+
+    if not os.path.exists("./bin/tuningRunner.py"):
+      raise FileNotFoundError("tuningRunner.py not found;"
+                              "  wrong directory or missing setup")
 
     cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
