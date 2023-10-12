@@ -47,10 +47,11 @@ class RocMLIRWorker(WorkerInterface):
   """ The RocMLIR class implements the worker class. Its purpose is to run a command. It picks up
   new jobs and when completed, sets the state to completed. """
 
-  def __init__(self, **kwargs):
+  def __init__(self, *, config_type=None, **kwargs):
     """Constructor"""
     self.dbt = None
-    super().__init__(**kwargs)
+    self.config_type = config_type
+    super().__init__(config_type=config_type, **kwargs)
     self.result_attr = [column.name for column in inspect(self.dbt.results).c]
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
@@ -62,7 +63,8 @@ class RocMLIRWorker(WorkerInterface):
 
   def set_db_tables(self):
     """Initialize tables"""
-    self.dbt = RocMLIRDBTables(session_id=self.session_id)
+    self.dbt = RocMLIRDBTables(session_id=self.session_id,
+                               config_type=self.config_type)
 
   def update_result_table(self, session, result_str):
     """update results table with individual result entry"""

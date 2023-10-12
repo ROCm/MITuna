@@ -28,6 +28,7 @@
 # pylint: disable=duplicate-code
 import sys
 import argparse
+from multiprocessing import Value
 
 from typing import Dict, Any, List, Optional
 from tuna.mituna_interface import MITunaInterface
@@ -101,24 +102,17 @@ class RocMLIR(MITunaInterface):
     args_check(self.args, parser)
 
   def launch_worker(self, gpu_idx: int, f_vals: Dict[str, Any], \
-                    worker_lst: List[RocMLIRWorker]) -> bool:
+                    worker_lst: List[RocMLIRWorker]) -> List[RocMLIRWorker]:
     """! Function to launch worker
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param worker_lst List containing worker instances
-      @return Boolean value
     """
-
-    # pylint: disable=duplicate-code
     kwargs: Dict[str, Any] = self.get_kwargs(gpu_idx, f_vals)
     worker: RocMLIRWorker = RocMLIRWorker(**kwargs)
-    if self.args.init_session:
-      SessionRocMLIR().add_new_session(self.args, worker)
-      return False
-
     worker.start()
     worker_lst.append(worker)
-    return True
+    return worker_lst
 
   def compose_worker_list(self, machines) -> Optional[List[RocMLIRWorker]]:
     # pylint: disable=too-many-branches
@@ -150,8 +144,7 @@ class RocMLIR(MITunaInterface):
 
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
-        if not self.launch_worker(gpu_idx, f_vals, worker_lst):
-          break
+        worker_lst = self.launch_worker(gpu_idx, f_vals, worker_lst)
 
     return worker_lst
 
@@ -172,7 +165,16 @@ class RocMLIR(MITunaInterface):
     if self.args.add_tables:
       self.add_tables()
       return None
+
     machines: List[Machine] = load_machines(self.args)
+    if self.args.init_session:
+      for machine in machines:
+        worker = RocMLIRWorker(config_type=self.args.config_type,
+                               session_id=self.args.session_id,
+                               machine=machine, num_procs=Value('i', 0))
+        SessionRocMLIR().add_new_session(self.args, worker)
+      return None
+
     res = self.compose_worker_list(machines)
     return res
 

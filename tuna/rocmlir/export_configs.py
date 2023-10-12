@@ -39,6 +39,7 @@ def main():
                       '--file_name',
                       type=str,
                       dest='file_name',
+                      required=True,
                       help='File to import')
   parser.add_argument('--append',
                       dest='append',
