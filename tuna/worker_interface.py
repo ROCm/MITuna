@@ -49,14 +49,10 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 
 from tuna.abort import chk_abort_file
-from tuna.utils.metadata import TUNA_LOG_DIR
-from tuna.utils.metadata import NUM_SQL_RETRIES
-from tuna.utils.metadata import MAX_JOB_RETRIES
-from tuna.utils.metadata import LOG_TIMEOUT
+from tuna.utils.metadata import TUNA_LOG_DIR, NUM_SQL_RETRIES, MAX_JOB_RETRIES, LOG_TIMEOUT
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.db_utility import session_retry
-from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
-from tuna.utils.db_utility import connect_db
+from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set, connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger

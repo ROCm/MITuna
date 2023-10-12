@@ -24,7 +24,8 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" This file contains mappings relevant to launching MIOpenDriver and interacting with sql tables
+""" This file contains mappings relevant to general constant definitions at tuna folder 
+    level
 """
 
 import os
