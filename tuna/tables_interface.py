@@ -28,8 +28,8 @@
 
 from typing import Any, Set, Optional, Dict
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.session_mixin import SessionMixin
-from tuna.miopen.db.miopen_tables import JobMixin
+from tuna.db.session_mixin import SessionMixin
+from tuna.db.tuna_tables import JobMixin
 
 
 #pylint: disable=too-few-public-methods
