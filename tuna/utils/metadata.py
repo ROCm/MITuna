@@ -24,40 +24,16 @@
 # SOFTWARE.
 #
 ###############################################################################
-#Dummy machine class for unit tests
-from tuna.utils.metadata import LOG_TIMEOUT
-from tuna.machine import Machine
+""" This file contains mappings relevant to general constant definitions at tuna folder 
+    level
+"""
 
+import os
 
-class DummyMachine:
+TUNA_LOG_DIR = os.path.expanduser("~/tmp/tuna_logs")
+if 'TUNA_LOG_DIR' in os.environ:
+  TUNA_LOG_DIR = os.environ['TUNA_LOG_DIR']
 
-  def __init__(self, _gpu_state):
-    self.gpu_state = _gpu_state
-    self.json_file = None
-    self.port = None
-    self.hostname = None
-    self.arch = 'gfx908'
-    self.num_cu = 120
-    self.id = 1
-    self.machine = Machine(local_machine=True)
-
-  def set_gpu_state(self, _gpu_state):
-    self.gpu_state = _gpu_state
-
-  def chk_gpu_status(self, gpu_id=0):
-    return self.gpu_state
-
-  def write_file(self, filename, is_temp=False):
-    self.json_file = filename
-    return filename
-
-  def restart_server(self, wait=True):
-    pass
-
-  def connect(self, abort=None):
-    pass
-
-  def exec_command(self, command, docker_name=None, timeout=LOG_TIMEOUT):
-    ret_code, out, err = self.machine.exec_command(command, docker_name,
-                                                   timeout)
-    return ret_code, out, err
+NUM_SQL_RETRIES = 10
+LOG_TIMEOUT = 10 * 60.0  # seconds
+MAX_JOB_RETRIES = 10

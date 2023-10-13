@@ -33,7 +33,7 @@ import tempfile
 from dummy_machine import DummyMachine
 from tuna.miopen.utils.config_type import ConfigType
 from multiprocessing import Value, Lock, Queue
-from tuna.miopen.utils.metadata import LOG_TIMEOUT
+from tuna.utils.metadata import LOG_TIMEOUT
 from tuna.miopen.worker.fin_class import FinClass
 
 sys.path.append("../tuna")

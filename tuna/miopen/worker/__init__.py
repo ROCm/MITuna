@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,40 +23,3 @@
 # SOFTWARE.
 #
 ###############################################################################
-#Dummy machine class for unit tests
-from tuna.utils.metadata import LOG_TIMEOUT
-from tuna.machine import Machine
-
-
-class DummyMachine:
-
-  def __init__(self, _gpu_state):
-    self.gpu_state = _gpu_state
-    self.json_file = None
-    self.port = None
-    self.hostname = None
-    self.arch = 'gfx908'
-    self.num_cu = 120
-    self.id = 1
-    self.machine = Machine(local_machine=True)
-
-  def set_gpu_state(self, _gpu_state):
-    self.gpu_state = _gpu_state
-
-  def chk_gpu_status(self, gpu_id=0):
-    return self.gpu_state
-
-  def write_file(self, filename, is_temp=False):
-    self.json_file = filename
-    return filename
-
-  def restart_server(self, wait=True):
-    pass
-
-  def connect(self, abort=None):
-    pass
-
-  def exec_command(self, command, docker_name=None, timeout=LOG_TIMEOUT):
-    ret_code, out, err = self.machine.exec_command(command, docker_name,
-                                                   timeout)
-    return ret_code, out, err
