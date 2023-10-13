@@ -32,15 +32,18 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
+from utils import ExampleArgs, CfgImportArgs
+from multiprocessing import Value
+
 from tuna.utils.logger import setup_logger
 from tuna.rocmlir.rocmlir_lib import RocMLIR
-from utils import ExampleArgs
 from tuna.utils.miopen_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.rocmlir.rocmlir_tables import SessionRocMLIR, ConvolutionJob, RocMLIRDBTablesConv, clear_tables
+from tuna.rocmlir.rocmlir_tables import SessionRocMLIR, ConvolutionJob, RocMLIRDBTables, clear_tables
 from tuna.rocmlir.load_job import add_jobs
 from tuna.rocmlir.import_configs import import_cfgs
-from utils import CfgImportArgs
+from tuna.rocmlir.config_type import ConfigType
+from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 
 SAMPLE_CONV_CONFIGS = """
 -F 1 -n 256 -c 1024 -H 14 -W 14 -k 2048 -y 1 -x 1 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1
@@ -49,11 +52,11 @@ SAMPLE_CONV_CONFIGS = """
 
 def test_rocmlir():
   logger = setup_logger('test_rocmlir')
-  dbt = RocMLIRDBTablesConv(session_id=None)
+  dbt = RocMLIRDBTables(session_id=None, config_type=ConfigType.convolution)
 
   rocmlir = RocMLIR()
   assert (rocmlir.add_tables())
-  clear_tables("convolution")
+  clear_tables(ConfigType.convolution)
 
   # To get some sample configs imported.
   with open("test-conv-configs", 'w') as f:
@@ -67,10 +70,13 @@ def test_rocmlir():
   rocmlir.args.init_session = True
   rocmlir.args.label = 'test_rocmlir'
   rocmlir.args.load_factor = 1
-  rocmlir.args.config_type = "convolution"
+  rocmlir.args.config_type = ConfigType.convolution
   machines = load_machines(rocmlir.args)
-  # With .init_session True, launch_worker adds a session and bails.
-  rocmlir.compose_worker_list(machines)
+  worker = RocMLIRWorker(config_type=rocmlir.args.config_type,
+                               session_id=None,
+                               machine=machines[0], num_procs=Value('i', 0))
+  SessionRocMLIR().add_new_session(rocmlir.args, worker)
+
   with DbSession() as session:
     query = session.query(SessionRocMLIR)
     res = query.all()

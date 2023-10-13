@@ -39,6 +39,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.rocmlir.rocmlir_tables import SessionRocMLIR
 from tuna.rocmlir.rocmlir_lib import RocMLIR
+from tuna.rocmlir.config_type import ConfigType
 from utils import DummyArgs
 
 
@@ -57,7 +58,7 @@ def test_add_session_rocmlir():
       'machine': machine,
       'gpu_id': 0,
       'num_procs': num_gpus,
-      'config_type': "convolution",
+      'config_type': ConfigType.convolution,
       'barred': v,
       'bar_lock': Lock(),
       'reset_interval': False,

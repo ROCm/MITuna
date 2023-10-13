@@ -69,7 +69,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   password: str = Column(Text, nullable=False)
   avail_gpus: List[int] = Column(Text, nullable=False)
   arch: str = Column(Text, nullable=False)
-  arch_full: str = Column(Text, nullable=False)
+  arch_full: str = Column(Text, nullable=False, default=arch)
   num_cu: int = Column(INTEGER, nullable=False, server_default="64")
   sclk: int = Column(INTEGER)
   mclk: int = Column(INTEGER)
