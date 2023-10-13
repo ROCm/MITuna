@@ -32,12 +32,13 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
+from utils import CfgImportArgs
 from tuna.utils.logger import setup_logger
 from tuna.rocmlir.import_configs import import_cfgs
 from tuna.sql import DbCursor
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.rocmlir.rocmlir_lib import RocMLIR
-from utils import CfgImportArgs
+from tuna.rocmlir.config_type import ConfigType
 
 SAMPLE_CONV_CONFIGS = """
 # This section of the file comes from resnet50-miopen-configs
@@ -60,7 +61,7 @@ def test_import_conv():
   rocmlir = RocMLIR()
   assert (rocmlir.add_tables())
 
-  dbt = RocMLIRDBTablesConv(session_id=None)
+  dbt = RocMLIRDBTables(session_id=None, config_type=ConfigType.convolution)
   logger = setup_logger('test_importconfigs')
   find_configs = "SELECT count(*) FROM rocmlir_conv_config;"
 

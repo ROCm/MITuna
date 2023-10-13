@@ -37,7 +37,7 @@ from multiprocessing import Value
 
 from tuna.utils.logger import setup_logger
 from tuna.rocmlir.rocmlir_lib import RocMLIR
-from tuna.utils.miopen_utility import load_machines
+from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.rocmlir.rocmlir_tables import SessionRocMLIR, ConvolutionJob, RocMLIRDBTables, clear_tables
 from tuna.rocmlir.load_job import add_jobs
@@ -71,10 +71,10 @@ def test_rocmlir():
   rocmlir.args.label = 'test_rocmlir'
   rocmlir.args.load_factor = 1
   rocmlir.args.config_type = ConfigType.convolution
-  machines = load_machines(rocmlir.args)
+  machine = Machine(hostname="test", local_machine=True)
   worker = RocMLIRWorker(config_type=rocmlir.args.config_type,
                          session_id=None,
-                         machine=machines[0],
+                         machine=machine,
                          num_procs=Value('i', 0))
   SessionRocMLIR().add_new_session(rocmlir.args, worker)
 

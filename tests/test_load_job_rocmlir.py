@@ -35,15 +35,20 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
+from utils import ExampleArgs
+from multiprocessing import Value
 from tuna.sql import DbCursor
+from tuna.machine import Machine
 from tests.test_importconfigs_rocmlir import test_importconfigs_rocmlir
 from tuna.rocmlir.load_job import add_jobs
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTablesConv, clear_tables
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, clear_tables, SessionRocMLIR
+from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
+from tuna.rocmlir.config_type import ConfigType
 
 
 def test_cfg_compose():
   """check the config query function for args tags and cmd intake"""
-  clear_tables("convolution")
+  clear_tables(ConfigType.convolution)
   test_importconfigs_rocmlir()  # to get the configs in place
   # +++pf: init a session, too.
   count_configs = "SELECT count(*) FROM rocmlir_conv_config;"
@@ -52,7 +57,19 @@ def test_cfg_compose():
     res = cur.fetchall()
     config_count = res[0][0]
 
-  dbt = RocMLIRDBTablesConv(session=None)
+  args = ExampleArgs()
+  args.init_session = True
+  args.label = 'test_rocmlir'
+  args.load_factor = 1
+  args.config_type = ConfigType.convolution
+  machine = Machine(hostname="test", local_machine=True)
+  worker = RocMLIRWorker(config_type=args.config_type,
+                         session_id=None,
+                         machine=machine,
+                         num_procs=Value('i', 0))
+  SessionRocMLIR().add_new_session(args, worker)
+
+  dbt = RocMLIRDBTables(session_id=1)
   args = argparse.Namespace(session_id=1)
   job_count = add_jobs(args, dbt)
   assert job_count == config_count
