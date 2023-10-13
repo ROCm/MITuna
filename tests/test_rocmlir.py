@@ -73,8 +73,9 @@ def test_rocmlir():
   rocmlir.args.config_type = ConfigType.convolution
   machines = load_machines(rocmlir.args)
   worker = RocMLIRWorker(config_type=rocmlir.args.config_type,
-                               session_id=None,
-                               machine=machines[0], num_procs=Value('i', 0))
+                         session_id=None,
+                         machine=machines[0],
+                         num_procs=Value('i', 0))
   SessionRocMLIR().add_new_session(rocmlir.args, worker)
 
   with DbSession() as session:
