@@ -33,7 +33,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
 from tuna.dbBase.base_class import BASE
-from tuna.session_mixin import SessionMixin
+from tuna.db.session_mixin import SessionMixin
 from tuna.worker_interface import WorkerInterface
 
 
