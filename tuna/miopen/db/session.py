@@ -29,7 +29,7 @@ from sqlalchemy import Column, String, UniqueConstraint
 
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
-from tuna.session_mixin import SessionMixin
+from tuna.db.session_mixin import SessionMixin
 
 LOGGER = setup_logger('session_miopen')
 

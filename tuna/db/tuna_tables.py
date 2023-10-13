@@ -31,9 +31,11 @@ from sqlalchemy import Text, Enum
 from sqlalchemy.databases import mysql
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.ext.declarative import declared_attr
-
+from tuna.miopen.db.miopen_tables import FinStep
 
 #pylint: disable=too-few-public-methods
+
+
 class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
@@ -62,20 +64,6 @@ class JobEnum(enum.Enum):
   not_tunable = 22
   compiled_pend = 23
   evaluated_pend = 24
-
-
-class FinStep(enum.Enum):
-  """ Allowed Fin Steps """
-  # pylint: disable=invalid-name ; tuna/go_fish.py names valid fin steps as FinStep.__members__
-  find_compile = 1
-  find_eval = 2
-  get_solvers = 3
-  get_applicability = 4
-  not_fin = 5
-  miopen_find_compile = 6
-  miopen_find_eval = 7
-  miopen_perf_compile = 8
-  miopen_perf_eval = 9
 
 
 class JobMixin():
