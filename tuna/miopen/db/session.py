@@ -38,8 +38,6 @@ class Session(BASE, SessionMixin):
   """Session table to keep track of tunning sesions"""
   #pylint: disable=attribute-defined-outside-init
   #pylint: disable=too-many-instance-attributes
-  #pylint: disable=no-name-in-module
-  #pylint: disable=no-value-for-parameter
 
   __tablename__ = "session"
   __table_args__ = (UniqueConstraint("arch",
