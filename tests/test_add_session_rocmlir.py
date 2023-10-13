@@ -74,6 +74,7 @@ def test_add_session_rocmlir():
   args = DummyArgs()
   args.add_session = True
   args.arch = 'gfx908'
+  args.arch_full = 'gfx908'
   args.num_cu = 120
   args.reason = "testing_add_session"
   args.ticket = "JIRA-Dummy-123"
