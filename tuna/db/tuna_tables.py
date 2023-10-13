@@ -32,6 +32,7 @@ from sqlalchemy.databases import mysql
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.ext.declarative import declared_attr
 
+
 #pylint: disable=too-few-public-methods
 class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
