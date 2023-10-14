@@ -126,13 +126,6 @@ class FinClass(WorkerInterface):
     self.fdb_attr.remove("insert_ts")
     self.fdb_attr.remove("update_ts")
 
-  def get_rocm_v(self) -> str:
-    """Interface function to get rocm version info"""
-    rocm_ver: str
-    _, rocm_ver, _ = self.exec_docker_cmd("cat /opt/rocm/.info/version")
-    self.logger.info('Got rocm version: %s', rocm_ver)
-    return rocm_ver
-
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
