@@ -76,7 +76,7 @@ def test_rocmlir():
                          session_id=None,
                          machine=machine,
                          num_procs=Value('i', 0))
-  SessionRocMLIR().add_new_session(rocmlir.args, worker)
+  session_id = SessionRocMLIR().add_new_session(rocmlir.args, worker)
 
   with DbSession() as session:
     query = session.query(SessionRocMLIR)
@@ -85,28 +85,30 @@ def test_rocmlir():
 
   #test load_job
   rocmlir.args.init_session = False
-  rocmlir.args.session_id = 1
+  rocmlir.args.session_id = session_id
   rocmlir.args.execute = True
   rocmlir.args.config = 1
   num_jobs = add_jobs(rocmlir.args, dbt)
   assert num_jobs == 6
 
-  # +++pf:  can't get this part to work
-  #   #testing execute rocminfo
-  #   # With .init_session False, launch_worker starts the worker.
-  #   workers = rocmlir.compose_worker_list(machines)
-  #   assert workers
-  #   for worker in workers:
-  #     worker.join()
-  #   with DbSession() as session:
-  #     query = session.query(ConvolutionJob).filter(ConvolutionJob.session==1)\
-  #                                          .filter(ConvolutionJob.state=='completed')
-  #     res = query.all()
-  #     assert len(res) == 0
-  #     # Because rocMLIR is not in path, error
-  #     query = session.query(ConvolutionJob).filter(ConvolutionJob.session==1)\
-  #                                          .filter(ConvolutionJob.state=='errored')
-  #     res = query.all()
-  #     assert len(res) == 6
+  workers = rocmlir.compose_worker_list([machine])
+  assert workers
+  for worker in workers:
+    worker.join()
+
+  # Deliberately did not supply ./bin/tuningRunner.py from rocMLIR, so we
+  # should see six 'errored' jobs.
+  with DbSession() as session:
+    query = session.query(ConvolutionJob).filter(ConvolutionJob.session==session_id)\
+                                         .filter(ConvolutionJob.state=='completed')
+    res = query.all()
+    print(f"Should be 0 'completed' jobs and there are {len(res)}")
+    assert len(res) == 0
+    # Because rocMLIR is not in path, error
+    query = session.query(ConvolutionJob).filter(ConvolutionJob.session==session_id)\
+                                         .filter(ConvolutionJob.state=='error')
+    res = query.all()
+    print(f"Should be 6 'error' jobs and there are {len(res)}")
+    assert len(res) == 6
 
   return True

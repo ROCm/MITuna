@@ -644,3 +644,4 @@ def clear_tables(config_type):
     session.execute(sql_delete(dbt.job_table))
     session.execute(sql_delete(dbt.config_table))
     session.execute(sql_delete(dbt.session_table))
+    session.commit()

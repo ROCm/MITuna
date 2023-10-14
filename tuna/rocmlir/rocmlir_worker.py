@@ -133,13 +133,13 @@ class RocMLIRWorker(WorkerInterface):
             retcode, cmd_output = self.run_cmd()
           except ValueError as verr:
             self.logger.info(verr)
-            self.set_job_state('errored', result=verr)
+            self.set_job_state('error', result=verr)
           else:
             if retcode != 0:
               quoted_output = cmd_output.replace("'", r"\'")
               msg = f"Error code {retcode}, output {quoted_output}"
               self.logger.info(msg)
-              self.set_job_state('errored', result=msg)
+              self.set_job_state('error', result=msg)
             else:
               with open(self.output_filename(), 'r',
                         encoding='utf8') as results:
@@ -153,7 +153,7 @@ class RocMLIRWorker(WorkerInterface):
     except Exception as exc:
       self.logger.warning('Exception occurred while running job %s:  %s',
                           self.job.id, exc)
-      self.set_job_state('errored', result=str(exc).replace("'", r"\'"))
+      self.set_job_state('error', result=str(exc).replace("'", r"\'"))
 
     return True
 

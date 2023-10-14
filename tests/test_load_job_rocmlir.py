@@ -50,7 +50,6 @@ def test_cfg_compose():
   """check the config query function for args tags and cmd intake"""
   clear_tables(ConfigType.convolution)
   test_importconfigs_rocmlir()  # to get the configs in place
-  # +++pf: init a session, too.
   count_configs = "SELECT count(*) FROM rocmlir_conv_config;"
   with DbCursor() as cur:
     cur.execute(count_configs)
@@ -59,7 +58,7 @@ def test_cfg_compose():
 
   args = ExampleArgs()
   args.init_session = True
-  args.label = 'test_rocmlir'
+  args.label = "test_load_job"
   args.load_factor = 1
   args.config_type = ConfigType.convolution
   machine = Machine(hostname="test", local_machine=True)
@@ -67,9 +66,9 @@ def test_cfg_compose():
                          session_id=None,
                          machine=machine,
                          num_procs=Value('i', 0))
-  SessionRocMLIR().add_new_session(args, worker)
+  session_id = SessionRocMLIR().add_new_session(args, worker)
 
-  dbt = RocMLIRDBTables(session_id=1)
-  args = argparse.Namespace(session_id=1)
+  dbt = RocMLIRDBTables(session_id=session_id)
+  args = argparse.Namespace(session_id=session_id)
   job_count = add_jobs(args, dbt)
   assert job_count == config_count

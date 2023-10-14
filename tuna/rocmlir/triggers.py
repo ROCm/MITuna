@@ -33,7 +33,7 @@ def get_timestamp_trigger():
   begin
    if NEW.state='running' then set NEW.compile_start=now();
    elseif NEW.state='completed' then set NEW.compile_end=now();
-   elseif NEW.state='errored' then set NEW.compile_end=now();
+   elseif NEW.state='error' then set NEW.compile_end=now();
    end if;
   end;"""
 
