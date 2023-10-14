@@ -71,7 +71,10 @@ def test_rocmlir():
   rocmlir.args.label = 'test_rocmlir'
   rocmlir.args.load_factor = 1
   rocmlir.args.config_type = ConfigType.convolution
-  machine = Machine(hostname="test", local_machine=True)
+  # Fake up a machine.  CI doesn't give access to GPU, thus no arch info.
+  machine = Machine(hostname="test", local_machine=True,
+                    arch='gfx908', arch_full='gfx908',
+                    num_cu=12, avail_gpus=[0])
   worker = RocMLIRWorker(config_type=rocmlir.args.config_type,
                          session_id=None,
                          machine=machine,

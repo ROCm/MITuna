@@ -37,11 +37,11 @@ this_path = os.path.dirname(__file__)
 
 from utils import ExampleArgs
 from multiprocessing import Value
-from tuna.sql import DbCursor
 from tuna.machine import Machine
+from tuna.dbBase.sql_alchemy import DbSession
 from tests.test_importconfigs_rocmlir import test_importconfigs_rocmlir
 from tuna.rocmlir.load_job import add_jobs
-from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, clear_tables, SessionRocMLIR
+from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables, clear_tables, SessionRocMLIR, ConvolutionConfig
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.rocmlir.config_type import ConfigType
 
@@ -50,18 +50,18 @@ def test_cfg_compose():
   """check the config query function for args tags and cmd intake"""
   clear_tables(ConfigType.convolution)
   test_importconfigs_rocmlir()  # to get the configs in place
-  count_configs = "SELECT count(*) FROM rocmlir_conv_config;"
-  with DbCursor() as cur:
-    cur.execute(count_configs)
-    res = cur.fetchall()
-    config_count = res[0][0]
+  with DbSession() as session:
+    config_count = session.query(ConvolutionConfig.id).count()
 
   args = ExampleArgs()
   args.init_session = True
   args.label = "test_load_job"
   args.load_factor = 1
   args.config_type = ConfigType.convolution
-  machine = Machine(hostname="test", local_machine=True)
+  # Fake up a machine.  CI doesn't give access to GPU, thus no arch info.
+  machine = Machine(hostname="dummy", local_machine=True,
+                    arch='gfx908', arch_full='gfx908',
+                    num_cu=12, avail_gpus=[0])
   worker = RocMLIRWorker(config_type=args.config_type,
                          session_id=None,
                          machine=machine,
@@ -71,4 +71,5 @@ def test_cfg_compose():
   dbt = RocMLIRDBTables(session_id=session_id)
   args = argparse.Namespace(session_id=session_id)
   job_count = add_jobs(args, dbt)
+  print(f"job count ({job_count}) should equal config count ({config_count})")
   assert job_count == config_count

@@ -32,10 +32,11 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
+from sqlalchemy import func
 from utils import CfgImportArgs
 from tuna.utils.logger import setup_logger
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.rocmlir.import_configs import import_cfgs
-from tuna.sql import DbCursor
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.rocmlir.rocmlir_lib import RocMLIR
 from tuna.rocmlir.config_type import ConfigType
@@ -63,19 +64,17 @@ def test_import_conv():
 
   dbt = RocMLIRDBTables(session_id=None, config_type=ConfigType.convolution)
   logger = setup_logger('test_importconfigs')
-  find_configs = "SELECT count(*) FROM rocmlir_conv_config;"
 
-  with DbCursor() as cur:
-    cur.execute(find_configs)
-    res = cur.fetchall()
-    before_cfg_num = res[0][0]
+  with DbSession() as session:
+    before_cfg_num = session.query(dbt.config_table.id).count()
 
   args = CfgImportArgs
   args.file_name = "test-conv-configs"
   counts = import_cfgs(args, dbt, logger)
+  print(f"Imported {counts} configs.")
 
-  with DbCursor() as cur:
-    cur.execute(find_configs)
-    res = cur.fetchall()
-    after_cfg_num = res[0][0]
-    assert (after_cfg_num - before_cfg_num == counts)
+  with DbSession() as session:
+    after_cfg_num = session.query(dbt.config_table.id).count()
+
+  print(f"after-import count {after_cfg_num} should equal before-import count {before_cfg_num} plus {counts}")
+  assert (after_cfg_num - before_cfg_num == counts)
