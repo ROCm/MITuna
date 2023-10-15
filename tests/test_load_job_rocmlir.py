@@ -59,9 +59,12 @@ def test_cfg_compose():
   args.load_factor = 1
   args.config_type = ConfigType.convolution
   # Fake up a machine.  CI doesn't give access to GPU, thus no arch info.
-  machine = Machine(hostname="dummy", local_machine=True,
-                    arch='gfx908', arch_full='gfx908',
-                    num_cu=12, avail_gpus=[0])
+  machine = Machine(hostname="dummy",
+                    local_machine=True,
+                    arch='gfx908',
+                    arch_full='gfx908',
+                    num_cu=12,
+                    avail_gpus=[0])
   worker = RocMLIRWorker(config_type=args.config_type,
                          session_id=None,
                          machine=machine,

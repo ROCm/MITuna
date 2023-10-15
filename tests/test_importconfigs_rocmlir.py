@@ -76,5 +76,7 @@ def test_import_conv():
   with DbSession() as session:
     after_cfg_num = session.query(dbt.config_table.id).count()
 
-  print(f"after-import count {after_cfg_num} should equal before-import count {before_cfg_num} plus {counts}")
+  print(
+      f"after-import count {after_cfg_num} should equal before-import count {before_cfg_num} plus {counts}"
+  )
   assert (after_cfg_num - before_cfg_num == counts)
