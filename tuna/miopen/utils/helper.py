@@ -39,7 +39,7 @@ from tuna.utils.utility import check_qts
 from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT
 from tuna.miopen.utils.metadata import BN_DEFAULTS
 from tuna.miopen.utils.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
-from tuna.miopen.utils.metadata import NUM_SQL_RETRIES
+from tuna.utils.metadata import NUM_SQL_RETRIES
 
 LOGGER = setup_logger('helper')
 

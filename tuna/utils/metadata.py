@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2023 Advanced Micro Devices, Inc.
+# Copyright (c) 2022 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,29 +24,16 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates the DB representation"""
+""" This file contains mappings relevant to general constant definitions at tuna folder 
+    level
+"""
 
-from typing import Dict, Any, Type
-from tuna.tables_interface import DBTablesInterface
-from tuna.example.example_tables import Job
-from tuna.example.session import SessionExample
+import os
 
+TUNA_LOG_DIR = os.path.expanduser("~/tmp/tuna_logs")
+if 'TUNA_LOG_DIR' in os.environ:
+  TUNA_LOG_DIR = os.environ['TUNA_LOG_DIR']
 
-#pylint: disable=too-few-public-methods
-class ExampleDBTables(DBTablesInterface):
-  """Represents db tables for example lib"""
-
-  def __init__(self, **kwargs: Dict[str, Any]) -> None:
-    """Constructor"""
-    super().__init__(**kwargs)
-
-    #for pylint
-    self.job_table: Type[Job] = Job
-    self.session_table: Type[SessionExample] = SessionExample
-
-    self.set_tables()
-
-  def set_tables(self, sess_class=SessionExample) -> None:
-    """Set appropriate tables based on requirements"""
-    super().set_tables(sess_class)
-    self.job_table = Job
+NUM_SQL_RETRIES = 10
+LOG_TIMEOUT = 10 * 60.0  # seconds
+MAX_JOB_RETRIES = 10

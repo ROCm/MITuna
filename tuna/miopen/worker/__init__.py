@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
@@ -24,29 +23,3 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates the DB representation"""
-
-from typing import Dict, Any, Type
-from tuna.tables_interface import DBTablesInterface
-from tuna.example.example_tables import Job
-from tuna.example.session import SessionExample
-
-
-#pylint: disable=too-few-public-methods
-class ExampleDBTables(DBTablesInterface):
-  """Represents db tables for example lib"""
-
-  def __init__(self, **kwargs: Dict[str, Any]) -> None:
-    """Constructor"""
-    super().__init__(**kwargs)
-
-    #for pylint
-    self.job_table: Type[Job] = Job
-    self.session_table: Type[SessionExample] = SessionExample
-
-    self.set_tables()
-
-  def set_tables(self, sess_class=SessionExample) -> None:
-    """Set appropriate tables based on requirements"""
-    super().set_tables(sess_class)
-    self.job_table = Job

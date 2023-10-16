@@ -69,7 +69,7 @@ def addJobs() {
 }
 
 def finSolvers(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
     /*
     Note: Does not need
             GPUs
@@ -98,7 +98,7 @@ def finSolvers(){
 }
 
 def finApplicability(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -153,7 +153,7 @@ def finApplicability(){
 }
 
 def finFindCompile(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -209,7 +209,7 @@ def finFindCompile(){
 
 
 def finFindEval(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -272,7 +272,7 @@ def buildTunaDocker(){
 }
 
 def loadJobTest() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -321,7 +321,7 @@ def loadJobTest() {
 }
 
 def solverAnalyticsTest(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("-u root --network host  --dns 8.8.8.8") {
         checkout scm
         // enviornment setup
@@ -353,7 +353,7 @@ def solverAnalyticsTest(){
 }
 
 def perfCompile() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -395,7 +395,7 @@ def perfCompile() {
 }
 
 def perfEval_gfx908() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -444,7 +444,7 @@ def perfEval_gfx908() {
 }
 
 def pytestSuite1() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", " .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -492,7 +492,7 @@ def pytestSuite1() {
 
 
 def pytestSuite2() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest2", "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest2", " --build-arg BACKEND=HIPNOGPU .")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -518,7 +518,7 @@ def pytestSuite2() {
 }
 
 def pytestSuite3AndCoverage(current_run, main_branch) {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg BACKEND=HIP .")
+    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg BACKEND=HIP .")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -557,7 +557,7 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
 def runFormat() {
     node {
         checkout scm
-        def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+        def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
         tuna_docker.inside("") {
             sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/"
         }
@@ -567,7 +567,7 @@ def runFormat() {
 def runLint() {
     node {
           checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+          def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
           tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
@@ -618,6 +618,8 @@ def runLint() {
             sh "mypy tuna/dbBase/sql_alchemy.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/dbBase/base_class.py --ignore-missing-imports"
             sh "mypy tuna/example/session.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/example/tables.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/example/load_job.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/example/example_worker.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/rocmlir/import_configs.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/rocmlir/load_job.py --ignore-missing-imports --follow-imports=skip"
@@ -681,7 +683,7 @@ def LoadJobs()
   }
   echo "${script_args}"
 
-  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
+  def build_args = " --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=HIPNOGPU --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} ."
   if(params.base_image != '')
   {
     build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
@@ -752,7 +754,7 @@ def applicUpdate(){
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
-  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -798,7 +800,7 @@ def compile()
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
-  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -861,7 +863,7 @@ def evaluate(params)
   def tuna_docker
   (partition, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
-  def build_args = " --network host --build-arg FIN_TOKEN=${FIN_TOKEN} --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -907,7 +909,7 @@ def evaluate(params)
 def doxygen() {
     node {
           checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}", "--build-arg FIN_TOKEN=${FIN_TOKEN} .")
+          def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
           tuna_docker.inside("") {
             sh "cd doc && doxygen Doxyfile"
             def empty = sh returnStdout: true, script: "ls doc | wc -l"

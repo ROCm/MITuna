@@ -11,7 +11,7 @@ def initSession(){
   backend = "HIPNOGPU"
   def tuna_docker
   def tuna_docker_name = utils.getDockerName("HIPNOGPU")
-  def build_args = "--build-arg FIN_TOKEN=${FIN_TOKEN} --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
@@ -41,6 +41,9 @@ def initSession(){
   if(num_session_prev.toInteger() >= num_session_now.toInteger()){
       error("Session is not correctly initialized with the reason:${job_label}")
   }
+
+  def session_ids = utils.runsql("SELECT id from session where reason='${job_label}' order by id desc;")
+  println "${job_label} session id(s): ${session_ids}"
 }
 
 def VerifyArgs()

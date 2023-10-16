@@ -29,7 +29,7 @@ import logging
 import os
 
 from typing import Union
-from tuna.miopen.utils.metadata import TUNA_LOG_DIR
+from tuna.utils.metadata import TUNA_LOG_DIR
 
 
 def setup_logger(logger_name: str = 'Tuna',

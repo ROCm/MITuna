@@ -71,14 +71,15 @@ def setup_arg_parser(desc: str,
           help='Architecture of machines',
           choices=['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a', 'gfx940'])
     if TunaArgs.NUM_CU in arg_list:
-      parser.add_argument('-n',
-                          '--num_cu',
-                          dest='num_cu',
-                          type=int,
-                          default=None,
-                          required=False,
-                          help='Number of CUs on GPU',
-                          choices=['36', '56', '60', '64', '104', '110', '120', '228'])
+      parser.add_argument(
+          '-n',
+          '--num_cu',
+          dest='num_cu',
+          type=int,
+          default=None,
+          required=False,
+          help='Number of CUs on GPU',
+          choices=['36', '56', '60', '64', '104', '110', '120', '228'])
     if TunaArgs.DIRECTION in arg_list:
       parser.add_argument(
           '-d',

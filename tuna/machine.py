@@ -48,7 +48,8 @@ from tuna.connection import Connection
 from tuna.dbBase.base_class import BASE
 from tuna.abort import chk_abort_file
 from tuna.utils.utility import check_qts
-from tuna.miopen.utils.metadata import DOCKER_CMD, LOG_TIMEOUT
+from tuna.miopen.utils.metadata import DOCKER_CMD
+from tuna.utils.metadata import LOG_TIMEOUT
 
 ROCMINFO: str = '/opt/rocm/bin/rocminfo'
 ROCMSMI: str = '/opt/rocm/bin/rocm-smi'
