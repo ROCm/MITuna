@@ -33,7 +33,7 @@ pipeline {
     string(name: 'session_id', defaultValue: '', description: 'session id for update applicability')
     string(name: 'config_tag', defaultValue: '', description: 'add a config tag to restrict the search')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
-    choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
+    choice(name: 'use_mlir', choices: ['', 'On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
     string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
