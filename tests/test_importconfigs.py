@@ -55,36 +55,39 @@ def test_import_conv():
   logger = setup_logger('test_importconfigs')
   res = None
   clean_tags = "TRUNCATE table conv_config_tags;"
-  find_tags = "SELECT count(*) FROM conv_config_tags WHERE tag='conv_config_test';"
-  find_configs = "SELECT count(*) FROM conv_config;"
+  find_conv_tags = "SELECT count(*) FROM conv_config_tags WHERE tag='conv_config_test';"
+  find_conv_configs = "SELECT count(*) FROM conv_config;"
   with DbCursor() as cur:
     cur.execute(clean_tags)
 
   before_cfg_num = 0
   with DbCursor() as cur:
-    cur.execute(find_configs)
+    cur.execute(find_conv_configs)
     res = cur.fetchall()
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/conv_configs_NHWC.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -V 1.0.0 -C convolution --model Alexnet --md_version 1 --framework Pytorch --fw_version 1".format(
+  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/conv_configs_NHWC.txt -t conv_config_test -C convolution --model Alexnet --md_version 1 --framework Pytorch --fw_version 1".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file
   args.tag = "conv_config_test"
   args.version = '1.0.0'
-  counts = import_cfgs(args, dbt, logger)
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  cnt = import_cfgs(args, dbt, logger, counts)
   os.system(add_cfg_NHWC)
 
   with DbCursor() as cur:
-    cur.execute(find_tags)
+    cur.execute(find_conv_tags)
     res = cur.fetchall()
-    assert (res[0][0] == len(counts['cnt_tagged_configs']))
+    assert (res[0][0] == len(cnt['cnt_tagged_configs']))
 
-    cur.execute(find_configs)
+    cur.execute(find_conv_configs)
     res = cur.fetchall()
     after_cfg_num = res[0][0]
-    assert (after_cfg_num - before_cfg_num == counts['cnt_configs'])
+    assert (after_cfg_num - before_cfg_num == cnt['cnt_configs'])
 
 
 def test_import_batch_norm():
@@ -92,37 +95,40 @@ def test_import_batch_norm():
   res = None
   logger = setup_logger('test_importconfigs')
   clean_tags = "TRUNCATE table bn_config_tags;"
-  find_tags = "SELECT count(*) FROM bn_config_tags WHERE tag='bn_config_test';"
-  find_configs = "SELECT count(*) FROM bn_config;"
+  find_bn_tags = "SELECT count(*) FROM bn_config_tags WHERE tag='bn_config_test';"
+  find_bn_configs = "SELECT count(*) FROM bn_config;"
   with DbCursor() as cur:
     cur.execute(clean_tags)
 
   before_cfg_num = 0
   with DbCursor() as cur:
-    cur.execute(find_configs)
+    cur.execute(find_bn_configs)
     res = cur.fetchall()
     before_cfg_num = res[0][0]
 
   cfg_file = "{0}/../utils/configs/batch_norm.txt".format(this_path)
-  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -V 1.0.0 -C batch_norm --model Alexnet --md_version 1 --framework Pytorch --fw_version 1".format(
+  add_cfg_NHWC = "{0}/../tuna/go_fish.py miopen import_configs -f {0}/../utils/configs/batch_norm.txt -t bn_config_test -C batch_norm --model Alexnet --md_version 1.5 --framework Pytorch --fw_version 1".format(
       this_path)
   args = CfgImportArgs
   args.file_name = cfg_file
   args.tag = "bn_config_test"
   args.version = '1.0.0'
   args.config_type = ConfigType.batch_norm
-  counts = import_cfgs(args, dbt, logger)
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  cnt = import_cfgs(args, dbt, logger, counts)
   os.system(add_cfg_NHWC)
 
   with DbCursor() as cur:
-    cur.execute(find_tags)
+    cur.execute(find_bn_tags)
     res = cur.fetchall()
-    assert (res[0][0] == len(counts['cnt_tagged_configs']))
+    assert (res[0][0] == len(cnt['cnt_tagged_configs']))
 
-    cur.execute(find_configs)
+    cur.execute(find_bn_configs)
     res = cur.fetchall()
     after_cfg_num = res[0][0]
-    assert (after_cfg_num - before_cfg_num == counts['cnt_configs'])
+    assert (after_cfg_num - before_cfg_num == cnt['cnt_configs'])
 
 
 def test_import_benchmark():
@@ -164,7 +170,10 @@ def test_import_benchmark():
   args.batchsize = 512
   args.file_name = "{0}/../utils/configs/conv_configs_NHWC.txt".format(
       this_path)
-  add_benchmark(args, dbt, logger)
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  add_benchmark(args, dbt, logger, counts)
   with DbSession() as session:
     bk_entries = session.query(ConvolutionBenchmark).all()
     assert len(bk_entries) > 0

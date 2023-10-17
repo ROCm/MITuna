@@ -156,13 +156,10 @@ def parse_line(args: argparse.Namespace, line: str, counts: dict,
 
 
 def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
-                logger: logging.Logger) -> dict:
+                logger: logging.Logger, counts: dict) -> dict:
   """import configs to mysql from file with driver invocations"""
   connect_db()
 
-  counts: dict = {}
-  counts['cnt_configs'] = 0
-  counts['cnt_tagged_configs'] = set()
   unique_lines: List[str] = []
   with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
     line_cnt = 0
@@ -265,7 +262,7 @@ def get_database_id(framework: Framework, fw_version: int, model: int,
 
 
 def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
-                  logger: logging.Logger) -> bool:
+                  logger: logging.Logger, counts: dict) -> bool:
   """Add new benchmark"""
   mid, fid = get_database_id(args.framework, args.fw_version, args.model,
                              args.md_version, dbt, logger)
@@ -285,8 +282,16 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
       for line in infile:
         commands.append(line)
 
-  count = 0
+  count = tag_commands(commands, counts, fid, mid, dbt, args, logger)
+  logger.info('Benchmarked %s configs', count)
+  return True
 
+
+def tag_commands(commands: str, counts: dict, fid: int, mid: int,
+                 dbt: MIOpenDBTables, args: argparse.Namespace,
+                 logger: logging.Logger) -> int:
+  """Loop through commands and insert benchmark"""
+  count = 0
   with DbSession() as session:
     for cmd in commands:
       try:
@@ -296,8 +301,7 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
           driver = DriverBatchNorm(line=cmd)
         db_obj = driver.get_db_obj(keep_id=True)
         if db_obj.id is None:
-          logger.error('Config not present in the DB: %s', str(driver))
-          logger.error('Please use import_configs.py to import configs')
+          db_obj.id = insert_config(driver, counts, dbt, args, logger)
 
         benchmark = dbt.benchmark()
         benchmark.framework = fid
@@ -312,8 +316,8 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
       except (ValueError, IntegrityError) as verr:
         logger.warning(verr)
         session.rollback()
-  logger.info('Benchmarked %s configs', count)
-  return True
+
+  return count
 
 
 def check_import_benchmark_args(args: argparse.Namespace) -> None:
@@ -334,6 +338,9 @@ def run_import_configs(args: argparse.Namespace,
                        logger: logging.Logger) -> bool:
   """Main function"""
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
 
   if args.print_models or args.add_model or args.add_framework or args.add_benchmark:
     check_import_benchmark_args(args)
@@ -348,7 +355,7 @@ def run_import_configs(args: argparse.Namespace,
     add_frameworks(args, logger)
     return True
   if args.add_benchmark:
-    add_benchmark(args, dbt, logger)
+    add_benchmark(args, dbt, logger, counts)
     return True
   if not (args.tag and args.framework and args.fw_version and args.model and
           args.md_version):
@@ -366,13 +373,13 @@ def run_import_configs(args: argparse.Namespace,
     return False
 
   set_import_cfg_batches(args)
-  counts = import_cfgs(args, dbt, logger)
+  cnt = import_cfgs(args, dbt, logger, counts)
   #tagging imported configs with benchmark
-  add_benchmark(args, dbt, logger)
+  add_benchmark(args, dbt, logger, counts)
 
-  logger.info('New configs added: %u', counts['cnt_configs'])
+  logger.info('New configs added: %u', cnt['cnt_configs'])
   if args.tag or args.tag_only:
-    logger.info('Tagged configs: %u', len(counts['cnt_tagged_configs']))
+    logger.info('Tagged configs: %u', len(cnt['cnt_tagged_configs']))
 
   return True
 

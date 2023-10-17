@@ -97,7 +97,7 @@ def get_import_cfg_parser(
                       help='Specify framework.')
   parser.add_argument('--fw_version',
                       dest='fw_version',
-                      type=int,
+                      type=float,
                       default=None,
                       required=False,
                       help='Specify framework version')
@@ -120,7 +120,7 @@ def get_import_cfg_parser(
                       help='Specify model')
   parser.add_argument('--md_version',
                       dest='md_version',
-                      type=int,
+                      type=float,
                       default=None,
                       required=False,
                       help='Specify model version')
