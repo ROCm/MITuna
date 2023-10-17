@@ -173,7 +173,7 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
       try:
         parse_line(args, line, counts, dbt, logger)
       except ValueError as err:
-        logger.warning(err)
+        logger.warning(str(err))
 
   return counts
 
@@ -287,7 +287,7 @@ def add_benchmark(args: argparse.Namespace, dbt: MIOpenDBTables,
   return True
 
 
-def tag_commands(commands: str, counts: dict, fid: int, mid: int,
+def tag_commands(commands: List[Any], counts: dict, fid: int, mid: int,
                  dbt: MIOpenDBTables, args: argparse.Namespace,
                  logger: logging.Logger) -> int:
   """Loop through commands and insert benchmark"""
@@ -314,7 +314,7 @@ def tag_commands(commands: str, counts: dict, fid: int, mid: int,
         session.commit()
         count += 1
       except (ValueError, IntegrityError) as verr:
-        logger.warning(verr)
+        logger.warning(str(verr))
         session.rollback()
 
   return count

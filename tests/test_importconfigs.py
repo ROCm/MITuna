@@ -54,11 +54,11 @@ def test_import_conv():
   dbt = MIOpenDBTables(config_type=ConfigType.convolution)
   logger = setup_logger('test_importconfigs')
   res = None
-  clean_tags = "TRUNCATE table conv_config_tags;"
+  #clean_tags = "TRUNCATE table conv_config_tags;"
   find_conv_tags = "SELECT count(*) FROM conv_config_tags WHERE tag='conv_config_test';"
   find_conv_configs = "SELECT count(*) FROM conv_config;"
-  with DbCursor() as cur:
-    cur.execute(clean_tags)
+  #with DbCursor() as cur:
+  #  cur.execute(clean_tags)
 
   before_cfg_num = 0
   with DbCursor() as cur:
@@ -94,11 +94,11 @@ def test_import_batch_norm():
   dbt = MIOpenDBTables(config_type=ConfigType.batch_norm)
   res = None
   logger = setup_logger('test_importconfigs')
-  clean_tags = "TRUNCATE table bn_config_tags;"
+  #clean_tags = "TRUNCATE table bn_config_tags;"
   find_bn_tags = "SELECT count(*) FROM bn_config_tags WHERE tag='bn_config_test';"
   find_bn_configs = "SELECT count(*) FROM bn_config;"
-  with DbCursor() as cur:
-    cur.execute(clean_tags)
+  #with DbCursor() as cur:
+  #  cur.execute(clean_tags)
 
   before_cfg_num = 0
   with DbCursor() as cur:
