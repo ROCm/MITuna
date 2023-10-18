@@ -55,7 +55,10 @@ def add_cfgs():
   args.file_name = f"{this_path}/../utils/configs/conv_configs_NCHW.txt"
 
   dbt = MIOpenDBTables(config_type=args.config_type)
-  counts = import_cfgs(args, dbt, setup_logger('test_fin_builder'))
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  _ = import_cfgs(args, dbt, setup_logger('test_fin_builder'), counts)
   return dbt
 
 

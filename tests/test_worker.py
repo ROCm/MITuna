@@ -59,7 +59,10 @@ def add_job(w):
   logger = setup_logger('test_add_job')
 
   dbt = MIOpenDBTables(session_id=w.session_id, config_type=args.config_type)
-  _ = import_cfgs(args, dbt, setup_logger('test_worker'))
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  _ = import_cfgs(args, dbt, setup_logger('test_worker'), counts)
 
   args = GoFishArgs()
   machine_lst = load_machines(args)

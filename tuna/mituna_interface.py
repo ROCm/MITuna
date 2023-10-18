@@ -202,7 +202,6 @@ class MITunaInterface():
 
     return kwargs
 
-
   def compose_work_objs(self, session: DbSession,
                         conds: List[str]) -> List[Tuple[SimpleDict, ...]]:
     """Query a job list for update"""

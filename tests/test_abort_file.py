@@ -59,7 +59,10 @@ def test_abort():
   args.file_name = f"{this_path}/../utils/recurrent_cfgs/alexnet_4jobs.txt"
 
   dbt = MIOpenDBTables(session_id=session_id, config_type=args.config_type)
-  counts = import_cfgs(args, dbt, logger)
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  _ = import_cfgs(args, dbt, logger, counts)
 
   #load jobs
   job_list = []
