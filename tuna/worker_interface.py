@@ -58,6 +58,7 @@ from tuna.utils.db_utility import connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
+from tuna.celery_app import app
 
 
 class WorkerInterface(Process):
@@ -139,6 +140,7 @@ class WorkerInterface(Process):
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
 
+  @app.task
   def step(self) -> bool:
     """Regular run loop operation, to be overloaded in class specialization """
     raise NotImplementedError("Not implemented")
