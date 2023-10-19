@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@
 """Module that encapsulates the DB representation of a Driver cmd"""
 
 from typing import List, Union, Dict, Any
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import Query
@@ -37,14 +37,11 @@ from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
 from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
-from tuna.miopen.utils.metadata import TENSOR_PRECISION
-from tuna.miopen.utils.parsing import parse_line
-from tuna.driver import DriverBase
 
 LOGGER = setup_logger('driver_base')
 
 
-class MIOpenDriver(DriverBase):
+class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
   tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
   tensor_id_map: Dict[str, int] = {}
@@ -63,18 +60,22 @@ class MIOpenDriver(DriverBase):
       raise ValueError(
           "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
+  @abstractmethod
   def parse_fdb_key(self, line: str):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def parse_row(self, db_obj: ConvolutionConfig):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def set_cmd(self, data_type: str):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def config_set_defaults(self):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
@@ -85,21 +86,25 @@ class MIOpenDriver(DriverBase):
     raise NotImplementedError("Not implemented")
 
   @staticmethod
+  @abstractmethod
   def test_skip_arg(tok1: str):
     """Overloaded method.Defined in conv&br driver child class"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
+  @abstractmethod
   def get_params(tok1: str):
     """Overloaded method.Defined in conv&br driver child class"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
+  @abstractmethod
   def get_check_valid(tok1: str, tok2: Union[str, int]):
     """Overloaded method.Defined in conv&br driver child class"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
+  @abstractmethod
   def get_common_cols() -> List[str]:
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
@@ -202,28 +207,6 @@ class MIOpenDriver(DriverBase):
 
     return ret_id
 
-  def compose_input_t(self) -> Dict[str, int]:
-    """Build input_tensor"""
-    i_dict: Dict[str, int] = {}
-    i_dict['data_type'] = TENSOR_PRECISION[self.cmd]
-    i_dict['num_dims'] = self.num_dims
-    i_dict['dim0'] = 1
-
-    if self.in_layout in ('NCHW', 'NCDHW'):
-      i_dict['dim1'] = self.in_channels
-      i_dict['dim2'] = self.in_d
-      i_dict['dim3'] = self.in_h
-      i_dict['dim4'] = self.in_w
-      i_dict['layout'] = self.in_layout
-    elif self.in_layout == 'NHWC':
-      i_dict['dim1'] = self.in_d
-      i_dict['dim2'] = self.in_h
-      i_dict['dim3'] = self.in_w
-      i_dict['dim4'] = self.in_channels
-      i_dict['layout'] = self.in_layout
-
-    return i_dict
-
   def decompose_input_t(self, db_obj: Any) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
@@ -254,19 +237,6 @@ class MIOpenDriver(DriverBase):
     w_dict = self.compose_weight_t()
     ret_id = self.insert_tensor(w_dict)
     return ret_id
-
-  def parse_driver_line(self, line: str):
-    """Parse line and set attributes"""
-
-    tok: list
-    tmp_line: str = parse_line(line)
-
-    tok = tmp_line.split()
-    #pylint: disable=attribute-defined-outside-init
-    self.cmd = tok[1]
-    assert tok[1] != ''
-
-    self.compose_fds(tok, line)
 
   def compose_fds(self, tok: list, line: str) -> bool:
     """Compose fds from driver line"""

@@ -39,12 +39,11 @@ from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import TENSOR_PRECISION
 from tuna.miopen.utils.parsing import parse_line
-from tuna.driver import DriverBase
 
 LOGGER = setup_logger('driver_base')
 
 
-class MIOpenDriver(DriverBase):
+class DriverBase():
   """Represents db tables based on ConfigType"""
   tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
   tensor_id_map: Dict[str, int] = {}

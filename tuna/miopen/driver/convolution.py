@@ -29,7 +29,7 @@
 from typing import Dict, Set, Optional, Any
 from re import search
 from tuna.utils.logger import setup_logger
-from tuna.miopen.driver.base import DriverBase
+from tuna.miopen.driver.base import MIOpenDriver
 from tuna.miopen.utils.metadata import CONV_CONFIG_COLS
 from tuna.miopen.utils.helper import get_db_id
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
@@ -44,7 +44,7 @@ LOGGER = setup_logger('driver_conv')
 
 
 #pylint: disable=too-many-instance-attributes
-class DriverConvolution(DriverBase):
+class DriverConvolution(MIOpenDriver):
   """Represents an MIOpenDriver convolution command"""
 
   def __init__(self,
