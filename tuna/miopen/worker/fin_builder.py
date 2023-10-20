@@ -117,14 +117,17 @@ class FinBuilder(FinClass):
     if not self.init_check_env():
       return False
 
-    if not self.get_job("new", "compile_start", True):
-      while not self.result_queue_drain():
-        sleep(random.randint(1, 10))
-      return False
+    #if not self.get_job("new", "compile_start", True):
+    # while not self.result_queue_drain():
+    #   sleep(random.randint(1, 10))
+    # return False
 
+    #NOTE: Alex
+    self.logger.info('JOB ID: %s', self.job.id)
+    return False
     # JD: while fin can exec multiple jobs at a time, that makes error detection difficult
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
-    self.set_job_state('compiling')
+    #self.set_job_state('compiling')
     fin_json = self.run_fin_cmd()
 
     failed_job = True
@@ -152,7 +155,7 @@ class FinBuilder(FinClass):
               err)
           session.rollback()
           failed_job = True
-
+    """
     if failed_job:
       self.set_job_state('errored', result=result_str)
     elif self.pending:
@@ -160,4 +163,5 @@ class FinBuilder(FinClass):
       self.result_queue.put(self.pending)
     else:
       self.set_job_state('compiled', result=result_str)
+    """
     return True

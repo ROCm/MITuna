@@ -37,6 +37,7 @@ from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example
 from tuna.yaml_parser import parse_yaml
 from tuna.parse_args import clean_args
+from tuna.celery_tasks import tune
 
 # Setup logging
 LOGGER: logging.Logger = setup_logger('go_fish')
@@ -86,7 +87,7 @@ def main() -> bool:
   if args['yaml']:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
 
-  worker_lst: list
+  #worker_lst: list
   try:
     for yaml_file in yaml_files:
       args['yaml_file'] = yaml_file
@@ -94,14 +95,18 @@ def main() -> bool:
         sys.argv[2] = yaml_file
         LOGGER.info("Executing with yaml file: %s", yaml_file)
 
+      #run non-tuning steps
+      library.run()
+      print('TUNE')
+      tune(library)
       #returns a list of workers/processes it started
-      worker_lst = library.run()
-      if worker_lst is None:
-        continue
+      #worker_lst = library.run()
+      #if worker_lst is None:
+      #  continue
 
-      for worker in worker_lst:
-        worker.join()
-        LOGGER.warning('Process finished')
+      #for worker in worker_lst:
+      #  worker.join()
+      #  LOGGER.warning('Process finished')
   except KeyboardInterrupt:
     LOGGER.warning('Interrupt signal caught')
 

@@ -58,7 +58,7 @@ from tuna.utils.db_utility import connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
-from tuna.celery_app import app
+from tuna.miopen.db.miopen_tables import JobMixin
 
 
 class WorkerInterface(Process):
@@ -140,7 +140,6 @@ class WorkerInterface(Process):
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
 
-  @app.task
   def step(self) -> bool:
     """Regular run loop operation, to be overloaded in class specialization """
     raise NotImplementedError("Not implemented")
@@ -307,6 +306,11 @@ class WorkerInterface(Process):
         '%s retries exhausted to update job status (host = %s, worker = %s), exiting ... ',
         NUM_SQL_RETRIES, self.hostname, self.gpu_id)
     return False
+
+  def set_job(self, job: JobMixin):
+    """Set worker job"""
+    self.job = job
+    self.job.gpu_id = self.gpu_id
 
   #TODO_: This should take a session obj as an input to remove the creation of an extraneous
   # session

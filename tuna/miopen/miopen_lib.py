@@ -34,8 +34,8 @@ from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.miopen.db.miopen_tables import FinStep, get_miopen_tables
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
-from tuna.miopen.worker.fin_builder import FinBuilder
-from tuna.miopen.worker.fin_eval import FinEvaluator
+#from tuna.miopen.worker.fin_builder import FinBuilder
+#from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
@@ -175,6 +175,9 @@ class MIOpen(MITunaInterface):
 
     self.args = parser.parse_args()
 
+    if self.args.config_type is None:
+      self.args.config_type = ConfigType.convolution
+
     #overwritte common lib args with subcommand args value
     if self.args.subcommand is not None:
       self.overwrite_common_args()
@@ -266,7 +269,7 @@ class MIOpen(MITunaInterface):
     # pylint: disable=too-many-branches
     worker = None
     kwargs = self.get_kwargs(gpu_idx, f_vals)
-
+    """
     if self.args.fin_steps:
       if 'miopen_find_compile' in self.args.fin_steps \
       or 'miopen_perf_compile' in self.args.fin_steps:
@@ -277,15 +280,16 @@ class MIOpen(MITunaInterface):
         worker = FinEvaluator(**kwargs)
       else:
         raise ValueError('Unsupported fin step')
-      worker.start()
-      worker_lst.append(worker)
+      #worker.start()
+      #worker_lst.append(worker)
       return True
     if self.args.update_applicability:
       kwargs['fin_steps'] = ['applicability']
       worker = FinClass(**kwargs)
-      worker.start()
-      worker_lst.append(worker)
+      #worker.start()
+      #worker_lst.append(worker)
       return True
+    """
 
     worker = WorkerInterface(**kwargs)
     ret = False
@@ -308,7 +312,7 @@ class MIOpen(MITunaInterface):
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
-    worker_lst = []
+    #worker_lst = []
     fin_work_done = False
     for machine in machines:
       if self.args.restart_machine:
@@ -334,12 +338,13 @@ class MIOpen(MITunaInterface):
         fin_work_done = True
         break
 
-      for gpu_idx in worker_ids:
-        self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
-        if not self.launch_worker(gpu_idx, f_vals, worker_lst):
-          break
+      #for gpu_idx in worker_ids:
+      #self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
+      #if not self.launch_worker(gpu_idx, f_vals, worker_lst):
+      #  break
 
-    return worker_lst
+    #return worker_lst
+    return []
 
   def add_tables(self):
     ret_t = create_tables(get_miopen_tables())
@@ -350,6 +355,7 @@ class MIOpen(MITunaInterface):
   def run(self):
     # pylint: disable=duplicate-code
     """Main function to launch library"""
+    print('RUN')
     res = None
     self.parse_args()
     if self.args.add_tables:
@@ -372,9 +378,13 @@ class MIOpen(MITunaInterface):
       run_update_golden(self.args.update_golden, self.logger)
       return None
 
-    machines = load_machines(self.args)
-    res = self.compose_worker_list(machines)
-    return res
+    #machines = load_machines(self.args)
+    #res = self.compose_worker_list(machines)
+    #run non-tuning steps
+    #print('compose_worker_list')
+    #self.compose_worker_list(machines)
+    #return res
+    print('RETURNING')
 
   def get_envmt(self):
     """! Function to construct environment var
@@ -400,9 +410,6 @@ class MIOpen(MITunaInterface):
       @param f_vals Dict containing runtime information
       @param args The command line arguments
     """
-    if self.args.config_type is None:
-      self.args.config_type = ConfigType.convolution
-
     kwargs = super().get_kwargs(gpu_idx, f_vals)
     kwargs['fin_steps'] = self.args.fin_steps
     kwargs['dynamic_solvers_only'] = self.args.dynamic_solvers_only
