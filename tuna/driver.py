@@ -26,16 +26,9 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
 
-from typing import List, Union, Dict, Any
+from typing import List, Union, Dict
 from abc import ABC, abstractmethod
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import Query
-from sqlalchemy.inspection import inspect
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
-from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
-from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
 
 LOGGER = setup_logger('driver_base')
@@ -43,22 +36,6 @@ LOGGER = setup_logger('driver_base')
 
 class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
-  tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
-  tensor_id_map: Dict[str, int] = {}
-
-  def __init__(self,
-               line: str = str(),
-               db_obj: ConvolutionConfig = None) -> None:
-    if line:
-      if not self.construct_driver(line):
-        raise ValueError(f"Error creating Driver from line: '{line}'")
-    elif db_obj:
-      if not self.construct_driver_from_db(db_obj):
-        raise ValueError(
-            f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
-    else:
-      raise ValueError(
-          "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
   @abstractmethod
   def parse_fdb_key(self, line: str):
@@ -108,161 +85,6 @@ class DriverBase(ABC):
   def get_common_cols() -> List[str]:
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
-
-  def construct_driver(self, line: str) -> bool:
-    """Takes a MIOpenDriver cmd or PDB key"""
-
-    LOGGER.info('Processing line: %s', line)
-    if line.find('=') != -1:
-      self.parse_fdb_key(line)
-    elif line.find('MIOpenDriver') != -1:
-      self.parse_driver_line(line)
-    else:
-      LOGGER.warning('Skipping line: %s', line)
-      return False
-
-    self.config_set_defaults()
-    return True
-
-  def construct_driver_from_db(self, db_obj: Any) -> bool:
-    """Takes a <>_config row and returns a driver cmd"""
-    LOGGER.info('Processing db_row: %s', db_obj.to_dict())
-    #common tensor among convolution and batch norm
-    self.decompose_input_t(db_obj)
-    self.parse_row(db_obj)
-
-    return True
-
-  @staticmethod
-  def get_tensor_id(session: Session, tensor_dict: dict) -> int:
-    """Return tensor id based on dict"""
-
-    query: Query
-    ret_id: int = -1
-    row: str
-    query = Query(TensorTable.id).filter_by(**tensor_dict)
-    try:
-      res: list
-      res = session.execute(query).fetchall()
-      if len(res) > 1:
-        LOGGER.error(tensor_dict)
-        for row in res:
-          LOGGER.error(row)
-        raise ValueError('Tensor table duplication. Only one row should match')
-      if not res:
-        raise ValueError('Missing from Tensor table. One row should match')
-      ret_id = res[0][0]
-    except IntegrityError as err:
-      session.rollback()
-      LOGGER.error("Error occurred: %s \n", err)
-      raise ValueError(
-          'Something went wrong with getting input tensor id from tensor table'
-      ) from err
-    except IndexError as err:
-      raise ValueError(f'Tensor not found in table: {tensor_dict}') from err
-
-    return ret_id
-
-  def insert_tensor(self, tensor_dict: dict) -> int:
-    """Insert new row into tensor table and return primary key"""
-    ret_id: int = -1
-    session: Session
-    with DbSession() as session:
-      try:
-        tid = TensorTable(**tensor_dict)
-        tid.valid = 1
-        key = build_dict_val_key(tid)
-        #cache the tensor table to avoid queries
-        if not DriverBase.tensor_id_map:
-          DriverBase.tensor_id_map = get_session_val_map(
-              session, TensorTable, DriverBase.tensor_attr)
-        id_map = DriverBase.tensor_id_map
-        if key in id_map:
-          ret_id = id_map[key]
-          LOGGER.info("Get Tensor: %s", ret_id)
-        else:
-          session.add(tid)
-          session.commit()
-          ret_id = tid.id
-          id_map[key] = ret_id
-          LOGGER.info("Insert Tensor: %s", ret_id)
-      except IntegrityError as err:
-        LOGGER.warning(err)
-        session.rollback()
-        #update tensor table cache
-        DriverBase.tensor_id_map = get_session_val_map(session, TensorTable,
-                                                       DriverBase.tensor_attr)
-        ret_id = self.get_tensor_id(session, tensor_dict)
-        LOGGER.info("Get Tensor: %s", ret_id)
-    return ret_id
-
-  def get_input_t_id(self) -> int:
-    """Build 1 row in tensor table based on layout from fds param
-       Details are mapped in metadata LAYOUT"""
-    ret_id: int = -1
-    i_dict: Dict[str, int]
-
-    i_dict = self.compose_input_t()
-    ret_id = self.insert_tensor(i_dict)
-
-    return ret_id
-
-  def decompose_input_t(self, db_obj: Any) -> bool:
-    """Use input_tensor to assign local variables to build driver cmd """
-    #pylint: disable=attribute-defined-outside-init
-
-    self.set_cmd(db_obj.input_t.data_type)
-    self.num_dims = db_obj.input_t.num_dims
-    self.in_layout = db_obj.input_t.layout
-
-    if self.in_layout == 'NCHW':
-      self.in_channels = db_obj.input_t.dim1
-      self.in_d = db_obj.input_t.dim2
-      self.in_h = db_obj.input_t.dim3
-      self.in_w = db_obj.input_t.dim4
-    elif self.in_layout == 'NHWC':
-      self.in_d = db_obj.input_t.dim1
-      self.in_h = db_obj.input_t.dim2
-      self.in_w = db_obj.input_t.dim3
-      self.in_channels = db_obj.input_t.dim4
-
-    return True
-
-  def get_weight_t_id(self) -> int:
-    """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
-    ret_id: int = -1
-    w_dict: dict = {}
-
-    w_dict = self.compose_weight_t()
-    ret_id = self.insert_tensor(w_dict)
-    return ret_id
-
-  def compose_fds(self, tok: list, line: str) -> bool:
-    """Compose fds from driver line"""
-    tok1: str
-    tok2: str
-    f_digi_v: Union[int, str]
-    for (tok1, tok2) in zip(tok[2::2], tok[3::2]):
-      # the following would not work for a full name argument
-      if tok1[0] == '-':
-        flag_type: str = tok1[1:]
-      if self.test_skip_arg(flag_type):
-        continue
-      flag_value: str = tok2.strip()
-      if flag_value.isdigit():
-        f_digi_v = int(flag_value)
-      else:
-        f_digi_v = flag_value
-
-      flag_sh_value = self.get_params(flag_type)
-      if self.get_check_valid(flag_sh_value[0], f_digi_v):
-        setattr(self, flag_sh_value[0], f_digi_v)
-      else:
-        raise ValueError(
-            f'Invalid command line arg for {self.cmd}: {flag_sh_value[0]} - {f_digi_v} line: {line}'
-        )
-    return True
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""

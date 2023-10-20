@@ -168,10 +168,10 @@ class MIOpenDriver(DriverBase):
         tid.valid = 1
         key = build_dict_val_key(tid)
         #cache the tensor table to avoid queries
-        if not DriverBase.tensor_id_map:
-          DriverBase.tensor_id_map = get_session_val_map(
-              session, TensorTable, DriverBase.tensor_attr)
-        id_map = DriverBase.tensor_id_map
+        if not MIOpenDriver.tensor_id_map:
+          MIOpenDriver.tensor_id_map = get_session_val_map(
+              session, TensorTable, MIOpenDriver.tensor_attr)
+        id_map = MIOpenDriver.tensor_id_map
         if key in id_map:
           ret_id = id_map[key]
           LOGGER.info("Get Tensor: %s", ret_id)
@@ -185,8 +185,8 @@ class MIOpenDriver(DriverBase):
         LOGGER.warning(err)
         session.rollback()
         #update tensor table cache
-        DriverBase.tensor_id_map = get_session_val_map(session, TensorTable,
-                                                       DriverBase.tensor_attr)
+        MIOpenDriver.tensor_id_map = get_session_val_map(session, TensorTable,
+                                                       MIOpenDriver.tensor_attr)
         ret_id = self.get_tensor_id(session, tensor_dict)
         LOGGER.info("Get Tensor: %s", ret_id)
     return ret_id
@@ -245,29 +245,6 @@ class MIOpenDriver(DriverBase):
 
     return True
 
-  def get_weight_t_id(self) -> int:
-    """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
-    ret_id: int = -1
-    w_dict: dict = {}
-
-    w_dict = self.compose_weight_t()
-    ret_id = self.insert_tensor(w_dict)
-    return ret_id
-
-  def parse_driver_line(self, line: str):
-    """Parse line and set attributes"""
-
-    tok: list
-    tmp_line: str = parse_line(line)
-
-    tok = tmp_line.split()
-    #pylint: disable=attribute-defined-outside-init
-    self.cmd = tok[1]
-    assert tok[1] != ''
-
-    self.compose_fds(tok, line)
-
   def compose_fds(self, tok: list, line: str) -> bool:
     """Compose fds from driver line"""
     tok1: str
@@ -294,22 +271,25 @@ class MIOpenDriver(DriverBase):
         )
     return True
 
-  def to_dict(self) -> Dict[str, Union[str, int]]:
-    """Return class to dictionary"""
-    copy_dict: Dict[str, Union[str, int]] = {}
-    key: str
-    value: Union[int, str]
-    for key, value in vars(self).items():
-      if key == "_cmd":
-        copy_dict["cmd"] = value
-      else:
-        copy_dict[key] = value
-    return copy_dict
+  def get_weight_t_id(self) -> int:
+    """Build 1 row in tensor table based on layout from fds param
+     Details are mapped in metadata LAYOUT"""
+    ret_id: int = -1
+    w_dict: dict = {}
 
-  def __eq__(self, other: object) -> bool:
-    """Defining equality functionality"""
-    if not isinstance(other, DriverBase):
-      return NotImplemented
-    if self.__class__ != other.__class__:
-      return False
-    return vars(self) == vars(other)
+    w_dict = self.compose_weight_t()
+    ret_id = self.insert_tensor(w_dict)
+    return ret_id
+
+  def parse_driver_line(self, line: str):
+    """Parse line and set attributes"""
+
+    tok: list
+    tmp_line: str = parse_line(line)
+
+    tok = tmp_line.split()
+    #pylint: disable=attribute-defined-outside-init
+    self.cmd = tok[1]
+    assert tok[1] != ''
+
+    self.compose_fds(tok, line)
