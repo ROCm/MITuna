@@ -185,8 +185,8 @@ class MIOpenDriver(DriverBase):
         LOGGER.warning(err)
         session.rollback()
         #update tensor table cache
-        MIOpenDriver.tensor_id_map = get_session_val_map(session, TensorTable,
-                                                       MIOpenDriver.tensor_attr)
+        MIOpenDriver.tensor_id_map = get_session_val_map(
+            session, TensorTable, MIOpenDriver.tensor_attr)
         ret_id = self.get_tensor_id(session, tensor_dict)
         LOGGER.info("Get Tensor: %s", ret_id)
     return ret_id
