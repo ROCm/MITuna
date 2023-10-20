@@ -60,7 +60,7 @@ def test_importconfigs_rocmlir():
 
 def test_import_conv():
   rocmlir = RocMLIR()
-  assert (rocmlir.add_tables())
+  assert rocmlir.add_tables()
 
   dbt = RocMLIRDBTables(session_id=None, config_type=ConfigType.convolution)
   logger = setup_logger('test_importconfigs')
@@ -76,7 +76,6 @@ def test_import_conv():
   with DbSession() as session:
     after_cfg_num = session.query(dbt.config_table.id).count()
 
-  print(
-      f"after-import count {after_cfg_num} should equal before-import count {before_cfg_num} plus {counts}"
-  )
-  assert (after_cfg_num - before_cfg_num == counts)
+  assert after_cfg_num - before_cfg_num == counts, \
+    f"after-import count {after_cfg_num} should equal " \
+    f"before-import count {before_cfg_num} plus {counts}"

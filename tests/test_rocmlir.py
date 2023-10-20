@@ -55,7 +55,7 @@ def test_rocmlir():
   dbt = RocMLIRDBTables(session_id=None, config_type=ConfigType.convolution)
 
   rocmlir = RocMLIR()
-  assert (rocmlir.add_tables())
+  assert rocmlir.add_tables()
   clear_tables(ConfigType.convolution)
 
   # To get some sample configs imported.
@@ -108,13 +108,12 @@ def test_rocmlir():
     query = session.query(ConvolutionJob).filter(ConvolutionJob.session==session_id)\
                                          .filter(ConvolutionJob.state=='completed')
     res = query.all()
-    print(f"Should be 0 'completed' jobs and there are {len(res)}")
-    assert len(res) == 0
+    assert len(res) == 0, \
+      f"Should be 0 'completed' jobs and there are {len(res)}"
     # Because rocMLIR is not in path, error
     query = session.query(ConvolutionJob).filter(ConvolutionJob.session==session_id)\
                                          .filter(ConvolutionJob.state=='error')
     res = query.all()
-    print(f"Should be 6 'error' jobs and there are {len(res)}")
-    assert len(res) == 6
+    assert len(res) == 6, f"Should be 6 'error' jobs and there are {len(res)}"
 
   return True

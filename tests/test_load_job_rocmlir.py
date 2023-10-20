@@ -74,5 +74,5 @@ def test_cfg_compose():
   dbt = RocMLIRDBTables(session_id=session_id)
   args = argparse.Namespace(session_id=session_id)
   job_count = add_jobs(args, dbt)
-  print(f"job count ({job_count}) should equal config count ({config_count})")
-  assert job_count == config_count
+  assert job_count == config_count, \
+    f"job count ({job_count}) should equal config count ({config_count})"
