@@ -32,7 +32,7 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import NoInspectionAvailable
 
 from tuna.utils.logger import setup_logger
-from tuna.utils.db_utility import gen_select_objs, has_attr_set
+from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
 from tuna.utils.utility import SimpleDict
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
@@ -41,30 +41,33 @@ from tuna.machine import Machine
 from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_eval import FinEvaluator
+from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.mituna_interface import MITunaInterface
+from tuna.celery_app.celery import app, celery_task
 
 LOGGER: logging.Logger = setup_logger('celery_tasks')
 MAX_JOB_RETRIES = 10
 
 
-def get_jobs(find_state: str, label: str, dbt: DBTablesInterface,
-             session_id: int) -> bool:
+def get_jobs(find_state: str, library: MITunaInterface) -> bool:
   """Interface function to get jobs based on session and find_state"""
   job_rows: List[Tuple[SimpleDict, ...]]
   job_tables: List[SimpleDict]
   ids: list
   row: SimpleDict
   job_attr: List[str]
+  #print(dbt)
   try:
-    job_attr = [column.name for column in inspect(dbt.job_table).c]
+    job_attr = [column.name for column in inspect(library.dbt.job_table).c]
     job_attr.remove("insert_ts")
     job_attr.remove("update_ts")
   except NoInspectionAvailable as error:
     LOGGER.warning("Ignoring error for init_session: %s", error)
 
   with DbSession() as session:
-    job_rows = get_job_objs(session, find_state, label, dbt, job_attr)
+    job_rows = get_job_objs(session, find_state, library.args.label, library.dbt, job_attr, library.args.fin_steps)
 
-    if not check_jobs_found(job_rows, find_state, session_id):
+    if not check_jobs_found(job_rows, find_state, library.args.session_id):
       return False
 
     job_tables = get_job_tables(job_rows, job_attr)
@@ -99,8 +102,9 @@ def compose_work_objs(
     conds: List[str],
     dbt: DBTablesInterface,
     job_attr: List[str],
-    fin_steps: List[str] = None) -> List[Tuple[SimpleDict, ...]]:
+    fin_steps: List[str] = None) -> List[Tuple[SimpleDict, SimpleDict]]:
   """Query a job list for update"""
+  ret = []
   if fin_steps:
     conds.append(f"fin_step like '%{fin_steps[0]}%'")
   else:
@@ -111,14 +115,16 @@ def compose_work_objs(
     cond_str = f"WHERE {cond_str}"
   cond_str += " ORDER BY retries,config ASC"
   #try once without waiting for lock
-  entries = gen_select_objs(session, job_attr, dbt.job_table.__tablename__,
+  job_entries = gen_select_objs(session, job_attr, dbt.job_table.__tablename__,
                             cond_str)
 
+  entries =  [(job,) for job in job_entries]
   if fin_steps:
     ret = compose_work_objs_fin(session, entries, dbt)
-    return ret
+  else:
+    ret = entries
 
-  return [(job,) for job in entries]
+  return ret 
 
 
 def compose_work_objs_fin(session, job_entries, dbt):
@@ -139,6 +145,13 @@ def compose_work_objs_fin(session, job_entries, dbt):
             'fkey': str(list(val.remote_side)[0]).split('.')[1]
         } for key, val in inspect(dbt.config_table).relationships.items()
     }
+    for key, val in cfg_rel.items():
+      rel_attr = [
+          column.name
+          for column in inspect(get_class_by_tablename(val['ftble'])).c
+      ]
+      val['fattr'] = rel_attr
+
     for cfg in cfg_entries:
       for key, val in cfg_rel.items():
         rel_val = getattr(cfg, val['key'])
@@ -192,7 +205,7 @@ def tune(library):
   job_tables = []
   worker = None
   #Alex: currently hardcoding GPU idx 0???
-  f_vals = library.get_f_vals(Machine(), range(0))
+  f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals)
 
   if library.args.fin_steps:
@@ -200,31 +213,33 @@ def tune(library):
     or 'miopen_perf_compile' in library.args.fin_steps:
       kwargs['fetch_state'] = ['new']
       worker = FinBuilder(**kwargs)
-      job_tables = get_jobs('new', library.dbt, library.args.session_id, None)
+      job_tables = get_jobs('new', library)
     elif 'miopen_find_eval' in library.args.fin_steps or 'miopen_perf_eval' in library.args.fin_steps:
       kwargs['fetch_state'] = ['compiled']
       worker = FinEvaluator(**kwargs)
-      job_tables = get_jobs('compiled', library.dbt, library.args.session_id, None)
+      job_tables = get_jobs('compiled', library, None)
     else:
       raise ValueError('Unsupported fin step')
     #worker.start()
     #worker_lst.append(worker)
-    return True
+
   if library.args.update_applicability:
     kwargs['fin_steps'] = ['applicability']
     worker = FinClass(**kwargs)
-    job_tables = get_jobs('new', library.dbt, library.args.session_id, library.args.fin_steps)
+    job_tables = get_jobs('new', library, None)
     #worker.start()
     #worker_lst.append(worker)
-    return True
+
   for elem in job_tables:
-    print(elem)
-    celery_task(worker, elem)
+    print("TASK: %s", elem)
+    #result = celery_task.delay(worker, elem)
+    result = celery_task.delay(1, 2)
+    print(result)
 
   return False
 
-
-def celery_task(worker, job):
-  """defines a celery task"""
-  print(worker.session_id)
-  print(job)
+#@app.task
+#def celery_task(worker, job):
+#  """defines a celery task"""
+#  print(worker.session_id)
+#  print(job)

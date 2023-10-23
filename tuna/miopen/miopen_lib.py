@@ -29,6 +29,7 @@
 import sys
 
 from tuna.mituna_interface import MITunaInterface
+from sqlalchemy.inspection import inspect
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.miopen.db.miopen_tables import FinStep, get_miopen_tables
@@ -51,6 +52,7 @@ from tuna.miopen.parse_miopen_args import get_update_golden_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
+from tuna.miopen.db.tables import MIOpenDBTables
 
 
 class MIOpen(MITunaInterface):
@@ -213,6 +215,12 @@ class MIOpen(MITunaInterface):
 
     if (self.args.update_applicability or has_fin) and not self.args.session_id:
       parser.error("session_id must be specified with this operation")
+
+    print(self.args.session_id)
+    print(self.args.config_type)
+    self.dbt = MIOpenDBTables(session_id=self.args.session_id,
+                              config_type=self.args.config_type)
+    print([column.name for column in inspect(self.dbt.job_table).c])
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""

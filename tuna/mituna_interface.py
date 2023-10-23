@@ -201,3 +201,7 @@ class MITunaInterface():
     }
 
     return kwargs
+
+  def get_celery_tasks():
+    """Return a list of tasks for celery"""
+    raise NotImplementedError("Not implemented")

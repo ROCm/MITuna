@@ -79,7 +79,8 @@ class WorkerInterface(Process):
     allowed_keys: Set[str] = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
+        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id',
+        'name'
     ])
 
     self.reset_interval: bool = None
@@ -100,6 +101,7 @@ class WorkerInterface(Process):
     self.fetch_state: List = ['new']
     self.label: str = None
     self.session_id: int = None
+    self.name = "generic_worker"
 
     for key, value in kwargs.items():
       if key in allowed_keys:

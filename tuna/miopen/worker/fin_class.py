@@ -87,6 +87,7 @@ class FinClass(WorkerInterface):
     self.pending = []
     self.first_pass = True
     self.dynamic_solvers_only = False
+    self.name = "fin_class_worker"
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)

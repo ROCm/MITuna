@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +24,22 @@
 # SOFTWARE.
 #
 ###############################################################################
-from .celery import app as celery_app
+"""Utility module for miopen library"""
 
-__all__ = ('celery_app',)
+from tuna.miopen.worker.fin_builder import FinBuilder
+from tuna.miopen.worker.fin_eval import FinEvaluator
+from tuna.miopen.worker.fin_class import FinClass
+from tuna.worker_interface import WorkerInterface
+
+
+def get_worker(kwargs, worker_type):
+  """Return worker based on worker_type"""
+  if worker_type is "fin_class_worker":
+    return FinClass(**kwargs)
+  elif worker_type is "fin_build_worker":
+    return FinBuilder(**kwargs)
+  elif worker_type is "fin_eval_worker":
+    return FinEvaluator(**kwargs)
+  else:
+    return WorkerInterface(kwargs)
+
