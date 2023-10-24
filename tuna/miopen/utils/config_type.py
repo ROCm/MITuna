@@ -37,3 +37,6 @@ class ConfigType(Enum):
 
   def __str__(self):
     return self.value
+
+  def __json__(self):
+    return self.value

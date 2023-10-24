@@ -14,10 +14,14 @@ app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
 
 @app.task(bind=True)
-def celery_task(self, kwargs, job):
+def celery_task(self, args, kwargs):
   """defines a celery task"""
+  #worker = get_worker(kwargs, worker_type)
   #logger.info(worker.session_id)
-  logger.info(job)
+  logger.info(args[0])
+  logger.info(args[1])
+  logger.info(kwargs)
+  return job
 
 if __name__ == '__main__':
   app.start()

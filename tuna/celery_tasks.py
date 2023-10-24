@@ -44,6 +44,8 @@ from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.mituna_interface import MITunaInterface
 from tuna.celery_app.celery import app, celery_task
+from celery.result import AsyncResult
+
 
 LOGGER: logging.Logger = setup_logger('celery_tasks')
 MAX_JOB_RETRIES = 10
@@ -207,16 +209,20 @@ def tune(library):
   #Alex: currently hardcoding GPU idx 0???
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals)
+  job_tables = library.get_jobs(library.fetch_state)
 
+  """
   if library.args.fin_steps:
     if 'miopen_find_compile' in library.args.fin_steps \
     or 'miopen_perf_compile' in library.args.fin_steps:
       kwargs['fetch_state'] = ['new']
       worker = FinBuilder(**kwargs)
+      worker_type = "fin_build_worker"
       job_tables = get_jobs('new', library)
     elif 'miopen_find_eval' in library.args.fin_steps or 'miopen_perf_eval' in library.args.fin_steps:
       kwargs['fetch_state'] = ['compiled']
       worker = FinEvaluator(**kwargs)
+      worker_type = "fin_eval_worker"
       job_tables = get_jobs('compiled', library, None)
     else:
       raise ValueError('Unsupported fin step')
@@ -227,19 +233,21 @@ def tune(library):
     kwargs['fin_steps'] = ['applicability']
     worker = FinClass(**kwargs)
     job_tables = get_jobs('new', library, None)
+      worker_type = "fin_class_worker"
     #worker.start()
     #worker_lst.append(worker)
+ """
 
   for elem in job_tables:
-    print("TASK: %s", elem)
+    #print("TASK: %s", elem)
     #result = celery_task.delay(worker, elem)
-    result = celery_task.delay(1, 2)
-    print(result)
+    result = celery_task.delay([elem.to_dict(), library.worker_type], kwargs)
+    print('result: %s', result)
+    print('result_id: %s', result.id)
+    #print('result_status: %s', result.status)
+    res = AsyncResult(result.id, app=app)
+    print('final res %s', res.get())
+    print('final state %s', res.state)
+    print()
 
   return False
-
-#@app.task
-#def celery_task(worker, job):
-#  """defines a celery task"""
-#  print(worker.session_id)
-#  print(job)

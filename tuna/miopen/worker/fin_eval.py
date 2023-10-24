@@ -50,7 +50,7 @@ class FinEvaluator(FinClass):
   def __init__(self, **kwargs):
     super().__init__(**kwargs)
     self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
-    self.name = "fin_eval_worker"
+    self.worker_type = "fin_eval_worker"
 
   def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""

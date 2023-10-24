@@ -101,7 +101,7 @@ class WorkerInterface(Process):
     self.fetch_state: List = ['new']
     self.label: str = None
     self.session_id: int = None
-    self.name = "generic_worker"
+    self.worker_type = "generic_worker"
 
     for key, value in kwargs.items():
       if key in allowed_keys:

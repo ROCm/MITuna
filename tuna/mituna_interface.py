@@ -50,6 +50,10 @@ class MITunaInterface():
                                                add_streamhandler=True)
     self.args: argparse.Namespace
 
+    self.worker_type: str = WorkerInterface.name 
+    self.fetch_state: List = ['new']
+    self.max_job_retries = 10
+
   def check_docker(self,
                    worker: WorkerInterface,
                    dockername="miopentuna") -> None:
@@ -162,16 +166,16 @@ class MITunaInterface():
       @param machine Machine instance
     """
     f_vals: Dict[str, Any] = {}
-    f_vals["barred"] = Value('i', 0)
-    f_vals["bar_lock"] = Lock()
+    #f_vals["barred"] = Value('i', 0)
+    #f_vals["bar_lock"] = Lock()
     #multiprocess queue for jobs, shared on machine
-    f_vals["job_queue"] = mpQueue()
-    f_vals["job_queue_lock"] = Lock()
-    f_vals["result_queue"] = mpQueue()
-    f_vals["result_queue_lock"] = Lock()
-    f_vals["machine"] = machine
+    #f_vals["job_queue"] = mpQueue()
+    #f_vals["job_queue_lock"] = Lock()
+    #f_vals["result_queue"] = mpQueue()
+    #f_vals["result_queue_lock"] = Lock()
+    #f_vals["machine"] = machine
     f_vals["b_first"] = True
-    f_vals["end_jobs"] = Value('i', 0)
+    #f_vals["end_jobs"] = Value('i', 0)
 
     return f_vals
 
@@ -184,19 +188,19 @@ class MITunaInterface():
     kwargs: Dict[str, Any] = {}
 
     kwargs = {
-        'machine': f_vals["machine"],
+        #'machine': f_vals["machine"],
         'gpu_id': gpu_idx,
-        'num_procs': f_vals["num_procs"],
-        'barred': f_vals["barred"],
-        'bar_lock': f_vals["bar_lock"],
+        #'num_procs': f_vals["num_procs"],
+        #'barred': f_vals["barred"],
+        #'bar_lock': f_vals["bar_lock"],
         'envmt': envmt,
-        'job_queue': f_vals["job_queue"],
-        'job_queue_lock': f_vals["job_queue_lock"],
-        'result_queue': f_vals["result_queue"],
-        'result_queue_lock': f_vals["result_queue_lock"],
+        #'job_queue': f_vals["job_queue"],
+        #'job_queue_lock': f_vals["job_queue_lock"],
+        #'result_queue': f_vals["result_queue"],
+        #'result_queue_lock': f_vals["result_queue_lock"],
         'label': self.args.label,
         'docker_name': self.args.docker_name,
-        'end_jobs': f_vals['end_jobs'],
+        #'end_jobs': f_vals['end_jobs'],
         'session_id': self.args.session_id
     }
 
