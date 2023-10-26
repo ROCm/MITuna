@@ -309,7 +309,7 @@ class FusionConfigTags(BASE, ConfigTagMixin):
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
 
-class MiopenJob(JobMixin):
+class MiopenJob():
   """Represents Mixin class for job tables"""
 
   compile_start = Column(DateTime,
@@ -355,7 +355,7 @@ class JobEnum(enum.Enum):
   evaluated_pend = 24
 
 
-class ConvolutionJob(BASE, JobMixin):
+class ConvolutionJob(BASE, JobMixin, MiopenJob):
   """Represents convolutions job table"""
   __tablename__ = "conv_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
