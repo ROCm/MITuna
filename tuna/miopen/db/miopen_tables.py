@@ -309,7 +309,7 @@ class FusionConfigTags(BASE, ConfigTagMixin):
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
 
-class MiopenJob():
+class MIOpenJob(BASE, JobMixin):
   """Represents Mixin class for job tables"""
 
   compile_start = Column(DateTime,
@@ -320,6 +320,7 @@ class MiopenJob():
   eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
 
   solver = Column(String(length=128), nullable=True, server_default="")
+  eval_mid = Column(Integer, server_default="-1")
   fin_step = Column(mysql.MSSet(*(list(k for k in FinStep.__members__))),
                     nullable=False,
                     server_default="not_fin")
@@ -355,7 +356,7 @@ class JobEnum(enum.Enum):
   evaluated_pend = 24
 
 
-class ConvolutionJob(BASE, JobMixin, MiopenJob):
+class ConvolutionJob(BASE, MIOpenJob):
   """Represents convolutions job table"""
   __tablename__ = "conv_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)

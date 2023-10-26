@@ -91,5 +91,4 @@ class JobMixin():
 
   gpu_id = Column(Integer, nullable=False, server_default="-1")
   machine_id = Column(Integer, nullable=False, server_default="-1")
-  eval_mid = Column(Integer, server_default="-1")
   cache_loc = Column(Text)
