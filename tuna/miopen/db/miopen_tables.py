@@ -312,6 +312,11 @@ class FusionConfigTags(BASE, ConfigTagMixin):
 class MIOpenJob(BASE, JobMixin):
   """Represents MIOpen Mixin class for job tables"""
 
+  @declared_attr
+  def session(self):
+    """session key"""
+    return Column(Integer, ForeignKey("session.id"), nullable=False)
+
   compile_start = Column(DateTime,
                          nullable=False,
                          server_default=sqla_func.now())
@@ -373,7 +378,7 @@ class ConvolutionJob(BASE, MIOpenJob):
                           'session')
 
 
-class BNJob(BASE, JobMixin):
+class BNJob(BASE, MIOpenJob):
   """Represents batch norm job table"""
   __tablename__ = "bn_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
@@ -384,7 +389,7 @@ class BNJob(BASE, JobMixin):
                   index=True)
 
 
-class FusionJob(BASE, JobMixin):
+class FusionJob(BASE, MIOpenJob):
   """Represents fusions job table"""
   __tablename__ = "fusion_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
