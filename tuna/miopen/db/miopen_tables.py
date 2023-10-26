@@ -310,7 +310,7 @@ class FusionConfigTags(BASE, ConfigTagMixin):
 
 
 class MIOpenJob(BASE, JobMixin):
-  """Represents Mixin class for job tables"""
+  """Represents MIOpen Mixin class for job tables"""
 
   compile_start = Column(DateTime,
                          nullable=False,
