@@ -62,20 +62,6 @@ class JobEnum(enum.Enum):
   evaluated_pend = 24
 
 
-class FinStep(enum.Enum):
-  """ Allowed Fin Steps """
-  # pylint: disable=invalid-name ; tuna/go_fish.py names valid fin steps as FinStep.__members__
-  find_compile = 1
-  find_eval = 2
-  get_solvers = 3
-  get_applicability = 4
-  not_fin = 5
-  miopen_find_compile = 6
-  miopen_find_eval = 7
-  miopen_perf_compile = 8
-  miopen_perf_eval = 9
-
-
 class JobMixin():
   """Represents Mixin class for job tables"""
 
