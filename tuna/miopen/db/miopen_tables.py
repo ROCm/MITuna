@@ -355,11 +355,6 @@ class FinStep(enum.Enum):
 class MIOpenJobMixin(JobMixin):
   """Represents MIOpen Mixin class for job tables"""
 
-  @declared_attr
-  def session(self):
-    """session key"""
-    return Column(Integer, ForeignKey("session.id"), nullable=False)
-
   compile_start = Column(DateTime,
                          nullable=False,
                          server_default=sqla_func.now())
