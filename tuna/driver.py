@@ -38,28 +38,8 @@ class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
 
   @abstractmethod
-  def parse_fdb_key(self, line: str):
-    """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
   def parse_row(self, db_obj: ConvolutionConfig):
     """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def set_cmd(self, data_type: str):
-    """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def config_set_defaults(self):
-    """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def compose_weight_t(self):
-    """Overloaded method.Defined in conv&br driver child class"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
@@ -79,12 +59,6 @@ class DriverBase(ABC):
   def get_check_valid(tok1: str, tok2: Union[str, int]):
     """Overloaded method.Defined in conv&br driver child class"""
     raise NotImplementedError("Not implemented")
-
-  @staticmethod
-  @abstractmethod
-  def get_common_cols() -> List[str]:
-    """Returns common MIOpenDriver command line args"""
-    return ['wall', 'time', 'iter', 'verify']
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
