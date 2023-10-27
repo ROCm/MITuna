@@ -352,7 +352,7 @@ class FinStep(enum.Enum):
   miopen_perf_eval = 9
 
 
-class MIOpenJobMixin(BASE, JobMixin):
+class MIOpenJobMixin(JobMixin):
   """Represents MIOpen Mixin class for job tables"""
 
   @declared_attr
@@ -374,7 +374,7 @@ class MIOpenJobMixin(BASE, JobMixin):
                     server_default="not_fin")
 
 
-class ConvolutionJob(MIOpenJobMixin):
+class ConvolutionJob(BASE, MIOpenJobMixin):
   """Represents convolutions job table"""
   __tablename__ = "conv_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
@@ -391,7 +391,7 @@ class ConvolutionJob(MIOpenJobMixin):
                           'session')
 
 
-class BNJob(MIOpenJobMixin):
+class BNJob(BASE, MIOpenJobMixin):
   """Represents batch norm job table"""
   __tablename__ = "bn_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
@@ -402,7 +402,7 @@ class BNJob(MIOpenJobMixin):
                   index=True)
 
 
-class FusionJob(MIOpenJobMixin):
+class FusionJob(BASE, MIOpenJobMixin):
   """Represents fusions job table"""
   __tablename__ = "fusion_job"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
