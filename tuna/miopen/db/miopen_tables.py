@@ -25,7 +25,6 @@
 #
 ###############################################################################
 """ Module for creating DB tables"""
-import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
 from sqlalchemy import Enum, Index
 from sqlalchemy import Float, BigInteger, Boolean
@@ -43,6 +42,7 @@ from tuna.miopen.db.session import Session
 from tuna.miopen.utils.metadata import DIR_MAP
 from tuna.miopen.db.benchmark import Model, Framework
 from tuna.db.tuna_tables import JobMixin
+from tuna.db.tuna_tables import enum
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
@@ -306,36 +306,6 @@ class FusionConfigTags(BASE, ConfigTagMixin):
   __table_args__ = (UniqueConstraint("config", "tag", name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
-
-
-class JobEnum(enum.Enum):
-  """Represents job_enum column in config table"""
-  # pylint: disable=invalid-name ; names represent entries in job_enum column
-  # pylint: disable=duplicate-code
-  new = 1
-  started = 2
-  running = 3
-  completed = 4
-  timeout = 5
-  error_status = 6
-  no_update = 7
-  errored = 8
-  bad_param = 9
-  error = 10
-  transfer_error = 11
-  eval_start = 12
-  evaluating = 13
-  evaluated = 14
-  evaluate_error = 15
-  compile_start = 16
-  compiling = 17
-  compiled = 18
-  compile_error = 19
-  not_applicable = 20
-  aborted = 21
-  not_tunable = 22
-  compiled_pend = 23
-  evaluated_pend = 24
 
 
 class FinStep(enum.Enum):
