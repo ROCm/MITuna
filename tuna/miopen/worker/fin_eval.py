@@ -39,6 +39,7 @@ from tuna.miopen.worker.fin_utils import fin_job
 from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry, gen_update_query
+from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -273,15 +274,18 @@ class FinEvaluator(FinClass):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
     self.pending = []
-    self.result_queue_drain()
+    #self.result_queue_drain()
 
     if not self.init_check_env():
       return False
 
-    if not self.get_job("compiled", "eval_start", True):
-      while not self.result_queue_drain():
-        sleep(random.randint(1, 10))
-      return False
+    self.solver_id_map = get_solver_ids()
+    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
+
+    #if not self.get_job("compiled", "eval_start", True):
+    #  while not self.result_queue_drain():
+    #    sleep(random.randint(1, 10))
+    #  return False
 
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
@@ -319,9 +323,9 @@ class FinEvaluator(FinClass):
                            result=result_str)
     elif self.pending:
       self.set_job_state('evaluated_pend', result=result_str)
-      self.result_queue.put(self.pending)
+      #self.result_queue.put(self.pending)
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()
 
-    return True
+    return False
