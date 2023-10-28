@@ -525,9 +525,10 @@ class WorkerInterface(Process):
         self.logger.info("proc %s step %s", self.gpu_id, ret)
         if not ret:
           self.logger.warning('No more steps, quitting...')
+          return True
           #with self.bar_lock:
           #  self.num_procs.value -= 1
-          return True
+          #return True
     except KeyboardInterrupt as err:
       self.logger.error('%s', err)
       self.reset_job_state()

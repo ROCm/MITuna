@@ -79,8 +79,7 @@ class FinClass(WorkerInterface):
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
 
     #self.solver_id_map = get_solver_ids()
-    _, self.id_solver_map = get_id_solvers(
-    )  #hyphenated names used by miopen::solver.ToString()
+    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
     self.all_configs = []
     self.fin_list = []
     self.multiproc = False
@@ -886,6 +885,8 @@ class FinClass(WorkerInterface):
 
   def step(self):
     """Inner loop for Process run defined in worker_interface"""
+    self.solver_id_map = get_solver_ids()
+    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
     self.multiproc = True
     if "applicability" in self.fin_steps:
       self.applicability()

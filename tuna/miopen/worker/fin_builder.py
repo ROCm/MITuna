@@ -39,6 +39,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.worker.fin_utils import fin_job
 from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.utils.db_utility import session_retry
+from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 
 
 class FinBuilder(FinClass):
@@ -118,6 +119,10 @@ class FinBuilder(FinClass):
     if not self.init_check_env():
       return False
 
+    #Alex note: should be moved to miopen_lib and passed in?
+    self.solver_id_map = get_solver_ids()
+    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
+
     #if not self.get_job("new", "compile_start", True):
     # while not self.result_queue_drain():
     #   sleep(random.randint(1, 10))
@@ -153,13 +158,13 @@ class FinBuilder(FinClass):
               err)
           session.rollback()
           failed_job = True
-    """
+    
     if failed_job:
       self.set_job_state('errored', result=result_str)
     elif self.pending:
       self.set_job_state('compiled_pend', result=result_str)
-      self.result_queue.put(self.pending)
+      #self.result_queue.put(self.pending)
     else:
       self.set_job_state('compiled', result=result_str)
-    """
-    return True
+
+    return False
