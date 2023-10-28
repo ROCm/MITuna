@@ -454,11 +454,18 @@ class MIOpen(MITunaInterface):
       if not self.check_jobs_found(job_rows, find_state, self.args.session_id):
         return False
 
-      job_tables = self.get_job_tables(job_rows, job_attr)
-      ids = [row.id for row in job_tables]
+      #print('JOB ROWS')
+      #for elem in job_rows:
+        #print(elem[0].to_dict(), elem[1].to_dict())
+      #job_tables = self.get_job_tables(job_rows, job_attr)
+      #ids = [row.id for row in job_tables]
+      ids = [row[0].id for row in job_rows]
+      #print()
+      #print(row.to_dict() for row in job_tables)
       self.logger.info("%s jobs %s", find_state, ids)
 
-    return job_tables
+    #return job_tables
+    return job_rows
 
 
   def get_job_objs(self,
@@ -505,8 +512,10 @@ class MIOpen(MITunaInterface):
                               cond_str)
 
     entries =  [(job,) for job in job_entries]
+    print('TEST')
     if fin_steps:
       ret = self.compose_work_objs_fin(session, entries, dbt)
+      print('TEST1')
     else:
       ret = entries
 
@@ -550,8 +559,13 @@ class MIOpen(MITunaInterface):
       cfg_map = {cfg.id: cfg for cfg in cfg_entries}
 
       for job in job_entries:
+        print('from compose_work obj fin')
+        print(job[0].to_dict(), cfg_map[job[0].config].to_dict())
+        print()
         ret.append((job[0], cfg_map[job[0].config]))
 
+
+    print(f"ret: {ret}")
     return ret
 
 
@@ -580,15 +594,6 @@ class MIOpen(MITunaInterface):
       job_tables = [row[job_i] for row in job_rows]
 
     return job_tables
-
-
-  def get_celery_tasks():
-    """Return a list of miopen celery tasks"""
-    job_tables = []
-    f_vals = self.get_f_vals(Machine(local_machine=True), range(0))
-    kwargs = self.get_kwargs(0, f_vals)
-    job_tables = get_jobs(self.fetch_state)
-    return job_table
 
 
   def update_worker_type(self):

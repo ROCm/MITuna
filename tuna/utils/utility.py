@@ -141,6 +141,18 @@ def get_mmi_env_vars(env_vars={}):
 class SimpleDict:
   """empty object"""
 
+  def __init__(self, **kwargs):
+    for key,  value in kwargs.items():
+      if type(value) == dict:
+        setattr(self, key, self.from_dict(value))
+      else:
+        setattr(self, key, value)
+    
+  @classmethod
+  def from_dict(cls, dict_obj):
+    """recreate object from dict"""
+    return cls(**dict_obj)
+
   def to_dict(self, ommit_ts=True, ommit_valid=False):
     """return dict copy of object"""
     ret = {}

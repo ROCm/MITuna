@@ -78,7 +78,7 @@ class FinClass(WorkerInterface):
     _, self.local_output = tempfile.mkstemp()
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
 
-    self.solver_id_map = get_solver_ids()
+    #self.solver_id_map = get_solver_ids()
     _, self.id_solver_map = get_id_solvers(
     )  #hyphenated names used by miopen::solver.ToString()
     self.all_configs = []
@@ -91,6 +91,7 @@ class FinClass(WorkerInterface):
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
+    print(kwargs['job'])
 
     self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
 
@@ -103,7 +104,6 @@ class FinClass(WorkerInterface):
     self.envmt.append(
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
 
-    self.config = SimpleDict()
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
 
     # dict of relationship_column : dict{local_key, foreign_table_name, foreign_key, [remote_attr]}
@@ -836,19 +836,19 @@ class FinClass(WorkerInterface):
   def close_job(self):
     """mark a job complete"""
 
-  def result_queue_drain(self):
-    """check for lock and commit the result queue"""
-    if self.result_queue_lock.acquire(block=False):
-      with DbSession() as session:
-        self.__result_queue_commit(session, self.close_job)
-      self.result_queue_lock.release()
-      return True
-    return False
+  #def result_queue_drain(self):
+  #  """check for lock and commit the result queue"""
+  #  if self.result_queue_lock.acquire(block=False):
+  #    with DbSession() as session:
+  #      self.__result_queue_commit(session, self.close_job)
+  #    self.result_queue_lock.release()
+  #    return True
+  #  return False
 
   def reset_job_state(self):
     """finish committing result queue"""
     super().reset_job_state()
-    self.result_queue_drain()
+    #self.result_queue_drain()
 
   def init_check_env(self):
     """check environment on the first run"""

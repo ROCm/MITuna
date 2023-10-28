@@ -51,153 +51,6 @@ LOGGER: logging.Logger = setup_logger('celery_tasks')
 MAX_JOB_RETRIES = 10
 
 
-def get_jobs(find_state: str, library: MITunaInterface) -> bool:
-  """Interface function to get jobs based on session and find_state"""
-  job_rows: List[Tuple[SimpleDict, ...]]
-  job_tables: List[SimpleDict]
-  ids: list
-  row: SimpleDict
-  job_attr: List[str]
-  #print(dbt)
-  try:
-    job_attr = [column.name for column in inspect(library.dbt.job_table).c]
-    job_attr.remove("insert_ts")
-    job_attr.remove("update_ts")
-  except NoInspectionAvailable as error:
-    LOGGER.warning("Ignoring error for init_session: %s", error)
-
-  with DbSession() as session:
-    job_rows = get_job_objs(session, find_state, library.args.label, library.dbt, job_attr, library.args.fin_steps)
-
-    if not check_jobs_found(job_rows, find_state, library.args.session_id):
-      return False
-
-    job_tables = get_job_tables(job_rows, job_attr)
-    ids = [row.id for row in job_tables]
-    LOGGER.info("%s jobs %s", find_state, ids)
-
-  return job_tables
-
-
-def get_job_objs(session: DbSession,
-                 find_state: str,
-                 label: str,
-                 dbt: DBTablesInterface,
-                 job_attr: List[str],
-                 fin_steps: List[str] = None) -> List[Tuple[SimpleDict, ...]]:
-  """Get list of job objects"""
-  entries: List[Tuple[SimpleDict, ...]]
-  conds: List[str] = [f"session={dbt.session.id}", "valid=1"]
-
-  if label:
-    conds.append(f"reason='{label}'")
-
-  conds.append(f"retries<{MAX_JOB_RETRIES}")
-  conds.append(f"state='{find_state}'")
-
-  entries = compose_work_objs(session, conds, dbt, job_attr, fin_steps)
-  return entries
-
-
-def compose_work_objs(
-    session: DbSession,
-    conds: List[str],
-    dbt: DBTablesInterface,
-    job_attr: List[str],
-    fin_steps: List[str] = None) -> List[Tuple[SimpleDict, SimpleDict]]:
-  """Query a job list for update"""
-  ret = []
-  if fin_steps:
-    conds.append(f"fin_step like '%{fin_steps[0]}%'")
-  else:
-    conds.append("fin_step='not_fin'")
-
-  cond_str = ' AND '.join(conds)
-  if cond_str:
-    cond_str = f"WHERE {cond_str}"
-  cond_str += " ORDER BY retries,config ASC"
-  #try once without waiting for lock
-  job_entries = gen_select_objs(session, job_attr, dbt.job_table.__tablename__,
-                            cond_str)
-
-  entries =  [(job,) for job in job_entries]
-  if fin_steps:
-    ret = compose_work_objs_fin(session, entries, dbt)
-  else:
-    ret = entries
-
-  return ret 
-
-
-def compose_work_objs_fin(session, job_entries, dbt):
-  """Return jobs for fin work"""
-  ret = []
-  if job_entries:
-    id_str = ','.join([str(job[0].config) for job in job_entries])
-    cfg_cond_str = f"where valid=1 and id in ({id_str})"
-    cfg_attr = [column.name for column in inspect(dbt.config_table).c]
-    cfg_entries = gen_select_objs(session, cfg_attr,
-                                  dbt.config_table.__tablename__, cfg_cond_str)
-
-    #attach tensor relationship information to config entries
-    cfg_rel = {
-        key: {
-            'key': list(val.local_columns)[0].name,
-            'ftble': str(list(val.remote_side)[0]).split('.', maxsplit=1)[0],
-            'fkey': str(list(val.remote_side)[0]).split('.')[1]
-        } for key, val in inspect(dbt.config_table).relationships.items()
-    }
-    for key, val in cfg_rel.items():
-      rel_attr = [
-          column.name
-          for column in inspect(get_class_by_tablename(val['ftble'])).c
-      ]
-      val['fattr'] = rel_attr
-
-    for cfg in cfg_entries:
-      for key, val in cfg_rel.items():
-        rel_val = getattr(cfg, val['key'])
-        rel_cond_str = f"where {val['fkey']}={rel_val}"
-        setattr(
-            cfg, key,
-            gen_select_objs(session, val['fattr'], val['ftble'],
-                            rel_cond_str)[0])
-
-    cfg_map = {cfg.id: cfg for cfg in cfg_entries}
-
-    for job in job_entries:
-      ret.append((job[0], cfg_map[job[0].config]))
-
-  return ret
-
-
-def check_jobs_found(job_rows: List[SimpleDict], find_state: str,
-                     session_id: int) -> bool:
-  """check for end of jobs"""
-  if not job_rows:
-    # we are done
-    LOGGER.warning('No %s jobs found, session %s', find_state, session_id)
-    return False
-  return True
-
-
-def get_job_tables(job_rows: List[Tuple[SimpleDict, ...]],
-                   job_attr: List[str]) -> List[SimpleDict]:
-  """find job tables in query results"""
-  if has_attr_set(job_rows[0], job_attr):
-    job_tables: List[SimpleDict] = job_rows
-  else:
-    job_i: int = 0
-    tble: SimpleDict
-    for i, tble in enumerate(job_rows[0]):
-      if has_attr_set(tble, job_attr):
-        job_i = i
-        break
-    job_tables = [row[job_i] for row in job_rows]
-
-  return job_tables
-
-
 def tune(library):
   """tuning loop to spin out celery tasks"""
 
@@ -209,16 +62,34 @@ def tune(library):
   #Alex: currently hardcoding GPU idx 0???
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals)
-  job_tables = library.get_jobs(library.fetch_state)
+  job_config_rows = library.get_jobs(library.fetch_state)
 
-  for elem in job_tables:
+  #job_config_rows[0] is job
+  #job_config_rows[1] is its related config
+  for elem in job_config_rows:
+    print
     #print("TASK: %s", elem)
     print(library.worker_type)
-    result = celery_task.delay([elem.to_dict(), library.worker_type], kwargs)
+    job_dict = {}
+
+    #launching task
+    for key, value in elem[1].to_dict().items():
+      print(key, value)
+      if type(value) == SimpleDict:
+        print(key, value.to_dict())
+        job_dict[key] = value.to_dict()
+      else:
+        job_dict[key] = value
+
+        
+        
+    result = celery_task.delay([elem[0].to_dict(), job_dict, library.worker_type], kwargs)
     print('result: %s', result)
     print('result_id: %s', result.id)
     print('result_status: %s', result.status)
+
     res = AsyncResult(result.id, app=app)
+    #calling get waits for job to terminate
     print('final res %s', res.get())
     #print('final state %s', res.state)
     print()

@@ -113,7 +113,7 @@ class FinBuilder(FinClass):
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     self.pending = []
-    self.result_queue_drain()
+    #self.result_queue_drain()
 
     if not self.init_check_env():
       return False
@@ -124,11 +124,8 @@ class FinBuilder(FinClass):
     # return False
 
     #NOTE: Alex
-    self.logger.info('JOB ID: %s', self.job.id)
-    return False
-    # JD: while fin can exec multiple jobs at a time, that makes error detection difficult
-    self.logger.info('Acquired new job: job_id=%s', self.job.id)
-    #self.set_job_state('compiling')
+    # JD: while fin can exec multiple jobs at a time, that makes error detection difficult self.logger.info('Acquired new job: job_id=%s', self.job.id)
+    self.set_job_state('compiling')
     fin_json = self.run_fin_cmd()
 
     failed_job = True

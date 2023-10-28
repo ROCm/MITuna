@@ -79,13 +79,12 @@ class WorkerInterface(Process):
     allowed_keys: Set[str] = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id',
-        'name'
+        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id', 'job', 'config'
     ])
 
     self.reset_interval: bool = None
     #system vars
-    self.machine: Machine = None
+    self.machine: Machine = Machine(local_machine=True) 
     #multiprocess vars
     self.gpu_id: int = None
     self.num_procs = None
@@ -93,8 +92,8 @@ class WorkerInterface(Process):
     self.bar_lock = Lock()
     self.job_queue = None
     self.job_queue_lock = Lock()
-    self.result_queue = None
-    self.result_queue_lock = Lock()
+    #self.result_queue = None
+    #self.result_queue_lock = Lock()
     self.end_jobs = None
     #job detail vars
     self.envmt: List = []
@@ -102,6 +101,8 @@ class WorkerInterface(Process):
     self.label: str = None
     self.session_id: int = None
     self.worker_type = "generic_worker"
+    self.job: SimpleDict = None 
+    self.config: dict = None 
 
     for key, value in kwargs.items():
       if key in allowed_keys:
@@ -113,7 +114,8 @@ class WorkerInterface(Process):
     self.set_db_tables()
 
     self.hostname: str = self.machine.hostname
-    self.claim_num: int = self.num_procs.value * 3
+    #self.claim_num: int = self.num_procs.value * 3
+    self.claim_num: int = 1 
     self.last_reset: datetime = datetime.now()
 
     dir_name: str = os.path.join(TUNA_LOG_DIR,
@@ -124,10 +126,11 @@ class WorkerInterface(Process):
 
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
+    self.logger.info("WI JOB: %s", kwargs['job'])
+    self.logger.info("WI CONFIG: %s", kwargs['config'])
 
     connect_db()
 
-    self.job: SimpleDict = SimpleDict()
 
     try:
       self.job_attr: List[str] = [
@@ -497,11 +500,11 @@ class WorkerInterface(Process):
       self.cnx = self.machine.connect(chk_abort_file)
 
       while True:
-        self.check_wait_barrier()
+        #self.check_wait_barrier()
 
         if chk_abort_file(self.machine.id, self.logger, self.machine.arch):
-          with self.bar_lock:
-            self.num_procs.value -= 1
+          #with self.bar_lock:
+          #  self.num_procs.value -= 1
           return False
 
         # re-establish node connection
@@ -522,18 +525,18 @@ class WorkerInterface(Process):
         self.logger.info("proc %s step %s", self.gpu_id, ret)
         if not ret:
           self.logger.warning('No more steps, quitting...')
-          with self.bar_lock:
-            self.num_procs.value -= 1
+          #with self.bar_lock:
+          #  self.num_procs.value -= 1
           return True
     except KeyboardInterrupt as err:
       self.logger.error('%s', err)
       self.reset_job_state()
-      with self.bar_lock:
-        self.num_procs.value -= 1
+      #with self.bar_lock:
+      #  self.num_procs.value -= 1
       return False
 
-    with self.bar_lock:
-      self.num_procs.value -= 1
+    #with self.bar_lock:
+    #  self.num_procs.value -= 1
 
     return True
 
