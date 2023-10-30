@@ -28,7 +28,6 @@
 
 from typing import Union, Dict, Any
 from abc import ABC, abstractmethod
-from sqlalchemy.orm import Session
 from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('driver_base')
@@ -45,12 +44,6 @@ class DriverBase(ABC):
   @abstractmethod
   def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  @staticmethod
-  def get_tensor_id(session: Session, tensor_dict: dict) -> int:
-    """Return tensor id based on dict"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
