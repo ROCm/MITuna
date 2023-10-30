@@ -26,9 +26,10 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
 
-from typing import Union, Dict, Any, List
+from typing import Union, Dict, Any
 from abc import ABC, abstractmethod
 from tuna.utils.logger import setup_logger
+from sqlalchemy.orm import Session
 
 LOGGER = setup_logger('driver_base')
 
@@ -47,6 +48,7 @@ class DriverBase(ABC):
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
+  @staticmethod
   def get_tensor_id(session: Session, tensor_dict: dict) -> int:
     """Return tensor id based on dict"""
     raise NotImplementedError("Not implemented")
