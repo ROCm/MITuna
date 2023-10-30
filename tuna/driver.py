@@ -28,8 +28,8 @@
 
 from typing import Union, Dict, Any
 from abc import ABC, abstractmethod
-from tuna.utils.logger import setup_logger
 from sqlalchemy.orm import Session
+from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('driver_base')
 
