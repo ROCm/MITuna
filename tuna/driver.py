@@ -38,44 +38,63 @@ class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
 
   @abstractmethod
-  def parse_row(self, db_obj: ConvolutionConfig):
-    """Overloaded method.Defined in conv&bn driver child class"""
+  def construct_driver(self, line: str) -> bool:
+    """Takes a MIOpenDriver cmd or PDB key"""
     raise NotImplementedError("Not implemented")
 
-  @staticmethod
   @abstractmethod
-  def test_skip_arg(tok1: str):
-    """Overloaded method.Defined in conv&br driver child class"""
+  def construct_driver_from_db(self, db_obj: Any) -> bool:
+    """Takes a <>_config row and returns a driver cmd"""
     raise NotImplementedError("Not implemented")
 
-  @staticmethod
   @abstractmethod
-  def get_params(tok1: str):
-    """Overloaded method.Defined in conv&br driver child class"""
+  def get_tensor_id(session: Session, tensor_dict: dict) -> int:
+    """Return tensor id based on dict"""
     raise NotImplementedError("Not implemented")
 
-  @staticmethod
   @abstractmethod
-  def get_check_valid(tok1: str, tok2: Union[str, int]):
-    """Overloaded method.Defined in conv&br driver child class"""
+  def insert_tensor(self, tensor_dict: dict) -> int:
+    """Insert new row into tensor table and return primary key"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
+  def get_input_t_id(self) -> int:
+    """Build 1 row in tensor table based on layout from fds param
+       Details are mapped in metadata LAYOUT"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def compose_input_t(self) -> Dict[str, int]:
+    """Build input_tensor"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def decompose_input_t(self, db_obj: Any) -> bool:
+    """Use input_tensor to assign local variables to build driver cmd """
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def compose_fds(self, tok: list, line: str) -> bool:
+    """Compose fds from driver line"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def get_weight_t_id(self) -> int:
+    """Build 1 row in tensor table based on layout from fds param
+     Details are mapped in metadata LAYOUT"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def parse_driver_line(self, line: str):
+    """Parse line and set attributes"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
-    copy_dict: Dict[str, Union[str, int]] = {}
-    key: str
-    value: Union[int, str]
-    for key, value in vars(self).items():
-      if key == "_cmd":
-        copy_dict["cmd"] = value
-      else:
-        copy_dict[key] = value
-    return copy_dict
+    raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def __eq__(self, other: object) -> bool:
     """Defining equality functionality"""
-    if not isinstance(other, DriverBase):
-      return NotImplemented
-    if self.__class__ != other.__class__:
-      return False
-    return vars(self) == vars(other)
+    raise NotImplementedError("Not implemented")

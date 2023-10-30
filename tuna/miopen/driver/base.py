@@ -293,3 +293,23 @@ class MIOpenDriver(DriverBase):
     assert tok[1] != ''
 
     self.compose_fds(tok, line)
+
+  def to_dict(self) -> Dict[str, Union[str, int]]:
+    """Return class to dictionary"""
+    copy_dict: Dict[str, Union[str, int]] = {}
+    key: str
+    value: Union[int, str]
+    for key, value in vars(self).items():
+      if key == "_cmd":
+        copy_dict["cmd"] = value
+      else:
+        copy_dict[key] = value
+    return copy_dict
+
+  def __eq__(self, other: object) -> bool:
+    """Defining equality functionality"""
+    if not isinstance(other, DriverBase):
+      return NotImplemented
+    if self.__class__ != other.__class__:
+      return False
+    return vars(self) == vars(other)
