@@ -26,8 +26,8 @@
 ###############################################################################
 """Builder class implements the worker interface. The purpose of this class is to run fin
 jobs in compile mode"""
-from time import sleep
-import random
+#from time import sleep
+#import random
 import functools
 import json
 
@@ -121,15 +121,15 @@ class FinBuilder(FinClass):
 
     #Alex note: should be moved to miopen_lib and passed in?
     self.solver_id_map = get_solver_ids()
-    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
+    _, self.id_solver_map = get_id_solvers(
+    )  #hyphenated names used by miopen::solver.ToString()
 
     #if not self.get_job("new", "compile_start", True):
     # while not self.result_queue_drain():
     #   sleep(random.randint(1, 10))
     # return False
 
-    #NOTE: Alex
-    # JD: while fin can exec multiple jobs at a time, that makes error detection difficult self.logger.info('Acquired new job: job_id=%s', self.job.id)
+    #self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('compiling')
     fin_json = self.run_fin_cmd()
 
@@ -158,7 +158,7 @@ class FinBuilder(FinClass):
               err)
           session.rollback()
           failed_job = True
-    
+
     if failed_job:
       self.set_job_state('errored', result=result_str)
     elif self.pending:

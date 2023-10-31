@@ -142,12 +142,12 @@ class SimpleDict:
   """empty object"""
 
   def __init__(self, **kwargs):
-    for key,  value in kwargs.items():
+    for key, value in kwargs.items():
       if type(value) == dict:
         setattr(self, key, self.from_dict(value))
       else:
         setattr(self, key, value)
-    
+
   @classmethod
   def from_dict(cls, dict_obj):
     """recreate object from dict"""

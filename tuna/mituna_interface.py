@@ -50,9 +50,10 @@ class MITunaInterface():
                                                add_streamhandler=True)
     self.args: argparse.Namespace
 
-    self.worker_type: str = WorkerInterface.name 
+    self.worker_type: str = WorkerInterface.name
     self.fetch_state: List = ['new']
     self.max_job_retries = 10
+    self.dbt = None
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -205,7 +206,3 @@ class MITunaInterface():
     }
 
     return kwargs
-
-  def get_celery_tasks():
-    """Return a list of tasks for celery"""
-    raise NotImplementedError("Not implemented")

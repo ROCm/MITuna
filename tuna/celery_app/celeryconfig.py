@@ -1,1 +1,1 @@
-CELERY_IMPORTS=("celery_task")
+CELERY_IMPORTS = ("celery_task")

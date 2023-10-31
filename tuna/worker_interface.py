@@ -79,12 +79,13 @@ class WorkerInterface(Process):
     allowed_keys: Set[str] = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id', 'job', 'config'
+        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id',
+        'job', 'config'
     ])
 
     self.reset_interval: bool = None
     #system vars
-    self.machine: Machine = Machine(local_machine=True) 
+    self.machine: Machine = Machine(local_machine=True)
     #multiprocess vars
     self.gpu_id: int = None
     self.num_procs = None
@@ -101,8 +102,8 @@ class WorkerInterface(Process):
     self.label: str = None
     self.session_id: int = None
     self.worker_type = "generic_worker"
-    self.job: SimpleDict = None 
-    self.config: dict = None 
+    self.job: SimpleDict = None
+    self.config: dict = None
 
     for key, value in kwargs.items():
       if key in allowed_keys:
@@ -115,7 +116,7 @@ class WorkerInterface(Process):
 
     self.hostname: str = self.machine.hostname
     #self.claim_num: int = self.num_procs.value * 3
-    self.claim_num: int = 1 
+    self.claim_num: int = 1
     self.last_reset: datetime = datetime.now()
 
     dir_name: str = os.path.join(TUNA_LOG_DIR,
@@ -126,11 +127,10 @@ class WorkerInterface(Process):
 
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
-    self.logger.info("WI JOB: %s", kwargs['job'])
-    self.logger.info("WI CONFIG: %s", kwargs['config'])
+    #self.logger.info("WI JOB: %s", kwargs['job'])
+    #self.logger.info("WI CONFIG: %s", kwargs['config'])
 
     connect_db()
-
 
     try:
       self.job_attr: List[str] = [

@@ -29,8 +29,9 @@
 import sys
 from typing import List, Tuple
 
-from tuna.mituna_interface import MITunaInterface
 from sqlalchemy.inspection import inspect
+from sqlalchemy.exc import NoInspectionAvailable
+from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.dbBase.sql_alchemy import DbSession
@@ -44,7 +45,7 @@ from tuna.miopen.worker.fin_class import FinClass
 #from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
-from tuna.utils.miopen_utility import load_machines
+#from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
@@ -370,7 +371,6 @@ class MIOpen(MITunaInterface):
     # pylint: disable=duplicate-code
     """Main function to launch library"""
     print('RUN')
-    res = None
     self.parse_args()
     if self.args.add_tables:
       self.add_tables()
@@ -397,8 +397,7 @@ class MIOpen(MITunaInterface):
     #run non-tuning steps
     #print('compose_worker_list')
     #self.compose_worker_list(machines)
-    #return res
-    print('RETURNING')
+    return None
 
   def get_envmt(self):
     """! Function to construct environment var
@@ -432,11 +431,10 @@ class MIOpen(MITunaInterface):
 
     return kwargs
 
-
   def get_jobs(self, find_state: str) -> bool:
     """Interface function to get jobs based on session and find_state"""
     job_rows: List[Tuple[SimpleDict, ...]]
-    job_tables: List[SimpleDict]
+    #job_tables: List[SimpleDict]
     ids: list
     row: SimpleDict
     job_attr: List[str]
@@ -449,14 +447,15 @@ class MIOpen(MITunaInterface):
       self.logger.warning("Ignoring error for init_session: %s", error)
 
     with DbSession() as session:
-      job_rows = self.get_job_objs(session, find_state, self.args.label, self.dbt, job_attr, self.args.fin_steps)
+      job_rows = self.get_job_objs(session, find_state, self.args.label,
+                                   self.dbt, job_attr, self.args.fin_steps)
 
       if not self.check_jobs_found(job_rows, find_state, self.args.session_id):
         return False
 
       #print('JOB ROWS')
       #for elem in job_rows:
-        #print(elem[0].to_dict(), elem[1].to_dict())
+      #print(elem[0].to_dict(), elem[1].to_dict())
       #job_tables = self.get_job_tables(job_rows, job_attr)
       #ids = [row.id for row in job_tables]
       ids = [row[0].id for row in job_rows]
@@ -466,7 +465,6 @@ class MIOpen(MITunaInterface):
 
     #return job_tables
     return job_rows
-
 
   def get_job_objs(self,
                    session: DbSession,
@@ -488,7 +486,6 @@ class MIOpen(MITunaInterface):
     entries = self.compose_work_objs(session, conds, dbt, job_attr, fin_steps)
     return entries
 
-
   def compose_work_objs(
       self,
       session: DbSession,
@@ -508,10 +505,10 @@ class MIOpen(MITunaInterface):
       cond_str = f"WHERE {cond_str}"
     cond_str += " ORDER BY retries,config ASC"
     #try once without waiting for lock
-    job_entries = gen_select_objs(session, job_attr, dbt.job_table.__tablename__,
-                              cond_str)
+    job_entries = gen_select_objs(session, job_attr,
+                                  dbt.job_table.__tablename__, cond_str)
 
-    entries =  [(job,) for job in job_entries]
+    entries = [(job,) for job in job_entries]
     print('TEST')
     if fin_steps:
       ret = self.compose_work_objs_fin(session, entries, dbt)
@@ -519,8 +516,7 @@ class MIOpen(MITunaInterface):
     else:
       ret = entries
 
-    return ret 
-
+    return ret
 
   def compose_work_objs_fin(self, session, job_entries, dbt):
     """Return jobs for fin work"""
@@ -530,7 +526,8 @@ class MIOpen(MITunaInterface):
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
       cfg_attr = [column.name for column in inspect(dbt.config_table).c]
       cfg_entries = gen_select_objs(session, cfg_attr,
-                                    dbt.config_table.__tablename__, cfg_cond_str)
+                                    dbt.config_table.__tablename__,
+                                    cfg_cond_str)
 
       #attach tensor relationship information to config entries
       cfg_rel = {
@@ -564,20 +561,18 @@ class MIOpen(MITunaInterface):
         print()
         ret.append((job[0], cfg_map[job[0].config]))
 
-
     print(f"ret: {ret}")
     return ret
-
 
   def check_jobs_found(self, job_rows: List[SimpleDict], find_state: str,
                        session_id: int) -> bool:
     """check for end of jobs"""
     if not job_rows:
       # we are done
-      self.logger.warning('No %s jobs found, session %s', find_state, session_id)
+      self.logger.warning('No %s jobs found, session %s', find_state,
+                          session_id)
       return False
     return True
-
 
   def get_job_tables(self, job_rows: List[Tuple[SimpleDict, ...]],
                      job_attr: List[str]) -> List[SimpleDict]:
@@ -595,7 +590,6 @@ class MIOpen(MITunaInterface):
 
     return job_tables
 
-
   def update_worker_type(self):
     """Update the workers type that this library needs"""
     if self.args.fin_steps:
@@ -610,3 +604,12 @@ class MIOpen(MITunaInterface):
     if self.args.update_applicability:
       self.worker_type = "fin_class_worker"
       self.fetch_state = "new"
+
+  def is_tunable_operation(self):
+    """Check if its a tuning loop operation"""
+    print(self.args.fin_steps)
+    if self.args.fin_steps is not None and (
+        ("miopen_find_compile" or "miopen_fin_eval") in self.args.fin_steps):
+      return True
+
+    return False

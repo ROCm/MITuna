@@ -34,15 +34,16 @@ from tuna.worker_interface import WorkerInterface
 
 def get_worker(kwargs, worker_type):
   """Return worker based on worker_type"""
+
+  worker = WorkerInterface(**kwargs)
   if worker_type == "fin_class_worker":
     kwargs['fin_steps'] = ['applicability']
-    return FinClass(**kwargs)
+    worker = FinClass(**kwargs)
   elif worker_type == "fin_build_worker":
     kwargs['fetch_state'] = ['new']
-    return FinBuilder(**kwargs)
+    worker = FinBuilder(**kwargs)
   elif worker_type == "fin_eval_worker":
     kwargs['fetch_state'] = ['compiled']
-    return FinEvaluator(**kwargs)
-  else:
-    return WorkerInterface(kwargs)
+    worker = FinEvaluator(**kwargs)
 
+  return worker

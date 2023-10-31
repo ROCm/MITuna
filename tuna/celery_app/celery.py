@@ -1,12 +1,13 @@
+from multiprocessing import Value, Lock, Queue as mpQueue
 from celery import Celery, shared_task
 from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
 
 app = Celery('celery_app',
-              broker='redis://localhost:6379/0',
-              backend='redis://localhost:6379/0',
-              includes=['tuna.celery_app.celery.celery_task'])
+             broker='redis://localhost:6379/0',
+             backend='redis://localhost:6379/0',
+             includes=['tuna.celery_app.celery.celery_task'])
 logger = get_task_logger(__name__)
 
 #             include=['proj.tasks'])
@@ -14,6 +15,7 @@ logger = get_task_logger(__name__)
 # Optional configuration, see the application user guide.
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
+
 
 @app.task(bind=True)
 def celery_task(self, args, kwargs):
@@ -25,20 +27,28 @@ def celery_task(self, args, kwargs):
   #print(f"args[0] {args[0]}")
   #logger.info(args[1])
   #logger.info(kwargs)
-  
-  new_job = SimpleDict(**args[0])
-  job_config = args[1]
-  print(f"config {args[1]}")
-  kwargs["job"] = new_job 
-  #kwargs["config"] = job_config 
-  kwargs["config"] = SimpleDict(**args[1]) 
-  
-  print(f"JOB {kwargs['job']}")
-  print(f"CONFIG {kwargs['config']}")
+
+  if args[0] is not None:
+    new_job = SimpleDict(**args[0])
+    job_config = args[1]
+    print(f"config {args[1]}")
+    kwargs["job"] = new_job
+    #kwargs["config"] = job_config
+    kwargs["config"] = SimpleDict(**args[1])
+
+    print(f"JOB {kwargs['job']}")
+    print(f"CONFIG {kwargs['config']}")
+  else:
+    kwargs["job_queue"] = mpQueue()
+    kwargs["job_queue_lock"] = Lock()
+    
+
+  #get worker based on worker_type
   worker = get_worker(kwargs, args[2])
   worker.run()
   #print(worker.worker_type)
   return args[0]
+
 
 if __name__ == '__main__':
   app.start()

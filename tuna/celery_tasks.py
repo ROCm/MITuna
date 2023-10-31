@@ -46,7 +46,6 @@ from tuna.mituna_interface import MITunaInterface
 from tuna.celery_app.celery import app, celery_task
 from celery.result import AsyncResult
 
-
 LOGGER: logging.Logger = setup_logger('celery_tasks')
 MAX_JOB_RETRIES = 10
 
@@ -62,35 +61,47 @@ def tune(library):
   #Alex: currently hardcoding GPU idx 0???
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals)
-  job_config_rows = library.get_jobs(library.fetch_state)
 
-  #job_config_rows[0] is job
-  #job_config_rows[1] is its related config
-  for elem in job_config_rows:
-    print
-    #print("TASK: %s", elem)
-    print(library.worker_type)
-    job_dict = {}
+  if library.is_tunable_operation():
+    job_config_rows = library.get_jobs(library.fetch_state)
 
-    #launching task
-    for key, value in elem[1].to_dict().items():
-      print(key, value)
-      if type(value) == SimpleDict:
-        print(key, value.to_dict())
-        job_dict[key] = value.to_dict()
-      else:
-        job_dict[key] = value
+    #job_config_rows[0] is job
+    #job_config_rows[1] is its related config
+    for elem in job_config_rows:
+      print
+      #print("TASK: %s", elem)
+      print(library.worker_type)
+      job_dict = {}
 
-        
-        
-    result = celery_task.delay([elem[0].to_dict(), job_dict, library.worker_type], kwargs)
+      #launching task
+      for key, value in elem[1].to_dict().items():
+        print(key, value)
+        if type(value) == SimpleDict:
+          print(key, value.to_dict())
+          job_dict[key] = value.to_dict()
+        else:
+          job_dict[key] = value
+
+      result = celery_task.delay(
+          [elem[0].to_dict(), job_dict, library.worker_type], kwargs)
+      print('result: %s', result)
+      print('result_id: %s', result.id)
+      print('result_status: %s', result.status)
+
+      res = AsyncResult(result.id, app=app)
+      #calling get waits for job to terminate
+      print('final res %s', res.get())
+      #print('final state %s', res.state)
+      print()
+  else:
+    result = celery_task.delay([None, None, library.worker_type], kwargs)
     print('result: %s', result)
     print('result_id: %s', result.id)
     print('result_status: %s', result.status)
 
     res = AsyncResult(result.id, app=app)
     #calling get waits for job to terminate
-    print('final res %s', res.get())
+    #print('final res %s', res.get())
     #print('final state %s', res.state)
     print()
 

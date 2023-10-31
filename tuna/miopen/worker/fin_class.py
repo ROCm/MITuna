@@ -31,6 +31,7 @@ import os
 import tempfile
 import functools
 from typing import List, Dict, Tuple
+from multiprocessing import Value
 import paramiko
 try:
   import queue
@@ -79,7 +80,8 @@ class FinClass(WorkerInterface):
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
 
     #self.solver_id_map = get_solver_ids()
-    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
+    _, self.id_solver_map = get_id_solvers(
+    )  #hyphenated names used by miopen::solver.ToString()
     self.all_configs = []
     self.fin_list = []
     self.multiproc = False
@@ -87,12 +89,12 @@ class FinClass(WorkerInterface):
     self.first_pass = True
     self.dynamic_solvers_only = False
     self.worker_type = "fin_class_worker"
+    self.solver_id_map = None
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
-    print(kwargs['job'])
 
-    self.config_type = ConfigType.convolution if self.config_type is None else self.config_type
+    self.config_type = ConfigType.convolution if self.config_type is None else ConfigType(self.config_type)
 
     super().__init__(**kwargs)
 
@@ -125,6 +127,9 @@ class FinClass(WorkerInterface):
     ]
     self.fdb_attr.remove("insert_ts")
     self.fdb_attr.remove("update_ts")
+    #self.num_procs = int(self.machine.get_num_cpus() * .6)
+    self.num_procs = Value(
+        'i', len(list(range(int(self.machine.get_num_cpus() * .6)))))
 
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
@@ -790,47 +795,47 @@ class FinClass(WorkerInterface):
 
     return status
 
-  def __add_sql_objs(self, session, obj_list):
-    """add sql objects to the table"""
-    for obj in obj_list:
-      if isinstance(obj, SimpleDict):
-        if has_attr_set(obj, self.fdb_attr):
-          query = gen_insert_query(obj, self.fdb_attr,
-                                   self.dbt.find_db_table.__tablename__)
-          session.execute(query)
-        else:
-          return False
-      else:
-        session.add(obj)
-    session.commit()
-    return True
+  #def __add_sql_objs(self, session, obj_list):
+  #  """add sql objects to the table"""
+  #  for obj in obj_list:
+  #    if isinstance(obj, SimpleDict):
+  #      if has_attr_set(obj, self.fdb_attr):
+  #        query = gen_insert_query(obj, self.fdb_attr,
+  #                                 self.dbt.find_db_table.__tablename__)
+  #        session.execute(query)
+  #      else:
+  #        return False
+  #    else:
+  #      session.add(obj)
+  #  session.commit()
+  #  return True
 
-  def __result_queue_commit(self, session, close_job):
-    """commit the result queue and set mark job complete"""
-    while not self.result_queue.empty():
-      obj_list = []
-      res_list = self.result_queue.get(True, 1)
-      res_job = res_list[0][0]
-      for _, obj in res_list:
-        obj_list.append(obj)
+  #def __result_queue_commit(self, session, close_job):
+  #  """commit the result queue and set mark job complete"""
+  #  while not self.result_queue.empty():
+  #    obj_list = []
+  #    res_list = self.result_queue.get(True, 1)
+  #    res_job = res_list[0][0]
+  #    for _, obj in res_list:
+  #      obj_list.append(obj)
 
-      self.logger.info("commit pending job %s, #objects: %s", res_job.id,
-                       len(obj_list))
-      status = session_retry(session, self.__add_sql_objs,
-                             lambda x: x(session, obj_list), self.logger)
-      if not status:
-        self.logger.error("Failed commit pending job %s", res_job.id)
-        return False
+  #   self.logger.info("commit pending job %s, #objects: %s", res_job.id,
+  #                     len(obj_list))
+  #    status = session_retry(session, self.__add_sql_objs,
+  #                           lambda x: x(session, obj_list), self.logger)
+  #    if not status:
+  #      self.logger.error("Failed commit pending job %s", res_job.id)
+  #      return False
 
-      this_job = self.job
+  #    this_job = self.job
 
-      #set job states after successful commit
-      self.job = res_job
-      close_job()
+  #    #set job states after successful commit
+  #    self.job = res_job
+  #    close_job()
 
-      self.job = this_job
+  #    self.job = this_job
 
-    return True
+  #  return True
 
   def close_job(self):
     """mark a job complete"""
@@ -844,10 +849,10 @@ class FinClass(WorkerInterface):
   #    return True
   #  return False
 
-  def reset_job_state(self):
-    """finish committing result queue"""
-    super().reset_job_state()
-    #self.result_queue_drain()
+  #def reset_job_state(self):
+  #  """finish committing result queue"""
+  #super().reset_job_state()
+  #self.result_queue_drain()
 
   def init_check_env(self):
     """check environment on the first run"""
@@ -886,7 +891,8 @@ class FinClass(WorkerInterface):
   def step(self):
     """Inner loop for Process run defined in worker_interface"""
     self.solver_id_map = get_solver_ids()
-    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
+    _, self.id_solver_map = get_id_solvers(
+    )  #hyphenated names used by miopen::solver.ToString()
     self.multiproc = True
     if "applicability" in self.fin_steps:
       self.applicability()

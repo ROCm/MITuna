@@ -280,7 +280,8 @@ class FinEvaluator(FinClass):
       return False
 
     self.solver_id_map = get_solver_ids()
-    _, self.id_solver_map = get_id_solvers()  #hyphenated names used by miopen::solver.ToString()
+    _, self.id_solver_map = get_id_solvers(
+    )  #hyphenated names used by miopen::solver.ToString()
 
     #if not self.get_job("compiled", "eval_start", True):
     #  while not self.result_queue_drain():
