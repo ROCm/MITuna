@@ -31,6 +31,8 @@ import os
 from time import sleep
 import random
 import functools
+import logging
+from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random
 
 from sqlalchemy.inspection import inspect
 
@@ -38,34 +40,41 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.utils.db_utility import session_retry, gen_insert_query
+from tuna.rocmlir.config_type import ConfigType
 
 
 class RocMLIRWorker(WorkerInterface):
   """ The RocMLIR class implements the worker class. Its purpose is to run a command. It picks up
   new jobs and when completed, sets the state to completed. """
 
-  def __init__(self, **kwargs):
+  def __init__(self, *, config_type=None, **kwargs):
     """Constructor"""
     self.dbt = None
-    super().__init__(**kwargs)
-    self.set_db_tables()
+    self.config_type = config_type
+    super().__init__(config_type=config_type, **kwargs)
     self.result_attr = [column.name for column in inspect(self.dbt.results).c]
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
 
+
+# Can either have one of these, or --device below, but no combinations.
+#     self.envmt.append(f"ROCR_VISIBLE_DEVICES={self.gpu_id}")
+#     self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
+
   def set_db_tables(self):
     """Initialize tables"""
-    self.dbt = RocMLIRDBTables(session_id=self.session_id)
+    self.dbt = RocMLIRDBTables(session_id=self.session_id,
+                               config_type=self.config_type)
 
   def update_result_table(self, session, result_str):
     """update results table with individual result entry"""
     obj = self.dbt.results()
 
-    arch, config, perf_config, tflops = obj.parse(result_str)
+    arch, num_cu, config, perf_config, tflops = obj.parse(result_str)
 
-    print(
-        f"arch = '{arch}', config = '{config}', perf_config = '{perf_config}', tflops = {tflops}",
-        file=sys.stderr)
+    print(f"arch = '{arch}', num_cu = '{num_cu}', config = '{config}', \
+          perf_config = '{perf_config}', tflops = {tflops}",
+          file=sys.stderr)
 
     obj.valid = 1
     obj.session = self.dbt.session.id
@@ -113,30 +122,38 @@ class RocMLIRWorker(WorkerInterface):
     self.set_job_state('running')
 
     try:
-      retcode, cmd_output = self.run_cmd()
-    except ValueError as verr:
-      self.logger.info(verr)
-      self.set_job_state('errored', result=verr)
-    else:
-      if retcode != 0:
-        quoted_output = cmd_output.replace("'", r"\'")
-        msg = f"Error code {retcode}, output {quoted_output}"
-        self.logger.info(msg)
-        self.set_job_state('errored', result=msg)
-      else:
-        try:
-          with open(self.output_filename(), 'r', encoding='utf8') as results:
-            # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
-            string = results.read().replace(':', r'\:')
-            self.set_job_state('completed', result=string)
-            self.process_result(string)
-          os.remove(self.output_filename())
-        except OSError as exc:
-          # Most often FileNotFoundError.
-          self.logger.warning(
-              'Exception occurred while saving results of job %s:  %s',
-              self.job.id, exc)
-          self.set_job_state('errored', result=repr(exc))
+      # Retry three times in the case of unhandled exceptions, logging them.
+      for attempt in Retrying(stop=stop_after_attempt(3),
+                              reraise=True,
+                              wait=wait_random(min=5, max=30),
+                              before_sleep=before_sleep_log(
+                                  self.logger, logging.DEBUG)):
+        with attempt:
+          try:
+            retcode, cmd_output = self.run_cmd()
+          except ValueError as verr:
+            self.logger.info(verr)
+            self.set_job_state('error', result=verr)
+          else:
+            if retcode != 0:
+              quoted_output = cmd_output.replace("'", r"\'")
+              msg = f"Error code {retcode}, output {quoted_output}"
+              self.logger.info(msg)
+              self.set_job_state('error', result=msg)
+            else:
+              with open(self.output_filename(), 'r',
+                        encoding='utf8') as results:
+                # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
+                string = results.read().replace(':', r'\:')
+                self.set_job_state('completed', result=string)
+                self.process_result(string)
+              os.remove(self.output_filename())
+    # pylint: disable=broad-exception-caught
+    # Not sure what to expect beyond OSError.
+    except Exception as exc:
+      self.logger.warning('Exception occurred while running job %s:  %s',
+                          self.job.id, exc)
+      self.set_job_state('error', result=str(exc).replace("'", r"\'"))
 
     return True
 
@@ -145,12 +162,22 @@ class RocMLIRWorker(WorkerInterface):
     env_str = " ".join(self.envmt)
     with DbSession() as session:
       cft = self.dbt.config_table
-      query = session.query(cft).filter(cft.id == self.job.config)
-      config = query.all()
+      config = session.query(cft).filter(cft.id == self.job.config).all()
       if len(config) > 1:
         raise ValueError(f"More than one config matching ID {self.job.config}")
       config_string = config[0].config_string()
-    cmd = env_str + f" python3 ./bin/tuningRunner.py --operation conv \
+    if self.dbt.config_type == ConfigType.convolution:
+      special_args = "--operation conv"
+    elif self.dbt.config_type == ConfigType.gemm:
+      special_args = "--operation gemm"
+    else:
+      raise ValueError(f"Config type {self.dbt.config_type} not yet supported.")
+
+    if not os.path.exists("./bin/tuningRunner.py"):
+      raise FileNotFoundError("tuningRunner.py not found;"
+                              "  wrong directory or missing setup")
+
+    cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
                      --output={self.output_filename()} --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}'"
@@ -161,7 +188,6 @@ class RocMLIRWorker(WorkerInterface):
 
   def get_mlir_v(self) -> str:
     """Interface function to get mlir version info"""
-    #_, mlir_ver, _ = self.exec_docker_cmd("cat /opt/rocm/.info/version")
-    mlir_ver = "mlir_v-not-yet-implemented"
-    self.logger.info('Got mlir version: %s', mlir_ver)
-    return mlir_ver
+    _, mlir_hash, _ = self.exec_docker_cmd("git rev-parse HEAD")
+    self.logger.info('Got mlir version: %s', mlir_hash)
+    return mlir_hash

@@ -69,19 +69,21 @@ def add_jobs(args, dbt):
                    .filter(dbt.session_table.valid == 1,
                            dbt.session_table.id == args.session_id)
     reasons = query.all()
+    if not reasons:
+      raise ValueError(f"No valid session matching ID {args.session_id}")
     if len(reasons) > 1:
       raise ValueError(f"More than one session matching ID {args.session_id}")
     reason = reasons[0].reason
 
     query = session.query(dbt.config_table.id)\
                    .filter(dbt.config_table.valid == 1)
-    res = query.all()
+    configs = query.all()
 
-    if not res:
+    if not configs:
       LOGGER.error('No applicable configs found for args %s', args.__dict__)
 
     # pylint: disable=duplicate-code
-    for config in res:
+    for config in configs:
       try:
         job = dbt.job_table(state='new',
                             valid=1,
@@ -100,13 +102,11 @@ def add_jobs(args, dbt):
 
 def main():
   """ main """
-  # pylint: disable=duplicate-code
+
   args = parse_args()
+  dbt = RocMLIRDBTables(session_id=args.session_id)
   connect_db()
-
-  dbt = RocMLIRDBTables(session_id=None)
   cnt = add_jobs(args, dbt)
-
   print(f"New jobs added: {cnt}")
 
 

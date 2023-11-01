@@ -63,7 +63,7 @@ def setup_logger(logger_name: str = 'Tuna',
 
 def set_usr_logger(logger_name: str) -> logging.Logger:
   """utility function to create worker interface logger object"""
-  log_level: str = os.environ.get('TUNA_WOKER_INTERFACE_LOGLEVEL', "INFO")
+  log_level: str = os.environ.get('TUNA_WORKER_INTERFACE_LOGLEVEL', "INFO")
   lgr: Union[logging.Logger,
              logging.RootLogger] = logging.getLogger(logger_name)
   log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
