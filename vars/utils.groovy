@@ -44,13 +44,21 @@ def buildSchema(){
     sh "./tuna/miopen/db/build_schema.py"
 }
 
+def getDockerName(backend){
+    return "ixt-rack-15:5000/ci_tuna:${branch_id}_${backend}"
+}
+
 def buildDockers(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
-    tuna_docker.push()
-    tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
-    tuna_docker.push()
-    tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP .")
-    tuna_docker.push()
+    def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
+    tuna_docker_hipnogpu.push()
+    def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
+    tuna_docker_hip.push()
+}
+
+def getDocker(backend){
+    def tuna_docker = docker.image(getDockerName(backend))
+    tuna_docker.pull()
+    return tuna_docker
 }
 
 def cleanup() {
@@ -78,7 +86,7 @@ def addJobs() {
 }
 
 def finSolvers(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     /*
     Note: Does not need
             GPUs
@@ -107,7 +115,7 @@ def finSolvers(){
 }
 
 def finApplicability(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -162,7 +170,7 @@ def finApplicability(){
 }
 
 def finFindCompile(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -218,7 +226,7 @@ def finFindCompile(){
 
 
 def finFindEval(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP .")
+    def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -281,7 +289,7 @@ def buildTunaDocker(){
 }
 
 def loadJobTest() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -330,7 +338,7 @@ def loadJobTest() {
 }
 
 def solverAnalyticsTest(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("-u root --network host  --dns 8.8.8.8") {
         checkout scm
         // enviornment setup
@@ -362,7 +370,7 @@ def solverAnalyticsTest(){
 }
 
 def perfCompile() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -404,7 +412,7 @@ def perfCompile() {
 }
 
 def perfEval_gfx908() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+    def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -453,7 +461,7 @@ def perfEval_gfx908() {
 }
 
 def pytestSuite1() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", " .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -501,7 +509,7 @@ def pytestSuite1() {
 
 
 def pytestSuite2() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest2", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -527,7 +535,7 @@ def pytestSuite2() {
 }
 
 def pytestSuite3AndCoverage(current_run, main_branch) {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg BACKEND=HIP .")
+    def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -565,8 +573,7 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
 
 def runFormat() {
     node {
-        checkout scm
-        def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+        def tuna_docker = getDocker("HIP")
         tuna_docker.inside("") {
             sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/"
         }
@@ -575,9 +582,8 @@ def runFormat() {
 
 def runLint() {
     node {
-          checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
-          tuna_docker.inside("") {
+        def tuna_docker = getDocker("HIP")
+        tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
