@@ -44,8 +44,10 @@ def buildSchema(){
     sh "./tuna/miopen/db/build_schema.py"
 }
 
-def getDockerName(backend){
-    return "ixt-rack-15:5000/ci_tuna:${branch_id}_${backend}"
+def getDockerName(backend)
+{
+  def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_name}_${backend}_${env.BUILD_ID}"
+  return tuna_docker_name
 }
 
 def buildDockers(){
@@ -655,12 +657,6 @@ def getJobReason()
 def killContainer() {
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker system prune -f'"
-}
-
-def getDockerName(backend)
-{
-  def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_name}_${backend}_${env.BUILD_ID}"
-  return tuna_docker_name
 }
 
 def LoadJobs()
