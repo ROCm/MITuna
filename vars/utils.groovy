@@ -44,6 +44,15 @@ def buildSchema(){
     sh "./tuna/miopen/db/build_schema.py"
 }
 
+def buildDockers(){
+    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+    tuna_docker.push()
+    tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    tuna_docker.push()
+    tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP .")
+    tuna_docker.push()
+}
+
 def cleanup() {
     def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
     sh "${cmd}"
