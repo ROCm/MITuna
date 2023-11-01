@@ -42,7 +42,7 @@ from tuna.miopen.db.session import Session
 from tuna.miopen.utils.metadata import DIR_MAP
 from tuna.miopen.db.benchmark import Model, Framework
 from tuna.db.tuna_tables import JobMixin
-from tuna.db.tuna_tables import enum
+from tuna.db.tuna_tables import JobEnum
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
@@ -308,7 +308,7 @@ class FusionConfigTags(BASE, ConfigTagMixin):
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
 
-class FinStep(enum.Enum):
+class FinStep(JobEnum):
   """ Allowed Fin Steps """
   # pylint: disable=invalid-name ; tuna/go_fish.py names valid fin steps as FinStep.__members__
   find_compile = 1
