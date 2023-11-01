@@ -28,6 +28,7 @@
 # pylint: disable=duplicate-code
 import sys
 import argparse
+from multiprocessing import Value
 
 from typing import Dict, Any, List, Optional
 from tuna.mituna_interface import MITunaInterface
@@ -41,6 +42,7 @@ from tuna.rocmlir.rocmlir_tables import get_tables, SessionRocMLIR
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.miopen.db.build_schema import recreate_triggers
 from tuna.rocmlir.triggers import get_timestamp_trigger
+from tuna.rocmlir.config_type import ConfigType
 
 
 class RocMLIR(MITunaInterface):
@@ -60,6 +62,18 @@ class RocMLIR(MITunaInterface):
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
+    parser.add_argument('--config_type',
+                        dest='config_type',
+                        help='Specify configuration type',
+                        default=None,
+                        choices=[ct.name for ct in ConfigType],
+                        type=ConfigType)
+    parser.add_argument('--load_factor',
+                        dest='load_factor',
+                        help='How many workers per GPU',
+                        default=1.0,
+                        type=float)
+
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
     )
     group.add_argument('--add_tables',
@@ -89,24 +103,17 @@ class RocMLIR(MITunaInterface):
     args_check(self.args, parser)
 
   def launch_worker(self, gpu_idx: int, f_vals: Dict[str, Any], \
-                    worker_lst: List[RocMLIRWorker]) -> bool:
+                    worker_lst: List[RocMLIRWorker]) -> List[RocMLIRWorker]:
     """! Function to launch worker
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param worker_lst List containing worker instances
-      @return Boolean value
     """
-
-    # pylint: disable=duplicate-code
     kwargs: Dict[str, Any] = self.get_kwargs(gpu_idx, f_vals)
     worker: RocMLIRWorker = RocMLIRWorker(**kwargs)
-    if self.args.init_session:
-      SessionRocMLIR().add_new_session(self.args, worker)
-      return False
-
     worker.start()
     worker_lst.append(worker)
-    return True
+    return worker_lst
 
   def compose_worker_list(self, machines) -> Optional[List[RocMLIRWorker]]:
     # pylint: disable=too-many-branches
@@ -122,6 +129,14 @@ class RocMLIR(MITunaInterface):
 
       #determine number of processes by compute capacity
       worker_ids: List = machine.get_avail_gpus()
+      factor = self.args.load_factor
+      if factor > 1:
+        # LF>1 means multiple workers per GPU.
+        worker_ids = worker_ids * round(factor)
+      else:
+        # LF<1 means use that fraction of GPUs.
+        worker_ids = worker_ids[:round(len(worker_ids) * factor)]
+
       if len(worker_ids) == 0:
         return None
 
@@ -130,8 +145,7 @@ class RocMLIR(MITunaInterface):
 
       for gpu_idx in worker_ids:
         self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
-        if not self.launch_worker(gpu_idx, f_vals, worker_lst):
-          break
+        worker_lst = self.launch_worker(gpu_idx, f_vals, worker_lst)
 
     return worker_lst
 
@@ -139,7 +153,8 @@ class RocMLIR(MITunaInterface):
     # pylint: disable=duplicate-code
     """Generates the library specific schema to the connected SQL server."""
     ret_t: bool = create_tables(get_tables())
-    recreate_triggers(['timestamp_trigger'], get_timestamp_trigger())
+    recreate_triggers(['conv_timestamp_trigger', 'gemm_timestamp_trigger'],
+                      get_timestamp_trigger())
     self.logger.info('DB creation successful: %s', ret_t)
     return True
 
@@ -151,7 +166,17 @@ class RocMLIR(MITunaInterface):
     if self.args.add_tables:
       self.add_tables()
       return None
+
     machines: List[Machine] = load_machines(self.args)
+    if self.args.init_session:
+      for machine in machines:
+        worker = RocMLIRWorker(config_type=self.args.config_type,
+                               session_id=self.args.session_id,
+                               machine=machine,
+                               num_procs=Value('i', 0))
+        SessionRocMLIR().add_new_session(self.args, worker)
+      return None
+
     res = self.compose_worker_list(machines)
     return res
 
@@ -169,5 +194,6 @@ class RocMLIR(MITunaInterface):
       @param f_vals Dict containing process specific runtime information
     """
     kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
+    kwargs['config_type'] = self.args.config_type
 
     return kwargs
