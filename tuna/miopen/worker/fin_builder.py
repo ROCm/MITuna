@@ -26,8 +26,8 @@
 ###############################################################################
 """Builder class implements the worker interface. The purpose of this class is to run fin
 jobs in compile mode"""
-#from time import sleep
-#import random
+from time import sleep
+import random
 import functools
 import json
 
@@ -39,7 +39,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.worker.fin_utils import fin_job
 from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.utils.db_utility import session_retry
-from tuna.utils.db_utility import get_solver_ids, get_id_solvers
+#from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 
 
 class FinBuilder(FinClass):
@@ -113,23 +113,20 @@ class FinBuilder(FinClass):
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
+    # pylint:disable=duplicate-code
     self.pending = []
     #self.result_queue_drain()
+    while not self.result_queue_drain():
+      sleep(random.randint(1, 10))
 
     if not self.init_check_env():
       return False
 
     #Alex note: should be moved to miopen_lib and passed in?
-    self.solver_id_map = get_solver_ids()
-    _, self.id_solver_map = get_id_solvers(
-    )  #hyphenated names used by miopen::solver.ToString()
+    #self.solver_id_map = get_solver_ids()
+    #_, self.id_solver_map = get_id_solvers(
+    #)  #hyphenated names used by miopen::solver.ToString()
 
-    #if not self.get_job("new", "compile_start", True):
-    # while not self.result_queue_drain():
-    #   sleep(random.randint(1, 10))
-    # return False
-
-    #self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('compiling')
     fin_json = self.run_fin_cmd()
 
@@ -163,7 +160,7 @@ class FinBuilder(FinClass):
       self.set_job_state('errored', result=result_str)
     elif self.pending:
       self.set_job_state('compiled_pend', result=result_str)
-      #self.result_queue.put(self.pending)
+      self.result_queue.put(self.pending)
     else:
       self.set_job_state('compiled', result=result_str)
 

@@ -94,7 +94,8 @@ class FinClass(WorkerInterface):
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
 
-    self.config_type = ConfigType.convolution if self.config_type is None else ConfigType(self.config_type)
+    self.config_type = ConfigType.convolution if self.config_type is None else ConfigType(
+        self.config_type)
 
     super().__init__(**kwargs)
 
@@ -795,59 +796,59 @@ class FinClass(WorkerInterface):
 
     return status
 
-  #def __add_sql_objs(self, session, obj_list):
-  #  """add sql objects to the table"""
-  #  for obj in obj_list:
-  #    if isinstance(obj, SimpleDict):
-  #      if has_attr_set(obj, self.fdb_attr):
-  #        query = gen_insert_query(obj, self.fdb_attr,
-  #                                 self.dbt.find_db_table.__tablename__)
-  #        session.execute(query)
-  #      else:
-  #        return False
-  #    else:
-  #      session.add(obj)
-  #  session.commit()
-  #  return True
+  def __add_sql_objs(self, session, obj_list):
+    """add sql objects to the table"""
+    for obj in obj_list:
+      if isinstance(obj, SimpleDict):
+        if has_attr_set(obj, self.fdb_attr):
+          query = gen_insert_query(obj, self.fdb_attr,
+                                   self.dbt.find_db_table.__tablename__)
+          session.execute(query)
+        else:
+          return False
+      else:
+        session.add(obj)
+    session.commit()
+    return True
 
-  #def __result_queue_commit(self, session, close_job):
-  #  """commit the result queue and set mark job complete"""
-  #  while not self.result_queue.empty():
-  #    obj_list = []
-  #    res_list = self.result_queue.get(True, 1)
-  #    res_job = res_list[0][0]
-  #    for _, obj in res_list:
-  #      obj_list.append(obj)
+  def __result_queue_commit(self, session, close_job):
+    """commit the result queue and set mark job complete"""
+    while not self.result_queue.empty():
+      obj_list = []
+      res_list = self.result_queue.get(True, 1)
+      res_job = res_list[0][0]
+      for _, obj in res_list:
+        obj_list.append(obj)
 
-  #   self.logger.info("commit pending job %s, #objects: %s", res_job.id,
-  #                     len(obj_list))
-  #    status = session_retry(session, self.__add_sql_objs,
-  #                           lambda x: x(session, obj_list), self.logger)
-  #    if not status:
-  #      self.logger.error("Failed commit pending job %s", res_job.id)
-  #      return False
+      self.logger.info("commit pending job %s, #objects: %s", res_job.id,
+                       len(obj_list))
+      status = session_retry(session, self.__add_sql_objs,
+                             lambda x: x(session, obj_list), self.logger)
+      if not status:
+        self.logger.error("Failed commit pending job %s", res_job.id)
+        return False
 
-  #    this_job = self.job
+      this_job = self.job
 
-  #    #set job states after successful commit
-  #    self.job = res_job
-  #    close_job()
+      #set job states after successful commit
+      self.job = res_job
+      close_job()
 
-  #    self.job = this_job
+      self.job = this_job
 
-  #  return True
+    return True
 
   def close_job(self):
     """mark a job complete"""
 
-  #def result_queue_drain(self):
-  #  """check for lock and commit the result queue"""
-  #  if self.result_queue_lock.acquire(block=False):
-  #    with DbSession() as session:
-  #      self.__result_queue_commit(session, self.close_job)
-  #    self.result_queue_lock.release()
-  #    return True
-  #  return False
+  def result_queue_drain(self):
+    """check for lock and commit the result queue"""
+    if self.result_queue_lock.acquire(block=False):
+      with DbSession() as session:
+        self.__result_queue_commit(session, self.close_job)
+      self.result_queue_lock.release()
+      return True
+    return False
 
   #def reset_job_state(self):
   #  """finish committing result queue"""

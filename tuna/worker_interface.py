@@ -85,7 +85,8 @@ class WorkerInterface(Process):
 
     self.reset_interval: bool = None
     #system vars
-    self.machine: Machine = Machine(local_machine=True)
+    #self.machine: Machine = Machine(local_machine=True)
+    self.machine: Machine = None
     #multiprocess vars
     self.gpu_id: int = None
     self.num_procs = None
@@ -93,8 +94,8 @@ class WorkerInterface(Process):
     self.bar_lock = Lock()
     self.job_queue = None
     self.job_queue_lock = Lock()
-    #self.result_queue = None
-    #self.result_queue_lock = Lock()
+    self.result_queue = None
+    self.result_queue_lock = Lock()
     self.end_jobs = None
     #job detail vars
     self.envmt: List = []
@@ -127,8 +128,8 @@ class WorkerInterface(Process):
 
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
-    #self.logger.info("WI JOB: %s", kwargs['job'])
-    #self.logger.info("WI CONFIG: %s", kwargs['config'])
+    self.logger.info("WI JOB: %s", kwargs['job'])
+    self.logger.info("WI CONFIG: %s", kwargs['config'])
 
     connect_db()
 

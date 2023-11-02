@@ -1,13 +1,17 @@
-from multiprocessing import Value, Lock, Queue as mpQueue
-from celery import Celery, shared_task
+from multiprocessing import Lock, Queue as mpQueue
+from celery import Celery
 from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
+from tuna.machine import Machine
 
 app = Celery('celery_app',
              broker='redis://localhost:6379/0',
              backend='redis://localhost:6379/0',
-             includes=['tuna.celery_app.celery.celery_task'])
+             includes=[
+                 'tuna.celery_app.celery.celery_enqueue_gfx908_120',
+                 'tuna.celery_app.celery.celery_enqueue_gfx1030_36',
+             ])
 logger = get_task_logger(__name__)
 
 #             include=['proj.tasks'])
@@ -18,36 +22,32 @@ app.autodiscover_tasks()
 
 
 @app.task(bind=True)
-def celery_task(self, args, kwargs):
+def celery_enqueue_gfx908_120(self, args, kwargs):
   """defines a celery task"""
-  #logger.info(worker.session_id)
-  #arg[0] is job
-  #arg[1] is worker_type
-  #kwargs for Worker constructor
-  #print(f"args[0] {args[0]}")
-  #logger.info(args[1])
-  #logger.info(kwargs)
-
-  if args[0] is not None:
-    new_job = SimpleDict(**args[0])
-    job_config = args[1]
-    print(f"config {args[1]}")
-    kwargs["job"] = new_job
-    #kwargs["config"] = job_config
-    kwargs["config"] = SimpleDict(**args[1])
-
-    print(f"JOB {kwargs['job']}")
-    print(f"CONFIG {kwargs['config']}")
-  else:
-    kwargs["job_queue"] = mpQueue()
-    kwargs["job_queue_lock"] = Lock()
-    
-
-  #get worker based on worker_type
+  logger.info("Enqueueing gfx908-120")
+  kwargs = prep_kwargs(kwargs, args)
   worker = get_worker(kwargs, args[2])
   worker.run()
-  #print(worker.worker_type)
-  return args[0]
+
+
+@app.task(bind=True)
+def celery_enqueue_gfx1030_36(self, args, kwargs):
+  """defines a celery task"""
+  logger.info("Enqueueing gfx1030-36")
+  kwargs = prep_kwargs(kwargs)
+  worker = get_worker(kwargs, args[2])
+  worker.run()
+
+
+def prep_kwargs(kwargs, args):
+  """Populate kwargs with serialized job, config and machine"""
+  kwargs["job"] = SimpleDict(**args[0])
+  kwargs["config"] = SimpleDict(**args[1])
+  kwargs["machine"] = Machine(local_machine=True)
+  kwargs["result_queue"] = mpQueue()
+  kwargs["result_queue_lock"] = Lock()
+
+  return kwargs
 
 
 if __name__ == '__main__':

@@ -45,7 +45,7 @@ from tuna.miopen.worker.fin_class import FinClass
 #from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
-#from tuna.utils.miopen_utility import load_machines
+from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
@@ -67,6 +67,7 @@ class MIOpen(MITunaInterface):
   def __init__(self):
     super().__init__(library=Library.MIOPEN)
     self.args = None
+    self.parse_args()
 
   def parse_args(self):
     # pylint: disable=too-many-statements
@@ -222,11 +223,8 @@ class MIOpen(MITunaInterface):
     if (self.args.update_applicability or has_fin) and not self.args.session_id:
       parser.error("session_id must be specified with this operation")
 
-    print(self.args.session_id)
-    print(self.args.config_type)
     self.dbt = MIOpenDBTables(session_id=self.args.session_id,
                               config_type=self.args.config_type)
-    print([column.name for column in inspect(self.dbt.job_table).c])
     self.update_worker_type()
 
   def overwrite_common_args(self):
@@ -284,27 +282,12 @@ class MIOpen(MITunaInterface):
     # pylint: disable=too-many-branches
     worker = None
     kwargs = self.get_kwargs(gpu_idx, f_vals)
-    """
-    if self.args.fin_steps:
-      if 'miopen_find_compile' in self.args.fin_steps \
-      or 'miopen_perf_compile' in self.args.fin_steps:
-        kwargs['fetch_state'] = ['new']
-        worker = FinBuilder(**kwargs)
-      elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
-        kwargs['fetch_state'] = ['compiled']
-        worker = FinEvaluator(**kwargs)
-      else:
-        raise ValueError('Unsupported fin step')
-      #worker.start()
-      #worker_lst.append(worker)
-      return True
     if self.args.update_applicability:
       kwargs['fin_steps'] = ['applicability']
       worker = FinClass(**kwargs)
-      #worker.start()
-      #worker_lst.append(worker)
+      worker.start()
+      worker_lst.append(worker)
       return True
-    """
 
     worker = WorkerInterface(**kwargs)
     ret = False
@@ -327,7 +310,7 @@ class MIOpen(MITunaInterface):
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
-    #worker_lst = []
+    worker_lst = []
     fin_work_done = False
     for machine in machines:
       if self.args.restart_machine:
@@ -353,13 +336,12 @@ class MIOpen(MITunaInterface):
         fin_work_done = True
         break
 
-      #for gpu_idx in worker_ids:
-      #self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
-      #if not self.launch_worker(gpu_idx, f_vals, worker_lst):
-      #  break
+      for gpu_idx in worker_ids:
+        self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
+        if not self.launch_worker(gpu_idx, f_vals, worker_lst):
+          break
 
-    #return worker_lst
-    return []
+    return worker_lst
 
   def add_tables(self):
     ret_t = create_tables(get_miopen_tables())
@@ -370,8 +352,8 @@ class MIOpen(MITunaInterface):
   def run(self):
     # pylint: disable=duplicate-code
     """Main function to launch library"""
-    print('RUN')
-    self.parse_args()
+    res = None
+    #self.parse_args()
     if self.args.add_tables:
       self.add_tables()
       return None
@@ -392,12 +374,9 @@ class MIOpen(MITunaInterface):
       run_update_golden(self.args.update_golden, self.logger)
       return None
 
-    #machines = load_machines(self.args)
-    #res = self.compose_worker_list(machines)
-    #run non-tuning steps
-    #print('compose_worker_list')
-    #self.compose_worker_list(machines)
-    return None
+    machines = load_machines(self.args)
+    res = self.compose_worker_list(machines)
+    return res
 
   def get_envmt(self):
     """! Function to construct environment var
@@ -417,13 +396,13 @@ class MIOpen(MITunaInterface):
 
     return envmt
 
-  def get_kwargs(self, gpu_idx, f_vals):
+  def get_kwargs(self, gpu_idx, f_vals, tuning=False):
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param args The command line arguments
     """
-    kwargs = super().get_kwargs(gpu_idx, f_vals)
+    kwargs = super().get_kwargs(gpu_idx, f_vals, tuning)
     kwargs['fin_steps'] = self.args.fin_steps
     kwargs['dynamic_solvers_only'] = self.args.dynamic_solvers_only
     kwargs['config_type'] = self.args.config_type
@@ -434,11 +413,9 @@ class MIOpen(MITunaInterface):
   def get_jobs(self, find_state: str) -> bool:
     """Interface function to get jobs based on session and find_state"""
     job_rows: List[Tuple[SimpleDict, ...]]
-    #job_tables: List[SimpleDict]
     ids: list
     row: SimpleDict
     job_attr: List[str]
-    #print(dbt)
     try:
       job_attr = [column.name for column in inspect(self.dbt.job_table).c]
       job_attr.remove("insert_ts")
@@ -453,17 +430,9 @@ class MIOpen(MITunaInterface):
       if not self.check_jobs_found(job_rows, find_state, self.args.session_id):
         return False
 
-      #print('JOB ROWS')
-      #for elem in job_rows:
-      #print(elem[0].to_dict(), elem[1].to_dict())
-      #job_tables = self.get_job_tables(job_rows, job_attr)
-      #ids = [row.id for row in job_tables]
       ids = [row[0].id for row in job_rows]
-      #print()
-      #print(row.to_dict() for row in job_tables)
       self.logger.info("%s jobs %s", find_state, ids)
 
-    #return job_tables
     return job_rows
 
   def get_job_objs(self,
@@ -509,10 +478,8 @@ class MIOpen(MITunaInterface):
                                   dbt.job_table.__tablename__, cond_str)
 
     entries = [(job,) for job in job_entries]
-    print('TEST')
     if fin_steps:
       ret = self.compose_work_objs_fin(session, entries, dbt)
-      print('TEST1')
     else:
       ret = entries
 
@@ -521,6 +488,15 @@ class MIOpen(MITunaInterface):
   def compose_work_objs_fin(self, session, job_entries, dbt):
     """Return jobs for fin work"""
     ret = []
+
+    cfg_rel = {
+        key: {
+            'key': list(val.local_columns)[0].name,
+            'ftble': str(list(val.remote_side)[0]).split('.', maxsplit=1)[0],
+            'fkey': str(list(val.remote_side)[0]).split('.')[1]
+        } for key, val in inspect(dbt.config_table).relationships.items()
+    }
+
     if job_entries:
       id_str = ','.join([str(job[0].config) for job in job_entries])
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
@@ -529,40 +505,33 @@ class MIOpen(MITunaInterface):
                                     dbt.config_table.__tablename__,
                                     cfg_cond_str)
 
-      #attach tensor relationship information to config entries
-      cfg_rel = {
-          key: {
-              'key': list(val.local_columns)[0].name,
-              'ftble': str(list(val.remote_side)[0]).split('.', maxsplit=1)[0],
-              'fkey': str(list(val.remote_side)[0]).split('.')[1]
-          } for key, val in inspect(dbt.config_table).relationships.items()
-      }
-      for key, val in cfg_rel.items():
-        rel_attr = [
-            column.name
-            for column in inspect(get_class_by_tablename(val['ftble'])).c
-        ]
-        val['fattr'] = rel_attr
-
-      for cfg in cfg_entries:
-        for key, val in cfg_rel.items():
-          rel_val = getattr(cfg, val['key'])
-          rel_cond_str = f"where {val['fkey']}={rel_val}"
-          setattr(
-              cfg, key,
-              gen_select_objs(session, val['fattr'], val['ftble'],
-                              rel_cond_str)[0])
+      cfg_entries = self.attach_tensors(session, cfg_rel, cfg_entries)
 
       cfg_map = {cfg.id: cfg for cfg in cfg_entries}
 
       for job in job_entries:
-        print('from compose_work obj fin')
-        print(job[0].to_dict(), cfg_map[job[0].config].to_dict())
-        print()
         ret.append((job[0], cfg_map[job[0].config]))
 
-    print(f"ret: {ret}")
     return ret
+
+  def attach_tensors(self, session, cfg_rel, cfg_entries):
+    """attach tensor relationship information to config entries"""
+    for key, val in cfg_rel.items():
+      rel_attr = [
+          column.name
+          for column in inspect(get_class_by_tablename(val['ftble'])).c
+      ]
+      val['fattr'] = rel_attr
+
+    for cfg in cfg_entries:
+      for key, val in cfg_rel.items():
+        rel_val = getattr(cfg, val['key'])
+        rel_cond_str = f"where {val['fkey']}={rel_val}"
+        setattr(
+            cfg, key,
+            gen_select_objs(session, val['fattr'], val['ftble'],
+                            rel_cond_str)[0])
+    return cfg_entries
 
   def check_jobs_found(self, job_rows: List[SimpleDict], find_state: str,
                        session_id: int) -> bool:
@@ -605,11 +574,11 @@ class MIOpen(MITunaInterface):
       self.worker_type = "fin_class_worker"
       self.fetch_state = "new"
 
-  def is_tunable_operation(self):
+  def has_tunable_operation(self):
     """Check if its a tuning loop operation"""
-    print(self.args.fin_steps)
-    if self.args.fin_steps is not None and (
-        ("miopen_find_compile" or "miopen_fin_eval") in self.args.fin_steps):
-      return True
+    if self.args.subcommand and "load_job" in self.args.subcommand:
+      return False
 
-    return False
+    tuning_steps = ["miopen_find_compile", "miopen_find_eval"]
+    return self.args.fin_steps and any(
+        s in self.args.fin_steps for s in tuning_steps)

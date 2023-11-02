@@ -75,12 +75,12 @@ def main() -> bool:
 
   args: Dict[str, Any]
   args = parse_args()
+  clean_args()
 
   #case no yaml file
   library: Union[Example, MIOpen]
   yaml_files: List[str]
   library = get_library(args)
-  clean_args()
   yaml_files = [args['yaml']]
 
   #case with yaml file
@@ -95,18 +95,19 @@ def main() -> bool:
         sys.argv[2] = yaml_file
         LOGGER.info("Executing with yaml file: %s", yaml_file)
 
-      #run non-tuning steps
-      library.run()
-      print('TUNE')
-      tune(library)
-      #returns a list of workers/processes it started
-      #worker_lst = library.run()
-      #if worker_lst is None:
-      #  continue
+      if library.has_tunable_operation():
+        #celery tasks
+        tune(library)
+      else:
+        #non-celery operations
+        #returns a list of workers/processes it started
+        worker_lst = library.run()
+        if worker_lst is None:
+          continue
 
-      #for worker in worker_lst:
-      #  worker.join()
-      #  LOGGER.warning('Process finished')
+        for worker in worker_lst:
+          worker.join()
+          LOGGER.warning('Process finished')
   except KeyboardInterrupt:
     LOGGER.warning('Interrupt signal caught')
 

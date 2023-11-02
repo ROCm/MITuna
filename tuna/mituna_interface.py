@@ -150,10 +150,11 @@ class MITunaInterface():
     return worker_ids
 
   def get_f_vals(self, machine: Machine, worker_ids: range) -> Dict[str, Any]:
+    #pylint:disable=unused-argument
     """Determine kwargs for worker_interface"""
     f_vals: Dict[str, Any]
     f_vals = self.compose_f_vals(machine)
-    f_vals["num_procs"] = Value('i', len(worker_ids))
+    #f_vals["num_procs"] = Value('i', len(worker_ids))
     f_vals['envmt'] = self.get_envmt()
     return f_vals
 
@@ -161,7 +162,7 @@ class MITunaInterface():
     """Get runtime envmt"""
     raise NotImplementedError("Not implemented")
 
-  def compose_f_vals(self, machine: Machine) -> Dict[str, Any]:
+  def compose_f_vals(self, machine: Machine, tuning=False) -> Dict[str, Any]:
     """! Compose dict for WorkerInterface constructor
       @param args The command line arguments
       @param machine Machine instance
@@ -178,9 +179,21 @@ class MITunaInterface():
     f_vals["b_first"] = True
     #f_vals["end_jobs"] = Value('i', 0)
 
+    #adding non-serializable obj when not running through celery
+    if not tuning:
+      f_vals["machine"] = machine
+      f_vals["barred"] = Value('i', 0)
+      f_vals["bar_lock"] = Lock()
+      #multiprocess queue for jobs, shared on machine
+      f_vals["job_queue"] = mpQueue()
+      f_vals["job_queue_lock"] = Lock()
+
     return f_vals
 
-  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
+  def get_kwargs(self,
+                 gpu_idx: int,
+                 f_vals: Dict[str, Any],
+                 tuning=False) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
@@ -197,12 +210,18 @@ class MITunaInterface():
         'envmt': envmt,
         #'job_queue': f_vals["job_queue"],
         #'job_queue_lock': f_vals["job_queue_lock"],
-        #'result_queue': f_vals["result_queue"],
+        #'resu,lt_queue': f_vals["result_queue"],
         #'result_queue_lock': f_vals["result_queue_lock"],
         'label': self.args.label,
         'docker_name': self.args.docker_name,
         #'end_jobs': f_vals['end_jobs'],
         'session_id': self.args.session_id
     }
+
+    #adding non-serializable obj when not running through celery
+    if not tuning:
+      kwargs["machine"] = f_vals["machine"]
+      kwargs["job_queue"] = f_vals["job_queue"]
+      kwargs["job_queue_lock"] = f_vals["job_queue_lock"]
 
     return kwargs
