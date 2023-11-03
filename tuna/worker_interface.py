@@ -128,8 +128,6 @@ class WorkerInterface(Process):
 
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
-    self.logger.info("WI JOB: %s", kwargs['job'])
-    self.logger.info("WI CONFIG: %s", kwargs['config'])
 
     connect_db()
 
