@@ -31,12 +31,8 @@ from sqlalchemy import Text, Enum
 from sqlalchemy.ext.declarative import declared_attr
 
 
-class BaseNullEnum(enum.Enum):
-  """base class to accomodate enum inheritence"""
-
-
 #pylint: disable=too-few-public-methods
-class JobEnum(BaseNullEnum):
+class JobEnum(enum.Enum):
   """Represents job_enum column in config table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
