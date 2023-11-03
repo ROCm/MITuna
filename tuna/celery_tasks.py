@@ -48,7 +48,8 @@ def tune(library):
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
-  job_config_rows = library.get_jobs(library.fetch_state)
+  job_config_rows = library.get_jobs(library.fetch_state,
+                                     library.args.session_id)
   if not job_config_rows:
     return False
 

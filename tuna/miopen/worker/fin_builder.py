@@ -107,10 +107,6 @@ class FinBuilder(FinClass):
 
     return status
 
-  def close_job(self):
-    """mark a job complete"""
-    self.set_job_state('compiled')
-
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     # pylint:disable=duplicate-code

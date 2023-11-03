@@ -54,14 +54,14 @@ class FinEvaluator(FinClass):
       self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
     self.worker_type = "fin_eval_worker"
 
-  def get_job(self, find_state, set_state, imply_end):
-    """Polling to see if job available"""
-    self.logger.info('find job: %s', find_state)
-    if not super().get_job(find_state, set_state, imply_end):
-      with self.bar_lock:
-        self.num_procs.value -= 1
-      return False
-    return True
+  #def get_job(self, find_state, set_state, imply_end):
+  #  """Polling to see if job available"""
+  #  self.logger.info('find job: %s', find_state)
+  #  if not super().get_job(find_state, set_state, imply_end):
+  #    with self.bar_lock:
+  #      self.num_procs.value -= 1
+  #    return False
+  #  return True
 
   def check_gpu(self):
     """Function to check gpu heartbeat"""

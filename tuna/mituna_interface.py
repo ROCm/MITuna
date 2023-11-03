@@ -225,3 +225,7 @@ class MITunaInterface():
       kwargs["job_queue_lock"] = f_vals["job_queue_lock"]
 
     return kwargs
+
+  def get_jobs(self, find_state: str, session_id: int) -> bool:
+    """Interface function to get jobs based on find_state"""
+    raise NotImplementedError("Not implemented")

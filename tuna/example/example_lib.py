@@ -168,3 +168,7 @@ class Example(MITunaInterface):
     kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
 
     return kwargs
+
+  def get_jobs(self, find_state: str, session_id: int) -> bool:
+    """Get jobs based on find_state"""
+    self.logger.info('Placeholder')

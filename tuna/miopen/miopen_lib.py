@@ -410,7 +410,7 @@ class MIOpen(MITunaInterface):
 
     return kwargs
 
-  def get_jobs(self, find_state: str) -> bool:
+  def get_jobs(self, find_state: str, session_id: int) -> bool:
     """Interface function to get jobs based on session and find_state"""
     job_rows: List[Tuple[SimpleDict, ...]]
     ids: list
@@ -427,7 +427,7 @@ class MIOpen(MITunaInterface):
       job_rows = self.get_job_objs(session, find_state, self.args.label,
                                    self.dbt, job_attr, self.args.fin_steps)
 
-      if not self.check_jobs_found(job_rows, find_state, self.args.session_id):
+      if not self.check_jobs_found(job_rows, find_state, session_id):
         return False
 
       ids = [row[0].id for row in job_rows]
