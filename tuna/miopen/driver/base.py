@@ -106,10 +106,6 @@ class MIOpenDriver(DriverBase):
 
   def construct_driver(self, line: str) -> bool:
     """Takes a MIOpenDriver cmd or PDB key"""
-    raise NotImplementedError("Not implemented")
-
-  def construct_driver(self, line: str) -> bool:
-    """Takes a MIOpenDriver cmd or PDB key"""
 
     LOGGER.info('Processing line: %s', line)
     if line.find('=') != -1:
