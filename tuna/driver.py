@@ -37,11 +37,6 @@ class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
 
   @abstractmethod
-  def construct_driver(self, line: str) -> bool:
-    """Takes a MIOpenDriver cmd or PDB key"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
   def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     raise NotImplementedError("Not implemented")

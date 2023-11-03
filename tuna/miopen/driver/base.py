@@ -104,6 +104,11 @@ class MIOpenDriver(DriverBase):
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
 
+  @staticmethod
+  def construct_driver(self, line: str) -> bool:
+    """Takes a MIOpenDriver cmd or PDB key"""
+    raise NotImplementedError("Not implemented")
+
   def construct_driver(self, line: str) -> bool:
     """Takes a MIOpenDriver cmd or PDB key"""
 
