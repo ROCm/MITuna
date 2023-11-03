@@ -62,3 +62,4 @@ zipp==3.8.1
 coverage==7.0.5
 mysql-connector-python
 prometheus_flask_exporter
+tenacity
