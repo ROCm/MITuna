@@ -157,7 +157,10 @@ class Example(MITunaInterface):
     envmt: List[str] = []
     return envmt
 
-  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
+  def get_kwargs(self,
+                 gpu_idx: int,
+                 f_vals: Dict[str, Any],
+                 tuning=False) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing process specific runtime information

@@ -159,6 +159,7 @@ class WorkerInterface(Process):
     self.machine.restart_server()
     self.last_reset = datetime.now()
 
+  #deprecated
   def compose_work_objs(self, session: DbSession,
                         conds: List[str]) -> List[Tuple[SimpleDict, ...]]:
     """Query a job list for update"""
@@ -176,6 +177,7 @@ class WorkerInterface(Process):
 
     return [(job,) for job in entries]
 
+  #deprecated
   def get_job_objs(self, session: DbSession,
                    find_state: str) -> List[Tuple[SimpleDict, ...]]:
     """Get list of job objects"""
@@ -191,11 +193,13 @@ class WorkerInterface(Process):
     entries = self.compose_work_objs(session, conds)
     return entries
 
+  #deprecated
   def queue_end_reset(self) -> None:
     """resets end queue flag"""
     with self.bar_lock:
       self.end_jobs.value = 0
 
+  #deprecated
   def check_jobs_found(self, job_rows: List[SimpleDict], find_state: str,
                        imply_end: bool) -> bool:
     """check for end of jobs"""
@@ -209,6 +213,7 @@ class WorkerInterface(Process):
       return False
     return True
 
+  #deprecated
   def get_job_from_tuple(
       self, job_tuple: Tuple[SimpleDict, ...]) -> Optional[SimpleDict]:
     """find job table in a job tuple"""
@@ -221,9 +226,11 @@ class WorkerInterface(Process):
         return tble
     return None
 
+  #deprecated
   def get_job_tables(
       self, job_rows: List[Tuple[SimpleDict, ...]]) -> List[SimpleDict]:
     """find job tables in query results"""
+    #pylint:disable=duplicate-code
     if has_attr_set(job_rows[0], self.job_attr):
       job_tables: List[SimpleDict] = job_rows
     else:
@@ -236,6 +243,7 @@ class WorkerInterface(Process):
       job_tables = [row[job_i] for row in job_rows]
     return job_tables
 
+  #deprecated
   def job_queue_push(self, job_rows: List[Tuple[SimpleDict, ...]]) -> None:
     """load job_queue with info for job ids"""
     job: SimpleDict
@@ -245,12 +253,14 @@ class WorkerInterface(Process):
       job = self.get_job_from_tuple(job_tuple)
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
+  #deprecated
   def job_queue_pop(self) -> None:
     """load job from top of job queue"""
     self.job = self.job_queue.get(True, 1)[0]
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                      self.job.reason)
 
+  #deprecated
   #pylint: disable=too-many-branches
   def get_job(self, find_state: str, set_state: str, imply_end: bool) -> bool:
     """Interface function to get new job for builder/evaluator"""
