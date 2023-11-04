@@ -48,9 +48,9 @@ def parse_args() -> Dict[str, Any]:
   args: argparse.Namespace
   parser = argparse.ArgumentParser(add_help=False)
 
-  parser.add_argument('--lib',
+  parser.add_argument('lib',
+                      nargs='?',
                       default=Library.MIOPEN,
-                      dest='lib',
                       type=Library,
                       help="Specify library to run",
                       choices=Library)

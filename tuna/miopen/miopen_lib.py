@@ -67,7 +67,7 @@ class MIOpen(MITunaInterface):
   def __init__(self):
     super().__init__(library=Library.MIOPEN)
     self.args = None
-    self.parse_args()
+    #self.parse_args()
 
   def parse_args(self):
     # pylint: disable=too-many-statements
@@ -353,7 +353,8 @@ class MIOpen(MITunaInterface):
     # pylint: disable=duplicate-code
     """Main function to launch library"""
     res = None
-    #self.parse_args()
+    if self.args is None:
+      self.parse_args()
     if self.args.add_tables:
       self.add_tables()
       return None
@@ -576,6 +577,8 @@ class MIOpen(MITunaInterface):
 
   def has_tunable_operation(self):
     """Check if its a tuning loop operation"""
+    if self.args is None:
+      self.parse_args()
     if self.args.subcommand and "load_job" in self.args.subcommand:
       return False
 
