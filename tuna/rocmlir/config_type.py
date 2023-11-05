@@ -27,4 +27,4 @@
 """Module that encapsulates different configuration types supported by Tuna"""
 from enum import Enum
 
-ConfigType = Enum('ConfigType', ['convolution', 'gemm'])
+ConfigType = Enum('ConfigType', ['convolution', 'gemm', 'attention'])
