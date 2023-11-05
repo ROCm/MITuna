@@ -46,6 +46,7 @@ from tuna.db.session_mixin import SessionMixin
 from tuna.utils.logger import setup_logger
 from tuna.tables_interface import DBTablesInterface
 from tuna.rocmlir.config_type import ConfigType
+from tuna.rocmlir.tuning_space import TuningSpace
 
 #pylint: disable=too-few-public-methods
 
@@ -59,6 +60,7 @@ class SessionRocMLIR(BASE, SessionMixin):
   arch_full = Column(String(length=64), nullable=False)
   # For convenience of commands.
   config_type = Column(Enum(ConfigType))
+  tuning_space = Column(Enum(TuningSpace))
 
   __tablename__ = "session_rocmlir"
   __table_args__ = (UniqueConstraint("arch",
@@ -67,6 +69,7 @@ class SessionRocMLIR(BASE, SessionMixin):
                                      "mlir_v",
                                      "reason",
                                      "config_type",
+                                     "tuning_space",
                                      name="uq_idx"),)
 
   def get_query(self, sess, sess_obj, entry):
@@ -77,7 +80,8 @@ class SessionRocMLIR(BASE, SessionMixin):
         .filter(sess_obj.rocm_v == entry.rocm_v)\
         .filter(sess_obj.mlir_v == entry.mlir_v)\
         .filter(sess_obj.reason == entry.reason)\
-        .filter(sess_obj.config_type == entry.config_type)
+        .filter(sess_obj.config_type == entry.config_type)\
+        .filter(sess_obj.tuning_space == entry.tuning_space)
 
     return query
 
@@ -97,6 +101,10 @@ class SessionRocMLIR(BASE, SessionMixin):
 
     if hasattr(args, 'config_type') and args.config_type:
       self.config_type = args.config_type
+
+    self.tuning_space = "exhaustive"
+    if hasattr(args, 'tuning_space') and args.tuning_space:
+      self.tuning_space = args.tuning_space
 
     return self.insert_session()
 
@@ -278,9 +286,7 @@ class ConvolutionConfig(BASE):
 
   ## Adapted from perfRunner.getConvConfigurations.
 
-  #DIRECTIONS = ['-F 1', '-F 2', '-F 4']
-  # temporarily disable backward-data until rocmlir-tuning-driver can handle multi-kernel code
-  DIRECTIONS = ['-F 1', '-F 4']
+  DIRECTIONS = ['-F 1', '-F 2', '-F 4']
   DATA_TYPES = ['conv', 'convfp16', 'convint8']
   LAYOUTS = ['NHWC', 'NCHW']
 
@@ -579,6 +585,182 @@ class GEMMResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attr
                   index=True)
 
 
+class AttentionJob(BASE, JobMixin):
+  """Represents attention job table"""
+  __tablename__ = "rocmlir_attention_job"
+  __table_args__ = (UniqueConstraint('config', 'session', name="uq_idx"),)
+
+  config = Column(Integer,
+                  ForeignKey("rocmlir_attention_config.id"),
+                  nullable=False,
+                  index=True)
+
+
+class AttentionConfig(BASE):
+  """Represents Attention config table"""
+  __tablename__ = "rocmlir_attention_config"
+
+  data_type = Column(String(length=60), nullable=False, server_default="")
+  group_size = Column(Integer, nullable=False, server_default="0")
+  seq_len = Column(Integer, nullable=False, server_default="0")
+  head_dim = Column(Integer, nullable=False, server_default="0")
+  with_attn_scale = Column(Boolean, nullable=False, server_default="0")
+  transpose_Q = Column(Boolean, nullable=False, server_default="0")
+  transpose_K = Column(Boolean, nullable=False, server_default="0")
+  transpose_V = Column(Boolean, nullable=False, server_default="0")
+  transpose_O = Column(Boolean, nullable=False, server_default="0")
+  kernel_repeats = Column(Integer, nullable=False, server_default="0")
+
+  def __repr__(self) -> str:
+    return f"AttentionConfig {self.to_dict()}"
+
+  # This dict maps field names, which are also the long option names, to
+  # the short forms used in the configs.  Necessary to turn a
+  # AttentionConfig back into a string that we can pass to the runner.
+  options = {
+      'data_type': '-t',
+      'transpose_Q': '-transQ',
+      'transpose_K': '-transK',
+      'transpose_V': '-transV',
+      'transpose_O': '-transO',
+      'group_size': '-g',
+      'seq_len': '-seq_len',
+      'head_dim': '-head_dim',
+      'with_attn_scale': '-with-attn-scale',
+      # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
+      #    'kernel_repeats': '--kernel-repeats',
+      'kernel_repeats': None,
+      'id': None,
+      'valid': None
+  }
+
+  def config_string(self):
+    """Return config as a flag/value string suitable for tuningRunner.py."""
+    string = ""
+    #     for field, value in self.to_dict().items():
+    #       flag = self.options[field]
+    #       if flag:
+    #         string += f"{flag} {value} "
+    # In options order for canonicalisation, kind of.
+    for field, flag in self.options.items():
+      value = getattr(self, field, None)
+      if value is not None and flag is not None:
+        string += f"{flag} {value} "
+    return string.strip()
+
+  def parse_line(self, line):
+    """Parse a command-line-style attention config into a AttentionConfig object."""
+
+    print(f"Parsing line {line}")
+
+    # Convert the line ("-n 256 -c 1024 -H 14 ...") to dict of flag and value.
+    i = iter(line.split())
+    options = dict(zip(i, i))
+    #  print(f"options = {options}")
+
+    # Mapping of flag to field name.
+    # -transA false -transB false -g 64 -m 1024 -n 384 -k 1024
+    fields = {
+        '-transQ': 'transpose_Q',
+        '-transK': 'transpose_K',
+        '-transV': 'transpose_V',
+        '-transO': 'transpose_O',
+        '-g': 'group_size',
+        '-seq_len': 'seq_len',
+        '-head_dim': 'head_dim',
+        '-with-attn-scale': 'with_attn_scale',
+        '-t': 'data_type'
+    }
+    # kernel-repeats has no flag, but perfRunner.py uses 5.
+
+    self.kernel_repeats = 1
+    for flag, value in options.items():
+      if value == "true":
+        value = 1
+      if value == "false":
+        value = 0
+      field = fields[flag]
+      if field:
+        setattr(self, field, value)
+
+  ## Adapted from perfRunner.getGemmConfigurations.
+
+  DATA_TYPES = ['f32', 'f16']
+
+  def get_configurations(self, filename):
+    #pylint: disable=invalid-name
+    """Read attention-configs from filename and expand into all combinations of
+         type and transpose.
+      """
+
+    configs = []
+    with open(filename, 'r', encoding='utf8') as config_file:
+      lines = config_file.readlines()
+
+      # All combinations of types and transposition (A and B)
+      for datatype, transQ, transK, transV, transO, withAttnScale, line in \
+              itertools.product(self.DATA_TYPES, ['false', 'true'],
+                                ['false', 'true'], ['false', 'true'],
+                                ['false', 'true'], ['false', 'true'], lines):
+        line = line.strip()
+
+        # Skip empty lines
+        if len(line) == 0 or line[0] == '#':
+          continue
+
+        # We need trailing spaces here to account for the concat below
+        # Skip type if already in
+        dataTypeString = ""
+        if "-t " not in line:
+          dataTypeString = f"-t {datatype} "
+
+        # Skip transQ if already in
+        transQString = ""
+        if "-transQ " not in line:
+          transQString = f"-transQ {transQ} "
+
+        # Skip transK if already in
+        transKString = ""
+        if "-transK " not in line:
+          transKString = f"-transK {transK} "
+
+        # Skip transV if already in
+        transVString = ""
+        if "-transV " not in line:
+          transVString = f"-transV {transV} "
+
+        # Skip transO if already in
+        transOString = ""
+        if "-transO " not in line:
+          transOString = f"-transO {transO} "
+
+        # Skip withAttnScale if already in
+        withAttnScaleString = ""
+        if "-with-attn-scale " not in line:
+          withAttnScaleString = f"-with-attn-scale {withAttnScale} "
+
+        # Strip to avoid spurious spaces
+        oneConfig = f"{dataTypeString}{transQString}{transKString}\
+                      {transVString}{transOString}{withAttnScaleString}{line}"\
+                      .strip()
+        if oneConfig not in configs:
+          configs.append(oneConfig)
+
+    return configs
+
+
+class AttentionResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attributes
+  """Collects the results of Attention tuning."""
+
+  __tablename__ = "rocmlir_attention_results"
+  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
+
+  config = Column(Integer,
+                  ForeignKey("rocmlir_attention_config.id"),
+                  nullable=False,
+                  index=True)
+
+
 #pylint: disable=too-few-public-methods
 class RocMLIRDBTables(DBTablesInterface):
   """Represents db tables for rocMLIR lib"""
@@ -608,6 +790,10 @@ class RocMLIRDBTables(DBTablesInterface):
       self.job_table = GEMMJob
       self.config_table = GEMMConfig
       self.results = GEMMResults
+    elif self.config_type == ConfigType.attention:
+      self.job_table = AttentionJob
+      self.config_table = AttentionConfig
+      self.results = AttentionResults
     else:
       raise ValueError(f"Config type {self.config_type} not yet supported.")
 
@@ -632,6 +818,9 @@ def get_tables() -> List[BASE]:
     append_if_not_exists(GEMMConfig())
     append_if_not_exists(GEMMJob())
     append_if_not_exists(GEMMResults())
+    append_if_not_exists(AttentionConfig())
+    append_if_not_exists(AttentionJob())
+    append_if_not_exists(AttentionResults())
 
   return tables
 
