@@ -27,7 +27,7 @@
 import tuna.miopen.worker.fin_utils as fu
 from tuna.miopen.db.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorTable
 from multiprocessing import Value, Lock, Queue
-from tuna.miopen.utils.metadata import LOG_TIMEOUT
+from tuna.utils.metadata import LOG_TIMEOUT
 from tuna.miopen.db.session import Session
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 

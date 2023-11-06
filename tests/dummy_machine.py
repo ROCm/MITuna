@@ -25,7 +25,7 @@
 #
 ###############################################################################
 #Dummy machine class for unit tests
-from tuna.miopen.utils.metadata import LOG_TIMEOUT
+from tuna.utils.metadata import LOG_TIMEOUT
 from tuna.machine import Machine
 
 

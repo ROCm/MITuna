@@ -132,6 +132,20 @@ class FinClass(WorkerInterface):
     self.num_procs = Value(
         'i', len(list(range(int(self.machine.get_num_cpus() * .6)))))
 
+  def get_miopen_v(self) -> str:
+    """Interface function to get new branch hash"""
+    commit_hash: str
+    _, commit_hash, _ = self.exec_docker_cmd(
+        "cat /opt/rocm/include/miopen/version.h "
+        "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
+    if "No such file" in commit_hash:
+      _, commit_hash, _ = self.exec_docker_cmd(
+          "cat /opt/rocm/miopen/include/miopen/version.h "
+          "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
+    self.logger.info('Got branch commit hash: %s', commit_hash)
+
+    return commit_hash
+
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []

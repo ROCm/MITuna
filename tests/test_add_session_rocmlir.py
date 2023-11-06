@@ -39,6 +39,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.rocmlir.rocmlir_tables import SessionRocMLIR
 from tuna.rocmlir.rocmlir_lib import RocMLIR
+from tuna.rocmlir.config_type import ConfigType
 from utils import DummyArgs
 
 
@@ -57,11 +58,12 @@ def test_add_session_rocmlir():
       'machine': machine,
       'gpu_id': 0,
       'num_procs': num_gpus,
+      'config_type': ConfigType.convolution,
       'barred': v,
       'bar_lock': Lock(),
       'reset_interval': False,
       'app_test': False,
-      'label': 'testing_add_session',
+      'label': 'test_add_session',
       'use_tuner': False,
       'job_queue': Queue(),
       'queue_lock': Lock(),
@@ -72,10 +74,10 @@ def test_add_session_rocmlir():
   args = DummyArgs()
   args.add_session = True
   args.arch = 'gfx908'
+  args.arch_full = 'gfx908'
   args.num_cu = 120
-  args.reason = "testing_add_session"
   args.ticket = "JIRA-Dummy-123"
-  args.label = "my_dummy_label"
+  args.label = "test_add_session"
   args.docker_name = docker_name
 
   worker = RocMLIRWorker(**kwargs)
@@ -87,7 +89,7 @@ def test_add_session_rocmlir():
     res = session.query(SessionRocMLIR).filter(
         SessionRocMLIR.id == sess_id).one()
     assert (res)
-    assert (res.reason == "my_dummy_label")
+    assert (res.reason == "test_add_session")
     assert (res.rocm_v)
     assert (res.mlir_v)
     assert (res.docker == docker_name)

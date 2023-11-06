@@ -27,6 +27,14 @@ pipeline {
 
     } 
     stages {
+        stage("docker build") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+            script {
+            utils.buildDockers()
+            }
+            }
+        }
         stage("code Format") {
         agent{  label utils.rocmnode("tunatest") }
         steps {

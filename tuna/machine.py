@@ -48,7 +48,8 @@ from tuna.connection import Connection
 from tuna.dbBase.base_class import BASE
 from tuna.abort import chk_abort_file
 from tuna.utils.utility import check_qts
-from tuna.miopen.utils.metadata import DOCKER_CMD, LOG_TIMEOUT
+from tuna.miopen.utils.metadata import DOCKER_CMD
+from tuna.utils.metadata import LOG_TIMEOUT
 
 ROCMINFO: str = '/opt/rocm/bin/rocminfo'
 ROCMSMI: str = '/opt/rocm/bin/rocm-smi'
@@ -69,6 +70,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   password: str = Column(Text, nullable=False)
   avail_gpus: List[int] = Column(Text, nullable=False)
   arch: str = Column(Text, nullable=False)
+  arch_full: str = Column(Text, nullable=False, default=arch)
   num_cu: int = Column(INTEGER, nullable=False, server_default="64")
   sclk: int = Column(INTEGER)
   mclk: int = Column(INTEGER)
@@ -88,7 +90,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     allowed_keys: Set = set([
         'id', 'hostname', 'user', 'password', 'port', 'ipmi_ip', 'ipmi_port',
         'ipmi_user', 'ipmi_password', 'ipmi_inaccessible', 'sclk', 'mclk',
-        'arch', 'num_cu', 'avail_gpus', 'local_machine'
+        'arch', 'arch_full', 'num_cu', 'avail_gpus', 'local_machine'
     ])
     self.__dict__.update(
         (key, None) for key in allowed_keys if key not in self.__dict__)
@@ -118,6 +120,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
       if self.gpus:
         self.arch = self.gpus[0]['arch']
+        self.arch_full = self.gpus[0]['arch_full']
         self.num_cu = self.gpus[0]['num_cu']
         self.avail_gpus = list(range(len(self.gpus)))
     else:
@@ -251,7 +254,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
             sub = stack.pop()
 
         if ':' in decoded_line:
-          cols = decoded_line.split(':')
+          cols = decoded_line.split(':', 1)
           field = cols[0].strip()
           val = cols[1].strip()
           if val == '':
@@ -293,9 +296,15 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     for i in alist:
       agent = agents[i]
       if agent['Device Type'] == 'GPU':
+        try:
+          arch_full = agent['ISA Info']['ISA 1']['Name']
+          arch_full = arch_full.replace('amdgcn-amd-amdhsa--', '')
+        except KeyError:
+          arch_full = agent['Name']
         details = {
             'rinfo': agent,
             'arch': agent['Name'],
+            'arch_full': arch_full,
             'num_cu': int(agent['Compute Unit'])
         }
         self.gpus.append(details)

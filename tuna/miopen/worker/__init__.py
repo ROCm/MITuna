@@ -23,21 +23,3 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Database triggers for timestamps."""
-
-
-def get_timestamp_trigger():
-  """setting up for job table triggers"""
-  trigger_template = """CREATE trigger {op}_timestamp_trigger before UPDATE on rocmlir_{op}_job
-  for each row
-  begin
-   if NEW.state='running' then set NEW.compile_start=now();
-   elseif NEW.state='completed' then set NEW.compile_end=now();
-   elseif NEW.state='error' then set NEW.compile_end=now();
-   end if;
-  end;"""
-
-  return [
-      trigger_template.format(op='conv'),
-      trigger_template.format(op='gemm')
-  ]

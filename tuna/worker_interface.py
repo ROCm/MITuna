@@ -49,12 +49,10 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 
 from tuna.abort import chk_abort_file
-from tuna.miopen.utils.metadata import TUNA_LOG_DIR
-from tuna.miopen.utils.metadata import NUM_SQL_RETRIES
+from tuna.utils.metadata import TUNA_LOG_DIR, NUM_SQL_RETRIES, MAX_JOB_RETRIES, LOG_TIMEOUT
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.db_utility import session_retry
-from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set
-from tuna.utils.db_utility import connect_db
+from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_set, connect_db
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
@@ -68,9 +66,6 @@ class WorkerInterface(Process):
   # pylint: disable=too-many-instance-attributes
   # pylint: disable=too-many-public-methods
   # pylint: disable=too-many-statements
-
-  MAX_JOB_RETRIES = 10
-  LOG_TIMEOUT = 10 * 60.0  # in seconds
 
   def __init__(self, **kwargs):
     """Constructor"""
@@ -185,7 +180,7 @@ class WorkerInterface(Process):
     if self.label:
       conds.append(f"reason='{self.label}'")
 
-    conds.append(f"retries<{self.MAX_JOB_RETRIES}")
+    conds.append(f"retries<{MAX_JOB_RETRIES}")
     conds.append(f"state='{find_state}'")
 
     entries = self.compose_work_objs(session, conds)
@@ -371,7 +366,7 @@ class WorkerInterface(Process):
     err: StringIO
     strout: str = str()
 
-    ret_code, out, err = self.cnx.exec_command(cmd, timeout=self.LOG_TIMEOUT)
+    ret_code, out, err = self.cnx.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
       strout = out.read().strip()
     if (ret_code != 0 or not out) and err:
@@ -387,8 +382,7 @@ class WorkerInterface(Process):
     err: StringIO
     strout: str = str()
 
-    ret_code, out, err = self.machine.exec_command(cmd,
-                                                   timeout=self.LOG_TIMEOUT)
+    ret_code, out, err = self.machine.exec_command(cmd, timeout=LOG_TIMEOUT)
     if out:
       strout = out.read().strip()
     if (ret_code != 0 or not out) and err:
@@ -555,7 +549,7 @@ class WorkerInterface(Process):
     ret_code: int
     out: str
     err: StringIO
-    for i in range(self.MAX_JOB_RETRIES):
+    for i in range(MAX_JOB_RETRIES):
       ret_code, out, err = self.exec_docker_cmd(cmd)
 
       if ret_code != 0:

@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2023 Advanced Micro Devices, Inc.
+# Copyright (c) 2022 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,21 +24,16 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Database triggers for timestamps."""
+""" This file contains mappings relevant to general constant definitions at tuna folder 
+    level
+"""
 
+import os
 
-def get_timestamp_trigger():
-  """setting up for job table triggers"""
-  trigger_template = """CREATE trigger {op}_timestamp_trigger before UPDATE on rocmlir_{op}_job
-  for each row
-  begin
-   if NEW.state='running' then set NEW.compile_start=now();
-   elseif NEW.state='completed' then set NEW.compile_end=now();
-   elseif NEW.state='error' then set NEW.compile_end=now();
-   end if;
-  end;"""
+TUNA_LOG_DIR = os.path.expanduser("~/tmp/tuna_logs")
+if 'TUNA_LOG_DIR' in os.environ:
+  TUNA_LOG_DIR = os.environ['TUNA_LOG_DIR']
 
-  return [
-      trigger_template.format(op='conv'),
-      trigger_template.format(op='gemm')
-  ]
+NUM_SQL_RETRIES = 10
+LOG_TIMEOUT = 10 * 60.0  # seconds
+MAX_JOB_RETRIES = 10

@@ -24,65 +24,30 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for tagging and importing configs """
-import os
-import logging
-import argparse
-import jsonargparse
+""" Module for exporting configs for use in performance runs """
 
-from sqlalchemy.exc import IntegrityError
-from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import connect_db
-from tuna.utils.logger import setup_logger
+from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
-from tuna.rocmlir.config_type import ConfigType
-
-
-def import_cfgs(args: argparse.Namespace, dbt: RocMLIRDBTables,
-                logger: logging.Logger):
-  """import configs to mysql from file with driver invocations"""
-  connect_db()
-  config_table = dbt.config_table()
-  configs = config_table.get_configurations(os.path.expanduser(args.file_name))
-  with DbSession() as session:
-    for line in configs:
-      try:
-        config_table = dbt.config_table()
-        config_table.parse_line(line)
-        try:
-          session.add(config_table)
-          session.commit()
-        except IntegrityError as err:
-          logger.warning("Error: %s", err)
-          session.rollback()
-
-      except ValueError as err:
-        logger.warning(err)
-
-  return len(configs)
 
 
 def main():
   """Import conv-configs file into database rocmlir_conv_config table."""
   # pylint: disable=duplicate-code
-  parser = jsonargparse.ArgumentParser()
+  parser = setup_arg_parser('Export perf-configs from MySQL db',
+                            [TunaArgs.VERSION, TunaArgs.SESSION_ID])
   parser.add_argument('-f',
                       '--file_name',
                       type=str,
-                      required=True,
                       dest='file_name',
+                      required=True,
                       help='File to import')
-  parser.add_argument('--config_type',
-                      dest='config_type',
-                      help='Specify configuration type',
-                      default=ConfigType.convolution,
-                      choices=[ct.name for ct in ConfigType],
-                      type=ConfigType)
+  parser.add_argument('--append',
+                      dest='append',
+                      action='store_true',
+                      help='Append to file instead of overwriting')
   args = parser.parse_args()
-  dbt = RocMLIRDBTables(session_id=None, config_type=args.config_type)
-  logger = setup_logger('import_configs')
-  counts = import_cfgs(args, dbt, logger)
-  logger.info('New configs added: %u', counts)
+  dbt = RocMLIRDBTables(session_id=args.session_id)
+  dbt.results().export_as_tsv(args.file_name, dbt, args.append)
 
 
 if __name__ == '__main__':
