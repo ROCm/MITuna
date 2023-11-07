@@ -52,6 +52,7 @@ class MIOpenDriver(DriverBase):
   def __init__(self,
                line: str = str(),
                db_obj: ConvolutionConfig = None) -> None:
+    super().__init__()
     if line:
       if not self.construct_driver(line):
         raise ValueError(f"Error creating Driver from line: '{line}'")

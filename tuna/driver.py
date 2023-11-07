@@ -37,6 +37,10 @@ LOGGER = setup_logger('driver_base')
 class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
 
+  def __init__(self):
+
+    pass
+
   @abstractmethod
   def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
