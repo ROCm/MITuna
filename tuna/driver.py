@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
 
-from typing import Union, Dict, Any
+from typing import List, Union, Dict, Any
 from abc import ABC, abstractmethod
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
@@ -37,6 +37,28 @@ LOGGER = setup_logger('driver_base')
 class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
 
+  def __init__(self,
+               line: str = str(),
+               db_obj: ConvolutionConfig = None) -> None:
+    self.tensor_attr: List[str] = []
+    self.tensor_id_map: Dict[str, int] = {}
+
+    if line:
+      if not self.construct_driver(line):
+        raise ValueError(f"Error creating Driver from line: '{line}'")
+    elif db_obj:
+      if not self.construct_driver_from_db(db_obj):
+        raise ValueError(
+            f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
+    else:
+      raise ValueError(
+          "Error creating Driver. MIOpen Driver cmd line or db_obj required")
+
+  @abstractmethod
+  def construct_driver(self, line: str) -> bool:
+    """Takes a MIOpenDriver cmd or PDB key"""
+    raise NotImplementedError("Not implemented")
+
   @abstractmethod
   def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
@@ -45,12 +67,6 @@ class DriverBase(ABC):
   @abstractmethod
   def compose_fds(self, tok: list, line: str) -> bool:
     """Compose fds from driver line"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def get_weight_t_id(self) -> int:
-    """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
