@@ -79,6 +79,7 @@ class DriverConvolution(DriverBase):
     self.trans_output_pad_h: int = 0
     self.trans_output_pad_w: int = 0
     self.trans_output_pad_d: int = 0
+    #all 3 must match
     self.out_layout: str = 'NCHW'
     self.in_layout: str = 'NCHW'
     self.fil_layout: str = 'NCHW'
@@ -105,6 +106,11 @@ class DriverConvolution(DriverBase):
     if cmd:
       self._cmd = cmd
 
+    self.update_default_layouts(line)
+    if self.in_layout != self.out_layout != self.fil_layout:
+      raise ValueError(
+          'Layouts do not match: in_layout/out_layout/fil_layout must match.')
+
   @property
   def cmd(self) -> str:
     """Setting 'private' variable"""
@@ -118,6 +124,28 @@ class DriverConvolution(DriverBase):
           f'Cannot instantiate convolution Driver class. Supported cmds are: {SUPPORTED_CONV_CMDS}'
       )
     self._cmd = value
+
+  def update_default_layouts(self, line: str):
+    """If not all 3 layouts are specified, the defaults get overwritten by the specified layout"""
+    layout_dict: dict = {}
+    same_layout = False
+    value_set: set = set()
+    layouts: list = ["in_layout", "out_layout", 'fil_layout']
+    if "in_layout" in line:
+      layout_dict['in_layout'] = self.in_layout
+    if "out_layout" in line:
+      layout_dict['out_layout'] = self.out_layout
+    if "fil_layout" in line:
+      layout_dict['fil_layout'] = self.fil_layout
+
+    for key, value in layout_dict.items():
+      value_set.add(value)
+    if len(value_set) != 1:
+      raise ValueError(
+          'Layouts do not match: in_layout/out_layout/fil_layout must match.')
+    ly_values = [x for x in layout_dict.values()]
+    for layout in layouts:
+      setattr(self, layout, ly_values[0])
 
   def parse_fdb_key(self, line: str) -> None:
     """import config attributes from fdb key line"""
@@ -237,6 +265,8 @@ class DriverConvolution(DriverBase):
 
     #NOTE: when DB col direction is renamed to forw, col_dict should be removed
     #and replaced with vars(self), but value still needs to map to 1,2 or 4.
+    #also appending tensor layouts, the input_tensor layout = in_layout and weight_tensor layout is fil_layout
+    tensor_layouts = ["in_layout", "fil_layout"]
     col_dict: dict = vars(self).copy()
     if "direction" in col_dict.keys():
       col_dict["forw"] = int(INVERS_DIR_MAP[col_dict["direction"]])
@@ -245,7 +275,7 @@ class DriverConvolution(DriverBase):
     return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(  # type: ignore[operator]
         f'--{key} {val}' for key, val in col_dict.items()
         if key in CONV_CONFIG_COLS or key in TENSOR_COLS or
-        key in self.get_common_cols() or key == "forw")
+        key in self.get_common_cols() or key == "forw" or key in tensor_layouts)
 
   @staticmethod
   def test_skip_arg(tok1: str) -> bool:
