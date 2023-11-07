@@ -26,7 +26,7 @@
 ###############################################################################
 """Module that encapsulates the DB representation of a Driver cmd"""
 
-from typing import List, Union, Dict, Any
+from typing import Union, Dict, Any
 from abc import ABC, abstractmethod
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
