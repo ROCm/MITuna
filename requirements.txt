@@ -10,7 +10,7 @@ decorator==4.3.0
 docutils<0.17 # sphinx-rtd-theme 0.5.2 requires docutils<0.17
 flask==2.2.5
 idna==2.8
-importlib-metadata==6.0.0
+importlib-metadata>=6.6.0
 jsonargparse==4.19.0
 isort==4.3.4
 jedi==0.13.1
