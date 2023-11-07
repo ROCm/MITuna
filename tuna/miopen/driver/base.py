@@ -65,18 +65,22 @@ class MIOpenDriver(DriverBase):
       raise ValueError(
           "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
+  @abstractmethod
   def parse_fdb_key(self, line: str):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def parse_row(self, db_obj: ConvolutionConfig):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def set_cmd(self, data_type: str):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def config_set_defaults(self):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
