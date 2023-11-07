@@ -44,6 +44,7 @@ from tuna.driver import DriverBase
 LOGGER = setup_logger('driver_base')
 
 
+# pylint: disable=too-many-instance-attributes
 class MIOpenDriver(DriverBase):
   """Represents db tables based on ConfigType"""
   tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
