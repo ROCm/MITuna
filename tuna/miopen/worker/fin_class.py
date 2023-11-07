@@ -140,6 +140,12 @@ class FinClass(WorkerInterface):
 
     return commit_hash
 
+  def chk_miopen_env_v() -> str:
+    """Interface function to get new branch hash"""
+    env_miopen_v: str = self.get_miopen_v()
+
+    return env_miopen_v
+
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
