@@ -106,7 +106,10 @@ class DriverConvolution(DriverBase):
     if cmd:
       self._cmd = cmd
 
-    self.update_default_layouts(line)
+    #if line:
+    #  self.update_default_layouts(line)
+
+    #sanity check, only supporting same layouts
     if self.in_layout != self.out_layout != self.fil_layout:
       raise ValueError(
           'Layouts do not match: in_layout/out_layout/fil_layout must match.')
@@ -125,27 +128,9 @@ class DriverConvolution(DriverBase):
       )
     self._cmd = value
 
-  def update_default_layouts(self, line: str):
-    """If not all 3 layouts are specified, the defaults get overwritten by the specified layout"""
-    layout_dict: dict = {}
-    same_layout = False
-    value_set: set = set()
-    layouts: list = ["in_layout", "out_layout", 'fil_layout']
-    if "in_layout" in line:
-      layout_dict['in_layout'] = self.in_layout
-    if "out_layout" in line:
-      layout_dict['out_layout'] = self.out_layout
-    if "fil_layout" in line:
-      layout_dict['fil_layout'] = self.fil_layout
-
-    for key, value in layout_dict.items():
-      value_set.add(value)
-    if len(value_set) != 1:
-      raise ValueError(
-          'Layouts do not match: in_layout/out_layout/fil_layout must match.')
-    ly_values = [x for x in layout_dict.values()]
-    for layout in layouts:
-      setattr(self, layout, ly_values[0])
+  def get_layouts(self):
+    """Get convolution layouts"""
+    return ["in_layout", "out_layout", 'fil_layout']
 
   def parse_fdb_key(self, line: str) -> None:
     """import config attributes from fdb key line"""
@@ -183,6 +168,7 @@ class DriverConvolution(DriverBase):
     for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
       if key not in ('id', 'input_t', 'weight_t', 'driver'):
         setattr(self, key, value)
+    self.out_layout = db_obj.out_layout
 
     return True
 
@@ -324,7 +310,6 @@ class DriverConvolution(DriverBase):
       self.fil_d = db_obj.weight_t.dim2
       self.fil_h = db_obj.weight_t.dim3
       self.fil_w = db_obj.weight_t.dim4
-
     return True
 
   def set_cmd(self, data_type: str) -> None:

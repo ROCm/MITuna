@@ -126,6 +126,10 @@ class DriverBatchNorm(DriverBase):
 
     return c_dict
 
+  def get_layouts(self):
+    """Get batch norm layouts"""
+    return ["in_layout"]
+
   def get_bn_dict(self) -> dict:
     """Populate c_dict with conv table elems"""
     c_dict = {}

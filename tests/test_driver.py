@@ -46,11 +46,12 @@ def test_driver():
   except ValueError as err:
     assert "needs direction" in str(err)
 
-  cmd1 = "./bin/MIOpenDriver conv --pad_h 1 --pad_w 1 --out_channels 128 --fil_w 3 --fil_h 3 --dilation_w 1 --dilation_h 1 --conv_stride_w 1 --conv_stride_h 1 --in_channels 128 --in_w 28 --in_h 28 --in_h 28 --batchsize 256 --group_count 1 --in_d 1 --fil_d 1 --forw 1 --in_layout NHWC --fil_layout NHWC --out_layout NHWC -V 0"
+  cmd1 = "./bin/MIOpenDriver conv --pad_h 1 --pad_w 1 --out_channels 128 --fil_w 3 --fil_h 3 --dilation_w 1 --dilation_h 1 --conv_stride_w 1 --conv_stride_h 1 --in_channels 128 --in_w 28 --in_h 28 --in_h 28 --batchsize 256 --group_count 1 --in_d 1 --fil_d 1 --forw 1 --out_layout NHWC -V 0"
   driver1 = DriverConvolution(cmd1)
   d1_str = driver1.to_dict()
   assert (d1_str["fil_h"] == 3)
   assert (d1_str["fil_layout"] == 'NHWC')
+  assert (d1_str["in_layout"] == 'NHWC')
   assert (d1_str["out_layout"] == 'NHWC')
   assert (d1_str["in_channels"] == 128)
   assert (d1_str["out_channels"] == 128)
@@ -134,3 +135,13 @@ def test_driver():
     driver_3_row = DriverBatchNorm(db_obj=row3)
     #compare DriverBN for same driver cmd built from Driver-line, vs built from that Driver-line's DB row
     assert driver3 == driver_3_row
+
+  fdb1 = "64-75-75-3x3-64-75-75-512-1x1-1x1-1x1-0-NHWC-FP16-W="
+  driver4 = DriverConvolution(fdb1)
+  d4_str = driver4.__str__()
+  assert (d4_str["in_layout" == "NHWC"])
+  assert (d4_str["out_layout" == "NHWC"])
+  assert (d4_str["fil_layout" == "NHWC"])
+  driver5 = DriverConvolution(d4_str)
+  d5_str = driver5.__str__()
+  assert driver4 == driver5
