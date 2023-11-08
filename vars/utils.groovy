@@ -763,7 +763,7 @@ def getSessionVals(session_id)
 
 
 def applicUpdate(){
-  def tuna_docker_name = utils.getDockerName("${backend}")
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
@@ -810,7 +810,7 @@ def applicUpdate(){
 
 def compile()
 {
-  def tuna_docker_name = utils.getDockerName("${backend}")
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
@@ -874,7 +874,7 @@ def compile()
 
 def evaluate(params)
 {
-  def tuna_docker_name = utils.getDockerName("${backend}")
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (partition, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
