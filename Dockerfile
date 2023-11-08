@@ -50,6 +50,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     apt-utils \
     build-essential \
     cmake \ 
+    clang-format-12 \
     curl \
     doxygen \
     gdb \
@@ -67,6 +68,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     python3-pip \
     python3-venv \
     rocblas \
+    rpm \
     software-properties-common \
     sqlite3 \
     vim \
