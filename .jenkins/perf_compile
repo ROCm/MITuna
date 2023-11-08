@@ -26,7 +26,6 @@ pipeline {
       partition = "${params.slurm_partition}"
       branch =  sh(script: "echo ${scm.branches[0].name} | sed 's/[^a-zA-Z0-9]/_/g' ", returnStdout: true).trim()
       branch_id = "${branch}_${BUILD_ID}"
-      tuna_docker_name = utils.getDockerName("${backend}")
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'compile_pipe_gold', description: '')
