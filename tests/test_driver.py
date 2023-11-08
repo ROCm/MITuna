@@ -143,5 +143,4 @@ def test_driver():
   assert (d4_str["out_layout" == "NHWC"])
   assert (d4_str["fil_layout" == "NHWC"])
   driver5 = DriverConvolution(d4_str)
-  d5_str = driver5.__str__()
   assert driver4 == driver5

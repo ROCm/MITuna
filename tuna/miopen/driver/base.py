@@ -314,7 +314,8 @@ class DriverBase():
       value_set.add(value)
 
     if len(value_set) != 1:
-      raise ValueError(f"Layouts do not match: [x for x in {layouts}]")
+      raise ValueError(f"Layouts do not match: {x for x in {layouts}}")
+
     ly_values = [x for x in layout_dict.values()]
     for layout in layouts:
       setattr(self, layout, ly_values[0])

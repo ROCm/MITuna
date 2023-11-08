@@ -79,7 +79,6 @@ class DriverConvolution(DriverBase):
     self.trans_output_pad_h: int = 0
     self.trans_output_pad_w: int = 0
     self.trans_output_pad_d: int = 0
-    #all 3 must match
     self.out_layout: str = 'NCHW'
     self.in_layout: str = 'NCHW'
     self.fil_layout: str = 'NCHW'
@@ -105,9 +104,6 @@ class DriverConvolution(DriverBase):
     #allow cmd input to override driver line
     if cmd:
       self._cmd = cmd
-
-    #if line:
-    #  self.update_default_layouts(line)
 
     #sanity check, only supporting same layouts
     if self.in_layout != self.out_layout != self.fil_layout:
