@@ -24,6 +24,8 @@ pipeline {
       db_password = "${params.db_password}"
       branch_name = "${params.branch_name}"
       backend = 'HIPNOGPU'
+      branch =  sh(script: "echo ${scm.branches[0].name} | sed 's/[^a-zA-Z0-9]/_/g' ", returnStdout: true).trim()
+      branch_id = "${branch}_${BUILD_ID}"
       tuna_docker_name = utils.getDockerName("${backend}")
   }
   parameters {
