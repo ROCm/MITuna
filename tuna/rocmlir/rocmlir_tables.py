@@ -42,7 +42,7 @@ from sqlalchemy.inspection import inspect
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
-from tuna.session_mixin import SessionMixin
+from tuna.db.session_mixin import SessionMixin
 from tuna.utils.logger import setup_logger
 from tuna.tables_interface import DBTablesInterface
 from tuna.rocmlir.config_type import ConfigType
