@@ -79,7 +79,6 @@ class FinClass(WorkerInterface):
     _, self.local_output = tempfile.mkstemp()
     self.fin_outfile = self.local_output.split("/tmp/", 1)[1] + ".json"
 
-    #self.solver_id_map = get_solver_ids()
     _, self.id_solver_map = get_id_solvers(
     )  #hyphenated names used by miopen::solver.ToString()
     self.all_configs = []
@@ -89,7 +88,8 @@ class FinClass(WorkerInterface):
     self.first_pass = True
     self.dynamic_solvers_only = False
     self.worker_type = "fin_class_worker"
-    self.solver_id_map = None
+    #self.solver_id_map = None
+    self.solver_id_map = get_solver_ids()
 
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
@@ -905,7 +905,7 @@ class FinClass(WorkerInterface):
 
   def step(self):
     """Inner loop for Process run defined in worker_interface"""
-    self.solver_id_map = get_solver_ids()
+    #self.solver_id_map = get_solver_ids()
     _, self.id_solver_map = get_id_solvers(
     )  #hyphenated names used by miopen::solver.ToString()
     self.multiproc = True

@@ -45,6 +45,11 @@ from tuna.miopen.miopen_lib import MIOpen
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
 from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.logger import setup_logger
+from tuna.miopen.utils.config_type import ConfigType
+from tuna.utils.utility import serialize_job
+from tuna.miopen.utils.helper import prep_kwargs
+from tuna.machine import Machine
+from tuna.miopen.utils.lib_helper import get_worker
 
 
 def add_cfgs():
@@ -107,14 +112,32 @@ def test_fin_builder():
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_builder'
   num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
+  assert (num_jobs)
 
   #compile
   miopen.args.update_applicability = False
   miopen.args.fin_steps = ["miopen_find_compile"]
   miopen.args.label = 'tuna_pytest_fin_builder'
-  worker_lst = miopen.compose_worker_list(machine_lst)
-  for worker in worker_lst:
-    worker.join()
+  miopen.fetch_state = 'new'
+  miopen.worker_type = 'fin_build_worker'
+  miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
+                              config_type=ConfigType.convolution)
+  job_config_rows = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
+  assert (job_config_rows)
+
+  f_vals = miopen.get_f_vals(Machine(local_machine=True), range(0))
+  kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
+
+  for elem in job_config_rows:
+    job_dict = serialize_job(elem)
+    worker_kwargs = prep_kwargs(
+        kwargs, [elem[0].to_dict(), job_dict, miopen.worker_type])
+    worker = get_worker(worker_kwargs, miopen.worker_type)
+    worker.run()
+
+  #worker_lst = miopen.compose_worker_list(machine_lst)
+  #for worker in worker_lst:
+  #  worker.join()
 
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\

@@ -37,13 +37,13 @@ def get_worker(kwargs, worker_type):
 
   worker = WorkerInterface(**kwargs)
   if worker_type == "fin_class_worker":
-    kwargs['fin_steps'] = ['applicability']
+    kwargs['fin_steps'] = 'applicability'
     worker = FinClass(**kwargs)
   elif worker_type == "fin_build_worker":
-    kwargs['fetch_state'] = ['new']
+    kwargs['fetch_state'] = 'new'
     worker = FinBuilder(**kwargs)
   elif worker_type == "fin_eval_worker":
-    kwargs['fetch_state'] = ['compiled']
+    kwargs['fetch_state'] = 'compiled'
     worker = FinEvaluator(**kwargs)
 
   return worker

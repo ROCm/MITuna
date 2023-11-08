@@ -55,6 +55,7 @@ class FinBuilder(FinClass):
     self.jcache_attr.remove("update_ts")
     self.jcache_attr.remove("valid")  #use default, don't specify
     self.worker_type = "fin_build_worker"
+    #self.solver_id_map = get_solver_ids()
 
   def get_fin_input(self):
     """Create the input dict for fin, serialize to json and write to machine

@@ -176,3 +176,15 @@ class SimpleDict:
         ret.pop('insert_ts')
 
     return ret
+
+
+def serialize_job(elem):
+  """Serialize job row from DB, including its foreign keys"""
+  job_dict = {}
+  for key, value in elem[1].to_dict().items():
+    if isinstance(value, SimpleDict):
+      job_dict[key] = value.to_dict()
+    else:
+      job_dict[key] = value
+
+  return job_dict

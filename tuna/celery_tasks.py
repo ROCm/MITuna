@@ -29,7 +29,7 @@ import logging
 from celery.result import AsyncResult
 
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import SimpleDict
+from tuna.utils.utility import serialize_job
 from tuna.celery_app.celery import app, celery_enqueue_gfx908_120, celery_enqueue_gfx1030_36
 from tuna.machine import Machine
 
@@ -70,15 +70,3 @@ def tune(library):
     LOGGER.info('final state %s', res.state)
 
   return False
-
-
-def serialize_job(elem):
-  """Serialize job row from DB, including its foreign keys"""
-  job_dict = {}
-  for key, value in elem[1].to_dict().items():
-    if isinstance(value, SimpleDict):
-      job_dict[key] = value.to_dict()
-    else:
-      job_dict[key] = value
-
-  return job_dict

@@ -1,8 +1,7 @@
-from multiprocessing import Lock, Queue as mpQueue
 from celery import Celery
 from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
-from tuna.utils.utility import SimpleDict
+from tuna.miopen.utils.helper import prep_kwargs
 from tuna.machine import Machine
 
 app = Celery('celery_app',
@@ -37,17 +36,6 @@ def celery_enqueue_gfx1030_36(self, args, kwargs):
   kwargs = prep_kwargs(kwargs)
   worker = get_worker(kwargs, args[2])
   worker.run()
-
-
-def prep_kwargs(kwargs, args):
-  """Populate kwargs with serialized job, config and machine"""
-  kwargs["job"] = SimpleDict(**args[0])
-  kwargs["config"] = SimpleDict(**args[1])
-  kwargs["machine"] = Machine(local_machine=True)
-  kwargs["result_queue"] = mpQueue()
-  kwargs["result_queue_lock"] = Lock()
-
-  return kwargs
 
 
 if __name__ == '__main__':

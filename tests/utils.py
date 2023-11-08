@@ -115,6 +115,8 @@ class GoFishArgs():
   solver_id = None
   find_mode = 1
   blacklist = None
+  init_session = True
+  check_status = True
 
 
 class ExampleArgs():
