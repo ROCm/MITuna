@@ -47,7 +47,7 @@ def buildSchema(){
 def getDockerName(backend)
 {
     def docker_registry = "${headnode}:5000"
-    def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_id}_${backend}_${env.BUILD_ID}"
+    def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_id}_${backend}"
     return tuna_docker_name
 }
 
@@ -764,6 +764,7 @@ def getSessionVals(session_id)
 
 
 def applicUpdate(){
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
@@ -810,6 +811,7 @@ def applicUpdate(){
 
 def compile()
 {
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
@@ -873,6 +875,7 @@ def compile()
 
 def evaluate(params)
 {
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (partition, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
