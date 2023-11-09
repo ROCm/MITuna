@@ -78,6 +78,10 @@ class DriverBase():
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
 
+  def get_layouts(self):
+    """Return operation layouts"""
+    raise NotImplementedError("Not implemented")
+
   @abstractmethod
   def compose_weight_t(self):
     """Overloaded method.Defined in conv&br driver child class"""
@@ -266,6 +270,8 @@ class DriverBase():
     assert tok[1] != ''
 
     self.compose_fds(tok, line)
+    if "_layout" in line:
+      self.update_default_layouts(line)
 
   def compose_fds(self, tok: list, line: str) -> bool:
     """Compose fds from driver line"""
@@ -292,6 +298,27 @@ class DriverBase():
             f'Invalid command line arg for {self.cmd}: {flag_sh_value[0]} - {f_digi_v} line: {line}'
         )
     return True
+
+  def update_default_layouts(self, line: str):
+    """Overwrite default layouts by the specified layout(s)"""
+    layout_dict: dict = {}
+    same_layout = False
+    value_set: set = set()
+    layouts: list = self.get_layouts()
+
+    for layout in layouts:
+      if layout in line:
+        layout_dict[layout] = getattr(self, layout)
+
+    for key, value in layout_dict.items():
+      value_set.add(value)
+
+    if len(value_set) != 1:
+      raise ValueError(f"Layouts do not match: {x for x in {layouts}}")
+
+    ly_values = [x for x in layout_dict.values()]
+    for layout in layouts:
+      setattr(self, layout, ly_values[0])
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""

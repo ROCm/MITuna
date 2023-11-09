@@ -221,7 +221,7 @@ def gen_select_objs(session, attribs, tablename, cond_str):
   ret = session.execute(query)
   entries = []
   for row in ret:
-    LOGGER.info('select_row: %s', row)
+    #LOGGER.info('select_row: %s', row)
     entry = SimpleDict()
     for i, col in enumerate(attribs):
       setattr(entry, col, row[i])
