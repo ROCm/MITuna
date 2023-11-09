@@ -19,8 +19,8 @@ pipeline {
     environment {
       backend = 'HIP'
       docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
-      tuna_docker_name = utils.getDockerName("${backend}")
       db_name = "${params.db_name}"
+      branch_id = "${params.branch_name}_${BUILD_ID}"
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'eval_pipe_gold', description: '')

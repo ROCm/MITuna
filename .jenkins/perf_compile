@@ -22,9 +22,9 @@ pipeline {
   environment {
       backend = 'HIPNOGPU'
       docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password}"
-      tuna_docker_name = utils.getDockerName("${backend}")
       db_name = "${params.db_name}"
       partition = "${params.slurm_partition}"
+      branch_id = "${params.branch_name}_${BUILD_ID}"
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'compile_pipe_gold', description: '')
