@@ -116,6 +116,7 @@ class DriverBatchNorm(DriverBase):
       if key not in ('id', 'input_t', 'driver'):
         setattr(self, key, value)
     self.compute_direction()
+    self.in_layout = db_obj.in_layout
 
   def compose_tensors(self, keep_id: bool = False) -> dict:
     """Get tensors needed for DB table based on config type"""

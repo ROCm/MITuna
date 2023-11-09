@@ -39,6 +39,14 @@ def test_driver():
   args = CfgImportArgs()
   logger = setup_logger('test_driver')
   dbt = MIOpenDBTables(session_id=None, config_type=args.config_type)
+  counts = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+  conv_driver(args, logger, dbt, counts)
+  bn_driver(args, logger, dbt, counts)
+
+
+def conv_driver(args, logger, dbt, counts):
   cmd0 = "./bin/MIOpenDriver conv --pad_h 1 --pad_w 1 --out_channels 128 --fil_w 3 --fil_h 3 --dilation_w 1 --dilation_h 1 --conv_stride_w 1 --conv_stride_h 1 --in_channels 128 --in_w 28 --in_h 28 --in_h 28 --batchsize 256 --group_count 1 --in_d 1 --fil_d 1 --in_layout NHWC --fil_layout NHWC --out_layout NHWC -V 0"
   try:
     driver0 = DriverConvolution(cmd0)
@@ -66,9 +74,6 @@ def test_driver():
   assert c_dict1["input_tensor"]
   assert c_dict1["weight_tensor"]
 
-  counts = {}
-  counts['cnt_configs'] = 0
-  counts['cnt_tagged_configs'] = set()
   cmd1_id = insert_config(driver1, counts, dbt, args, logger)
   with DbSession() as session:
     row1 = session.query(ConvolutionConfig).filter(
@@ -109,6 +114,22 @@ def test_driver():
     #compare DriverConvolution for same driver cmd built from Driver-line, vs built from that Driver-line's DB row
     assert driver2 == driver_2_row
 
+  fdb1 = "64-75-75-3x3-64-75-75-512-1x1-1x1-1x1-0-NHWC-FP16-W="
+  driver4 = DriverConvolution(fdb1)
+  d4_str = driver4.__str__()
+  d4_dict = driver4.to_dict()
+  assert (d4_dict["in_layout"] == "NHWC")
+  assert (d4_dict["out_layout"] == "NHWC")
+  assert (d4_dict["fil_layout"] == "NHWC")
+  driver5 = DriverConvolution(d4_str)
+  assert driver4 == driver5
+  d5_dict = driver5.to_dict()
+  assert (d5_dict["in_layout"] == "NHWC")
+  assert (d5_dict["out_layout"] == "NHWC")
+  assert (d5_dict["fil_layout"] == "NHWC")
+
+
+def bn_driver(args, logger, dbt, counts):
   cmd3 = "./bin/MIOpenDriver bnormfp16 -n 256 -c 64 -H 56 -W 56 -m 1 --forw 1 -b 0 -s 1 -r 1"
   args.config_type = ConfigType.batch_norm
   dbt2 = MIOpenDBTables(session_id=None, config_type=args.config_type)
@@ -135,12 +156,3 @@ def test_driver():
     driver_3_row = DriverBatchNorm(db_obj=row3)
     #compare DriverBN for same driver cmd built from Driver-line, vs built from that Driver-line's DB row
     assert driver3 == driver_3_row
-
-  fdb1 = "64-75-75-3x3-64-75-75-512-1x1-1x1-1x1-0-NHWC-FP16-W="
-  driver4 = DriverConvolution(fdb1)
-  d4_str = driver4.__str__()
-  assert (d4_str["in_layout" == "NHWC"])
-  assert (d4_str["out_layout" == "NHWC"])
-  assert (d4_str["fil_layout" == "NHWC"])
-  driver5 = DriverConvolution(d4_str)
-  assert driver4 == driver5

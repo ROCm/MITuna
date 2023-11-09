@@ -309,16 +309,13 @@ class DriverBase():
     for layout in layouts:
       if layout in line:
         layout_dict[layout] = getattr(self, layout)
-
-    for key, value in layout_dict.items():
-      value_set.add(value)
+        value_set.add(getattr(self, layout))
 
     if len(value_set) != 1:
       raise ValueError(f"Layouts do not match: {x for x in {layouts}}")
 
-    ly_values = [x for x in layout_dict.values()]
     for layout in layouts:
-      setattr(self, layout, ly_values[0])
+      setattr(self, layout, value_set[0])
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
