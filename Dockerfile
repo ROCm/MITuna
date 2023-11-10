@@ -1,9 +1,9 @@
 #default image to ubuntu + install rocm
 ARG BASEIMAGE=rocm/miopen:ci_5450cc
 ARG ROCM_PRE=0
-#ARG IMG_VER=$([[ $BASEIMAGE == "ubuntu:20.04" ]]; echo $?)
 
-FROM ubuntu:20.04 as dtuna-ver-0
+#FROM ubuntu:20.04 as dtuna-ver-0
+FROM rocm/miopen:ci_5450cc as dtuna-ver-0
 #install rocm
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION='12969'
