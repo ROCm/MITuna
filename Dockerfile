@@ -1,5 +1,5 @@
 #default image to ubuntu + install rocm
-ARG BASEIMAGE=ubuntu:20.04
+ARG BASEIMAGE=rocm/miopen:ci_5450cc
 ARG ROCM_PRE=0
 #ARG IMG_VER=$([[ $BASEIMAGE == "ubuntu:20.04" ]]; echo $?)
 
@@ -110,11 +110,11 @@ ARG MIOPEN_BRANCH=b5c9cd5b0fa65bc77004dd59adcbb336ead031af
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
-ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
-# Install dependencies
-RUN cmake -P install_deps.cmake --prefix $MIOPEN_DEPS
+ARG MIOPEN_DEPS=/opt/rocm
 
-RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
+# Install dependencies # included in rocm/miopen:ci_xxxxxx
+#RUN cmake -P install_deps.cmake --prefix $MIOPEN_DEPS
+#RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
 
 ARG TUNA_USER=miopenpdb
 ARG BACKEND=HIP
