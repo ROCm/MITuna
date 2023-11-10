@@ -5,8 +5,8 @@ ARG ROCM_PRE=0
 
 FROM ubuntu:20.04 as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION='5.7 65'
-ARG OSDB_BKC_VERSION=
+ARG ROCMVERSION=
+ARG OSDB_BKC_VERSION='12969'
 # Add rocm repository
 RUN apt-get update
 RUN apt-get install -y wget gnupg
@@ -50,6 +50,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     apt-utils \
     build-essential \
     cmake \ 
+    clang-format-12 \
     curl \
     doxygen \
     gdb \
@@ -67,6 +68,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     python3-pip \
     python3-venv \
     rocblas \
+    rpm \
     software-properties-common \
     sqlite3 \
     vim \
