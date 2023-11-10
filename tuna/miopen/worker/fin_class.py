@@ -512,7 +512,8 @@ class FinClass(WorkerInterface):
                                         session=self.session_id,
                                         applicable=1)
         session.add(new_entry)
-      session.commit()
+        session.commit()
+        self.logger.info(f"solver id: {solver_id}, config id: {cfg_id}")
 
     return True
 
