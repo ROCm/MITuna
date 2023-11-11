@@ -1,46 +1,53 @@
 #default image to ubuntu + install rocm
 ARG BASEIMAGE=rocm/miopen:ci_5450cc
-ARG ROCM_PRE=0
+#ARG ROCM_PRE=0
 
 #FROM ubuntu:20.04 as dtuna-ver-0
-FROM rocm/miopen:ci_5450cc as dtuna-ver-0
+FROM $BASEIMAGE as dtuna-ver-0
 #install rocm
 ARG ROCMVERSION=
-ARG OSDB_BKC_VERSION='12969'
+ARG OSDB_BKC_VERSION=
+#'12969'
+ENV NO_ROCM_INST=
 # Add rocm repository
-RUN apt-get update
-RUN apt-get install -y wget gnupg
+RUN apt-get update && apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
-RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
+RUN echo "" > /env; \
+    if ! [ -z $OSDB_BKC_VERSION ]; then \
        echo "Using BKC VERSION: $OSDB_BKC_VERSION";\
        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
-    else \
+    elif ! [ -z $ROCMVERSION ]; then \
        echo "Using Release VERSION: $ROCMVERSION";\
        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
+    else \
+       echo "export NO_ROCM_INST=1" >> /env; \
     fi
 
-ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
-ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
+#ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
+#ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
 
 RUN set -xe
 # Install dependencies
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
-    rocm-dev \
-    rocm-device-libs \
-    rocm-opencl \
-    rocm-opencl-dev \
-    rocm-cmake \
-    && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN . /env; if [ -z $NO_ROCM_INST ]; then\
+        echo "Installing ROCm"; \
+        apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+            rocm-dev \
+            rocm-device-libs \
+            rocm-opencl \
+            rocm-opencl-dev \
+            rocm-cmake \
+            && \
+            apt-get clean && \
+            rm -rf /var/lib/apt/lists/*; \
+    fi
 
-FROM $BASEIMAGE as dtuna-ver-1
+#FROM $BASEIMAGE as dtuna-ver-1
 #do nothing, assume rocm is installed here
 
 
-FROM dtuna-ver-${ROCM_PRE} as final
+#FROM dtuna-ver-${ROCM_PRE} as final
 
 #finish building off previous image
 RUN set -xe
@@ -97,10 +104,10 @@ RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.
 RUN dpkg -i dumb-init_*.deb && rm dumb-init_*.deb
 
 # Install cget
-RUN pip install cget
+#RUN pip install cget
 
 # Install rclone
-RUN pip install https://github.com/pfultz2/rclone/archive/master.tar.gz
+#RUN pip install https://github.com/pfultz2/rclone/archive/master.tar.gz
 
 ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
