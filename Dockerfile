@@ -1,6 +1,5 @@
 #default image to ubuntu + install rocm
 ARG BASEIMAGE=rocm/miopen:ci_5450cc
-#ARG ROCM_PRE=0
 
 #FROM ubuntu:20.04 as dtuna-ver-0
 FROM $BASEIMAGE as dtuna-ver-0
@@ -25,9 +24,6 @@ RUN echo "" > /env; \
        echo "export NO_ROCM_INST=1" >> /env; \
     fi
 
-#ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
-#ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
-
 RUN set -xe
 # Install dependencies
 RUN . /env; if [ -z $NO_ROCM_INST ]; then\
@@ -42,15 +38,6 @@ RUN . /env; if [ -z $NO_ROCM_INST ]; then\
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*; \
     fi
-
-#FROM $BASEIMAGE as dtuna-ver-1
-#do nothing, assume rocm is installed here
-
-
-#FROM dtuna-ver-${ROCM_PRE} as final
-
-#finish building off previous image
-RUN set -xe
 
 # Install dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
