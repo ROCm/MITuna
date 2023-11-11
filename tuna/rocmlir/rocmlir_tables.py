@@ -93,7 +93,15 @@ class SessionRocMLIR(BASE, SessionMixin):
     if hasattr(args, 'arch_full') and args.arch_full:
       self.arch_full = args.arch_full
     else:
-      self.arch_full = worker.machine.arch_full
+      arch_full = worker.machine.arch
+      if worker.machine.gpus:
+        try:
+          gpu = worker.machine.gpus[0]['rinfo']
+          arch_full = gpu['ISA Info']['ISA 1']['Name']
+          arch_full = arch_full.replace('amdgcn-amd-amdhsa--', '')
+        except KeyError:
+          pass
+      self.arch_full = arch_full
 
     if hasattr(args, 'config_type') and args.config_type:
       self.config_type = args.config_type
