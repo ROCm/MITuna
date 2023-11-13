@@ -386,7 +386,7 @@ class WorkerInterface(Process):
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
       )
-    env_miopen_v: str = FinClass.chk_miopen_env_v()
+    env_miopen_v: str = FinClass.chk_miopen_env_v(self)
     if self.dbt.session.miopen_v != env_miopen_v:
       raise ValueError(
           f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
