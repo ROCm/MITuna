@@ -277,7 +277,8 @@ class FinEvaluator(FinClass):
     if not self.init_check_env():
       return False
 
-    if not self.get_job("compiled", "eval_start", True):
+    if not self.get_job("compiled", "eval_start", True) and not self.get_job(
+        "new", "eval_start", True):
       while not self.result_queue_drain():
         sleep(random.randint(1, 10))
       return False
