@@ -1,0 +1,30 @@
+version: '3'
+services:
+  redis:
+    image: redis:latest
+    restart: always
+
+  tuna:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: tuna
+    stdin_open: true
+    tty: true
+    volumes:
+      - .env/:/tuna/.env
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: "celery -A tuna.celery_app.celery worker -l info -E"
+    environment:
+      - BROKER_URL=redis://localhost:6379/0
+      - RESULT_BACKEND=redis://localhost:6379/0
+    hostname: celery
+    stdin_open: true
+    tty: true
+    depends_on:
+      - tuna
+      - redis

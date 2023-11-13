@@ -4,13 +4,16 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
 from tuna.machine import Machine
 
-app = Celery('celery_app',
-             broker='redis://localhost:6379/0',
-             backend='redis://localhost:6379/0',
-             includes=[
-                 'tuna.celery_app.celery.celery_enqueue_gfx908_120',
-                 'tuna.celery_app.celery.celery_enqueue_gfx1030_36',
-             ])
+#app = Celery('celery_app',
+#             broker='redis://localhost:6379/0',
+#             backend='redis://localhost:6379/0',
+#             includes=[
+#                 'tuna.celery_app.celery.celery_enqueue_gfx908_120',
+#                 'tuna.celery_app.celery.celery_enqueue_gfx1030_36',
+#             ])
+app = Celery()
+app.config_from_envvar('CELERY_CONFIG_MODULE')
+
 logger = get_task_logger(__name__)
 
 #             include=['proj.tasks'])

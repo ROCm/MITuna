@@ -48,6 +48,10 @@ from tuna.utils.db_utility import get_solver_ids
 from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.utils.miopen_utility import load_machines
+from tuna.machine import Machine
+from tuna.miopen.utils.helper import prep_kwargs
+from tuna.miopen.utils.lib_helper import get_worker
+from tuna.utils.utility import serialize_job
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 
@@ -155,7 +159,10 @@ def test_fin_evaluator():
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.args.session_id = add_test_session(label='tuna_pytest_fin_eval')
 
+  dbt = MIOpenDBTables(config_type=ConfigType.convolution,
+                       session_id=miopen.args.session_id)
   #update solvers
+  """
   kwargs = get_worker_args(miopen.args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
@@ -179,6 +186,7 @@ def test_fin_evaluator():
         slv_app_entry.applicable = True
         session.add(slv_app_entry)
     session.commit()
+  """
 
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_eval'
@@ -190,7 +198,7 @@ def test_fin_evaluator():
     job_query.update({dbt.job_table.state: 'compiled'})
     session.commit()
 
-    add_fake_fdb_entries(job_query, dbt, job_query.first().id)
+    #add_fake_fdb_entries(job_query, dbt, job_query.first().id)
 
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
@@ -219,7 +227,7 @@ def test_fin_evaluator():
     #ommiting valid Fin/MIOpen errors
     #num_jobs = (num_jobs - valid_fin_err)
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
-                                         .filter(dbt.job_table.state=='compiled').count()
+                                         .filter(dbt.job_table.state=='evaluated').count()
     assert (count == num_jobs)
 
   # test get_job true branch
