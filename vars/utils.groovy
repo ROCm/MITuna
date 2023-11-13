@@ -576,6 +576,7 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
 
 def runFormat() {
     node {
+        checkout scm
         def tuna_docker = getDocker("HIP")
         tuna_docker.inside("") {
             sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/"
@@ -585,6 +586,7 @@ def runFormat() {
 
 def runLint() {
     node {
+        checkout scm
         def tuna_docker = getDocker("HIP")
         tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py"
