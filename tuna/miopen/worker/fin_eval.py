@@ -281,8 +281,8 @@ class FinEvaluator(FinClass):
 
     if not self.get_job("compiled", "eval_start", True):
       if not self.get_job("new", "eval_start", True):
-        with self.bar_lock:
-          self.num_procs.value -= 1
+        while not self.result_queue_drain():
+          sleep(random.randint(1, 10))
         return False
 
     orig_state = 'compiled'
