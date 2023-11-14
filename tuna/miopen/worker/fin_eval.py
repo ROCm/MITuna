@@ -281,9 +281,9 @@ class FinEvaluator(FinClass):
 
     if not self.get_job("compiled", "eval_start", True):
       if not self.get_job("new", "eval_start", True):
-          with self.bar_lock:
-              self.num_procs.value -= 1
-          return False
+        with self.bar_lock:
+          self.num_procs.value -= 1
+        return False
 
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
