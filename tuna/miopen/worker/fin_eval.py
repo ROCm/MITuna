@@ -55,9 +55,6 @@ class FinEvaluator(FinClass):
     """Polling to see if job available"""
     self.logger.info('find job: %s', find_state)
 
-    if find_state == "new":
-      return False
-
     if not super().get_job(find_state, set_state, imply_end):
       with self.bar_lock:
         self.num_procs.value -= 1
@@ -283,9 +280,10 @@ class FinEvaluator(FinClass):
       return False
 
     if not self.get_job("compiled", "eval_start", True):
-      while not self.result_queue_drain():
-        sleep(random.randint(1, 10))
-      return False
+      if not self.get_job("new", "eval_start", True):
+          with self.bar_lock:
+              self.num_procs.value -= 1
+          return False
 
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
