@@ -122,7 +122,7 @@ class MIOpenDriver(DriverBase):
 
   def parse_fdb_key(self, line: str) -> None:
     """import config attributes from fdb key line"""
-    fds: str
+    fds: dict
     direction: str
     fds, _, direction = get_fds_from_cmd(line)
     setattr(self, 'direction', DIR_MAP[direction])
