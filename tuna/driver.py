@@ -30,6 +30,7 @@ from typing import Union, Dict, Any
 from abc import ABC, abstractmethod
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
 
+
 class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
 

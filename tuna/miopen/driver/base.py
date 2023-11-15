@@ -43,6 +43,7 @@ from tuna.driver import DriverBase
 
 LOGGER = setup_logger('MIOpenDriver_driver_base')
 
+
 # pylint: disable=too-many-instance-attributes
 class MIOpenDriver(DriverBase):
   """Represents db tables based on ConfigType"""
@@ -83,7 +84,7 @@ class MIOpenDriver(DriverBase):
   def compose_weight_t(self):
     """Overloaded method.Defined in conv&br driver child class"""
     raise NotImplementedError("Not implemented")
-  
+
   @abstractmethod
   def get_db_obj(self, keep_id: bool = False) -> ConvolutionConfig:
     """Return the DB representation of this object"""
