@@ -45,6 +45,11 @@ class DriverBase(ABC):
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
+  def parse_driver_line(self, line: str):
+    """Parse line and set attributes"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
     raise NotImplementedError("Not implemented")

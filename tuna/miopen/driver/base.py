@@ -46,6 +46,7 @@ LOGGER = setup_logger('MIOpenDriver_driver_base')
 
 
 # pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-public-methods
 class MIOpenDriver(DriverBase):
   """Represents db tables based on ConfigType"""
   tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
@@ -67,6 +68,9 @@ class MIOpenDriver(DriverBase):
           "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
   @abstractmethod
+  def compose_tensors(self, keep_id: bool = False) -> dict:
+    """Get tensors needed for DB table based on config type"""
+
   def parse_row(self, db_obj: ConvolutionConfig):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
@@ -79,6 +83,11 @@ class MIOpenDriver(DriverBase):
   @abstractmethod
   def config_set_defaults(self):
     """Overloaded method.Defined in conv&bn driver child class"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def set_defaults(self, defaults) -> None:
+    """Set fds defaults"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
