@@ -34,7 +34,7 @@ from tuna.miopen.utils.helper import get_db_id
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PREC_TO_CMD
 from tuna.miopen.utils.metadata import CONV_3D_DEFAULTS, TENSOR_COLS
-from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION
+from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION, DIR_MAP
 from tuna.miopen.utils.metadata import DIRECTION, CONV_SKIP_ARGS, INVERS_DIR_MAP
 from tuna.miopen.utils.parsing import get_fd_name, conv_arg_valid
 from tuna.miopen.utils.config_type import ConfigType
