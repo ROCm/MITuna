@@ -32,8 +32,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import Query
 from sqlalchemy.inspection import inspect
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
 from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
@@ -41,8 +41,7 @@ from tuna.miopen.utils.metadata import TENSOR_PRECISION
 from tuna.miopen.utils.parsing import parse_line
 from tuna.driver import DriverBase
 
-LOGGER = setup_logger('driver_base')
-
+LOGGER = setup_logger('MIOpenDriver_driver_base')
 
 # pylint: disable=too-many-instance-attributes
 class MIOpenDriver(DriverBase):
@@ -66,11 +65,6 @@ class MIOpenDriver(DriverBase):
           "Error creating Driver. MIOpen Driver cmd line or db_obj required")
 
   @abstractmethod
-  def parse_fdb_key(self, line: str):
-    """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
   def parse_row(self, db_obj: ConvolutionConfig):
     """Overloaded method.Defined in conv&bn driver child class"""
     raise NotImplementedError("Not implemented")
@@ -88,6 +82,11 @@ class MIOpenDriver(DriverBase):
   @abstractmethod
   def compose_weight_t(self):
     """Overloaded method.Defined in conv&br driver child class"""
+    raise NotImplementedError("Not implemented")
+  
+  @abstractmethod
+  def get_db_obj(self, keep_id: bool = False) -> ConvolutionConfig:
+    """Return the DB representation of this object"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod

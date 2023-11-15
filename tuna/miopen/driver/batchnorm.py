@@ -87,10 +87,6 @@ class DriverBatchNorm(MIOpenDriver):
     super().parse_driver_line(line)
     self.compute_direction()
 
-  def parse_fdb_key(self, line):
-    """ Overidden Method"""
-    raise NotImplementedError("Not implemented")
-
   def compose_weight_t(self):
     """ Overridden Method """
     raise NotImplementedError("Not implemented")
