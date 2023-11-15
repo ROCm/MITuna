@@ -56,7 +56,7 @@ from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_se
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
-from tuna.miopen.worker.fin_class import FinClass
+import tuna.miopen.worker.fin_class as fc
 
 
 class WorkerInterface(Process):
@@ -66,6 +66,7 @@ class WorkerInterface(Process):
   # pylint: disable=too-many-instance-attributes
   # pylint: disable=too-many-public-methods
   # pylint: disable=too-many-statements
+  # pylint: disable=no-member
 
   def __init__(self, **kwargs):
     """Constructor"""
@@ -386,7 +387,7 @@ class WorkerInterface(Process):
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
       )
-    env_miopen_v: str = FinClass.chk_miopen_env_v(self)
+    env_miopen_v: str = fc.chk_miopen_env_v(self)
     if self.dbt.session.miopen_v != env_miopen_v:
       raise ValueError(
           f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
