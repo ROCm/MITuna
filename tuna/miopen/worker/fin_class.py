@@ -126,26 +126,6 @@ class FinClass(WorkerInterface):
     self.fdb_attr.remove("insert_ts")
     self.fdb_attr.remove("update_ts")
 
-  def get_miopen_v(self) -> str:
-    """Interface function to get new branch hash"""
-    commit_hash: str
-    _, commit_hash, _ = self.exec_docker_cmd(
-        "cat /opt/rocm/include/miopen/version.h "
-        "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-    if "No such file" in commit_hash:
-      _, commit_hash, _ = self.exec_docker_cmd(
-          "cat /opt/rocm/miopen/include/miopen/version.h "
-          "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-    self.logger.info('Got branch commit hash: %s', commit_hash)
-
-    return commit_hash
-
-  def chk_miopen_env_v(self) -> str:
-    """Interface function to get new branch hash"""
-    env_miopen_v: str = self.get_miopen_v()
-
-    return env_miopen_v
-
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
