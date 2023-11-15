@@ -44,6 +44,26 @@ def buildSchema(){
     sh "./tuna/miopen/db/build_schema.py"
 }
 
+def getDockerName(backend)
+{
+    def docker_registry = "${headnode}:5000"
+    def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_id}_${backend}"
+    return tuna_docker_name
+}
+
+def buildDockers(){
+    def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
+    tuna_docker_hipnogpu.push()
+    def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
+    tuna_docker_hip.push()
+}
+
+def getDocker(backend){
+    def tuna_docker = docker.image(getDockerName(backend))
+    tuna_docker.pull()
+    return tuna_docker
+}
+
 def cleanup() {
     def cmd = $/mysql --protocol tcp -h ${db_host} -u ${db_user} -p${db_password}  -e "DROP DATABASE IF EXISTS ${db_name}"/$
     sh "${cmd}"
@@ -61,7 +81,7 @@ def getMachine() {
 def addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port) {
     runsql("TRUNCATE machine;")
 // TODO: this should come from different nodes
-    runsql("INSERT INTO machine(hostname, local_ip, local_port,  avail_gpus, user, password, port, arch, num_cu, available, ipmi_inaccessible) VALUES(\'${machine_ip}\', \'${machine_local_ip}\', 22, \'0,1,2,3\', \'${username}\', \'${pwd}\', ${port}, \'${arch}\', ${num_cu}, TRUE, TRUE)" )
+    runsql("INSERT INTO machine(hostname, local_ip, local_port,  avail_gpus, user, password, port, arch, arch_full, num_cu, available, ipmi_inaccessible) VALUES(\'${machine_ip}\', \'${machine_local_ip}\', 22, \'0,1,2,3\', \'${username}\', \'${pwd}\', ${port}, \'${arch}\', \'${arch}\', ${num_cu}, TRUE, TRUE)" )
 }
 
 
@@ -69,7 +89,7 @@ def addJobs() {
 }
 
 def finSolvers(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     /*
     Note: Does not need
             GPUs
@@ -98,7 +118,7 @@ def finSolvers(){
 }
 
 def finApplicability(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -153,7 +173,7 @@ def finApplicability(){
 }
 
 def finFindCompile(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -209,7 +229,7 @@ def finFindCompile(){
 
 
 def finFindEval(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIP .")
+    def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -272,7 +292,7 @@ def buildTunaDocker(){
 }
 
 def loadJobTest() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -321,7 +341,7 @@ def loadJobTest() {
 }
 
 def solverAnalyticsTest(){
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("-u root --network host  --dns 8.8.8.8") {
         checkout scm
         // enviornment setup
@@ -353,7 +373,7 @@ def solverAnalyticsTest(){
 }
 
 def perfCompile() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -395,7 +415,7 @@ def perfCompile() {
 }
 
 def perfEval_gfx908() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+    def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -444,7 +464,7 @@ def perfEval_gfx908() {
 }
 
 def pytestSuite1() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest1", " .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -492,7 +512,7 @@ def pytestSuite1() {
 
 
 def pytestSuite2() {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest2", " --build-arg BACKEND=HIPNOGPU .")
+    def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -518,7 +538,7 @@ def pytestSuite2() {
 }
 
 def pytestSuite3AndCoverage(current_run, main_branch) {
-    def tuna_docker = docker.build("ci-tuna:${branch_id}_pytest3", " --build-arg BACKEND=HIP .")
+    def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
@@ -557,7 +577,7 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
 def runFormat() {
     node {
         checkout scm
-        def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+        def tuna_docker = getDocker("HIP")
         tuna_docker.inside("") {
             sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/"
         }
@@ -566,9 +586,9 @@ def runFormat() {
 
 def runLint() {
     node {
-          checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
-          tuna_docker.inside("") {
+        checkout scm
+        def tuna_docker = getDocker("HIP")
+        tuna_docker.inside("") {
             sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
@@ -608,7 +628,8 @@ def runLint() {
             sh "yamllint tuna/example/*.yaml"
             sh "mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/machine.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/session_mixin.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/db/session_mixin.py --ignore-missing-imports --follow-imports=skip"
+            sh "mypy tuna/db/tuna_tables.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/parse_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/tables_interface.py --ignore-missing-imports --follow-imports=skip"
@@ -640,12 +661,6 @@ def getJobReason()
 def killContainer() {
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker system prune -f'"
-}
-
-def getDockerName(backend)
-{
-  def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_name}_${backend}_${env.BUILD_ID}"
-  return tuna_docker_name
 }
 
 def LoadJobs()
@@ -751,6 +766,7 @@ def getSessionVals(session_id)
 
 
 def applicUpdate(){
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
@@ -797,6 +813,7 @@ def applicUpdate(){
 
 def compile()
 {
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 
@@ -860,6 +877,7 @@ def compile()
 
 def evaluate(params)
 {
+  def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
   (partition, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
 

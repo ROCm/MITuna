@@ -1,79 +1,73 @@
 #default image to ubuntu + install rocm
-ARG BASEIMAGE=ubuntu:20.04
-ARG ROCM_PRE=0
-#ARG IMG_VER=$([[ $BASEIMAGE == "ubuntu:20.04" ]]; echo $?)
+ARG BASEIMAGE=rocm/miopen:ci_5450cc
 
-FROM ubuntu:20.04 as dtuna-ver-0
+#FROM ubuntu:20.04 as dtuna-ver-0
+FROM $BASEIMAGE as dtuna-ver-0
 #install rocm
-ARG ROCMVERSION='5.7 65'
+ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
+#'12969'
+ENV NO_ROCM_INST=
 # Add rocm repository
-RUN apt-get update
-RUN apt-get install -y wget gnupg
+RUN apt-get update && apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
-RUN if ! [ -z $OSDB_BKC_VERSION ]; then \
+RUN echo "" > /env; \
+    if ! [ -z $OSDB_BKC_VERSION ]; then \
        echo "Using BKC VERSION: $OSDB_BKC_VERSION";\
        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
-    else \
+    elif ! [ -z $ROCMVERSION ]; then \
        echo "Using Release VERSION: $ROCMVERSION";\
        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
+    else \
+       echo "export NO_ROCM_INST=1" >> /env; \
     fi
 
-ENV TUNA_ROCM_VERSION=${OSDB_BKC_VERSION:+osdb-$OSDB_BKC_VERSION}
-ENV TUNA_ROCM_VERSION=${TUNA_ROCM_VERSION:-rocm-$ROCMVERSION}
-
-
-FROM $BASEIMAGE as dtuna-ver-1
-#do nothing, assume rocm is installed here
-
-
-FROM dtuna-ver-${ROCM_PRE} as final
-#finish building off previous image
 RUN set -xe
+# Install dependencies
+RUN . /env; if [ -z $NO_ROCM_INST ]; then\
+        echo "Installing ROCm"; \
+        apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+            rocm-dev \
+            rocm-device-libs \
+            rocm-opencl \
+            rocm-opencl-dev \
+            rocm-cmake \
+            && \
+            apt-get clean && \
+            rm -rf /var/lib/apt/lists/*; \
+    fi
 
 # Install dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
     apt-utils \
-    sshpass \
     build-essential \
-    bzip2 \
-    lbzip2 \
     cmake \ 
+    clang-format-12 \
     curl \
     doxygen \
-    g++ \
     gdb \
     git \
-    hip-rocclr \
-    jq \
+    lbzip2 \
     lcov \
-    libelf-dev \
     libncurses5-dev \
     libnuma-dev \
     libpthread-stubs0-dev \
-    llvm \
-    # miopengemm \
+    mysql-client \
+    openssh-server \
     pkg-config \
     python3 \
     python3-dev \
     python3-pip \
     python3-venv \
+    rocblas \
+    rpm \
     software-properties-common \
     sqlite3 \
-    wget \
-    rocm-dev \
-    rocm-device-libs \
-    rocm-opencl \
-    rocm-opencl-dev \
-    rocm-cmake \
-    rocblas \
     vim \
-    zlib1g-dev \
-    openssh-server \
-    kmod \
-    mysql-client && \
+    wget \
+    && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -97,24 +91,24 @@ RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.
 RUN dpkg -i dumb-init_*.deb && rm dumb-init_*.deb
 
 # Install cget
-RUN pip install cget
+#RUN pip install cget
 
 # Install rclone
-RUN pip install https://github.com/pfultz2/rclone/archive/master.tar.gz
+#RUN pip install https://github.com/pfultz2/rclone/archive/master.tar.gz
 
 ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=fd9eff7509a064cfb44023d7cd47f7fde9d45af3
+ARG MIOPEN_BRANCH=b5c9cd5b0fa65bc77004dd59adcbb336ead031af
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
-ARG MIOPEN_DEPS=$MIOPEN_DIR/cget
-# Install dependencies
-RUN cmake -P install_deps.cmake --minimum
+ARG MIOPEN_DEPS=/opt/rocm
 
-RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
+# Install dependencies # included in rocm/miopen:ci_xxxxxx
+#RUN cmake -P install_deps.cmake --prefix $MIOPEN_DEPS
+#RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
 
 ARG TUNA_USER=miopenpdb
 ARG BACKEND=HIP
@@ -122,8 +116,8 @@ ARG BACKEND=HIP
 WORKDIR $MIOPEN_DIR/build
 ARG MIOPEN_CACHE_DIR=/tmp/${TUNA_USER}/cache
 ARG MIOPEN_USER_DB_PATH=/tmp/$TUNA_USER/config/miopen
-ARG MIOPEN_USE_MLIR=On
-ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS} -DUSE_FIN=Off"
+ARG MIOPEN_USE_MLIR=ON
+ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS}"
 
 RUN echo "MIOPEN: Selected $BACKEND backend."
 RUN if [ $BACKEND = "OpenCL" ]; then \
@@ -143,7 +137,7 @@ WORKDIR $FIN_DIR
 # Can be a branch or a SHA
 ARG FIN_BRANCH=
 RUN if ! [ -z $FIN_BRANCH ]; then \
-        git pull && git checkout $FIN_BRANCH; \
+        git fetch && git checkout $FIN_BRANCH; \
     fi
 # Install dependencies
 RUN cmake -P install_deps.cmake 
