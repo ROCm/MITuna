@@ -270,6 +270,15 @@ class FinEvaluator(FinClass):
     self.set_job_state('evaluated')
     self.clean_cache_table()
 
+  def manage_queue(self):
+    """Try to acquire a job, or manage the result queue if no job is available."""
+    if not self.get_job("compiled", "eval_start", True):
+      if not self.get_job("new", "eval_start", True):
+        while not self.result_queue_drain():
+          sleep(random.randint(1, 10))
+        return False
+    return True
+
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
@@ -279,11 +288,8 @@ class FinEvaluator(FinClass):
     if not self.init_check_env():
       return False
 
-    if not self.get_job("compiled", "eval_start", True):
-      if not self.get_job("new", "eval_start", True):
-        while not self.result_queue_drain():
-          sleep(random.randint(1, 10))
-        return False
+    if not self.manage_queue():
+      return False
 
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
