@@ -30,16 +30,16 @@ from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
 from tuna.machine import Machine
-from tuna.celery_app import celery_config
+#from tuna.celery_app import celery_config
 
-environ.setdefault('CELERY_CONFIG_MODULE', 'celery_config')
+#environ.setdefault('CELERY_CONFIG_MODULE', 'celery_config')
 #app = Celery()
 #app.config_from_envvar('CELERY_CONFIG_MODULE')
 app = Celery('celery_app',
              broker_url="redis://localhost:6379/",
              result_backend="redis://localhost:6379/")
 #app.config_from_module("celery_config")
-app.config_from_object(celery_config)
+#app.config_from_object(celery_config)
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
 app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
