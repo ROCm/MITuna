@@ -247,7 +247,8 @@ class DriverConvolution(DriverBase):
 
     #NOTE: when DB col direction is renamed to forw, col_dict should be removed
     #and replaced with vars(self), but value still needs to map to 1,2 or 4.
-    #also appending tensor layouts, the input_tensor layout = in_layout and weight_tensor layout is fil_layout
+    #also appending tensor layouts, the input_tensor layout = in_layout
+    #and weight_tensor layout is fil_layout
     tensor_layouts = ["in_layout", "fil_layout"]
     col_dict: dict = vars(self).copy()
     if "direction" in col_dict.keys():

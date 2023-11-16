@@ -52,10 +52,10 @@ class DriverBase():
                line: str = str(),
                db_obj: ConvolutionConfig = None) -> None:
     if line:
-      if not self.construct_driver(line):
+      if not self.__construct_driver(line):
         raise ValueError(f"Error creating Driver from line: '{line}'")
     elif db_obj:
-      if not self.construct_driver_from_db(db_obj):
+      if not self.__construct_driver_from_db(db_obj):
         raise ValueError(
             f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
     else:
@@ -107,7 +107,7 @@ class DriverBase():
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
 
-  def construct_driver(self, line: str) -> bool:
+  def __construct_driver(self, line: str) -> bool:
     """Takes a MIOpenDriver cmd or PDB key"""
 
     LOGGER.info('Processing line: %s', line)
@@ -122,11 +122,11 @@ class DriverBase():
     self.config_set_defaults()
     return True
 
-  def construct_driver_from_db(self, db_obj: Any) -> bool:
+  def __construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
-    self.decompose_input_t(db_obj)
+    self.__decompose_input_t(db_obj)
     self.parse_row(db_obj)
 
     return True
@@ -161,7 +161,7 @@ class DriverBase():
 
     return ret_id
 
-  def insert_tensor(self, tensor_dict: dict) -> int:
+  def __insert_tensor(self, tensor_dict: dict) -> int:
     """Insert new row into tensor table and return primary key"""
     ret_id: int = -1
     session: Session
@@ -200,12 +200,12 @@ class DriverBase():
     ret_id: int = -1
     i_dict: Dict[str, int]
 
-    i_dict = self.compose_input_t()
-    ret_id = self.insert_tensor(i_dict)
+    i_dict = self.__compose_input_t()
+    ret_id = self.__insert_tensor(i_dict)
 
     return ret_id
 
-  def compose_input_t(self) -> Dict[str, int]:
+  def __compose_input_t(self) -> Dict[str, int]:
     """Build input_tensor"""
     i_dict: Dict[str, int] = {}
     i_dict['data_type'] = TENSOR_PRECISION[self.cmd]
@@ -227,7 +227,7 @@ class DriverBase():
 
     return i_dict
 
-  def decompose_input_t(self, db_obj: Any) -> bool:
+  def __decompose_input_t(self, db_obj: Any) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
 
@@ -255,7 +255,7 @@ class DriverBase():
     w_dict: dict = {}
 
     w_dict = self.compose_weight_t()
-    ret_id = self.insert_tensor(w_dict)
+    ret_id = self.__insert_tensor(w_dict)
     return ret_id
 
   def parse_driver_line(self, line: str):
@@ -302,7 +302,6 @@ class DriverBase():
   def update_default_layouts(self, line: str):
     """Overwrite default layouts by the specified layout(s)"""
     layout_dict: dict = {}
-    same_layout = False
     value_set: set = set()
     layouts: list = self.get_layouts()
 
@@ -312,7 +311,7 @@ class DriverBase():
         value_set.add(getattr(self, layout))
 
     if len(value_set) != 1:
-      raise ValueError(f"Layouts do not match: {x for x in {layouts}}")
+      raise ValueError(f"Layouts do not match: [x for x in {layouts}]")
 
     for layout in layouts:
       setattr(self, layout, value_set[0])
