@@ -61,3 +61,6 @@ class DummyMachine:
     ret_code, out, err = self.machine.exec_command(command, docker_name,
                                                    timeout)
     return ret_code, out, err
+
+  def get_num_cpus(self):
+    return 5
