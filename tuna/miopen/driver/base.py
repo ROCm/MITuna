@@ -301,20 +301,19 @@ class DriverBase():
 
   def update_default_layouts(self, line: str):
     """Overwrite default layouts by the specified layout(s)"""
-    layout_dict: dict = {}
     value_set: set = set()
     layouts: list = self.get_layouts()
 
     for layout in layouts:
       if layout in line:
-        layout_dict[layout] = getattr(self, layout)
         value_set.add(getattr(self, layout))
 
     if len(value_set) != 1:
       raise ValueError(f"Layouts do not match: [x for x in {layouts}]")
 
+    driver_layout = value_set.pop()
     for layout in layouts:
-      setattr(self, layout, value_set.pop())
+      setattr(self, layout, driver_layout)
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
