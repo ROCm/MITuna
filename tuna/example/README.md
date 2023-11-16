@@ -9,15 +9,15 @@ Example library
 *Example* is mock library that runs the *rocminfo* binary.
 The supported tuning steps are:
 ```
-./go_fish.py --lib example --add_tables
-./go_fish.py --lib example --init_session -l my_label
+./go_fish.py example --add_tables
+./go_fish.py example --init_session -l my_label
 ./example/load_job.py -a gfx908 -n 120 -l my_label --session_id 1
-./go_fish.py --lib example --execute --session_id 1
+./go_fish.py example --execute --session_id 1
 ```
 
 The first step is:
 ```
-./go_fish.py --lib example --add_tables
+./go_fish.py example --add_tables
 ```
 This command will create the following new tables in the DB:
 - machine
@@ -26,7 +26,7 @@ This command will create the following new tables in the DB:
 
 The next command is:
 ```
-./go_fish.py --lib example --init_session -l my_label
+./go_fish.py example --init_session -l my_label
 ```
 This command will add a new session in the *session_example* table. This session id will be
 used to add new jobs and track the tuning data, post execution step.
@@ -41,7 +41,7 @@ next step. Once these jobs are completed their status will be updated to 'comple
 
 The last step:
 ```
-./go_fish.py --lib example --execute --session_id 1
+./go_fish.py example --execute --session_id 1
 
 ```
 This command will pick up jobs in the *new* state from the job tables associated with the

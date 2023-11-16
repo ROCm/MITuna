@@ -1,14 +1,21 @@
 #Install the latest requirements.txt file for your virtual environment.
 
+Launch dockers through docker-compose:
+```
+sudo -E docker-compose up --build
+```
+This will launch a redis docker with the latest image and a custom docker for the celery worker.
+The celery docker will display information about the celery setup such as the broker and result 
+backend. These can be customized in `tuna/celery_app.celery.py`
+
+Open a terminal and launch a tuning job, sample:
+```
+./go_fish.py miopen --fin_steps miopen_find_compile -l tuna_celery_compile --session_id 1
+```
+
+
+Note: if redis is not running in a docker, from docker-compose.
 Make sure redis-server is running on the headnode:
 ```
 redis-server --daemonize yes
 ```
-
-To launch the worker:
-```
-cd MITuna
-celery -A tuna.celery_app.celery worker --loglevel=INFO -E
-```
-then run any go_fish.py command that includes: applicability, builder/eval work.
-Note: the celery task needs to be registered in the includes part of the Celery() app. 
