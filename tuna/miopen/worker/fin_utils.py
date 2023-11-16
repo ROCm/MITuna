@@ -32,7 +32,6 @@ from tuna.miopen.utils.metadata import PREC_TO_CMD, INVERS_DIR_MAP
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import arch2targetid
 from tuna.miopen.utils.config_type import ConfigType
-from tuna.worker_interface import WorkerInterface
 
 LOGGER = setup_logger('fin_utils')
 
@@ -157,24 +156,3 @@ def get_tensor(tensor_type: str, tensor_dict: dict) -> dict:
       ret_dict[layout[key]] = value
 
   return ret_dict
-
-
-def get_miopen_v(self) -> str:
-  """Interface function to get new branch hash"""
-  commit_hash: str
-  _, commit_hash, _ = WorkerInterface.exec_docker_cmd(
-      self, "cat /opt/rocm/include/miopen/version.h "
-      "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-  if "No such file" in commit_hash:
-    _, commit_hash, _ = WorkerInterface.exec_docker_cmd(
-        self, "cat /opt/rocm/miopen/include/miopen/version.h "
-        "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-  self.logger.info('Got branch commit hash: %s', commit_hash)
-  return commit_hash
-
-
-def chk_miopen_env_v(self) -> str:
-  """Interface function to get new branch hash"""
-  env_miopen_v: str = self.get_miopen_v()
-
-  return env_miopen_v

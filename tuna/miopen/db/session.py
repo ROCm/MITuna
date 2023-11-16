@@ -30,7 +30,6 @@ from sqlalchemy import Column, String, UniqueConstraint
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
 from tuna.db.session_mixin import SessionMixin
-from tuna.miopen.worker.fin_utils import get_miopen_v
 
 LOGGER = setup_logger('session_miopen')
 
@@ -72,6 +71,6 @@ class Session(BASE, SessionMixin):
     if hasattr(args, 'miopen_v') and args.miopen_v:
       self.miopen_v = args.miopen_v
     else:
-      self.miopen_v = get_miopen_v(self)
+      self.miopen_v = worker.get_miopen_v()
 
     return self.insert_session()

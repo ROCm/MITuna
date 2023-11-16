@@ -56,8 +56,6 @@ from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_se
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
-from tuna.miopen.worker.fin_utils import chk_miopen_env_v
-
 
 class WorkerInterface(Process):
   """ Interface class extended by Builder and Evaluator. The purpose of this class is to define
