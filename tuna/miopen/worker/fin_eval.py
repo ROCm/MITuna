@@ -259,14 +259,11 @@ class FinEvaluator(FinClass):
     self.set_job_state('evaluated')
     self.clean_cache_table()
 
-  def get_job(self, find_state, set_state, imply_end, is_new_context=False):
+  def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""
     self.logger.info('find job: %s', find_state)
 
     if not super().get_job(find_state, set_state, imply_end):
-      if is_new_context and find_state == "new":
-        with self.bar_lock:
-          self.num_procs.value -= 1
       return False
     return True
 
@@ -274,6 +271,8 @@ class FinEvaluator(FinClass):
     """Try to acquire a job, or manage the result queue if no job is available."""
     if not self.get_job("compiled", "eval_start", True, False):
       if not self.get_job("new", "eval_start", True, True):
+        with self.bar_lock:
+          self.num_procs.value -= 1
         while not self.result_queue_drain():
           sleep(random.randint(1, 10))
         return False
