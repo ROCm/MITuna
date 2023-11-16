@@ -51,17 +51,6 @@ class FinEvaluator(FinClass):
     super().__init__(**kwargs)
     self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
 
-  def get_job(self, find_state, set_state, imply_end):
-    """Polling to see if job available"""
-    self.logger.info('find job: %s', find_state)
-
-    if not super().get_job(find_state, set_state, imply_end):
-      with self.bar_lock:
-        self.num_procs.value -= 1
-      return False
-
-    return True
-
   def check_gpu(self):
     """Function to check gpu heartbeat"""
     for _ in range(5):
@@ -270,10 +259,21 @@ class FinEvaluator(FinClass):
     self.set_job_state('evaluated')
     self.clean_cache_table()
 
+  def get_job(self, find_state, set_state, imply_end, is_new_context=False):
+    """Polling to see if job available"""
+    self.logger.info('find job: %s', find_state)
+
+    if not super().get_job(find_state, set_state, imply_end):
+      if is_new_context and find_state == "new":
+        with self.bar_lock:
+          self.num_procs.value -= 1
+      return False
+    return True
+
   def manage_queue(self):
     """Try to acquire a job, or manage the result queue if no job is available."""
-    if not self.get_job("compiled", "eval_start", True):
-      if not self.get_job("new", "eval_start", True):
+    if not self.get_job("compiled", "eval_start", True, False):
+      if not self.get_job("new", "eval_start", True, True):
         while not self.result_queue_drain():
           sleep(random.randint(1, 10))
         return False
