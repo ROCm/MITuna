@@ -314,7 +314,7 @@ class DriverBase():
       raise ValueError(f"Layouts do not match: [x for x in {layouts}]")
 
     for layout in layouts:
-      setattr(self, layout, value_set[0])
+      setattr(self, layout, value_set.pop())
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
