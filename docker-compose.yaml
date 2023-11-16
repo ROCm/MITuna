@@ -1,30 +1,37 @@
-version: '3'
-services:
-  redis:
-    image: redis:latest
-    restart: always
+version: '3.8'
 
-  tuna:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    hostname: tuna
-    stdin_open: true
-    tty: true
-    volumes:
-      - .env/:/tuna/.env
+services:
+  #redis:
+  #  image: redis:latest
+  #  ports:
+  #    - 6379:6379
+  #restart: always
+  #  networks: 
+  #    - custom_network
 
   celery:
     build:
       context: .
       dockerfile: Dockerfile
-    command: "celery -A tuna.celery_app.celery worker -l info -E"
-    environment:
-      - BROKER_URL=redis://localhost:6379/0
-      - RESULT_BACKEND=redis://localhost:6379/0
-    hostname: celery
+    privileged: true
+    group_add: 
+      - video
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev:dri:rw
     stdin_open: true
     tty: true
-    depends_on:
-      - tuna
-      - redis
+    volumes:
+      - /dev/dri:/dev/dri/:rw
+      - /var/lib/docker/:/var/lib/docker
+    environment:
+        - TUNA_DB_HOSTNAME=${db_hostname}
+        - TUNA_DB_NAME=${db_name}
+        - TUNA_DB_USER_NAME=${user_name}
+        - TUNA_DB_USER_PASSWORD=${user_password}
+        - HIP_VISIBLE_DEVICES=1
+    env_file:
+      - .env
+    command: "celery -A tuna.celery_app.celery worker -l info -E"
+    #command: "celery -A tasks worker --loglevel=INFO"
+    network_mode: "host"

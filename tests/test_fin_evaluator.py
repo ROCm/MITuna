@@ -236,7 +236,6 @@ def test_fin_evaluator():
   #ans = fin_eval.get_job('compiled', 'eval_start', False)
   #assert (ans is True)
   #fin_eval.set_job_state('evaluating')
-
   """
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\

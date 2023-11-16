@@ -66,7 +66,7 @@ def tune(library):
 
     res = AsyncResult(result.id, app=app)
     #calling get waits for job to terminate
-    LOGGER.info('final res %s', res.get())
+    #LOGGER.info('final res %s', res.get())
     LOGGER.info('final state %s', res.state)
 
   return False
