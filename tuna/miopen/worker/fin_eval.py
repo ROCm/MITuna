@@ -269,8 +269,8 @@ class FinEvaluator(FinClass):
 
   def manage_queue(self):
     """Try to acquire a job, or manage the result queue if no job is available."""
-    if not self.get_job("compiled", "eval_start", True, False):
-      if not self.get_job("new", "eval_start", True, True):
+    if not self.get_job("compiled", "eval_start", True):
+      if not self.get_job("new", "eval_start", True):
         with self.bar_lock:
           self.num_procs.value -= 1
         while not self.result_queue_drain():
