@@ -116,6 +116,7 @@ class DriverBatchNorm(DriverBase):
       if key not in ('id', 'input_t', 'driver'):
         setattr(self, key, value)
     self.compute_direction()
+    self.in_layout = db_obj.in_layout
 
   def compose_tensors(self, keep_id: bool = False) -> dict:
     """Get tensors needed for DB table based on config type"""
@@ -125,6 +126,10 @@ class DriverBatchNorm(DriverBase):
       c_dict['id'] = get_db_id(c_dict, BNConfig)
 
     return c_dict
+
+  def get_layouts(self):
+    """Get batch norm layouts"""
+    return ["in_layout"]
 
   def get_bn_dict(self) -> dict:
     """Populate c_dict with conv table elems"""
