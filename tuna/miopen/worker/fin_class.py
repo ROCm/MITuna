@@ -139,6 +139,15 @@ class FinClass(WorkerInterface):
     self.logger.info('Got branch commit hash: %s', commit_hash)
     return commit_hash
 
+  def chk_miopen_env(self) -> bool:
+    """Interface function to check the miopen env version vs presumed miopen version"""
+    env_miopen_v: str = self.get_miopen_v()
+    if self.dbt.session.miopen_v != env_miopen_v:
+      raise ValueError(
+          f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
+      )
+    return True
+
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []

@@ -57,6 +57,7 @@ from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
 
+
 class WorkerInterface(Process):
   """ Interface class extended by Builder and Evaluator. The purpose of this class is to define
   common functionalities. """
@@ -379,16 +380,11 @@ class WorkerInterface(Process):
     return rocm_ver
 
   def check_env(self) -> bool:
-    """Checking that presumed rocm/miopen_v corresponds to the env rocm/miopen_v"""
+    """Checking that presumed rocm_v corresponds to the env rocm"""
     env_rocm_v: str = self.get_rocm_v()
     if self.dbt.session.rocm_v != env_rocm_v:
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
-      )
-    env_miopen_v: str = chk_miopen_env_v(self)
-    if self.dbt.session.miopen_v != env_miopen_v:
-      raise ValueError(
-          f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
       )
 
     return True
