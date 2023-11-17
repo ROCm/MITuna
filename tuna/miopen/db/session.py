@@ -30,6 +30,7 @@ from sqlalchemy import Column, String, UniqueConstraint
 from tuna.dbBase.base_class import BASE
 from tuna.utils.logger import setup_logger
 from tuna.db.session_mixin import SessionMixin
+from tuna.miopen.worker.fin_class import FinClass
 
 LOGGER = setup_logger('session_miopen')
 
@@ -64,7 +65,7 @@ class Session(BASE, SessionMixin):
 
     return query
 
-  def add_new_session(self, args, worker):
+  def add_new_session(self, args, worker: FinClass):
     """Add new session entry"""
     super().add_new_session(args, worker)
 
