@@ -34,6 +34,24 @@ from tuna.miopen.db.miopen_tables import ConvolutionConfig
 class DriverBase(ABC):
   """Represents db tables based on ConfigType"""
 
+  def __init__(self, line: str = str(), db_obj: ConvolutionConfig = None):
+    super().__init__()
+    if line:
+      if not self.construct_driver(line):
+        raise ValueError(f"Error creating Driver from line: '{line}'")
+    elif db_obj:
+      if not self.construct_driver_from_db(db_obj):
+        raise ValueError(
+            f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
+      else:
+        raise ValueError(
+            "Error creating Driver. Driver cmd line or db_obj required")
+
+  @abstractmethod
+  def construct_driver(self, line: str) -> bool:
+    """Takes a MIOpenDriver cmd or PDB key"""
+    raise NotImplementedError("Not implemented")
+
   @abstractmethod
   def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""

@@ -52,20 +52,8 @@ class MIOpenDriver(DriverBase):
   tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
   tensor_id_map: Dict[str, int] = {}
 
-  def __init__(self,
-               line: str = str(),
-               db_obj: ConvolutionConfig = None) -> None:
-    super().__init__()
-    if line:
-      if not self.construct_driver(line):
-        raise ValueError(f"Error creating Driver from line: '{line}'")
-    elif db_obj:
-      if not self.construct_driver_from_db(db_obj):
-        raise ValueError(
-            f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
-    else:
-      raise ValueError(
-          "Error creating Driver. MIOpen Driver cmd line or db_obj required")
+  def __init__(self, line: str = str(), db_obj: ConvolutionConfig = None):
+    super().__init__(line, db_obj)
 
   @abstractmethod
   def compose_tensors(self, keep_id: bool = False) -> dict:
