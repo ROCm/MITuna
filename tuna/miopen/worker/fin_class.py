@@ -141,12 +141,12 @@ class FinClass(WorkerInterface):
 
   def check_env(self) -> bool:
     """Interface function to check the miopen env version vs presumed miopen version"""
-    if (super().check_env()):
+    if super().check_env():
       env_miopen_v: str = self.get_miopen_v()
       if self.dbt.session.miopen_v != env_miopen_v:
         raise ValueError(
-            f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
-        )
+            f'session miopen_v {self.dbt.session.miopen_v} does not match\
+            env miopen_v {env_miopen_v}')
     else:
       return False
 
