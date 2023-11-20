@@ -24,12 +24,13 @@
 # SOFTWARE.
 #
 ###############################################################################
-from os import environ
+"""Module to define celery jobs"""
+#from os import environ
 from celery import Celery
+from celery import group
 from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
-from tuna.machine import Machine
 #from tuna.celery_app import celery_config
 
 #environ.setdefault('CELERY_CONFIG_MODULE', 'celery_config')
@@ -46,23 +47,44 @@ app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
 logger = get_task_logger(__name__)
 
 
-@app.task(bind=True)
-def celery_enqueue_gfx908_120(self, args, kwargs):
-  """defines a celery task"""
+@app.task(trail=True)
+def group_tasks(chunk, worker_type, kwargs, arch, num_cu):
+  """Launch group tasks"""
+  return group(
+      async_call.s([elem[0], elem[1], worker_type], kwargs, arch, num_cu)
+      for elem in chunk)()
+
+
+@app.task(trail=True)
+def async_call(args, kwargs, arch, num_cu):
+  """Async function call"""
+  return TUNING_QUEUE[arch + '-' + num_cu].delay(args, kwargs)
+
+
+@app.task(trail=True)
+def celery_enqueue_gfx908_120(args, kwargs):
+  """Defines a celery task"""
   logger.info("Enqueueing gfx908-120")
   kwargs = prep_kwargs(kwargs, args)
   worker = get_worker(kwargs, args[2])
   worker.run()
+  return 'RET VAL'
 
 
-@app.task(bind=True)
-def celery_enqueue_gfx1030_36(self, args, kwargs):
-  """defines a celery task"""
+@app.task(trail=True)
+def celery_enqueue_gfx1030_36(args, kwargs):
+  """Defines a celery task"""
   logger.info("Enqueueing gfx1030-36")
-  kwargs = prep_kwargs(kwargs)
+  kwargs = prep_kwargs(kwargs, args)
   worker = get_worker(kwargs, args[2])
   worker.run()
+  return 'RET VAL'
 
+
+TUNING_QUEUE = {
+    "gfx908-120": celery_enqueue_gfx908_120,
+    "gfx1030-36": celery_enqueue_gfx1030_36
+}
 
 if __name__ == '__main__':
   app.start()

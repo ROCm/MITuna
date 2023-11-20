@@ -26,21 +26,18 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 import logging
-from celery.result import AsyncResult
+from itertools import islice
+from celery import group
+from celery.result import AsyncResult, ResultBase
 
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import serialize_job
+from tuna.utils.utility import serialize_chunk
 from tuna.celery_app.celery import app, celery_enqueue_gfx908_120, celery_enqueue_gfx1030_36
+from tuna.celery_app.celery import group_tasks
 from tuna.machine import Machine
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_JOB_RETRIES = 10
-
-TUNING_QUEUE = {
-    "gfx908-120": celery_enqueue_gfx908_120,
-    "gfx1030-36": celery_enqueue_gfx1030_36
-}
-
 
 def tune(library):
   """tuning loop to spin out celery tasks"""
@@ -53,20 +50,16 @@ def tune(library):
   if not job_config_rows:
     return False
 
-  for elem in job_config_rows:
-    job_dict = serialize_job(elem)
-
-    result = TUNING_QUEUE[library.dbt.session.arch + '-' +
-                          str(library.dbt.session.num_cu)].delay([
-                              elem[0].to_dict(), job_dict, library.worker_type
-                          ], kwargs)
-    print('result: %s', result)
-    print('result_id: %s', result.id)
-    LOGGER.info('result_status: %s', result.status)
-
-    res = AsyncResult(result.id, app=app)
-    #calling get waits for job to terminate
-    #LOGGER.info('final res %s', res.get())
-    LOGGER.info('final state %s', res.state)
+  iterator = iter(job_config_rows)
+  final_res = []
+  #test launching 5 async jobs at a time,
+  #celery default is 72
+  while chunk := list(islice(iterator, 5)):
+    serialized_jobs = serialize_chunk(chunk)
+    result = group_tasks.delay(serialized_jobs, library.worker_type, kwargs,
+                               library.dbt.session.arch,
+                               str(library.dbt.session.num_cu))
+    #v = ResultGroup = tree, leafs are AsyncTasks
+    print([v for v in result.collect()])
 
   return False

@@ -178,13 +178,21 @@ class SimpleDict:
     return ret
 
 
-def serialize_job(elem):
+def serialize_job_config_row(elem):
   """Serialize job row from DB, including its foreign keys"""
-  job_dict = {}
+  config_dict = {}
   for key, value in elem[1].to_dict().items():
     if isinstance(value, SimpleDict):
-      job_dict[key] = value.to_dict()
+      config_dict[key] = value.to_dict()
     else:
-      job_dict[key] = value
+      config_dict[key] = value
 
-  return job_dict
+  return (elem[0].to_dict(), config_dict)
+
+
+def serialize_chunk(chunk):
+  """Serialize a list of tuple(job, configs) rows"""
+  result = []
+  for elem in chunk:
+    result.append(serialize_job_config_row(elem))
+  return result
