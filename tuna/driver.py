@@ -40,11 +40,6 @@ class DriverBase(ABC):
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
-  def compose_fds(self, tok: list, line: str) -> bool:
-    """Compose fds from driver line"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
   def parse_driver_line(self, line: str):
     """Parse line and set attributes"""
     raise NotImplementedError("Not implemented")
