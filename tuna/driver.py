@@ -65,17 +65,22 @@ class DriverBase(ABC):
     """Parse line and set attributes"""
     raise NotImplementedError("Not implemented")
 
-  @abstractmethod
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
-    raise NotImplementedError("Not implemented")
+    copy_dict: Dict[str, Union[str, int]] = {}
+    key: str
+    value: Union[int, str]
+    for key, value in vars(self).items():
+      if key == "_cmd":
+        copy_dict["cmd"] = value
+      else:
+        copy_dict[key] = value
+    return copy_dict
 
-  @abstractmethod
   def __eq__(self, other: object) -> bool:
     """Defining equality functionality"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def get_db_obj(self, keep_id: bool = False) -> ConvolutionConfig:
-    """Return the DB representation of this object"""
-    raise NotImplementedError("Not implemented")
+    if not isinstance(other, DriverBase):
+      return NotImplemented
+    if self.__class__ != other.__class__:
+      return False
+    return vars(self) == vars(other)
