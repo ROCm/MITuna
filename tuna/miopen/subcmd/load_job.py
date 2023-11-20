@@ -36,7 +36,7 @@ from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
 
 from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
-from tuna.utils.db_utility import get_solver_ids
+from tuna.miopen.utils.miopen_db_utils import get_solver_ids
 from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import connect_db
 from tuna.miopen.db.miopen_tables import Solver
