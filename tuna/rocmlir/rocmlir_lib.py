@@ -73,11 +73,12 @@ class RocMLIR(MITunaInterface):
                         help='How many workers per GPU',
                         default=1.0,
                         type=float)
-    parser.add_argument('--tuning_space',
-                        dest='tuning_space',
-                        default='exhaustive',
-                        choices=['quick', 'full', 'exhaustive'],
-                        help='Which space of tuning configs should be used while tuning')
+    parser.add_argument(
+        '--tuning_space',
+        dest='tuning_space',
+        default='exhaustive',
+        choices=['quick', 'full', 'exhaustive'],
+        help='Which space of tuning configs should be used while tuning')
 
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
     )
@@ -158,9 +159,10 @@ class RocMLIR(MITunaInterface):
     # pylint: disable=duplicate-code
     """Generates the library specific schema to the connected SQL server."""
     ret_t: bool = create_tables(get_tables())
-    recreate_triggers(['conv_timestamp_trigger', 'gemm_timestamp_trigger',
-                       'attention_timestamp_trigger'],
-                      get_timestamp_trigger())
+    recreate_triggers([
+        'conv_timestamp_trigger', 'gemm_timestamp_trigger',
+        'attention_timestamp_trigger'
+    ], get_timestamp_trigger())
     self.logger.info('DB creation successful: %s', ret_t)
     return True
 

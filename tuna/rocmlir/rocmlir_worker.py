@@ -57,7 +57,6 @@ class RocMLIRWorker(WorkerInterface):
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
 
-
 # Can either have one of these, or --device below, but no combinations.
 #     self.envmt.append(f"ROCR_VISIBLE_DEVICES={self.gpu_id}")
 #     self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
@@ -66,7 +65,6 @@ class RocMLIRWorker(WorkerInterface):
     """Initialize tables"""
     self.dbt = RocMLIRDBTables(session_id=self.session_id,
                                config_type=self.config_type)
-
 
   def update_result_table(self, session, result_str):
     """update results table with individual result entry"""
@@ -81,7 +79,7 @@ class RocMLIRWorker(WorkerInterface):
     # Sanity checks.
     if not perf_config or perf_config == 'None' or tflops == '-inf':
       self.logger.warning('Bad data for job_id=%s, skipping', self.job.id)
-      return True                       # To avoid an update retry.
+      return True  # To avoid an update retry.
 
     obj.valid = 1
     obj.session = self.dbt.session.id
@@ -151,6 +149,8 @@ class RocMLIRWorker(WorkerInterface):
               string = cmd_output.replace(':', r'\:')
               self.set_job_state('completed', result=string)
               self.process_result(string)
+
+
 #               with open(self.output_filename(), 'r',
 #                         encoding='utf8') as results:
 #                 # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
@@ -158,8 +158,8 @@ class RocMLIRWorker(WorkerInterface):
 #                 self.set_job_state('completed', result=string)
 #                 self.process_result(string)
 #               os.remove(self.output_filename())
-    # pylint: disable=broad-exception-caught
-    # Not sure what to expect beyond OSError.
+# pylint: disable=broad-exception-caught
+# Not sure what to expect beyond OSError.
     except Exception as exc:
       self.logger.error('Exception occurred while running job %s:  %s',
                         self.job.id, traceback.format_exc(exc))
