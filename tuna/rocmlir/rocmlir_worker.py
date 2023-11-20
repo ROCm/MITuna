@@ -155,7 +155,7 @@ class RocMLIRWorker(WorkerInterface):
     # Not sure what to expect beyond OSError.
     except Exception as exc:
       self.logger.error('Exception occurred while running job %s:  %s',
-                        self.job.id, traceback.format_exc(exc))
+                        self.job.id, traceback.format_exc())
       self.set_job_state('error', result=str(exc).replace("'", r"\'"))
 
     return True
