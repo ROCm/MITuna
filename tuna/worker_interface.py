@@ -65,7 +65,6 @@ class WorkerInterface(Process):
   # pylint: disable=too-many-instance-attributes
   # pylint: disable=too-many-public-methods
   # pylint: disable=too-many-statements
-  # pylint: disable=no-member
 
   def __init__(self, **kwargs):
     """Constructor"""
