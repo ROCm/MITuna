@@ -43,7 +43,7 @@ from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
-from tuna.utils.db_utility import get_solver_ids
+from tuna.miopen.utils.miopen_db_utils import get_solver_ids
 from tuna.utils.logger import setup_logger
 
 

@@ -40,7 +40,7 @@ from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.subcmd.import_configs import insert_config
 from tuna.miopen.utils.metadata import PREC_TO_CMD
-from tuna.utils.db_utility import get_solver_ids
+from tuna.miopen.utils.miopen_db_utils import get_solver_ids
 from tuna.miopen.utils.parsing import parse_fdb_line
 
 LOGGER = setup_logger('import_db')
