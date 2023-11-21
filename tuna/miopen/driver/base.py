@@ -54,46 +54,12 @@ class MIOpenDriver(DriverBase):
   def __init__(self, line: str = str(), db_obj: ConvolutionConfig = None):
     super().__init__(line, db_obj)
 
-  @abstractmethod
-  def compose_tensors(self, keep_id: bool = False) -> dict:
-    """Abstract/Inference for Get tensors needed for DB table based on config type"""
-
   def parse_row(self, db_obj: ConvolutionConfig):
     """Abstract/Inference for Overwritting base class function for batch_norm"""
     raise NotImplementedError("Not implemented")
 
-  @abstractmethod
-  def set_cmd(self, data_type: str):
-    """Abstract/Inference for Set cmd based on tensor data type"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def config_set_defaults(self):
-    """Abstract/Inference for Setting config DB defaults to avoid duplicates through SELECT"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def set_defaults(self, defaults) -> None:
-    """Abstract/Inference for Set fds defaults"""
-    raise NotImplementedError("Not implemented")
-
   def get_layouts(self):
     """Return operation layouts"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def compose_weight_t(self):
-    """Abstract/Inference for Build weight_tensor"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def get_db_obj(self, keep_id: bool = False) -> ConvolutionConfig:
-    """Return the DB representation of this object"""
-    raise NotImplementedError("Not implemented")
-
-  @abstractmethod
-  def parse_fdb_key(self, line: str) -> None:
-    """import config attributes from fdb key line"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
