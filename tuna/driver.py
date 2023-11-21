@@ -44,8 +44,8 @@ class DriverBase(ABC):
         raise ValueError(
             f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
     else:
-        raise ValueError(
-        "Error creating Driver. Driver cmd line or db_obj required")
+      raise ValueError(
+          "Error creating Driver. Driver cmd line or db_obj required")
 
   @abstractmethod
   def construct_driver(self, line: str) -> bool:
