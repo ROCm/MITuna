@@ -57,30 +57,30 @@ class MIOpenDriver(DriverBase):
 
   @abstractmethod
   def compose_tensors(self, keep_id: bool = False) -> dict:
-    """Get tensors needed for DB table based on config type"""
+    """Abstract/Inference for Get tensors needed for DB table based on config type"""
 
   def parse_row(self, db_obj: ConvolutionConfig):
-    """Overloaded method.Defined in conv&bn driver child class"""
+    """Abstract/Inference for Overwritting base class function for batch_norm"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
   def set_cmd(self, data_type: str):
-    """Overloaded method.Defined in conv&bn driver child class"""
+    """Abstract/Inference for Set cmd based on tensor data type"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
   def config_set_defaults(self):
-    """Overloaded method.Defined in conv&bn driver child class"""
+    """Abstract/Inference for Setting config DB defaults to avoid duplicates through SELECT"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
   def set_defaults(self, defaults) -> None:
-    """Set fds defaults"""
+    """Abstract/Inference for Set fds defaults"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
   def compose_weight_t(self):
-    """Overloaded method.Defined in conv&br driver child class"""
+    """Abstract/Inference for Build weight_tensor"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
@@ -90,17 +90,17 @@ class MIOpenDriver(DriverBase):
 
   @staticmethod
   def test_skip_arg(tok1: str):
-    """Overloaded method.Defined in conv&br driver child class"""
+    """Check if token is skipable"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
   def get_params(tok1: str):
-    """Overloaded method.Defined in conv&br driver child class"""
+    """Get full arg name"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
   def get_check_valid(tok1: str, tok2: Union[str, int]):
-    """Overloaded method.Defined in conv&br driver child class"""
+    """Check if valid conv arg"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
