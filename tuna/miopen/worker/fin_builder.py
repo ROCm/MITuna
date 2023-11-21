@@ -38,7 +38,7 @@ from tuna.miopen.worker.fin_class import FinClass
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.worker.fin_utils import fin_job
 from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
-from tuna.utils.db_utility import session_retry
+from tuna.miopen.utils.miopen_db_utils import session_retry
 
 
 class FinBuilder(FinClass):

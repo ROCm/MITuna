@@ -38,7 +38,8 @@ from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_utils import fin_job
 from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import session_retry, gen_update_query
+from tuna.utils.db_utility import gen_update_query
+from tuna.miopen.utils.miopen_db_utils import session_retry
 
 MAX_ERRORED_JOB_RETRIES = 3
 

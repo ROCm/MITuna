@@ -36,7 +36,7 @@ from tuna.miopen.parse_miopen_args import get_update_golden_parser
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.db.session import Session
-from tuna.utils.db_utility import session_retry
+from tuna.miopen.utils.miopen_db_utils import session_retry
 from tuna.utils.logger import setup_logger
 from tuna.db_engine import ENGINE
 
