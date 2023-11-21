@@ -27,6 +27,7 @@
 """Module that a convolution MIOpenDriver cmd"""
 
 from typing import Dict, Set, Optional, Any
+from re import search
 from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import MIOpenDriver
 from tuna.miopen.utils.metadata import CONV_CONFIG_COLS
@@ -36,7 +37,7 @@ from tuna.miopen.utils.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PR
 from tuna.miopen.utils.metadata import CONV_3D_DEFAULTS, TENSOR_COLS
 from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION, DIR_MAP
 from tuna.miopen.utils.metadata import DIRECTION, CONV_SKIP_ARGS, INVERS_DIR_MAP
-from tuna.miopen.utils.parsing import get_fd_name, conv_arg_valid
+from tuna.miopen.utils.parsing import get_fd_name, conv_arg_valid, get_fds_from_cmd
 from tuna.miopen.utils.config_type import ConfigType
 
 LOGGER = setup_logger('driver_conv')

@@ -27,7 +27,6 @@
 """Module that encapsulates the DB representation of a Driver cmd"""
 
 from typing import List, Union, Dict, Any
-from re import search
 from abc import abstractmethod
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -38,8 +37,8 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
 from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
-from tuna.miopen.utils.metadata import TENSOR_PRECISION, DIR_MAP
-from tuna.miopen.utils.parsing import parse_line, get_fds_from_cmd
+from tuna.miopen.utils.metadata import TENSOR_PRECISION
+from tuna.miopen.utils.parsing import parse_line
 from tuna.driver import DriverBase
 
 LOGGER = setup_logger('MIOpenDriver_driver_base')
@@ -92,6 +91,11 @@ class MIOpenDriver(DriverBase):
     """Return the DB representation of this object"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
+  def parse_fdb_key(self, line: str) -> None:
+    """import config attributes from fdb key line"""
+    raise NotImplementedError("Not implemented")
+
   @staticmethod
   def test_skip_arg(tok1: str):
     """Check if token is skipable"""
@@ -112,7 +116,7 @@ class MIOpenDriver(DriverBase):
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
 
-  def __construct_driver(self, line: str) -> bool:
+  def construct_driver(self, line: str) -> bool:
     """Takes a MIOpenDriver cmd or PDB key"""
 
     LOGGER.info('Processing line: %s', line)
@@ -127,7 +131,7 @@ class MIOpenDriver(DriverBase):
     self.config_set_defaults()
     return True
 
-  def __construct_driver_from_db(self, db_obj: Any) -> bool:
+  def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm

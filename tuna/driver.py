@@ -37,10 +37,10 @@ class DriverBase(ABC):
   def __init__(self, line: str = str(), db_obj: ConvolutionConfig = None):
     super().__init__()
     if line:
-      if not self._construct_driver(line):
+      if not self.construct_driver(line):
         raise ValueError(f"Error creating Driver from line: '{line}'")
     elif db_obj:
-      if not self._construct_driver_from_db(db_obj):
+      if not self.construct_driver_from_db(db_obj):
         raise ValueError(
             f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
     else:
