@@ -37,7 +37,7 @@ from tuna.celery_app.celery import group_tasks
 from tuna.machine import Machine
 
 LOGGER: logging.Logger = setup_logger('tune')
-MAX_JOB_RETRIES = 10
+
 
 def tune(library):
   """tuning loop to spin out celery tasks"""
