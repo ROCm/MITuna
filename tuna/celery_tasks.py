@@ -27,12 +27,9 @@
 """Interface class to set up and launch tuning functionality"""
 import logging
 from itertools import islice
-from celery import group
-from celery.result import AsyncResult, ResultBase
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk
-from tuna.celery_app.celery import app, celery_enqueue_gfx908_120, celery_enqueue_gfx1030_36
 from tuna.celery_app.celery import group_tasks
 from tuna.machine import Machine
 
@@ -51,7 +48,6 @@ def tune(library):
     return False
 
   iterator = iter(job_config_rows)
-  final_res = []
   #test launching 5 async jobs at a time,
   #celery default is 72
   while chunk := list(islice(iterator, 5)):
@@ -60,6 +56,6 @@ def tune(library):
                                library.dbt.session.arch,
                                str(library.dbt.session.num_cu))
     #v = ResultGroup = tree, leafs are AsyncTasks
-    print([v for v in result.collect()])
+    print(v for v in result.collect())
 
   return False
