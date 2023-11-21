@@ -59,7 +59,7 @@ class DriverBase(ABC):
 
   @abstractmethod
   def parse_driver_line(self, line: str):
-    """Parse line and set attributes"""
+    """Parse configuration line and set attributes"""
     raise NotImplementedError("Not implemented")
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
