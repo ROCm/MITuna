@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  #redis:
-  #  image: redis:latest
-  #  ports:
-  #    - 6379:6379
-  #restart: always
-  #  networks: 
-  #    - custom_network
+  redis:
+    image: redis:latest
+    ports:
+      - "6380:6379"
+    expose:
+      - "6380"
+    restart: always
 
   celery:
     build:
@@ -33,5 +33,6 @@ services:
     env_file:
       - .env
     command: "celery -A tuna.celery_app.celery worker -l info -E"
-    #command: "celery -A tasks worker --loglevel=INFO"
-    network_mode: "host"
+    depends_on:
+      - redis
+

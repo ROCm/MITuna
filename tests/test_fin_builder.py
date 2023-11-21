@@ -129,9 +129,9 @@ def test_fin_builder():
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
 
   for elem in job_config_rows:
-    job_dict = serialize_job_config_row(elem)
+    job_dict, config_dict = serialize_job_config_row(elem)
     worker_kwargs = prep_kwargs(
-        kwargs, [elem[0].to_dict(), job_dict, miopen.worker_type])
+        kwargs, [config_dict, job_dict, miopen.worker_type])
     worker = get_worker(worker_kwargs, miopen.worker_type)
     worker.run()
 

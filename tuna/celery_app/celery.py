@@ -37,8 +37,8 @@ from tuna.miopen.utils.helper import prep_kwargs
 #app = Celery()
 #app.config_from_envvar('CELERY_CONFIG_MODULE')
 app = Celery('celery_app',
-             broker_url="redis://localhost:6379/",
-             result_backend="redis://localhost:6379/")
+             broker_url="redis://mituna_redis_1:6379//",
+             result_backend="redis://mituna_redis_1:6379/")
 #app.config_from_module("celery_config")
 #app.config_from_object(celery_config)
 app.conf.update(result_expires=3600,)
