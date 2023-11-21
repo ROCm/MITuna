@@ -130,8 +130,8 @@ def test_fin_builder():
 
   for elem in job_config_rows:
     job_dict, config_dict = serialize_job_config_row(elem)
-    worker_kwargs = prep_kwargs(
-        kwargs, [config_dict, job_dict, miopen.worker_type])
+    worker_kwargs = prep_kwargs(kwargs,
+                                [config_dict, job_dict, miopen.worker_type])
     worker = get_worker(worker_kwargs, miopen.worker_type)
     worker.run()
 
