@@ -78,6 +78,10 @@ class MIOpenDriver(DriverBase):
     """Abstract/Inference for Set fds defaults"""
     raise NotImplementedError("Not implemented")
 
+  def get_layouts(self):
+    """Return operation layouts"""
+    raise NotImplementedError("Not implemented")
+
   @abstractmethod
   def compose_weight_t(self):
     """Abstract/Inference for Build weight_tensor"""
@@ -108,21 +112,7 @@ class MIOpenDriver(DriverBase):
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
 
-  def parse_fdb_key(self, line: str) -> None:
-    """import config attributes from fdb key line"""
-    fds: dict
-    direction: str
-    fds, _, direction = get_fds_from_cmd(line)
-    setattr(self, 'direction', DIR_MAP[direction])
-    for key in self.to_dict():
-      if key in fds:
-        setattr(self, key, fds[key])
-
-    pattern_3d = '[0-9]x[0-9]x[0-9]'
-    if search(pattern_3d, line):
-      setattr(self, 'spatial_dim', 3)
-
-  def construct_driver(self, line: str) -> bool:
+  def __construct_driver(self, line: str) -> bool:
     """Takes a MIOpenDriver cmd or PDB key"""
 
     LOGGER.info('Processing line: %s', line)
@@ -137,11 +127,11 @@ class MIOpenDriver(DriverBase):
     self.config_set_defaults()
     return True
 
-  def construct_driver_from_db(self, db_obj: Any) -> bool:
+  def __construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
-    self.decompose_input_t(db_obj)
+    self.__decompose_input_t(db_obj)
     self.parse_row(db_obj)
 
     return True
@@ -176,7 +166,7 @@ class MIOpenDriver(DriverBase):
 
     return ret_id
 
-  def insert_tensor(self, tensor_dict: dict) -> int:
+  def __insert_tensor(self, tensor_dict: dict) -> int:
     """Insert new row into tensor table and return primary key"""
     ret_id: int = -1
     session: Session
@@ -215,12 +205,12 @@ class MIOpenDriver(DriverBase):
     ret_id: int = -1
     i_dict: Dict[str, int]
 
-    i_dict = self.compose_input_t()
-    ret_id = self.insert_tensor(i_dict)
+    i_dict = self.__compose_input_t()
+    ret_id = self.__insert_tensor(i_dict)
 
     return ret_id
 
-  def compose_input_t(self) -> Dict[str, int]:
+  def __compose_input_t(self) -> Dict[str, int]:
     """Build input_tensor"""
     i_dict: Dict[str, int] = {}
     i_dict['data_type'] = TENSOR_PRECISION[self.cmd]
@@ -242,7 +232,7 @@ class MIOpenDriver(DriverBase):
 
     return i_dict
 
-  def decompose_input_t(self, db_obj: Any) -> bool:
+  def __decompose_input_t(self, db_obj: Any) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
 
@@ -262,6 +252,31 @@ class MIOpenDriver(DriverBase):
       self.in_channels = db_obj.input_t.dim4
 
     return True
+
+  def get_weight_t_id(self) -> int:
+    """Build 1 row in tensor table based on layout from fds param
+     Details are mapped in metadata LAYOUT"""
+    ret_id: int = -1
+    w_dict: dict = {}
+
+    w_dict = self.compose_weight_t()
+    ret_id = self.__insert_tensor(w_dict)
+    return ret_id
+
+  def parse_driver_line(self, line: str):
+    """Parse line and set attributes"""
+
+    tok: list
+    tmp_line: str = parse_line(line)
+
+    tok = tmp_line.split()
+    #pylint: disable=attribute-defined-outside-init
+    self.cmd = tok[1]
+    assert tok[1] != ''
+
+    self.compose_fds(tok, line)
+    if "_layout" in line:
+      self.update_default_layouts(line)
 
   def compose_fds(self, tok: list, line: str) -> bool:
     """Compose fds from driver line"""
@@ -289,25 +304,38 @@ class MIOpenDriver(DriverBase):
         )
     return True
 
-  def get_weight_t_id(self) -> int:
-    """Build 1 row in tensor table based on layout from fds param
-     Details are mapped in metadata LAYOUT"""
-    ret_id: int = -1
-    w_dict: dict = {}
+  def update_default_layouts(self, line: str):
+    """Overwrite default layouts by the specified layout(s)"""
+    value_set: set = set()
+    layouts: list = self.get_layouts()
 
-    w_dict = self.compose_weight_t()
-    ret_id = self.insert_tensor(w_dict)
-    return ret_id
+    for layout in layouts:
+      if layout in line:
+        value_set.add(getattr(self, layout))
 
-  def parse_driver_line(self, line: str):
-    """Parse line and set attributes"""
+    if len(value_set) != 1:
+      raise ValueError(f"Layouts do not match: [x for x in {layouts}]")
 
-    tok: list
-    tmp_line: str = parse_line(line)
+    driver_layout = value_set.pop()
+    for layout in layouts:
+      setattr(self, layout, driver_layout)
 
-    tok = tmp_line.split()
-    #pylint: disable=attribute-defined-outside-init
-    self.cmd = tok[1]
-    assert tok[1] != ''
+  def to_dict(self) -> Dict[str, Union[str, int]]:
+    """Return class to dictionary"""
+    copy_dict: Dict[str, Union[str, int]] = {}
+    key: str
+    value: Union[int, str]
+    for key, value in vars(self).items():
+      if key == "_cmd":
+        copy_dict["cmd"] = value
+      else:
+        copy_dict[key] = value
+    return copy_dict
 
-    self.compose_fds(tok, line)
+  def __eq__(self, other: object) -> bool:
+    """Defining equality functionality"""
+    if not isinstance(other, DriverBase):
+      return NotImplemented
+    if self.__class__ != other.__class__:
+      return False
+    return vars(self) == vars(other)

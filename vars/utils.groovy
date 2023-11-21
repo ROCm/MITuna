@@ -81,7 +81,7 @@ def getMachine() {
 def addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port) {
     runsql("TRUNCATE machine;")
 // TODO: this should come from different nodes
-    runsql("INSERT INTO machine(hostname, local_ip, local_port,  avail_gpus, user, password, port, arch, arch_full, num_cu, available, ipmi_inaccessible) VALUES(\'${machine_ip}\', \'${machine_local_ip}\', 22, \'0,1,2,3\', \'${username}\', \'${pwd}\', ${port}, \'${arch}\', \'${arch}\', ${num_cu}, TRUE, TRUE)" )
+    runsql("INSERT INTO machine(hostname, local_ip, local_port,  avail_gpus, user, password, port, arch, num_cu, available, ipmi_inaccessible) VALUES(\'${machine_ip}\', \'${machine_local_ip}\', 22, \'0,1,2,3\', \'${username}\', \'${pwd}\', ${port}, \'${arch}\', ${num_cu}, TRUE, TRUE)" )
 }
 
 

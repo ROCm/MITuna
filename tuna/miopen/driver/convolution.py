@@ -104,6 +104,11 @@ class DriverConvolution(MIOpenDriver):
     if cmd:
       self._cmd = cmd
 
+    #sanity check, only supporting same layouts
+    if self.in_layout != self.out_layout != self.fil_layout:
+      raise ValueError(
+          'Layouts do not match: in_layout/out_layout/fil_layout must match.')
+
   @property
   def cmd(self) -> str:
     """Setting 'private' variable"""
@@ -117,6 +122,24 @@ class DriverConvolution(MIOpenDriver):
           f'Cannot instantiate convolution Driver class. Supported cmds are: {SUPPORTED_CONV_CMDS}'
       )
     self._cmd = value
+
+  def get_layouts(self):
+    """Get convolution layouts"""
+    return ["in_layout", "out_layout", 'fil_layout']
+
+  def parse_fdb_key(self, line: str) -> None:
+    """import config attributes from fdb key line"""
+    fds: str
+    direction: str
+    fds, _, direction = get_fds_from_cmd(line)
+    setattr(self, 'direction', DIR_MAP[direction])
+    for key in self.to_dict():
+      if key in fds:
+        setattr(self, key, fds[key])
+
+    pattern_3d = '[0-9]x[0-9]x[0-9]'
+    if search(pattern_3d, line):
+      setattr(self, 'spatial_dim', 3)
 
   def parse_driver_line(self, line: str) -> None:
     """Parse MIOpenDriver line"""
@@ -140,6 +163,7 @@ class DriverConvolution(MIOpenDriver):
     for key, value in db_obj.to_dict(ommit_ts=True, ommit_valid=True).items():
       if key not in ('id', 'input_t', 'weight_t', 'driver'):
         setattr(self, key, value)
+    self.out_layout = db_obj.out_layout
 
     return True
 
@@ -222,6 +246,9 @@ class DriverConvolution(MIOpenDriver):
 
     #NOTE: when DB col direction is renamed to forw, col_dict should be removed
     #and replaced with vars(self), but value still needs to map to 1,2 or 4.
+    #also appending tensor layouts, the input_tensor layout = in_layout
+    #and weight_tensor layout is fil_layout
+    tensor_layouts = ["in_layout", "fil_layout"]
     col_dict: dict = vars(self).copy()
     if "direction" in col_dict.keys():
       col_dict["forw"] = int(INVERS_DIR_MAP[col_dict["direction"]])
@@ -230,7 +257,7 @@ class DriverConvolution(MIOpenDriver):
     return "./bin/MIOpenDriver " + self.cmd + " " + " ".join(  # type: ignore[operator]
         f'--{key} {val}' for key, val in col_dict.items()
         if key in CONV_CONFIG_COLS or key in TENSOR_COLS or
-        key in self.get_common_cols() or key == "forw")
+        key in self.get_common_cols() or key == "forw" or key in tensor_layouts)
 
   @staticmethod
   def test_skip_arg(tok1: str) -> bool:
@@ -279,7 +306,6 @@ class DriverConvolution(MIOpenDriver):
       self.fil_d = db_obj.weight_t.dim2
       self.fil_h = db_obj.weight_t.dim3
       self.fil_w = db_obj.weight_t.dim4
-
     return True
 
   def set_cmd(self, data_type: str) -> None:
