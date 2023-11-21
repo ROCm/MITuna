@@ -54,7 +54,7 @@ class DriverBase(ABC):
 
   @abstractmethod
   def construct_driver_from_db(self, db_obj: Any) -> bool:
-    """Takes a <>_config row and returns a driver cmd"""
+    """Takes a db row of a configuration and returns the string representation"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
