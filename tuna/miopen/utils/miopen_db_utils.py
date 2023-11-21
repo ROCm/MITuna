@@ -26,18 +26,10 @@
 ###############################################################################
 """Utility module for miopem solver helper functions"""
 
-import logging
-import random
-from time import sleep
-
-from typing import Callable, Any
-import pymysql
-from sqlalchemy.exc import IntegrityError, OperationalError
-
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.db_utility import session_retry
 from tuna.miopen.db.miopen_tables import Solver
 from tuna.utils.logger import setup_logger
-from tuna.utils.metadata import NUM_SQL_RETRIES
 
 LOGGER = setup_logger('miopen_db_utility')
 
@@ -70,28 +62,3 @@ def get_solver_ids():
       solver_id_map[slv.replace(', ', '-')] = sid
 
   return solver_id_map
-
-
-def session_retry(session: DbSession,
-                  callback: Callable,
-                  actuator: Callable,
-                  logger: logging.Logger = LOGGER) -> Any:
-  """retry handling for a callback function using an actuator (lamda function with params)"""
-  for idx in range(NUM_SQL_RETRIES):
-    try:
-      return actuator(callback)
-    except OperationalError as error:
-      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
-      session.rollback()
-      sleep(random.randint(1, 30))
-    except pymysql.err.OperationalError as error:
-      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
-      session.rollback()
-      sleep(random.randint(1, 30))
-    except IntegrityError as error:
-      logger.error('Query failed: %s', error)
-      session.rollback()
-      return False
-
-  logger.error('All retries have failed.')
-  return False

@@ -108,6 +108,31 @@ def create_indices(all_indices):
         continue
 
 
+def session_retry(session: DbSession,
+                  callback: Callable,
+                  actuator: Callable,
+                  logger: logging.Logger = LOGGER) -> Any:
+  """retry handling for a callback function using an actuator (lamda function with params)"""
+  for idx in range(NUM_SQL_RETRIES):
+    try:
+      return actuator(callback)
+    except OperationalError as error:
+      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
+      session.rollback()
+      sleep(random.randint(1, 30))
+    except pymysql.err.OperationalError as error:
+      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
+      session.rollback()
+      sleep(random.randint(1, 30))
+    except IntegrityError as error:
+      logger.error('Query failed: %s', error)
+      session.rollback()
+      return False
+
+  logger.error('All retries have failed.')
+  return False
+
+
 def get_attr_vals(obj, attr_list):
   """create the dictionary of values for the attribute list """
   attr_vals = {}

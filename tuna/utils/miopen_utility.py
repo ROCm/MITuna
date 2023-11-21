@@ -30,7 +30,7 @@ from sqlalchemy.exc import InterfaceError
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 from tuna.utils.logger import setup_logger
-from tuna.miopen.utils.miopen_db_utils import session_retry
+from tuna.utils.db_utility import session_retry
 
 LOGGER = setup_logger('miopen_utility')
 

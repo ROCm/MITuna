@@ -40,7 +40,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.utils.db_utility import gen_insert_query
-from tuna.miopen.utils.miopen_db_utils import session_retry
+from tuna.utils.db_utility import session_retry
 from tuna.rocmlir.config_type import ConfigType
 
 
