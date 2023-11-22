@@ -99,11 +99,14 @@ class MIOpenDriver(DriverBase):
     return ['wall', 'time', 'iter', 'verify']
 
   def parse_fdb_key(self, line: str) -> None:
-    """import config attributes from fdb key line"""
-    fds: str
+    """Import config attributes from fdb key line"""
+    fds: dict
     direction: str
     fds, _, direction = get_fds_from_cmd(line)
-    setattr(self, 'direction', DIR_MAP[direction])
+    setattr(self, 'direction',
+            DIR_MAP.get(direction,
+                        ''))  # Use .get() to safely access the dictionary
+
     for key in self.to_dict():
       if key in fds:
         setattr(self, key, fds[key])
