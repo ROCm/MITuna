@@ -103,4 +103,3 @@ class MIOpenDBTables(DBTablesInterface):
       self.benchmark = ConvolutionBenchmark
       self.solver_analytics_aggregated = ConvSolverAnalyticsAggregated
       self.solver_analytics_detailed = ConvSolverAnalyticsDetailed
-
