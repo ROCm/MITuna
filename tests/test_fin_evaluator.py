@@ -162,7 +162,6 @@ def test_fin_evaluator():
   dbt = MIOpenDBTables(config_type=ConfigType.convolution,
                        session_id=miopen.args.session_id)
   #update solvers
-  """
   kwargs = get_worker_args(miopen.args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
@@ -176,7 +175,6 @@ def test_fin_evaluator():
     configs = session.query(dbt.config_tags_table.config).filter(
         dbt.config_tags_table.tag == 'tuna_pytest_fin_eval').all()
     configs = [x[0] for x in configs]
-    print(configs)
     for solver in solver_id_map.values():
       for config in configs:
         slv_app_entry = dbt.solver_app()
@@ -186,7 +184,6 @@ def test_fin_evaluator():
         slv_app_entry.applicable = True
         session.add(slv_app_entry)
     session.commit()
-  """
 
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_eval'
@@ -196,9 +193,10 @@ def test_fin_evaluator():
     job_query = session.query(
         dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)
     job_query.update({dbt.job_table.state: 'compiled'})
+    print(job_query)
     session.commit()
 
-    #add_fake_fdb_entries(job_query, dbt, job_query.first().id)
+    add_fake_fdb_entries(job_query, dbt, job_query.first().id)
 
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
