@@ -215,6 +215,7 @@ def test_fin_evaluator():
     worker_kwargs = prep_kwargs(kwargs,
                                 [job_dict, config_dict, miopen.worker_type])
     worker = get_worker(worker_kwargs, miopen.worker_type)
+    worker.gpu_id = 1
     worker.run()
 
   with DbSession() as session:
