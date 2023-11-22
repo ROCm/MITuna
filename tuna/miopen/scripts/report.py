@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
-from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.miopen.tables.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.miopen_db_utils import get_id_solvers
 
