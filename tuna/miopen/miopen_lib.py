@@ -273,7 +273,7 @@ class MIOpen(MITunaInterface):
         kwargs['fetch_state'] = ['new']
         worker = FinBuilder(**kwargs)
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
-        kwargs['fetch_state'] = ['compiled']
+        kwargs['fetch_state'] = ['new', 'compiled']
         worker = FinEvaluator(**kwargs)
       else:
         raise ValueError('Unsupported fin step')
