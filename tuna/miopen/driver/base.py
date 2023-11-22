@@ -70,10 +70,12 @@ class MIOpenDriver(DriverBase):
     """Build weight_tensor"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def parse_row(self, db_obj: ConvolutionConfig):
     """Abstract/Inference for Overwritting base class function for batch_norm"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
   def get_layouts(self):
     """Return operation layouts"""
     raise NotImplementedError("Not implemented")
