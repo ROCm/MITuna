@@ -56,7 +56,6 @@ from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_se
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
-from tuna.miopen.worker.fin_class import FinClass
 
 
 class WorkerInterface(Process):
@@ -386,12 +385,6 @@ class WorkerInterface(Process):
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
       )
-    env_miopen_v: str = FinClass.chk_miopen_env_v(self)
-    if self.dbt.session.miopen_v != env_miopen_v:
-      raise ValueError(
-          f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
-      )
-
     return True
 
   def set_barrier(self, funct: Callable, with_timeout: bool) -> bool:
