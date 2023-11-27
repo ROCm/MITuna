@@ -207,15 +207,16 @@ def test_fin_evaluator():
   job_config_rows = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
   assert (job_config_rows)
 
-  f_vals = miopen.get_f_vals(machine)
+  f_vals = miopen.get_f_vals(machine, range(0))
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
 
   job_config = job_config_rows[0]
-  job_dict, config_dict = serialize_job_config_row(elem)
+  job_dict, config_dict = serialize_job_config_row(job_config)
   worker_kwargs = prep_kwargs(kwargs,
                               [job_dict, config_dict, miopen.worker_type])
-  print('worker_kwargs: %s', worker_kwargs)
-  #assert ()
+  assert (worker_kwargs['config'])
+  assert (worker_kwargs['job'])
+  assert (worker_kwargs['fin_steps'] == 'miopen_find_eval')
   fin_eval = get_worker(worker_kwargs, miopen.worker_type)
   assert (fin_eval.worker_type == 'fin_eval_worker')
   fin_eval.set_job_state('evaluating')
@@ -234,20 +235,11 @@ def test_fin_evaluator():
                                          .filter(dbt.job_table.session==dbt.session_id).count()
     assert (count == 1)
 
-  fin_eval.machine.set_gpu_state(True)
   fin_eval.check_gpu()
-  fin_eval.machine.set_gpu_state(True)
 
   # test get_fin_input
   file_name = fin_eval.get_fin_input()
   assert (file_name)
-  #for elem in job_config_rows:
-  #  job_dict, config_dict = serialize_job_config_row(elem)
-  #  worker_kwargs = prep_kwargs(kwargs,
-  #                              [job_dict, config_dict, miopen.worker_type])
-  #  worker = get_worker(worker_kwargs, miopen.worker_type)
-  #  worker.gpu_id = 1
-  #  worker.run()
 
   with DbSession() as session:
     session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
