@@ -207,7 +207,7 @@ def test_fin_evaluator():
   job_config_rows = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
   assert (job_config_rows)
 
-  f_vals = miopen.get_f_vals(Machine(local_machine=True), range(4))
+  f_vals = miopen.get_f_vals(machine)
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
 
   for elem in job_config_rows:
