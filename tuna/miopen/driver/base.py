@@ -118,7 +118,7 @@ class MIOpenDriver(DriverBase):
       setattr(self, 'spatial_dim', 3)
 
   def construct_driver(self, line: str) -> bool:
-    """Takes a MIOpenDriver cmd or PDB key"""
+    """Takes a line description of a configuration"""
 
     LOGGER.info('Processing line: %s', line)
     if line.find('=') != -1:
