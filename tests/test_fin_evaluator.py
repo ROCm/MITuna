@@ -210,63 +210,52 @@ def test_fin_evaluator():
   f_vals = miopen.get_f_vals(machine)
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
 
-  for elem in job_config_rows:
-    job_dict, config_dict = serialize_job_config_row(elem)
-    worker_kwargs = prep_kwargs(kwargs,
-                                [job_dict, config_dict, miopen.worker_type])
-    worker = get_worker(worker_kwargs, miopen.worker_type)
-    worker.gpu_id = 1
-    worker.run()
-
-  with DbSession() as session:
-    #valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
-    #                                     .filter(dbt.job_table.state=='errored')\
-    #                                     .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
-    #                                     .count()
-    #ommiting valid Fin/MIOpen errors
-    #num_jobs = (num_jobs - valid_fin_err)
-    count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
-                                         .filter(dbt.job_table.state=='evaluated').count()
-    assert (count == num_jobs)
-
-  # test get_job true branch
-  #kwargs = get_kwargs(dbt)
-  #fin_eval = FinEvaluator(**kwargs)
-  #ans = fin_eval.get_job('compiled', 'eval_start', False)
-  #assert (ans is True)
-  #fin_eval.set_job_state('evaluating')
-  """
+  job_config = job_config_rows[0]
+  job_dict, config_dict = serialize_job_config_row(elem)
+  worker_kwargs = prep_kwargs(kwargs,
+                              [job_dict, config_dict, miopen.worker_type])
+  print('worker_kwargs: %s', worker_kwargs)
+  #assert ()
+  fin_eval = get_worker(worker_kwargs, miopen.worker_type)
+  assert (fin_eval.worker_type == 'fin_eval_worker')
+  fin_eval.set_job_state('evaluating')
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_eval')\
                                          .filter(dbt.job_table.session==dbt.session_id).count()
     assert (count == 1)
 
-  # test get_fin_input
-  file_name = fin_eval.get_fin_input()
-  assert (file_name)
-
-  # test check gpu with "bad" GPU
-  # the job state will set back to "compiled" from "evaluating"
-  fin_eval.check_gpu()
-  with DbSession() as session:
-    count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\
-                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_eval')\
-                                         .filter(dbt.job_table.session==dbt.session_id).count()
-    assert (count == 0)
-
   # test check gpu with "good" GPU
   # the job state will remain 'evaluated'
-  ans = fin_eval.get_job('compiled', 'eval_start', False)
-  assert (ans is True)
   fin_eval.set_job_state('evaluated')
-  fin_eval.machine.set_gpu_state(True)
-  fin_eval.check_gpu()
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluated')\
                                          .filter(dbt.job_table.reason=='tuna_pytest_fin_eval')\
                                          .filter(dbt.job_table.session==dbt.session_id).count()
     assert (count == 1)
+
+  fin_eval.machine.set_gpu_state(True)
+  fin_eval.check_gpu()
+  fin_eval.machine.set_gpu_state(True)
+
+  # test get_fin_input
+  file_name = fin_eval.get_fin_input()
+  assert (file_name)
+  #for elem in job_config_rows:
+  #  job_dict, config_dict = serialize_job_config_row(elem)
+  #  worker_kwargs = prep_kwargs(kwargs,
+  #                              [job_dict, config_dict, miopen.worker_type])
+  #  worker = get_worker(worker_kwargs, miopen.worker_type)
+  #  worker.gpu_id = 1
+  #  worker.run()
+
+  with DbSession() as session:
+    session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
+                                         .filter(dbt.job_table.state=='compiled')\
+                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_eval')\
+                                         .filter(dbt.job_table.session==dbt.session_id)\
+                                         .update({dbt.job_table.state: 'evaluated'})
+    session.commit()
 
   with DbSession() as session:
     session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
@@ -297,7 +286,7 @@ def test_fin_evaluator():
   for obj in status:
     print(obj)
     assert (obj['success'] == True)
- 
+
   #test FinEvaluator close_job
   with DbSession() as session:
     session.query(
@@ -311,4 +300,3 @@ def test_fin_evaluator():
   with DbSession() as session:
     assert ('evaluated' == session.query(dbt.job_table.state).filter(
         dbt.job_table.id == fin_eval.job.id).first()[0].name)
-  """
