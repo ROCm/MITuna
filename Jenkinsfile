@@ -96,8 +96,8 @@ pipeline {
         stage("docker compose"){
         agent{ label utils.rocmnode("tunatest") }
         steps {
-            sh 'docker compose up -d --no-color --wait'
-            sh 'docker compose ps'
+            sh 'docker-compose up --build'
+            sh 'docker-compose ps'
             }
 				}
         stage("fin find compile"){
