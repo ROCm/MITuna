@@ -71,6 +71,10 @@ def cleanup() {
 
 def compose() {
     sh "printenv"
+    sh "export TUNA_DB_HOSTNAME=${db_host}"
+    sh "export TUNA_DB_NAME=${db_name}"
+    sh "export TUNA_DB_USER_NAME=${db_user}"
+    sh "export TUNA_DB_USER_PASSWORD=${db_password}"
     sh "docker-compose up --build"
     sh "docker-compose ps"
 }
