@@ -203,7 +203,7 @@ def test_fin_evaluator():
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
   job_config_rows = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
-  assert (job_config_rows == 80)
+  assert (len(job_config_rows) == 80)
 
   f_vals = miopen.get_f_vals(machine, range(0))
   print('f_vals: %s', f_vals)
