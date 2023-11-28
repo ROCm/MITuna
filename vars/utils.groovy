@@ -69,17 +69,6 @@ def cleanup() {
     sh "${cmd}"
 }
 
-def compose() {
-    sh "printenv"
-    sh "docker-compose --version"
-    sh "export db_host=${db_host}"
-    sh "export db_name=${DB_NAME}"
-    sh "export db_user=${db_user}"
-    sh "export db_password=${db_password}"
-    sh "docker-compose up --build"
-    sh "docker-compose ps"
-}
-
 def getMachine() {
     def arch, cu, count
     for(String arch_cu :  sh(script:'bin/arch_cu.sh', returnStdout: true).split("\n")) { // is multiline
@@ -197,6 +186,7 @@ def finFindCompile(){
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
+        sh  "celery -a tuna.celery_app.celery worker -l info -e --detach"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def num_cfg = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg}"
