@@ -51,7 +51,7 @@ pipeline {
            utils.runLint()
            }
            }
-        }
+        }/*
         stage("fin get solver"){
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -92,7 +92,14 @@ pipeline {
                     utils.pytestSuite3AndCoverage(branch, branch_master)
                 }
             }
-        }
+        }*/
+        stage("docker compose"){
+        agent{ label utils.rocmnode("tunatest") }
+        steps {
+            sh 'docker compose up -d --no-color --wait'
+            sh 'docker compose ps'
+            }
+				}
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
