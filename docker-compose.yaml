@@ -25,13 +25,11 @@ services:
       - /dev/dri:/dev/dri/:rw
       - /var/lib/docker/:/var/lib/docker
     environment:
-        - TUNA_DB_HOSTNAME=${db_hostname}
+        - TUNA_DB_HOSTNAME=${db_host}
         - TUNA_DB_NAME=${db_name}
-        - TUNA_DB_USER_NAME=${user_name}
-        - TUNA_DB_USER_PASSWORD=${user_password}
+        - TUNA_DB_USER_NAME=${db_user}
+        - TUNA_DB_USER_PASSWORD=${db_password}
         - HIP_VISIBLE_DEVICES=1
-    env_file:
-      - .env
     command: "celery -A tuna.celery_app.celery worker -l info -E"
     depends_on:
       - redis
