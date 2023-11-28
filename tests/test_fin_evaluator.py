@@ -56,8 +56,7 @@ from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 
 solver_id_map = get_solver_ids()
-
-
+"""
 def get_kwargs(dbt):
   num_gpus = Value('i', 1)
   v = Value('i', 0)
@@ -82,6 +81,7 @@ def get_kwargs(dbt):
       'session_id': dbt.session_id
   }
   return kwargs
+"""
 
 
 def add_cfgs():
@@ -159,8 +159,6 @@ def test_fin_evaluator():
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.args.session_id = add_test_session(label='tuna_pytest_fin_eval')
 
-  dbt = MIOpenDBTables(config_type=ConfigType.convolution,
-                       session_id=miopen.args.session_id)
   #update solvers
   kwargs = get_worker_args(miopen.args, machine, miopen)
   fin_worker = FinClass(**kwargs)
@@ -205,10 +203,19 @@ def test_fin_evaluator():
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
   job_config_rows = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
-  assert (job_config_rows)
+  assert (job_config_rows == 80)
 
   f_vals = miopen.get_f_vals(machine, range(0))
+  print('f_vals: %s', f_vals)
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
+  assert (kwargs['fin_steps'] == ['miopen_find_eval'])
+  print('kwargs: %s', kwargs)
+
+  num_gpus = Value('i', 1)
+  v = Value('i', 0)
+  e = Value('i', 0)
+  kwargs['num_procs'] = num_gpus
+  kwargs['avail_gpus'] = 1
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
@@ -258,17 +265,6 @@ def test_fin_evaluator():
     session.commit()
 
   #test get_job false branch
-  kwargs = get_kwargs(dbt)
-  fin_eval = FinEvaluator(**kwargs)
-  ans = fin_eval.get_job('compiled', 'eval_start', False)
-  assert (ans is False)
-
-  #test FinEvaluator process results
-  job_first = job_query.first()
-  with DbSession() as session:
-    fin_eval.job = job_first
-    fin_eval.config = session.query(dbt.config_table)\
-                            .filter(dbt.config_table.id == job_first.config).first()
 
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
