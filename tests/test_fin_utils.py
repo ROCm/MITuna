@@ -28,8 +28,8 @@ import tuna.miopen.worker.fin_utils as fu
 from tuna.miopen.db.miopen_tables import ConvolutionConfig, ConvolutionJob, TensorTable
 from multiprocessing import Value, Lock, Queue
 from tuna.utils.metadata import LOG_TIMEOUT
-from tuna.miopen.db.session import Session
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
+from tuna.miopen.utils.session_utils import get_session_t
 
 
 def test_fin_utils():
@@ -39,7 +39,7 @@ def test_fin_utils():
   my_job.valid = 1
   my_job.config = 1
   dbt = MIOpenDBTables(session=1, config_type=ConfigType.convolution)
-  dbt.session = Session()
+  dbt.session = get_session_t()
   dbt.session.id = 1
   dbt.session.arch = 'gfx908'
   dbt.session.num_cu = 120

@@ -37,7 +37,7 @@ from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
-from tuna.miopen.db.session import Session
+from tuna.miopen.utils.session_utils import get_session_t
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
@@ -294,7 +294,7 @@ class MIOpen(MITunaInterface):
                                   f_vals["machine"], self.args.docker_name):
         ret = True
     elif self.args.init_session:
-      Session().add_new_session(self.args, worker)
+      get_session_t().add_new_session(self.args, worker)
     elif self.args.execute_cmd:
       # JD: Move the worker.exec_command to machine
       self.logger.info(self.args.execute_cmd)

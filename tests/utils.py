@@ -27,7 +27,7 @@
 from multiprocessing import Value
 
 from tuna.worker_interface import WorkerInterface
-from tuna.miopen.db.session import Session
+from tuna.miopen.utils.session_utils import get_session_t
 from tuna.machine import Machine
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.find_db import ConvolutionFindDB
@@ -152,7 +152,7 @@ def add_test_session(arch='gfx908', num_cu=120, label=None):
   miopen.args = args
   kwargs = get_worker_args(args, machine, miopen)
   worker = WorkerInterface(**kwargs)
-  session_id = Session().add_new_session(args, worker)
+  session_id = get_session_t().add_new_session(args, worker)
   assert (session_id)
   return session_id
 

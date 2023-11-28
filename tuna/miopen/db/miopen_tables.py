@@ -39,7 +39,7 @@ from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
 from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
 from tuna.miopen.utils.config_type import ConfigType
-from tuna.miopen.db.session import Session
+from tuna.miopen.utils.session_utils import get_session_t
 from tuna.miopen.utils.metadata import DIR_MAP
 from tuna.miopen.db.benchmark import Model, Framework
 from tuna.db.tuna_tables import JobMixin
@@ -643,7 +643,7 @@ def get_miopen_tables():
   """Returns a list of all MIOpen Tuna DB tables"""
   miopen_tables = []
   miopen_tables.append(Solver())
-  miopen_tables.append(Session())
+  miopen_tables.append(get_session_t())
   miopen_tables.append(Framework())
   miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))
