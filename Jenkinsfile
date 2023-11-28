@@ -96,10 +96,11 @@ pipeline {
         stage("docker compose"){
         agent{ label utils.rocmnode("tunatest") }
         steps {
-            sh 'docker-compose up --build'
-            sh 'docker-compose ps'
+                script {
+                    utils.compose()
             }
 				}
+        }
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
         steps{
