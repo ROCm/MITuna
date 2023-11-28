@@ -69,6 +69,12 @@ def cleanup() {
     sh "${cmd}"
 }
 
+def compose() {
+    sh "printenv"
+    sh "docker-compose up --build"
+    sh "docker-compose ps"
+}
+
 def getMachine() {
     def arch, cu, count
     for(String arch_cu :  sh(script:'bin/arch_cu.sh', returnStdout: true).split("\n")) { // is multiline
