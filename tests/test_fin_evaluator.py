@@ -216,7 +216,7 @@ def test_fin_evaluator():
                               [job_dict, config_dict, miopen.worker_type])
   assert (worker_kwargs['config'])
   assert (worker_kwargs['job'])
-  assert (worker_kwargs['fin_steps'] == 'miopen_find_eval')
+  assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])
   fin_eval = get_worker(worker_kwargs, miopen.worker_type)
   assert (fin_eval.worker_type == 'fin_eval_worker')
   fin_eval.set_job_state('evaluating')
