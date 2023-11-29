@@ -51,15 +51,6 @@ class FinEvaluator(FinClass):
     super().__init__(**kwargs)
     self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
 
-  def get_job(self, find_state, set_state, imply_end):
-    """Polling to see if job available"""
-    self.logger.info('find job: %s', find_state)
-    if not super().get_job(find_state, set_state, imply_end):
-      with self.bar_lock:
-        self.num_procs.value -= 1
-      return False
-    return True
-
   def check_gpu(self):
     """Function to check gpu heartbeat"""
     for _ in range(5):
@@ -268,6 +259,25 @@ class FinEvaluator(FinClass):
     self.set_job_state('evaluated')
     self.clean_cache_table()
 
+  def get_job(self, find_state, set_state, imply_end):
+    """Polling to see if job available"""
+    self.logger.info('find job: %s', find_state)
+
+    if not super().get_job(find_state, set_state, imply_end):
+      return False
+    return True
+
+  def manage_queue(self):
+    """Try to acquire a job, or manage the result queue if no job is available."""
+    if not self.get_job("compiled", "eval_start", True):
+      if not self.get_job("new", "eval_start", True):
+        with self.bar_lock:
+          self.num_procs.value -= 1
+        while not self.result_queue_drain():
+          sleep(random.randint(1, 10))
+        return False
+    return True
+
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
@@ -277,9 +287,7 @@ class FinEvaluator(FinClass):
     if not self.init_check_env():
       return False
 
-    if not self.get_job("compiled", "eval_start", True):
-      while not self.result_queue_drain():
-        sleep(random.randint(1, 10))
+    if not self.manage_queue():
       return False
 
     orig_state = 'compiled'
