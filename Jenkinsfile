@@ -34,7 +34,7 @@ pipeline {
             utils.buildDockers()
             }
             }
-        }/*
+        }
         stage("code Format") {
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -92,14 +92,6 @@ pipeline {
                     utils.pytestSuite3AndCoverage(branch, branch_master)
                 }
             }
-        }*/
-        stage("docker compose"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps {
-                script {
-                    utils.compose()
-            }
-				}
         }
         stage("fin find compile"){
         agent{ label utils.rocmnode("tunatest") }
