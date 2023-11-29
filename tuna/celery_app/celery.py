@@ -33,14 +33,16 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
 #from tuna.celery_app import celery_config
 
-#environ.setdefault('CELERY_CONFIG_MODULE', 'celery_config')
-#app = Celery()
-#app.config_from_envvar('CELERY_CONFIG_MODULE')
+#docker-compose app need to connect to mituna_redis_1 docker
+#app = Celery('celery_app',
+#             broker_url="redis://mituna_redis_1:6379//",
+#             result_backend="redis://mituna_redis_1:6379/")
+
+#when running on localhost:
 app = Celery('celery_app',
              broker_url="redis://localhost:6379//",
              result_backend="redis://localhost:6379/")
-#app.config_from_module("celery_config")
-#app.config_from_object(celery_config)
+
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
 app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}

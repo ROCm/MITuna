@@ -1,4 +1,4 @@
-version '3.8'
+version: "3.8"
 
 services:
   redis:
@@ -24,6 +24,8 @@ services:
     volumes:
       - /dev/dri:/dev/dri/:rw
       - /var/lib/docker/:/var/lib/docker
+    env_file:
+      - .env
     environment:
         - TUNA_DB_HOSTNAME=${db_host}
         - TUNA_DB_NAME=${db_name}
