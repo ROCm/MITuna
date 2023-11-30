@@ -81,6 +81,7 @@ class RocMLIR(MITunaInterface):
         help='Which space of tuning configs should be used while tuning')
 
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
+      required=True
     )
     group.add_argument('--add_tables',
                        dest='add_tables',
@@ -89,7 +90,6 @@ class RocMLIR(MITunaInterface):
 
     # pylint: disable=duplicate-code
     group.add_argument(
-        '-e',
         '--execute',
         dest='execute',
         action='store_true',
@@ -185,8 +185,8 @@ class RocMLIR(MITunaInterface):
         SessionRocMLIR().add_new_session(self.args, worker)
       return None
 
-    assert self.args.execute, \
-      "one of --add_tables, --init_session, or --execute must be present"
+    # Must be --execute, because the mutually-exclusive-group argument is
+    # required, and we just checked for --add_tables and --init_session.
     res = self.compose_worker_list(machines)
     return res
 

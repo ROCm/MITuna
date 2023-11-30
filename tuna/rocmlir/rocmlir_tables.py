@@ -286,14 +286,14 @@ class ConvolutionConfig(BASE):
 
   ## Adapted from perfRunner.getConvConfigurations.
 
-  DIRECTIONS = ['-F 1', '-F 2', '-F 4']
-  DATA_TYPES = ['conv', 'convfp16', 'convint8']
-  LAYOUTS = ['NHWC', 'NCHW']
-
   def get_configurations(self, filename):
     """Read conv-configs from filename and expand into all combinations of
          direction, type, and layout.
       """
+
+    DIRECTIONS = ['-F 1', '-F 2', '-F 4']
+    DATA_TYPES = ['conv', 'convfp16', 'convint8']
+    LAYOUTS = ['NHWC', 'NCHW']
 
     configs = []
     with open(filename, 'r', encoding='utf8') as config_file:
@@ -301,8 +301,7 @@ class ConvolutionConfig(BASE):
 
       # All combinations of conv direction, type and layouts
       for direction, datatype, layout, line in \
-              itertools.product(self.DIRECTIONS, self.DATA_TYPES, self.LAYOUTS,
-                                lines):
+              itertools.product(DIRECTIONS, DATA_TYPES, LAYOUTS, lines):
         line = line.strip()
 
         # Skip empty lines
@@ -314,7 +313,7 @@ class ConvolutionConfig(BASE):
 
         # Skip datatype if already in
         datatype = f"{datatype} "
-        # check for the presense of a positional arg
+        # check for the presence of a positional arg
         if line[0][0] != "-":
           datatype = ""
 
@@ -513,13 +512,13 @@ class GEMMConfig(BASE):
 
   ## Adapted from perfRunner.getGemmConfigurations.
 
-  DATA_TYPES = ['f32', 'f16', 'i8']
-
   def get_configurations(self, filename):
     #pylint: disable=invalid-name
     """Read gemm-configs from filename and expand into all combinations of
          type and transpose.
       """
+
+    DATA_TYPES = ['f32', 'f16', 'i8']
 
     configs = []
     with open(filename, 'r', encoding='utf8') as config_file:
@@ -527,7 +526,7 @@ class GEMMConfig(BASE):
 
       # All combinations of types and transposition (A and B)
       for datatype, transA, transB, line in \
-              itertools.product(self.DATA_TYPES, ['false', 'true'],
+              itertools.product(DATA_TYPES, ['false', 'true'],
                                 ['false', 'true'], lines):
         line = line.strip()
 
@@ -685,8 +684,6 @@ class AttentionConfig(BASE):
 
   ## Adapted from perfRunner.getGemmConfigurations.
 
-  DATA_TYPES = ['f32', 'f16']
-
   def get_configurations(self, filename):
     #pylint: disable=invalid-name
     #pylint: disable=too-many-locals
@@ -694,13 +691,15 @@ class AttentionConfig(BASE):
        type and transpose.
     """
 
+    DATA_TYPES = ['f32', 'f16']
+
     configs = []
     with open(filename, 'r', encoding='utf8') as config_file:
       lines = config_file.readlines()
 
       # All combinations of types and transposition (A and B)
       for datatype, transQ, transK, transV, transO, withAttnScale, line in \
-              itertools.product(self.DATA_TYPES, ['false', 'true'],
+              itertools.product(DATA_TYPES, ['false', 'true'],
                                 ['false', 'true'], ['false', 'true'],
                                 ['false', 'true'], ['false', 'true'], lines):
         line = line.strip()
