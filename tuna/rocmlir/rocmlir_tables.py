@@ -319,13 +319,15 @@ class ConvolutionConfig(BASE):
         if datatype == 'convint8' and direction != '-F 1':
           continue
 
-        # Skip datatype if already in
-        one_config = f"{datatype} "
-        # check for the presence of a positional arg
-        if line[0][0] != "-":
-          one_config = ""
+        # Add options if they aren't already supplied.
+        # We need trailing spaces here to account for the string concat.
 
-        one_config += make_option_if_not_in_line("-F", direction, line)
+        # For datatype, check for the presence of a positional arg.
+        if line[0][0] == "-":
+          one_config = f"{datatype} "
+
+        if "-F" not in line:
+          one_config += f"{direction} "  # -F included in direction.
         one_config += make_option_if_not_in_line("-f", layout, line)
         one_config += make_option_if_not_in_line("-I", layout, line)
         one_config += make_option_if_not_in_line("-O", layout, line)
@@ -548,18 +550,18 @@ class GEMMConfig(BASE):
           outDataTypeString = f"-out_datatype {datatype} "
 
         # Strip to avoid spurious spaces
-        oneConfig = f"{dataTypeString}{outDataTypeString}\
-                      {transAString}{transBString}{line}".strip()
-        if oneConfig not in configs:
-          configs.append(oneConfig)
+        one_config = f"{dataTypeString}{outDataTypeString}\
+                       {transAString}{transBString}{line}".strip()
+        if one_config not in configs:
+          configs.append(one_config)
 
         # Special case to get both i8_i8 and i8_i32, w/o --data-type or output-type-map.
         if "-out_datatype" not in line and datatype == 'i8':
           outDataTypeString = "-out_datatype i32 "
-          oneConfig = f"{dataTypeString}{outDataTypeString}\
-                        {transAString}{transBString}{line}".strip()
-          if oneConfig not in configs:
-            configs.append(oneConfig)
+          one_config = f"{dataTypeString}{outDataTypeString}\
+                         {transAString}{transBString}{line}".strip()
+          if one_config not in configs:
+            configs.append(one_config)
 
     return configs
 
@@ -696,20 +698,20 @@ class AttentionConfig(BASE):
         if len(line) == 0 or line[0] == '#':
           continue
 
-        oneConfig = ""
-        oneConfig += make_option_if_not_in_line("-t", datatype, line)
-        oneConfig += make_option_if_not_in_line("-transQ", transQ, line)
-        oneConfig += make_option_if_not_in_line("-transK", transK, line)
-        oneConfig += make_option_if_not_in_line("-transV", transV, line)
-        oneConfig += make_option_if_not_in_line("-transO", transO, line)
-        oneConfig += make_option_if_not_in_line("-with-attn-scale",
-                                                withAttnScale, line)
+        one_config = ""
+        one_config += make_option_if_not_in_line("-t", datatype, line)
+        one_config += make_option_if_not_in_line("-transQ", transQ, line)
+        one_config += make_option_if_not_in_line("-transK", transK, line)
+        one_config += make_option_if_not_in_line("-transV", transV, line)
+        one_config += make_option_if_not_in_line("-transO", transO, line)
+        one_config += make_option_if_not_in_line("-with-attn-scale",
+                                                 withAttnScale, line)
 
         # Strip to avoid spurious spaces
-        oneConfig += line
-        oneConfig = oneConfig.strip()
-        if oneConfig not in configs:
-          configs.append(oneConfig)
+        one_config += line
+        one_config = one_config.strip()
+        if one_config not in configs:
+          configs.append(one_config)
 
     return configs
 
