@@ -502,9 +502,9 @@ class GEMMConfig(BASE):
 
     self.kernel_repeats = 1
     for flag, value in options.items():
-      if value == "true":
+      if value in ["true", "True"]:
         value = 1
-      if value == "false":
+      if value in ["false", "False"]:
         value = 0
       field = fields[flag]
       if field:
@@ -674,9 +674,9 @@ class AttentionConfig(BASE):
 
     self.kernel_repeats = 1
     for flag, value in options.items():
-      if value == "true":
+      if value in ["true", "True"]:
         value = 1
-      if value == "false":
+      if value in ["false", "False"]:
         value = 0
       field = fields[flag]
       if field:
@@ -684,14 +684,17 @@ class AttentionConfig(BASE):
 
   ## Adapted from perfRunner.getGemmConfigurations.
 
+  def make_option_if_not_in_line(field, value, line):
+    if f"{field} " in line:
+      return ""
+    else:
+      return f"{field} {value}"
+
   def get_configurations(self, filename):
     #pylint: disable=invalid-name
-    #pylint: disable=too-many-locals
     """Read attention-configs from filename and expand into all combinations of
        type and transpose.
     """
-
-    DATA_TYPES = ['f32', 'f16']
 
     configs = []
     with open(filename, 'r', encoding='utf8') as config_file:
@@ -699,7 +702,7 @@ class AttentionConfig(BASE):
 
       # All combinations of types and transposition (A and B)
       for datatype, transQ, transK, transV, transO, withAttnScale, line in \
-              itertools.product(DATA_TYPES, ['false', 'true'],
+              itertools.product(['f32', 'f16'], ['false', 'true'],
                                 ['false', 'true'], ['false', 'true'],
                                 ['false', 'true'], ['false', 'true'], lines):
         line = line.strip()
@@ -709,40 +712,17 @@ class AttentionConfig(BASE):
           continue
 
         # We need trailing spaces here to account for the concat below
-        # Skip type if already in
-        dataTypeString = ""
-        if "-t " not in line:
-          dataTypeString = f"-t {datatype} "
-
-        # Skip transQ if already in
-        transQString = ""
-        if "-transQ " not in line:
-          transQString = f"-transQ {transQ} "
-
-        # Skip transK if already in
-        transKString = ""
-        if "-transK " not in line:
-          transKString = f"-transK {transK} "
-
-        # Skip transV if already in
-        transVString = ""
-        if "-transV " not in line:
-          transVString = f"-transV {transV} "
-
-        # Skip transO if already in
-        transOString = ""
-        if "-transO " not in line:
-          transOString = f"-transO {transO} "
-
-        # Skip withAttnScale if already in
-        withAttnScaleString = ""
-        if "-with-attn-scale " not in line:
-          withAttnScaleString = f"-with-attn-scale {withAttnScale} "
+        oneConfig = ""
+        oneConfig += make_option_if_not_in_line("-t", datatype, line)
+        oneConfig += make_option_if_not_in_line("-transQ", transQ, line)
+        oneConfig += make_option_if_not_in_line("-transK", transK, line)
+        oneConfig += make_option_if_not_in_line("-transV", transV, line)
+        oneConfig += make_option_if_not_in_line("-transO", transO, line)
+        oneConfig += make_option_if_not_in_line("-with-attn-scale", withAttnScale, line)
 
         # Strip to avoid spurious spaces
-        oneConfig = f"{dataTypeString}{transQString}{transKString}\
-                      {transVString}{transOString}{withAttnScaleString}{line}"\
-                      .strip()
+        oneConfig += line
+        oneConfig = oneConfig.strip()
         if oneConfig not in configs:
           configs.append(oneConfig)
 
