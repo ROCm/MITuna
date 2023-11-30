@@ -27,6 +27,7 @@
 """
 Script for adding jobs to the MySQL database
 """
+import pdb
 import logging
 import argparse
 import warnings
@@ -163,43 +164,62 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
         pre_ex[config] = {}
       pre_ex[config][solver] = True
 
-    do_commit = False
-    while True:
-      for config, solver in res:
-        try:
-          job = dbt.job_table()
-          job.config = config
-          job.solver = solver
-          job.state = 'new'
-          job.valid = 1
-          job.reason = args.label
-          job.fin_step = args.fin_steps
-          job.session = args.session_id
+    for config, solver in res:
+      job = dbt.job_table()
+      job.config = config
+      job.solver = solver
+      job.state = 'new'
+      job.valid = 1
+      job.reason = args.label
+      job.fin_step = args.fin_steps
+      job.session = args.session_id
 
-          if job.config in pre_ex:
-            if job.solver in pre_ex[job.config]:
-              logger.warning("Job exists (skip): %s : %s", job.config,
-                             job.solver)
-              continue
-
-          session.add(job)
-          if do_commit:
-            session.commit()
-          counts += 1
-        except IntegrityError as err:
-          session.rollback()
-          logger.warning('Integrity Error: %s', err)
-      if not do_commit:
-        try:
-          session.commit()
-        except IntegrityError as err:
-          session.rollback()
-          counts = 0
-          do_commit = True
-          logger.warning(
-              'Quick update failed, rolling back to add one by one : %s', err)
+      if job.config in pre_ex:
+        if job.solver in pre_ex[job.config]:
+          logger.warning("Job exists (skip): %s : %s", job.config,
+                         job.solver)
           continue
-      break
+
+      session.add(job)
+      counts += 1
+
+    try:
+      session.commit()
+    except IntegrityError as err:
+      session.rollback()
+      counts = 0
+      logger.warning(
+          'Quick update failed, trying batched update : %s', err)
+
+      print('\n')
+
+      batch_sz = 1024
+      jobs = []
+      for k, (config, solver) in enumerate(res):
+        if config in pre_ex:
+          if solver in pre_ex[config]:
+            logger.warning("Job exists (skip): %s : %s", config,
+                           solver)
+            continue
+
+        jobs.append({"config": config,
+                     "solver": solver,
+                     "state": "new",
+                     "valid": 1,
+                     "reason": args.label,
+                     "fin_step": args.fin_steps,
+                     "session": args.session_id})
+
+        counts += 1
+
+        if counts % batch_sz == 0 or (k + 1) == len(res):
+          result = session.execute(dbt.job_table.__table__
+                                  .insert()
+                                  .prefix_with('IGNORE')
+                                  .values(jobs))
+          session.commit()
+          jobs = []
+
 
   return counts
 
