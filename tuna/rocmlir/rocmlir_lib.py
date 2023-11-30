@@ -81,8 +81,7 @@ class RocMLIR(MITunaInterface):
         help='Which space of tuning configs should be used while tuning')
 
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
-      required=True
-    )
+        required=True)
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',

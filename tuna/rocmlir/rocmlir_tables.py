@@ -151,6 +151,14 @@ class ConvolutionJob(BASE, JobMixin):
                   index=True)
 
 
+def make_option_if_not_in_line(option, value, line):
+  """If option is not already in line, make an option-value string."""
+  if f"{option} " in line:
+    return ""
+  # We need trailing space here to account for use in string concat.
+  return f"{option} {value} "
+
+
 class ConvolutionConfig(BASE):
   """Represents convolution config table"""
   __tablename__ = "rocmlir_conv_config"
@@ -291,9 +299,9 @@ class ConvolutionConfig(BASE):
          direction, type, and layout.
       """
 
-    DIRECTIONS = ['-F 1', '-F 2', '-F 4']
-    DATA_TYPES = ['conv', 'convfp16', 'convint8']
-    LAYOUTS = ['NHWC', 'NCHW']
+    directions = ['-F 1', '-F 2', '-F 4']
+    data_types = ['conv', 'convfp16', 'convint8']
+    layouts = ['NHWC', 'NCHW']
 
     configs = []
     with open(filename, 'r', encoding='utf8') as config_file:
@@ -301,7 +309,7 @@ class ConvolutionConfig(BASE):
 
       # All combinations of conv direction, type and layouts
       for direction, datatype, layout, line in \
-              itertools.product(DIRECTIONS, DATA_TYPES, LAYOUTS, lines):
+              itertools.product(directions, data_types, layouts, lines):
         line = line.strip()
 
         # Skip empty lines
@@ -312,33 +320,17 @@ class ConvolutionConfig(BASE):
           continue
 
         # Skip datatype if already in
-        datatype = f"{datatype} "
+        one_config = f"{datatype} "
         # check for the presence of a positional arg
         if line[0][0] != "-":
-          datatype = ""
+          one_config = ""
 
-        # Skip direction if already in
-        direction = f"{direction} "
-        if "-F" in line:
-          direction = ""
-
-        # Skip filter layout if already in
-        filter_layout = f"-f {layout} "
-        if "-f" in line:
-          filter_layout = ""
-
-        # Skip input layout if already in
-        input_layout = f"-I {layout} "
-        if "-I" in line:
-          input_layout = ""
-
-        # Skip output layout if already in
-        output_layout = f"-O {layout} "
-        if "-O" in line:
-          output_layout = ""
-
-        one_config = f"{datatype}{direction}{filter_layout}\
-                       {input_layout}{output_layout}{line}"
+        one_config += make_option_if_not_in_line("-F", direction, line)
+        one_config += make_option_if_not_in_line("-f", layout, line)
+        one_config += make_option_if_not_in_line("-I", layout, line)
+        one_config += make_option_if_not_in_line("-O", layout, line)
+        one_config += line
+        one_config = one_config.strip()
 
         if one_config not in configs:
           configs.append(one_config)
@@ -683,13 +675,6 @@ class AttentionConfig(BASE):
         setattr(self, field, value)
 
   ## Adapted from perfRunner.getGemmConfigurations.
-
-  def make_option_if_not_in_line(field, value, line):
-    if f"{field} " in line:
-      return ""
-    else:
-      return f"{field} {value}"
-
   def get_configurations(self, filename):
     #pylint: disable=invalid-name
     """Read attention-configs from filename and expand into all combinations of
@@ -711,14 +696,14 @@ class AttentionConfig(BASE):
         if len(line) == 0 or line[0] == '#':
           continue
 
-        # We need trailing spaces here to account for the concat below
         oneConfig = ""
         oneConfig += make_option_if_not_in_line("-t", datatype, line)
         oneConfig += make_option_if_not_in_line("-transQ", transQ, line)
         oneConfig += make_option_if_not_in_line("-transK", transK, line)
         oneConfig += make_option_if_not_in_line("-transV", transV, line)
         oneConfig += make_option_if_not_in_line("-transO", transO, line)
-        oneConfig += make_option_if_not_in_line("-with-attn-scale", withAttnScale, line)
+        oneConfig += make_option_if_not_in_line("-with-attn-scale",
+                                                withAttnScale, line)
 
         # Strip to avoid spurious spaces
         oneConfig += line
