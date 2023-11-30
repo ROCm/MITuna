@@ -176,8 +176,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
 
       if job.config in pre_ex:
         if job.solver in pre_ex[job.config]:
-          logger.warning("Job exists (skip): %s : %s", job.config,
-                         job.solver)
+          logger.warning("Job exists (skip): %s : %s", job.config, job.solver)
           continue
 
       session.add(job)
@@ -188,8 +187,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
     except IntegrityError as err:
       session.rollback()
       counts = 0
-      logger.warning(
-          'Quick update failed, trying batched update : %s', err)
+      logger.warning('Quick update failed, trying batched update : %s', err)
 
       print('\n')
 
@@ -198,28 +196,26 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
       for k, (config, solver) in enumerate(res):
         if config in pre_ex:
           if solver in pre_ex[config]:
-            logger.warning("Job exists (skip): %s : %s", config,
-                           solver)
+            logger.warning("Job exists (skip): %s : %s", config, solver)
             continue
 
-        jobs.append({"config": config,
-                     "solver": solver,
-                     "state": "new",
-                     "valid": 1,
-                     "reason": args.label,
-                     "fin_step": args.fin_steps,
-                     "session": args.session_id})
+        jobs.append({
+            "config": config,
+            "solver": solver,
+            "state": "new",
+            "valid": 1,
+            "reason": args.label,
+            "fin_step": args.fin_steps,
+            "session": args.session_id
+        })
 
         counts += 1
 
         if counts % batch_sz == 0 or (k + 1) == len(res):
-          result = session.execute(dbt.job_table.__table__
-                                  .insert()
-                                  .prefix_with('IGNORE')
-                                  .values(jobs))
+          result = session.execute(dbt.job_table.__table__.insert().prefix_with(
+              'IGNORE').values(jobs))
           session.commit()
           jobs = []
-
 
   return counts
 
