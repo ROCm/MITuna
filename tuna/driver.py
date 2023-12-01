@@ -73,3 +73,6 @@ class DriverBase(ABC):
       else:
         copy_dict[key] = value
     return copy_dict
+
+  def __str__(self):
+    return self.to_dict()
