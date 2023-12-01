@@ -79,6 +79,11 @@ class MIOpenDriver(DriverBase):
     """Return operation layouts"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
+  def parse_fdb_key(self, line: str) -> None:
+    """Import config attributes from fdb key line"""
+    raise NotImplementedError("Not implemented")
+
   @staticmethod
   def test_skip_arg(tok1: str):
     """Check if token is skipable"""
@@ -98,6 +103,21 @@ class MIOpenDriver(DriverBase):
   def get_common_cols() -> List[str]:
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
+
+  def construct_driver(self, line: str) -> bool:
+    """Takes MIOpen line description of a configuration"""
+
+    LOGGER.info('Processing line: %s', line)
+    if line.find('=') != -1:
+      self.parse_fdb_key(line)
+    elif line.find('MIOpenDriver') != -1:
+      self.parse_driver_line(line)
+    else:
+      LOGGER.warning('Skipping line: %s', line)
+      return False
+
+    self.config_set_defaults()
+    return True
 
   def construct_driver_from_db(self, db_obj: Any) -> bool:
     """Takes a <>_config row and returns a driver cmd"""

@@ -137,24 +137,9 @@ class DriverConvolution(MIOpenDriver):
       if key in fds:
         setattr(self, key, fds[key])
 
-    pattern_3d = '[0-9]x[0-9]x[0-9]'
+    pattern_3d = '[0-9]+x[0-9]+x[0-9]+'
     if search(pattern_3d, line):
       setattr(self, 'spatial_dim', 3)
-
-  def construct_driver(self, line: str) -> bool:
-    """Takes MIOpen line description of a configuration"""
-
-    LOGGER.info('Processing line: %s', line)
-    if line.find('=') != -1:
-      self.parse_fdb_key(line)
-    elif line.find('MIOpenDriver') != -1:
-      self.parse_driver_line(line)
-    else:
-      LOGGER.warning('Skipping line: %s', line)
-      return False
-
-    self.config_set_defaults()
-    return True
 
   def get_layouts(self):
     """Get convolution layouts"""
