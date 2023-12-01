@@ -80,11 +80,6 @@ class MIOpenDriver(DriverBase):
     """Return operation layouts"""
     raise NotImplementedError("Not implemented")
 
-  @abstractmethod
-  def parse_fdb_key(self, line: str) -> None:
-    """Import config attributes from fdb key line"""
-    raise NotImplementedError("Not implemented")
-
   @staticmethod
   def test_skip_arg(tok1: str):
     """Check if token is skipable"""
