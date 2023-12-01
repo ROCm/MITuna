@@ -49,7 +49,7 @@ class DriverBase(ABC):
 
   @abstractmethod
   def construct_driver(self, line: str) -> bool:
-    """Takes a MIOpenDriver cmd or PDB key"""
+    """Parse configuration from input line"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
@@ -57,22 +57,9 @@ class DriverBase(ABC):
     """Takes a db row of a configuration and returns the string representation"""
     raise NotImplementedError("Not implemented")
 
-  @abstractmethod
-  def parse_driver_line(self, line: str):
-    """Parse configuration line and set attributes"""
-    raise NotImplementedError("Not implemented")
-
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""
-    copy_dict: Dict[str, Union[str, int]] = {}
-    key: str
-    value: Union[int, str]
-    for key, value in vars(self).items():
-      if key == "_cmd":
-        copy_dict["cmd"] = value
-      else:
-        copy_dict[key] = value
-    return copy_dict
+    return dict(vars(self))
 
   def __str__(self):
     return self.to_dict()
