@@ -27,7 +27,7 @@
 """ Module for creating DB tables"""
 import enum
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
-from sqlalchemy import Enum, Index
+from sqlalchemy import Index
 from sqlalchemy import Float, BigInteger, Boolean
 from sqlalchemy.databases import mysql
 from sqlalchemy.dialects.mysql import TINYINT, MEDIUMBLOB, LONGBLOB
@@ -38,11 +38,13 @@ from sqlalchemy.ext.declarative import declared_attr
 from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
 from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
-from tuna.miopen.utils.config_type import ConfigType
-from tuna.miopen.utils.session_utils import get_session_t
+from tuna.miopen.db.session import Session
+from tuna.miopen.db.solver import Solver
+from tuna.miopen.db.convolutionjob import MIOpenJobMixin, ConvolutionJob
+from tuna.miopen.db.tensortable import TensorTable
 from tuna.miopen.utils.metadata import DIR_MAP
 from tuna.miopen.db.benchmark import Model, Framework
-from tuna.db.tuna_tables import JobMixin
+
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
@@ -149,40 +151,6 @@ class BNKernelCache(BASE, KernelCacheMixin):
   kernel_group = Column(Integer, nullable=True)
 
 
-class Solver(BASE):
-  """Represents solver table"""
-  __tablename__ = "solver"
-  __table_args__ = (UniqueConstraint("solver", name="uq_idx"),)
-
-  solver = Column(String(length=128), unique=True, nullable=False)
-  tunable = Column(TINYINT(1), nullable=False, server_default="1")
-  config_type = Column(Enum(ConfigType),
-                       nullable=False,
-                       server_default="convolution")
-  is_dynamic = Column(TINYINT(1), nullable=False, server_default="0")
-
-
-class TensorTable(BASE):
-  """Represents tensor table"""
-  __tablename__ = "tensor"
-  __table_args__ = (UniqueConstraint("dim0",
-                                     "dim1",
-                                     "dim2",
-                                     "dim3",
-                                     "dim4",
-                                     "layout",
-                                     "num_dims",
-                                     "data_type",
-                                     name="uq_idx"),)
-
-  dim0 = Column(Integer, nullable=False, server_default="0")
-  dim1 = Column(Integer, nullable=False, server_default="0")
-  dim2 = Column(Integer, nullable=False, server_default="0")
-  dim3 = Column(Integer, nullable=False, server_default="0")
-  dim4 = Column(Integer, nullable=False, server_default="0")
-  layout = Column(String(60), nullable=False, server_default="NCHW")
-  num_dims = Column(Integer, nullable=False, server_default="2")
-  data_type = Column(String(60), nullable=False, server_default="FP32")
 
 
 class ConvolutionConfig(BASE):
@@ -320,40 +288,6 @@ class FinStep(enum.Enum):
   miopen_find_eval = 7
   miopen_perf_compile = 8
   miopen_perf_eval = 9
-
-
-class MIOpenJobMixin(JobMixin):
-  """Represents MIOpen Mixin class for job tables"""
-
-  compile_start = Column(DateTime,
-                         nullable=False,
-                         server_default=sqla_func.now())
-  compile_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  eval_start = Column(DateTime, nullable=False, server_default=sqla_func.now())
-  eval_end = Column(DateTime, nullable=False, server_default=sqla_func.now())
-
-  solver = Column(String(length=128), nullable=True, server_default="")
-  eval_mid = Column(Integer, server_default="-1")
-  fin_step = Column(mysql.MSSet(*(list(k for k in FinStep.__members__))),
-                    nullable=False,
-                    server_default="not_fin")
-
-
-class ConvolutionJob(BASE, MIOpenJobMixin):
-  """Represents convolutions job table"""
-  __tablename__ = "conv_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
-
-  config = Column(Integer,
-                  ForeignKey("conv_config.id"),
-                  nullable=False,
-                  index=True)
-  get_job_ids1 = Index('get_job_idx1', 'session', 'valid', 'reason', 'fin_step',
-                       'retries')
-  get_job_ids2 = Index('get_job_idx2', 'session', 'valid')
-  get_job_ids3 = Index('get_job_idx3', 'session', 'valid', 'retries')
-  get_job_compile = Index('get_job_compile', 'valid', 'state', 'reason',
-                          'session')
 
 
 class BNJob(BASE, MIOpenJobMixin):
@@ -643,7 +577,7 @@ def get_miopen_tables():
   """Returns a list of all MIOpen Tuna DB tables"""
   miopen_tables = []
   miopen_tables.append(Solver())
-  miopen_tables.append(get_session_t())
+  miopen_tables.append(Session())
   miopen_tables.append(Framework())
   miopen_tables.append(Model())
   miopen_tables.append(Machine(local_machine=True))

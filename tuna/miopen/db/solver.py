@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 ###############################################################################
 #
@@ -24,14 +25,25 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for miopem solver helper functions"""
+""" Module for defining Solver and model enums  """
 
-from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen.db.solver import Solver
-from tuna.utils.db_utility import session_retry
-from tuna.utils.logger import setup_logger
-LOGGER = setup_logger('miopen_db_utility')
+from sqlalchemy import Column, String, UniqueConstraint
+from sqlalchemy import Enum
+from sqlalchemy.dialects.mysql import TINYINT
+from tuna.dbBase.base_class import BASE
+from tuna.miopen.utils.config_type import ConfigType
 
+class Solver(BASE):
+  """Represents solver table"""
+  __tablename__ = "solver"
+  __table_args__ = (UniqueConstraint("solver", name="uq_idx"),)
+
+  solver = Column(String(length=128), unique=True, nullable=False)
+  tunable = Column(TINYINT(1), nullable=False, server_default="1")
+  config_type = Column(Enum(ConfigType),
+                       nullable=False,
+                       server_default="convolution")
+  is_dynamic = Column(TINYINT(1), nullable=False, server_default="0")
 
 def get_id_solvers():
   """DB solver id to name map"""

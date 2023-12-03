@@ -24,12 +24,29 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Utility module to create the Seesion object"""
+""" Module for defining Tensor Table and model enums  """
 
-from tuna.miopen.db.session import Session
+from sqlalchemy import Column, Integer, String, UniqueConstraint
+from tuna.dbBase.base_class import BASE
 
+class TensorTable(BASE):
+  """Represents tensor table"""
+  __tablename__ = "tensor"
+  __table_args__ = (UniqueConstraint("dim0",
+                                     "dim1",
+                                     "dim2",
+                                     "dim3",
+                                     "dim4",
+                                     "layout",
+                                     "num_dims",
+                                     "data_type",
+                                     name="uq_idx"),)
 
-def get_session_t():
-  """Helper routine to create a Session object"""
-  return Session()
-
+  dim0 = Column(Integer, nullable=False, server_default="0")
+  dim1 = Column(Integer, nullable=False, server_default="0")
+  dim2 = Column(Integer, nullable=False, server_default="0")
+  dim3 = Column(Integer, nullable=False, server_default="0")
+  dim4 = Column(Integer, nullable=False, server_default="0")
+  layout = Column(String(60), nullable=False, server_default="NCHW")
+  num_dims = Column(Integer, nullable=False, server_default="2")
+  data_type = Column(String(60), nullable=False, server_default="FP32")
