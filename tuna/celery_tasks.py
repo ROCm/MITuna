@@ -26,7 +26,9 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 import logging
+import time
 from itertools import islice
+from celery.result import ResultBase
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk
@@ -52,16 +54,19 @@ def tune(library, blocking=False):
   #celery default is 72
   while chunk := list(islice(iterator, 5)):
     serialized_jobs = serialize_chunk(chunk)
-    #delay launches the grouop tasks in parallel
     result = group_tasks.delay(serialized_jobs, library.worker_type, kwargs,
                                library.dbt.session.arch,
                                str(library.dbt.session.num_cu))
     if blocking:
-      print('Subtasks completed: %s', group.ready()
-      print('Subtasks successful: %s', group.successful())
-      print(result.get())
+      while not result.ready():
+        time.sleep(5)
+      print(result.ready())
+      print(result.successful())
+      print([v for v in result.collect()
+ if not isinstance(v, (ResultBase, tuple))])
+    #print(v for v in result.collect())
       
     #v = ResultGroup = tree, leafs are AsyncTasks
-    print(v for v in result.collect())
+    #print(v for v in result.collect())
 
   return False
