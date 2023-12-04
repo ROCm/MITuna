@@ -60,6 +60,7 @@ def group_tasks(chunk, worker_type, kwargs, arch, num_cu):
 @app.task(trail=True)
 def async_call(args, kwargs, arch, num_cu):
   """Async function call"""
+  #delay is a wrapper around apply_async()
   return TUNING_QUEUE[arch + '-' + num_cu].delay(args, kwargs)
 
 
