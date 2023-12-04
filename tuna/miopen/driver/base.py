@@ -27,7 +27,6 @@
 """Module that encapsulates the DB representation of a Driver cmd"""
 
 from typing import List, Union, Dict, Any
-from re import search
 from abc import abstractmethod
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -38,8 +37,8 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
 from tuna.miopen.db.miopen_tables import TensorTable
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
-from tuna.miopen.utils.metadata import TENSOR_PRECISION, DIR_MAP
-from tuna.miopen.utils.parsing import parse_line, get_fds_from_cmd
+from tuna.miopen.utils.metadata import TENSOR_PRECISION
+from tuna.miopen.utils.parsing import parse_line
 from tuna.driver import DriverBase
 
 LOGGER = setup_logger('MIOpenDriver_driver_base')
@@ -80,6 +79,11 @@ class MIOpenDriver(DriverBase):
     """Return operation layouts"""
     raise NotImplementedError("Not implemented")
 
+  @abstractmethod
+  def parse_fdb_key(self, line: str) -> None:
+    """Import config attributes from fdb key line"""
+    raise NotImplementedError("Not implemented")
+
   @staticmethod
   def test_skip_arg(tok1: str):
     """Check if token is skipable"""
@@ -99,23 +103,6 @@ class MIOpenDriver(DriverBase):
   def get_common_cols() -> List[str]:
     """Returns common MIOpenDriver command line args"""
     return ['wall', 'time', 'iter', 'verify']
-
-  def parse_fdb_key(self, line: str) -> None:
-    """Import config attributes from fdb key line"""
-    fds: dict
-    direction: str
-    fds, _, direction = get_fds_from_cmd(line)
-    setattr(self, 'direction',
-            DIR_MAP.get(direction,
-                        ''))  # Use .get() to safely access the dictionary
-
-    for key in self.to_dict():
-      if key in fds:
-        setattr(self, key, fds[key])
-
-    pattern_3d = '[0-9]+x[0-9]+x[0-9]+'
-    if search(pattern_3d, line):
-      setattr(self, 'spatial_dim', 3)
 
   def construct_driver(self, line: str) -> bool:
     """Takes MIOpen line description of a configuration"""
