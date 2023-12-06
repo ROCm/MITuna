@@ -88,9 +88,9 @@ def main() -> bool:
   if args['yaml']:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
 
-  blocking = False
+  blocking: bool = False
   if 'TUNA_BLOCKING' in os.environ:
-    blocking = os.environ['TUNA_BLOCKING']
+    blocking = bool(os.environ['TUNA_BLOCKING'])
 
   #worker_lst: list
   try:
