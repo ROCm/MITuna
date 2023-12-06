@@ -26,6 +26,7 @@
 ###############################################################################
 """! @brief Script to launch tuning jobs, or execute commands on available machines"""
 
+import os
 import argparse
 import sys
 import logging
@@ -87,6 +88,10 @@ def main() -> bool:
   if args['yaml']:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
 
+  blocking = False
+  if 'TUNA_BLOCKING' in os.environ:
+    blocking = os.environ['TUNA_BLOCKING']
+
   #worker_lst: list
   try:
     for yaml_file in yaml_files:
@@ -97,7 +102,7 @@ def main() -> bool:
 
       if library.has_tunable_operation():
         #celery tasks
-        tune(library)
+        tune(library, blocking=blocking)
       else:
         #non-celery operations
         #returns a list of workers/processes it started

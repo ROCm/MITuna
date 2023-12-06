@@ -39,12 +39,12 @@ from tuna.miopen.utils.helper import prep_kwargs
 #             result_backend="redis://mituna_redis_1:6379/")
 
 #when running on localhost:
-#app = Celery('celery_app',
-#             broker_url="redis://localhost:6379//",
-#             result_backend="redis://localhost:6379/")
 app = Celery('celery_app',
-             broker_url="redis://mituna_redis_1:6379//",
-             result_backend="redis://mituna_redis_1:6379/")
+             broker_url="redis://localhost:6379//",
+             result_backend="redis://localhost:6379/")
+#app = Celery('celery_app',
+#             broker_url="redis://mituna_redis_1:6379//",
+#             result_backend="redis://mituna_redis_1:6379/")
 
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
@@ -55,8 +55,11 @@ logger = get_task_logger(__name__)
 @app.task(trail=True)
 def group_tasks(chunk, worker_type, kwargs, arch, num_cu):
   """Returns a group of async tasks the size of chunk"""
-  tasks = group([async_call.s([elem[0], elem[1], worker_type], kwargs, arch, num_cu) for elem in chunk])
-  return group
+  tasks = group([
+      async_call.s([elem[0], elem[1], worker_type], kwargs, arch, num_cu)
+      for elem in chunk
+  ])
+  return tasks
 
 
 @app.task(trail=True)

@@ -32,7 +32,7 @@ services:
         - TUNA_DB_USER_NAME=${db_user}
         - TUNA_DB_USER_PASSWORD=${db_password}
         - HIP_VISIBLE_DEVICES=1
-    command: "celery -A tuna.celery_app.celery worker -l info -E"
+    command: "celery -A tuna.celery_app.celery worker -l info -E --detach"
     depends_on:
       - redis
 

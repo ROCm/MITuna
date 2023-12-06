@@ -62,10 +62,11 @@ def tune(library, blocking=False):
         time.sleep(5)
       print(result.ready())
       print(result.successful())
-      print([v for v in result.collect()
- if not isinstance(v, (ResultBase, tuple))])
+      print([
+          v for v in result.collect() if not isinstance(v, (ResultBase, tuple))
+      ])
     #print(v for v in result.collect())
-      
+
     #v = ResultGroup = tree, leafs are AsyncTasks
     #print(v for v in result.collect())
 
