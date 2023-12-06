@@ -197,6 +197,7 @@ def finFindCompile(){
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         sh "cat ${celery_log}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "cat ${celery_log}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
