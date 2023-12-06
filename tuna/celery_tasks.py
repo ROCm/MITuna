@@ -38,7 +38,7 @@ from tuna.machine import Machine
 LOGGER: logging.Logger = setup_logger('tune')
 
 
-def tune(library, blocking=False):
+def tune(library, blocking=None):
   """tuning loop to spin out celery tasks"""
 
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
@@ -54,20 +54,24 @@ def tune(library, blocking=False):
   #celery default is 72
   while chunk := list(islice(iterator, 5)):
     serialized_jobs = serialize_chunk(chunk)
+    #delay launches each group in separate process
     result = group_tasks.delay(serialized_jobs, library.worker_type, kwargs,
                                library.dbt.session.arch,
                                str(library.dbt.session.num_cu))
     if blocking:
+      LOGGER.info('Collecting result for group task: %s ', result.id)
       while not result.ready():
         time.sleep(5)
-      print(result.ready())
-      print(result.successful())
-      print([
-          v for v in result.collect() if not isinstance(v, (ResultBase, tuple))
-      ])
-    #print(v for v in result.collect())
+      LOGGER.info('Group %s ready: %s', result.id, result.ready())
+      LOGGER.info('Group successful: %s', result.successful())
+      LOGGER.info(result.get())
 
     #v = ResultGroup = tree, leafs are AsyncTasks
-    #print(v for v in result.collect())
+    #print([
+    #    v for v in result.collect() if not isinstance(v, (ResultBase, tuple))
+    #  ])
+    else:
+      #async result gather
+      print(v for v in result.collect())
 
   return False
