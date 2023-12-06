@@ -187,7 +187,7 @@ def finFindCompile(){
         celery_log="${env.WORKSPACE}/tuna/celery_log.log"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
-        sh  "celery -A tuna.celery_app.celery worker -l info -E"
+        sh  "celery -A tuna.celery_app.celery worker -l info -E --detach"
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         def num_cfg = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg}"
