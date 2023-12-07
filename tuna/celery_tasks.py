@@ -28,7 +28,7 @@
 import logging
 import time
 from itertools import islice
-from celery.result import ResultBase
+#from celery.result import ResultBase
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk
