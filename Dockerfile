@@ -107,7 +107,7 @@ RUN . /env; if [ -z $NO_ROCM_INST ]; then\
         pip install https://github.com/pfultz2/rclone/archive/master.tar.gz; \
         cmake -P install_deps.cmake --prefix cget; \
         cp -r cget/* /opt/rocm/.; \
-        CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt; \
+        CXXFLAGS='-isystem $PREFIX/include' cget install -f ./dev-requirements.txt; \
     fi
 
 ARG TUNA_USER=miopenpdb
