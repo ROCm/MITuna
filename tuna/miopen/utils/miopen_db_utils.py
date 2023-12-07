@@ -30,6 +30,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.solver import Solver
 from tuna.utils.db_utility import session_retry
 from tuna.utils.logger import setup_logger
+
 LOGGER = setup_logger('miopen_db_utility')
 
 

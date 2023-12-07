@@ -31,7 +31,8 @@ import sys
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
-from tuna.miopen.db.miopen_tables import FinStep, get_miopen_tables
+from tuna.miopen.db.mixin_tables import FinStep
+from tuna.miopen.db.miopen_tables import get_miopen_tables
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_builder import FinBuilder

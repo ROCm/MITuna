@@ -25,50 +25,38 @@
 #
 ###############################################################################
 """ Module for creating DB tables"""
-import enum
-from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey, DateTime
-from sqlalchemy import Index
-from sqlalchemy import Float, BigInteger, Boolean
-from sqlalchemy.databases import mysql
-from sqlalchemy.dialects.mysql import TINYINT, MEDIUMBLOB, LONGBLOB
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func as sqla_func
-from sqlalchemy.ext.declarative import declared_attr
 
+from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, UniqueConstraint, ForeignKey
 from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
+from tuna.miopen.db.batch_norm_tables import BNBenchmark, BNConfig
+from tuna.miopen.db.batch_norm_tables import BNConfigTags, BNFinJobCache
+from tuna.miopen.db.batch_norm_tables import BNJob, BNJobCache, BNKernelCache
+from tuna.miopen.db.batch_norm_tables import BNSolverApplicability
+from tuna.miopen.db.convolutionjob_tables import CacheMixin, ConfigTagMixin, ConvolutionJob
+from tuna.miopen.db.convolutionjob_tables import ConvFinJobCache, ConvJobCache
+from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsAggregated
+from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsDetailed
+from tuna.miopen.db.convolutionjob_tables import ConvSolverApplicability, ConvolutionBenchmark
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig, ConvolutionConfigTags
+from tuna.miopen.db.convolutionjob_tables import ConvolutionGolden, ConvolutionKernelCache
+from tuna.miopen.db.convolutionjob_tables import GoldenMixin, KernelCacheMixin
+from tuna.miopen.db.convolutionjob_tables import MIOpenJobMixin, SolverApplicabilityMixin
 from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
 from tuna.miopen.db.session import Session
-from tuna.miopen.db.solver import Solver
-from tuna.miopen.db.convolutionjob import MIOpenJobMixin, ConvolutionJob
 from tuna.miopen.db.tensortable import TensorTable
 from tuna.miopen.utils.metadata import DIR_MAP
 from tuna.miopen.db.benchmark import Model, Framework
-
+from tuna.miopen.db.solver import Solver
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
 
 #pylint: disable=too-few-public-methods
-class CacheMixin():
-  """Represents job_cache table"""
-
-  kernel_blob = Column(LONGBLOB, nullable=False)
-  cache_name = Column(String(length=45), nullable=False)
-
-
-class KernelCacheMixin():
-  """Represents Mixin for KernelCache table"""
-
-  kernel_name = Column(String(length=4000), nullable=False)
-  kernel_args = Column(String(length=9000), nullable=False)
-  kernel_blob = Column(MEDIUMBLOB, nullable=False)
-  kernel_hash = Column(String(length=128), nullable=False)
-  uncompressed_size = Column(Integer, nullable=False)
-
-
 class JobCache(BASE, CacheMixin):
   """Represents job_cache table"""
+
   __tablename__ = "job_cache"
   __table_args__ = (UniqueConstraint("job_id", name="uq_cache_idx"),)
 
@@ -87,107 +75,6 @@ class FinJobCache(BASE, KernelCacheMixin):
                                 onupdate="CASCADE",
                                 ondelete="CASCADE"),
                      nullable=False)
-
-
-class BNJobCache(BASE, CacheMixin):
-  """Represents job_cache table for batch_norm"""
-  __tablename__ = "bn_job_cache"
-  __table_args__ = (UniqueConstraint("job_id", name="uq_cache_idx"),)
-
-  job_id = Column(Integer, ForeignKey("bn_job.id"), nullable=False)
-
-
-class BNFinJobCache(BASE, KernelCacheMixin):
-  """Represents job_cache table for batch_norm"""
-  __tablename__ = "bn_job_cache_fin"
-
-  job_id = Column(Integer,
-                  ForeignKey("bn_job.id",
-                             onupdate="CASCADE",
-                             ondelete="CASCADE"),
-                  nullable=False)
-  solver_id = Column(Integer,
-                     ForeignKey("solver.id",
-                                onupdate="CASCADE",
-                                ondelete="CASCADE"),
-                     nullable=False)
-
-
-class ConvJobCache(BASE, CacheMixin):
-  """Represents job_cache table for convolutions"""
-  __tablename__ = "conv_job_cache"
-  __table_args__ = (UniqueConstraint("job_id", name="uq_cache_idx"),)
-
-  job_id = Column(Integer, ForeignKey("conv_job.id"), nullable=False)
-
-
-class ConvFinJobCache(BASE, KernelCacheMixin):
-  """Represents job_cache table"""
-  __tablename__ = "conv_job_cache_fin"
-
-  job_id = Column(Integer,
-                  ForeignKey("conv_job.id",
-                             onupdate="CASCADE",
-                             ondelete="CASCADE"),
-                  nullable=False)
-  solver_id = Column(Integer,
-                     ForeignKey("solver.id",
-                                onupdate="CASCADE",
-                                ondelete="CASCADE"),
-                     nullable=False)
-
-
-class ConvolutionKernelCache(BASE, KernelCacheMixin):
-  """Represents kernel_cache table for convolutions"""
-  __tablename__ = "conv_kernel_cache"
-
-  kernel_group = Column(Integer, nullable=True)
-
-
-class BNKernelCache(BASE, KernelCacheMixin):
-  """Represents kernel_cache table for batch_norm"""
-  __tablename__ = "bn_kernel_cache"
-
-  kernel_group = Column(Integer, nullable=True)
-
-
-
-
-class ConvolutionConfig(BASE):
-  """Represents convolution config table"""
-  __tablename__ = "conv_config"
-
-  batchsize = Column(Integer, nullable=False, server_default="0")
-  spatial_dim = Column(Integer, nullable=False, server_default="2")
-  pad_h = Column(Integer, nullable=False, server_default="0")
-  pad_w = Column(Integer, nullable=False, server_default="0")
-  pad_d = Column(Integer, nullable=False, server_default="0")
-  conv_stride_h = Column(Integer, nullable=False, server_default="1")
-  conv_stride_w = Column(Integer, nullable=False, server_default="1")
-  conv_stride_d = Column(Integer, nullable=False, server_default="1")
-  dilation_h = Column(Integer, nullable=False, server_default="1")
-  dilation_w = Column(Integer, nullable=False, server_default="1")
-  dilation_d = Column(Integer, nullable=False, server_default="1")
-  group_count = Column(Integer, nullable=False, server_default="1")
-  mode = Column(String(length=40), nullable=False, server_default="conv")
-  pad_mode = Column(String(length=40), nullable=False, server_default="default")
-  trans_output_pad_h = Column(Integer, nullable=False, server_default="0")
-  trans_output_pad_w = Column(Integer, nullable=False, server_default="0")
-  trans_output_pad_d = Column(Integer, nullable=False, server_default="0")
-  direction = Column(String(length=8), nullable=False)
-  input_tensor = Column(Integer, ForeignKey("tensor.id"), nullable=False)
-  weight_tensor = Column(Integer, ForeignKey("tensor.id"), nullable=False)
-  input_t = relationship("TensorTable",
-                         backref="conv_input_tensor",
-                         foreign_keys=[input_tensor],
-                         lazy="joined")
-  weight_t = relationship("TensorTable",
-                          backref="weight_tensor",
-                          foreign_keys=[weight_tensor],
-                          lazy="joined")
-  out_layout = Column(String(60), nullable=False, server_default="NCHW")
-  md5 = Column(String(length=40), nullable=False, unique=True)
-  driver = Column(String(length=512), nullable=False, server_default="")
 
 
 class FusionConfig(BASE):
@@ -209,63 +96,9 @@ class FusionConfig(BASE):
   fusion_mode = Column(Integer, nullable=False, server_default="1")
 
 
-class BNConfig(BASE):
-  """Represents batch normalization table"""
-  __tablename__ = "bn_config"
-  __table_args__ = (UniqueConstraint("alpha",
-                                     "beta",
-                                     "forw",
-                                     "verify",
-                                     "back",
-                                     "mode",
-                                     "batchsize",
-                                     "run",
-                                     "input_tensor",
-                                     name="uq_idx"),)
-
-  alpha = Column(Integer, nullable=False, server_default="1.0")
-  beta = Column(Integer, nullable=False, server_default="0.0")
-  forw = Column(Integer, nullable=False, server_default="1")
-  verify = Column(Integer, nullable=False, server_default="1")
-  back = Column(Integer, nullable=False, server_default="0")
-  mode = Column(Integer, nullable=False, server_default="0")
-  batchsize = Column(Integer, nullable=False, server_default="32")
-  run = Column(Integer, nullable=False, server_default="0")
-  save = Column(Integer, nullable=False, server_default="0")
-  input_tensor = Column(Integer, ForeignKey("tensor.id"), nullable=False)
-  input_t = relationship("TensorTable",
-                         backref="bn_input_tensor",
-                         foreign_keys=[input_tensor],
-                         lazy="joined")
-  in_layout = Column(String(60), nullable=False, server_default="NCHW")
-  driver = Column(String(length=512), nullable=False, server_default="")
-
-  def get_direction(self):
-    """synthesize direction"""
-    return DIR_MAP[(self.forw + 4 * self.back)]
-
-
-class ConfigTagMixin():
-  """Mixin class for config tags tables"""
-
-  tag = Column(String(length=128), nullable=False, server_default="no_tag")
-  recurrent = Column(TINYINT(1), nullable=False, server_default="0")
-
-
-class ConvolutionConfigTags(BASE, ConfigTagMixin):
-  """Represents config_tags tables"""
-  __tablename__ = "conv_config_tags"
-  __table_args__ = (UniqueConstraint("config", "tag", name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-
-
-class BNConfigTags(BASE, ConfigTagMixin):
-  """Represents config_tags tables"""
-  __tablename__ = "bn_config_tags"
-  __table_args__ = (UniqueConstraint("config", "tag", name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
+def get_direction(self):
+  """synthesize direction"""
+  return DIR_MAP[(self.forw + 4 * self.back)]
 
 
 class FusionConfigTags(BASE, ConfigTagMixin):
@@ -276,31 +109,6 @@ class FusionConfigTags(BASE, ConfigTagMixin):
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
 
-class FinStep(enum.Enum):
-  """ Allowed Fin Steps """
-  # pylint: disable=invalid-name ; tuna/go_fish.py names valid fin steps as FinStep.__members__
-  find_compile = 1
-  find_eval = 2
-  get_solvers = 3
-  get_applicability = 4
-  not_fin = 5
-  miopen_find_compile = 6
-  miopen_find_eval = 7
-  miopen_perf_compile = 8
-  miopen_perf_eval = 9
-
-
-class BNJob(BASE, MIOpenJobMixin):
-  """Represents batch norm job table"""
-  __tablename__ = "bn_job"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
-
-  config = Column(Integer,
-                  ForeignKey("bn_config.id"),
-                  nullable=False,
-                  index=True)
-
-
 class FusionJob(BASE, MIOpenJobMixin):
   """Represents fusions job table"""
   __tablename__ = "fusion_job"
@@ -309,96 +117,12 @@ class FusionJob(BASE, MIOpenJobMixin):
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
 
 
-class SolverApplicabilityMixin():
-  """Represents Mixin class for solver_applicability tables"""
-
-  @declared_attr
-  def solver(self):
-    """solver column"""
-    return Column(Integer, ForeignKey("solver.id"), nullable=False, index=True)
-
-  @declared_attr
-  def session(self):
-    """session key"""
-    return Column(Integer, ForeignKey("session.id"), nullable=False, index=True)
-
-  applicable = Column(TINYINT, nullable=False, server_default="1")
-
-
-class ConvSolverApplicability(BASE, SolverApplicabilityMixin):
-  """Represents conv_solver_applicability table"""
-  __tablename__ = "conv_solver_applicability"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
-
-  config = Column(Integer,
-                  ForeignKey("conv_config.id"),
-                  nullable=False,
-                  index=True)
-  app_idx = Index('app_idx', 'config', 'solver', 'session')
-  sess_cfg = Index('sess_cfg', 'session', 'config')
-
-
-class BNSolverApplicability(BASE, SolverApplicabilityMixin):
-  """Represents bn_solver_applicability  table"""
-  __tablename__ = "bn_solver_applicability"
-  __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
-
-  config = Column(Integer,
-                  ForeignKey("bn_config.id"),
-                  nullable=False,
-                  index=True)
-
-
 class SolverFusionApplicability(BASE, SolverApplicabilityMixin):
   """Represents fusion_solver_applicability table"""
   __tablename__ = "fusion_solver_applicability"
   __table_args__ = (UniqueConstraint(*COMMON_UNIQ_FDS, name="uq_idx"),)
 
   config = Column(Integer, ForeignKey("fusion_config.id"), nullable=False)
-
-
-class GoldenMixin():
-  """Mixin for golden table"""
-
-  @declared_attr
-  def session(self):
-    """session foreign key"""
-    return Column(Integer, ForeignKey("session.id"), nullable=False)
-
-  @declared_attr
-  def solver(self):
-    """solver foreign key"""
-    return Column(Integer,
-                  ForeignKey("solver.id",
-                             onupdate="CASCADE",
-                             ondelete="CASCADE"),
-                  nullable=False)
-
-  golden_miopen_v = Column(Integer, nullable=False)
-  arch = Column(String(length=20), nullable=False, server_default="")
-  num_cu = Column(Integer, nullable=False, server_default="0")
-
-
-class ConvolutionGolden(BASE, GoldenMixin):
-  """Golden table for convolution"""
-  __tablename__ = "conv_golden"
-  __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "config",
-                                     "solver",
-                                     "arch",
-                                     "num_cu",
-                                     name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-
-  fdb_key = Column(String(length=128), nullable=True)
-  params = Column(String(length=128), nullable=True)
-  kernel_time = Column(Float, nullable=False)
-  workspace_sz = Column(BigInteger, nullable=False)
-  alg_lib = Column(String(length=64), nullable=True)
-  opencl = Column(Boolean, nullable=False)
-
-  kernel_group = Column(Integer, nullable=True)
 
 
 class BNGolden(BASE, GoldenMixin):
@@ -414,122 +138,6 @@ class BNGolden(BASE, GoldenMixin):
   config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
   kernel_group = Column(Integer, nullable=True)
-
-
-class BenchmarkMixin():
-  """Mixin class for bechmark tables"""
-
-  @declared_attr
-  def framework(self):
-    """Framework Fkey"""
-    return Column(Integer, ForeignKey("framework.id"), nullable=False)
-
-  @declared_attr
-  def model(self):
-    """Model Fkey"""
-    return Column(Integer, ForeignKey("model.id"), nullable=False)
-
-  batchsize = Column(Integer, nullable=False, server_default="32")
-  gpu_number = Column(Integer, nullable=True, server_default="1")
-  driver_cmd = Column(String(length=512), nullable=False)
-
-
-class ConvolutionBenchmark(BASE, BenchmarkMixin):
-  """benchmark table for framework and model parameters"""
-  __tablename__ = "conv_benchmark"
-  __table_args__ = (UniqueConstraint("framework",
-                                     "model",
-                                     "batchsize",
-                                     "gpu_number",
-                                     "config",
-                                     name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
-
-
-class BNBenchmark(BASE, BenchmarkMixin):
-  """benchmark table for framework and model parameters"""
-  __tablename__ = "bn_benchmark"
-  __table_args__ = (UniqueConstraint("framework",
-                                     "model",
-                                     "batchsize",
-                                     "gpu_number",
-                                     "config",
-                                     name="uq_idx"),)
-
-  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
-
-
-class SolverAnalyticsMixin():
-  """common columns in aggregated & detailed solver analytics tables"""
-  # software state description
-  golden_miopen_v = Column(Integer, nullable=False)
-  # hardware description
-  arch = Column(String(20), nullable=False)
-  num_cu = Column(Integer, nullable=False)
-  opencl = Column(Boolean, nullable=False)
-  # convolution problem description
-  filter = Column(String(32), nullable=False)
-  padding = Column(String(32), nullable=False)
-  stride = Column(String(32), nullable=False)
-  dilation = Column(String(32), nullable=False)
-  layout = Column(String(8), nullable=False)
-  precision = Column(String(8), nullable=False)
-  direction = Column(String(1), nullable=False)
-  # fastest solvers stats
-  sf = Column(String(128), nullable=False)  # fastest solver name
-  tf = Column(Float, nullable=False)  # fastest solver runtime
-  count = Column(Integer, nullable=False)  # fastest solver count
-
-
-class ConvSolverAnalyticsAggregated(BASE, SolverAnalyticsMixin):
-  """Table to store aggregated results from SolverAnalytics"""
-  __tablename__ = "conv_solver_analytics_aggregated"
-
-  __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "arch",
-                                     "num_cu",
-                                     "opencl",
-                                     "filter",
-                                     "padding",
-                                     "stride",
-                                     "dilation",
-                                     "layout",
-                                     "precision",
-                                     "direction",
-                                     "sf",
-                                     name="uq_idx"),)
-
-  # additional stats (null if no alternate solver is available)
-  ta = Column(Float, nullable=True)  # alternate solver runtime
-  difference = Column(Float, nullable=True)  # runtime difference
-  ratio = Column(Float, nullable=True)  # runtime ratio (null if infinity)
-
-
-class ConvSolverAnalyticsDetailed(BASE, SolverAnalyticsMixin):
-  """Table to store detailed results from SolverAnalytics"""
-  __tablename__ = "conv_solver_analytics_detailed"
-
-  __table_args__ = (UniqueConstraint("golden_miopen_v",
-                                     "arch",
-                                     "num_cu",
-                                     "opencl",
-                                     "filter",
-                                     "padding",
-                                     "stride",
-                                     "dilation",
-                                     "layout",
-                                     "precision",
-                                     "direction",
-                                     "sf",
-                                     "sa",
-                                     name="uq_idx"),)
-
-  # additional stats
-  sa = Column(String(128), nullable=False)  # alternate solver
-  ta = Column(Float, nullable=True)  # alternate solver runtime
-  difference = Column(Float, nullable=True)  # runtime difference
-  ratio = Column(Float, nullable=True)  # runtime ratio (null if infinity)
 
 
 def add_conv_tables(miopen_tables):

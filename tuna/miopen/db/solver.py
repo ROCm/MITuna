@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 ###############################################################################
 #
@@ -31,8 +30,15 @@ from sqlalchemy import Column, String, UniqueConstraint
 from sqlalchemy import Enum
 from sqlalchemy.dialects.mysql import TINYINT
 from tuna.dbBase.base_class import BASE
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
+from tuna.utils.db_utility import session_retry
+from tuna.utils.logger import setup_logger
 
+LOGGER = setup_logger('miopen_db_utility')
+
+
+#pylint: disable=too-few-public-methods
 class Solver(BASE):
   """Represents solver table"""
   __tablename__ = "solver"
@@ -44,6 +50,7 @@ class Solver(BASE):
                        nullable=False,
                        server_default="convolution")
   is_dynamic = Column(TINYINT(1), nullable=False, server_default="0")
+
 
 def get_id_solvers():
   """DB solver id to name map"""

@@ -25,33 +25,38 @@
 #
 ###############################################################################
 """Module that encapsulates the DB representation based on configuration type"""
+
+from tuna.miopen.db.batch_norm_tables import BNBenchmark, BNConfig
+from tuna.miopen.db.batch_norm_tables import BNConfigTags, BNFinJobCache
+from tuna.miopen.db.batch_norm_tables import BNJob, BNJobCache, BNKernelCache
+from tuna.miopen.db.batch_norm_tables import BNSolverApplicability
 from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
-#from tuna.miopen.db.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
-from tuna.miopen.db.miopen_tables import ConvolutionConfig, ConvolutionConfigTags
-from tuna.miopen.db.convolutionjob import ConvolutionJob
-from tuna.miopen.db.miopen_tables import ConvJobCache, Solver
-from tuna.miopen.db.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
-from tuna.miopen.db.miopen_tables import ConvSolverApplicability, BNSolverApplicability
-from tuna.miopen.db.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
-from tuna.miopen.db.miopen_tables import TensorTable, ConvolutionGolden, ConvolutionBenchmark
-from tuna.miopen.db.miopen_tables import BNBenchmark
-from tuna.miopen.db.miopen_tables import ConvSolverAnalyticsAggregated, ConvSolverAnalyticsDetailed
-from tuna.miopen.db.miopen_tables import TensorTable
+from tuna.miopen.db.convolutionjob_tables import ConvolutionJob
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfigTags
+from tuna.miopen.db.convolutionjob_tables import ConvJobCache
+from tuna.miopen.db.convolutionjob_tables import ConvSolverApplicability
+from tuna.miopen.db.convolutionjob_tables import ConvolutionGolden, ConvolutionBenchmark
+from tuna.miopen.db.convolutionjob_tables import ConvFinJobCache, ConvolutionKernelCache
+from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsAggregated
+from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsDetailed
 from tuna.miopen.db.tensortable import TensorTable
 from tuna.miopen.db.benchmark import Framework, Model
-from tuna.miopen.db.session import Session
-
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.tables_interface import DBTablesInterface
-
 
 #pylint: disable=too-many-instance-attributes
 #pylint: disable=too-few-public-methods
 
+
 class Session():
-    pass
-class ConvolutionJob():
-    pass
+  """Represents forward class"""
+
+
+class Solver():
+  """Represents forward class"""
+
+
 class MIOpenDBTables(DBTablesInterface):
   """Represents db tables based on ConfigType"""
 
@@ -80,7 +85,7 @@ class MIOpenDBTables(DBTablesInterface):
     self.__dict__.update(
         (key, value) for key, value in kwargs.items() if key in allowed_keys)
     self.set_tables()
- 
+
   def set_tables(self, sess_class=Session):
     """Set appropriate tables based on config type"""
 
@@ -112,5 +117,3 @@ class MIOpenDBTables(DBTablesInterface):
       self.benchmark = ConvolutionBenchmark
       self.solver_analytics_aggregated = ConvSolverAnalyticsAggregated
       self.solver_analytics_detailed = ConvSolverAnalyticsDetailed
-
-  

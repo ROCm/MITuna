@@ -34,7 +34,8 @@ from sqlalchemy.orm import Query
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
-from tuna.miopen.utils.miopen_db_utils import get_solver_ids
+#from tuna.miopen.utils.miopen_db_utils import get_solver_ids
+from tuna.miopen.db.solver import get_solver_ids
 from tuna.utils.utility import check_qts
 from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT
 from tuna.miopen.utils.metadata import BN_DEFAULTS

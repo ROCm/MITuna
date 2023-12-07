@@ -29,6 +29,9 @@
 from sqlalchemy import Column, Integer, String, UniqueConstraint
 from tuna.dbBase.base_class import BASE
 
+#pylint: disable=too-few-public-methods
+
+
 class TensorTable(BASE):
   """Represents tensor table"""
   __tablename__ = "tensor"

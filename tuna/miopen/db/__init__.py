@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,11 +23,3 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Utility module to create the Seesion object"""
-
-from tuna.miopen.db.session import Session
-
-
-def get_session_t():
-  """Helper routine to create a Session object"""
-  return Session()

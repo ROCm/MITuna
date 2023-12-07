@@ -35,17 +35,21 @@ from tuna.miopen.utils.analyze_parse_db import parse_pdb_filename
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.miopen.utils.session_utils import get_session_t
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.subcmd.import_configs import insert_config
 from tuna.miopen.utils.metadata import PREC_TO_CMD
-from tuna.miopen.utils.miopen_db_utils import get_solver_ids
+from tuna.miopen.db.solver import get_solver_ids
 from tuna.miopen.utils.parsing import parse_fdb_line
 
 LOGGER = setup_logger('import_db')
 
 COMMIT_FREQ = 1000
+
+
+#pylint: disable=too-few-public-methods
+class Session():
+  """Represents forward class"""
 
 
 def parse_args():
@@ -256,7 +260,7 @@ def main():
   args.config_type = ConfigType.convolution
   args.arch, args.num_cu = parse_pdb_filename(args.target_file)
   if not args.session_id:
-    args.session_id = get_session_t().add_new_session(args, None)
+    args.session_id = Session().add_new_session(args, None)
   dbt = MIOpenDBTables(session_id=args.session_id)
   if args.target_file.endswith(".db"):
     record_perfdb(dbt, args)
