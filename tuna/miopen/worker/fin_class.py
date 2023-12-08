@@ -36,6 +36,7 @@ try:
   import queue
 except ImportError:
   import Queue as queue  #type: ignore
+
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
@@ -44,13 +45,11 @@ from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.metadata import FIN_CACHE
 from tuna.miopen.utils.metadata import INVERS_DIR_MAP
-from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import compose_config_obj
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.utils.db_utility import session_retry
-#from tuna.miopen.utils.miopen_db_utils import get_solver_ids, get_id_solvers
 from tuna.miopen.db.solver import get_solver_ids, get_id_solvers
 from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
 from tuna.utils.db_utility import get_class_by_tablename, has_attr_set
@@ -172,6 +171,8 @@ class FinClass(WorkerInterface):
 
   def set_db_tables(self):
     """Initialize tables"""
+    # pylint: disable=import-outside-toplevel
+    from tuna.miopen.db.tables import MIOpenDBTables
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 

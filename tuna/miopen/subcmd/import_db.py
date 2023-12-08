@@ -35,6 +35,7 @@ from tuna.miopen.utils.analyze_parse_db import parse_pdb_filename
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.helper import valid_cfg_dims
 from tuna.parse_args import TunaArgs, setup_arg_parser
+from tuna.miopen.db.session import Session
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.driver.convolution import DriverConvolution
 from tuna.miopen.subcmd.import_configs import insert_config
@@ -48,10 +49,6 @@ COMMIT_FREQ = 1000
 
 
 #pylint: disable=too-few-public-methods
-class Session():
-  """Represents forward class"""
-
-
 def parse_args():
   """command line parsing"""
   parser = setup_arg_parser('Import Performance DBs once tunning is finished',

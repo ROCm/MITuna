@@ -40,23 +40,16 @@ from tuna.miopen.db.convolutionjob_tables import ConvolutionGolden, ConvolutionB
 from tuna.miopen.db.convolutionjob_tables import ConvFinJobCache, ConvolutionKernelCache
 from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsAggregated
 from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsDetailed
+from tuna.miopen.db.solver import Solver
 from tuna.miopen.db.tensortable import TensorTable
 from tuna.miopen.db.benchmark import Framework, Model
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.tables_interface import DBTablesInterface
+from tuna.miopen.db.session import Session
+
 
 #pylint: disable=too-many-instance-attributes
 #pylint: disable=too-few-public-methods
-
-
-class Session():
-  """Represents forward class"""
-
-
-class Solver():
-  """Represents forward class"""
-
-
 class MIOpenDBTables(DBTablesInterface):
   """Represents db tables based on ConfigType"""
 

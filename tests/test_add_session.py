@@ -37,7 +37,7 @@ this_path = os.path.dirname(__file__)
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
-from tuna.miopen.utils.session_utils import get_session_t
+from tuna.miopen.db.session import Session
 from utils import DummyArgs
 
 
@@ -80,7 +80,7 @@ def test_add_session():
   args.solver_id = 1
 
   worker = WorkerInterface(**kwargs)
-  sess_id = get_session_t().add_new_session(args, worker)
+  sess_id = Session().add_new_session(args, worker)
   print(f"session id: {sess_id}")
   assert (sess_id)
 
