@@ -65,7 +65,7 @@ def VerifyArgs()
 }
 
 pipeline {
-  agent { node { label 'mysql' } }
+  agent { node { label 'build-node' } }
   environment {
       db_name = "${params.db_name}"
       db_host = "${params.db_host}"
