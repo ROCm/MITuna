@@ -134,7 +134,7 @@ class WorkerInterface(Process):
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
 
-  def get_miopen_v(self) -> None:
+  def get_miopen_v(self):
     """Abstract method """
 
   def step(self) -> bool:
