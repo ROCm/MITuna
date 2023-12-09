@@ -32,7 +32,7 @@ from tuna.utils.logger import setup_logger
 from tuna.miopen.driver.base import DriverBase
 from tuna.miopen.utils.metadata import CONV_CONFIG_COLS
 from tuna.miopen.utils.helper import get_db_id
-from tuna.miopen.db.miopen_tables import ConvolutionConfig
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PREC_TO_CMD
 from tuna.miopen.utils.metadata import CONV_3D_DEFAULTS, TENSOR_COLS
 from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION

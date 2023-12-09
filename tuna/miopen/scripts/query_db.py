@@ -32,7 +32,7 @@ from tuna.miopen.db.find_db import ConvolutionFindDB
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.parse_args import TunaArgs, setup_arg_parser
-from tuna.miopen.db.miopen_tables import ConvolutionJob, ConvolutionConfig
+from tuna.miopen.db.convolutionjob_tables import ConvolutionJob, ConvolutionConfig
 from tuna.miopen.utils.parsing import get_pdb_key
 from tuna.miopen.utils.parsing import get_fds_from_cmd
 

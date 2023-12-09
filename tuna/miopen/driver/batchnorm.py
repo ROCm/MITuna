@@ -31,7 +31,7 @@ from tuna.miopen.driver.base import DriverBase
 from tuna.miopen.utils.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS, PREC_TO_CMD
 from tuna.miopen.utils.metadata import SUPPORTED_BN_CMDS, TABLE_COLS_BN_MAP, BN_DEFAULTS
 from tuna.miopen.utils.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
-from tuna.miopen.db.miopen_tables import BNConfig
+from tuna.miopen.db.batch_norm_tables import BNConfig
 from tuna.miopen.utils.parsing import get_fd_name, arg_valid
 from tuna.miopen.utils.helper import get_db_id
 from tuna.miopen.utils.config_type import ConfigType

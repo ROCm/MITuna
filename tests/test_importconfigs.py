@@ -40,7 +40,7 @@ from tuna.sql import DbCursor
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from utils import CfgImportArgs
 from tuna.miopen.db.benchmark import Framework, ModelEnum, FrameworkEnum
-from tuna.miopen.db.miopen_tables import ConvolutionBenchmark
+from tuna.miopen.db.convolutionjob_tables import ConvolutionBenchmark
 from utils import DummyArgs
 
 

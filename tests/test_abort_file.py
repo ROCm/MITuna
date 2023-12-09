@@ -43,7 +43,7 @@ from utils import CfgImportArgs
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.subcmd.import_configs import import_cfgs
 from tuna.utils.db_utility import connect_db
-from tuna.miopen.db.miopen_tables import ConvolutionJob
+from tuna.miopen.db.convolutionjob_tables import ConvolutionJob
 from tuna.miopen.subcmd.load_job import test_tag_name as tag_name_test
 from utils import add_test_session
 from tuna.dbBase.sql_alchemy import DbSession

@@ -39,7 +39,7 @@ from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import connect_db
-from tuna.miopen.db.miopen_tables import Solver
+from tuna.miopen.db.solver import Solver
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
