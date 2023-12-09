@@ -134,6 +134,9 @@ class WorkerInterface(Process):
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
 
+  def get_miopen_v(self) -> None:
+    """Abstract method """
+
   def step(self) -> bool:
     """Regular run loop operation, to be overloaded in class specialization """
     raise NotImplementedError("Not implemented")

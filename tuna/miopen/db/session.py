@@ -25,7 +25,6 @@
 #
 ###############################################################################
 """Session table and its associate functionality"""
-from typing import Type
 from sqlalchemy import Column, String, UniqueConstraint
 
 from tuna.dbBase.base_class import BASE
@@ -66,7 +65,7 @@ class Session(BASE, SessionMixin):
 
     return query
 
-  def add_new_session(self, args, worker: Type[FinClass]):
+  def add_new_session(self, args, worker: FinClass):
     """Add new session entry"""
     super().add_new_session(args, worker)
 
