@@ -35,7 +35,7 @@ import logging
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.find_db import FindDBMixin
-from tuna.miopen.db.miopen_tables import GoldenMixin
+from tuna.miopen.db.mixin_tables import GoldenMixin
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.metadata import SQLITE_PERF_DB_COLS
 from tuna.utils.db_utility import DB_Type
