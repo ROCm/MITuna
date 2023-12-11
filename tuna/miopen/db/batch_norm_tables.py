@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Represents batch normalization table definitions """
+"""Represents Batch normalization table definitions """
 
 from sqlalchemy import Column, Integer, String, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import relationship

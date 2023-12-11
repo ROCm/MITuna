@@ -80,7 +80,6 @@ def test_add_session():
   args.docker_name = docker_name
   args.solver_id = 1
 
-  #worker = WorkerInterface(**kwargs)
   worker = FinClass(**kwargs)
   sess_id = Session().add_new_session(args, worker)
   print(f"session id: {sess_id}")

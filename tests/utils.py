@@ -152,7 +152,6 @@ def add_test_session(arch='gfx908', num_cu=120, label=None):
   miopen = MIOpen()
   miopen.args = args
   kwargs = get_worker_args(args, machine, miopen)
-  #worker = WorkerInterface(**kwargs)
   worker = FinClass(**kwargs)
   session_id = Session().add_new_session(args, worker)
   assert (session_id)

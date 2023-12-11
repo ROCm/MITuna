@@ -288,7 +288,6 @@ class MIOpen(MITunaInterface):
       worker_lst.append(worker)
       return True
 
-    #worker = WorkerInterface(**kwargs)
     worker = FinClass(**kwargs)
     ret = False
     if self.args.check_status:

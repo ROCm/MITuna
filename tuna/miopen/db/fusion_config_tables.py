@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Represents Fusion table class definitions """
+"""Represents Fusion config table class definitions """
 
 from sqlalchemy import Column, Integer, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import relationship
