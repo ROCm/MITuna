@@ -37,7 +37,7 @@ from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.miopen.worker.fin_eval import FinEvaluator
-from tuna.worker_interface import WorkerInterface
+#from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
