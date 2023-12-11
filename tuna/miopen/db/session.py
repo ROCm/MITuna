@@ -65,14 +65,15 @@ class Session(BASE, SessionMixin):
 
     return query
 
-  def add_new_session(self, args, worker):
+  def add_new_session(self, args, worker:FinClass):
     """Add new session entry"""
-    worker = FinClass()
     super().add_new_session(args, worker)
+    print(args)
+    print(f" worker :: {worker}")
 
     if hasattr(args, 'miopen_v') and args.miopen_v:
       self.miopen_v = args.miopen_v
     else:
       self.miopen_v = worker.get_miopen_v()
-
+    print(f" MiOpenV :: {self.miopen_v}")
     return self.insert_session()

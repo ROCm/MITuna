@@ -288,7 +288,8 @@ class MIOpen(MITunaInterface):
       worker_lst.append(worker)
       return True
 
-    worker = WorkerInterface(**kwargs)
+    #worker = WorkerInterface(**kwargs)
+    worker = FinClass(**kwargs)
     ret = False
     if self.args.check_status:
       if not super().check_status(worker, f_vals["b_first"], gpu_idx,
