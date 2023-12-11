@@ -45,15 +45,8 @@ from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
 from tuna.miopen.db.convolutionjob_tables import ConvolutionConfigTags
 from tuna.miopen.db.convolutionjob_tables import ConvolutionGolden, ConvolutionJob
 from tuna.miopen.db.convolutionjob_tables import ConvolutionKernelCache
-from tuna.miopen.utils.metadata import DIR_MAP
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
-
-
-#pylint: disable=too-few-public-methods
-def get_direction(self):
-  """synthesize direction"""
-  return DIR_MAP[(self.forw + 4 * self.back)]
 
 
 def add_conv_tables(miopen_tables):

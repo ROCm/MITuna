@@ -32,6 +32,7 @@ from tuna.dbBase.base_class import BASE
 from tuna.miopen.db.mixin_tables import BenchmarkMixin, CacheMixin
 from tuna.miopen.db.mixin_tables import ConfigTagMixin, KernelCacheMixin
 from tuna.miopen.db.mixin_tables import MIOpenJobMixin, SolverApplicabilityMixin
+from tuna.miopen.utils.metadata import DIR_MAP
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
@@ -80,6 +81,11 @@ class BNConfig(BASE):
                          lazy="joined")
   in_layout = Column(String(60), nullable=False, server_default="NCHW")
   driver = Column(String(length=512), nullable=False, server_default="")
+
+  #pylint: disable=too-few-public-methods
+  def get_direction(self):
+    """synthesize direction"""
+    return DIR_MAP[(self.forw + 4 * self.back)]
 
 
 class BNConfigTags(BASE, ConfigTagMixin):
