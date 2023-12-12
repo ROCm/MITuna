@@ -1,5 +1,5 @@
 #default image to ubuntu + install rocm
-ARG BASEIMAGE=rocm/miopen:ci_386a9d
+ARG BASEIMAGE=rocm/miopen:ci_fbea27
 
 #FROM ubuntu:20.04 as dtuna-ver-0
 FROM $BASEIMAGE as dtuna-ver-0
@@ -11,33 +11,33 @@ ENV NO_ROCM_INST=
 # Add rocm repository
 RUN apt-get update && apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
-RUN echo "" > /env; \
-    if ! [ -z $OSDB_BKC_VERSION ]; then \
-       echo "Using BKC VERSION: $OSDB_BKC_VERSION";\
-       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
-       cat  /etc/apt/sources.list.d/rocm.list;\
-    elif ! [ -z $ROCMVERSION ]; then \
-       echo "Using Release VERSION: $ROCMVERSION";\
-       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
-       cat  /etc/apt/sources.list.d/rocm.list;\
-    else \
-       echo "export NO_ROCM_INST=1" >> /env; \
-    fi
+# RUN echo "" > /env; \
+#     if ! [ -z $OSDB_BKC_VERSION ]; then \
+#        echo "Using BKC VERSION: $OSDB_BKC_VERSION";\
+#        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
+#        cat  /etc/apt/sources.list.d/rocm.list;\
+#     elif ! [ -z $ROCMVERSION ]; then \
+#        echo "Using Release VERSION: $ROCMVERSION";\
+#        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
+#        cat  /etc/apt/sources.list.d/rocm.list;\
+#     else \
+#        echo "export NO_ROCM_INST=1" >> /env; \
+#     fi
 
 RUN set -xe
 # Install dependencies
-RUN . /env; if [ -z $NO_ROCM_INST ]; then\
-        echo "Installing ROCm"; \
-        apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
-            rocm-dev \
-            rocm-device-libs \
-            rocm-opencl \
-            rocm-opencl-dev \
-            rocm-cmake \
-            && \
-            apt-get clean && \
-            rm -rf /var/lib/apt/lists/*; \
-    fi
+# RUN . /env; if [ -z $NO_ROCM_INST ]; then\
+#         echo "Installing ROCm"; \
+#         apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+#             rocm-dev \
+#             rocm-device-libs \
+#             rocm-opencl \
+#             rocm-opencl-dev \
+#             rocm-cmake \
+#             && \
+#             apt-get clean && \
+#             rm -rf /var/lib/apt/lists/*; \
+#     fi
 
 # Install dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
@@ -80,7 +80,7 @@ RUN pip3 install --quiet nosexcover
 RUN pip3 install --quiet mypy==0.971
 
 # opentelemetry
-RUN opentelemetry-bootstrap -a install
+# RUN opentelemetry-bootstrap -a install
 
 # Setup ubsan environment to printstacktrace
 RUN ln -s /usr/bin/llvm-symbolizer-3.8 /usr/local/bin/llvm-symbolizer
@@ -102,13 +102,13 @@ ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=/opt/rocm
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
-RUN . /env; if [ -z $NO_ROCM_INST ]; then\
-        pip install cget; \
-        pip install https://github.com/pfultz2/rclone/archive/master.tar.gz; \
-        cmake -P install_deps.cmake --prefix cget; \
-        cget install -f ./dev-requirements.txt --prefix cget; \
-        cp -r cget/* /opt/rocm/.; \
-    fi
+# RUN . /env; if [ -z $NO_ROCM_INST ]; then\
+#         pip install cget; \
+#         pip install https://github.com/pfultz2/rclone/archive/master.tar.gz; \
+#         cmake -P install_deps.cmake --prefix cget; \
+#         cget install -f ./dev-requirements.txt --prefix cget; \
+#         cp -r cget/* /opt/rocm/.; \
+#     fi
 
 ARG TUNA_USER=miopenpdb
 ARG BACKEND=HIP
