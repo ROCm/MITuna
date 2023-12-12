@@ -1,5 +1,5 @@
 #default image to ubuntu + install rocm
-ARG BASEIMAGE=rocm/miopen:ci_3346f2
+ARG BASEIMAGE=rocm/miopen:ci_386a9d
 
 #FROM ubuntu:20.04 as dtuna-ver-0
 FROM $BASEIMAGE as dtuna-ver-0
@@ -106,8 +106,8 @@ RUN . /env; if [ -z $NO_ROCM_INST ]; then\
         pip install cget; \
         pip install https://github.com/pfultz2/rclone/archive/master.tar.gz; \
         cmake -P install_deps.cmake --prefix cget; \
+        cget install -f ./dev-requirements.txt --prefix cget; \
         cp -r cget/* /opt/rocm/.; \
-        CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt; \
     fi
 
 ARG TUNA_USER=miopenpdb
@@ -139,8 +139,9 @@ ARG FIN_BRANCH=
 RUN if ! [ -z $FIN_BRANCH ]; then \
         git fetch && git checkout $FIN_BRANCH; \
     fi
+
 # Install dependencies
-RUN cmake -P install_deps.cmake 
+# RUN cmake -P install_deps.cmake --prefix $MIOPEN_DIR/cget 
 
 WORKDIR $FIN_DIR/_hip
 RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$MIOPEN_DEPS $FIN_DIR
