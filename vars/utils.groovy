@@ -244,10 +244,14 @@ def finFindEval(){
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        celery_log="${env.WORKSPACE}/tuna/celery_log.log"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
+
+        sh  "celery -A tuna.celery_app.celery worker -l info -E --detach --logfile=${celery_log} -n celery_worker"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
+        sh "cat ${celery_log}"
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
