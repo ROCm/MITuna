@@ -115,11 +115,12 @@ class WorkerInterface(Process):
     self.claim_num: int = 1
     self.last_reset: datetime = datetime.now()
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
-    self.logger = set_usr_logger(logger_name)
 
     dir_name: str = os.path.join(TUNA_LOG_DIR,
                                  type(self).__name__,
                                  f"{self.hostname}_{self.machine.port}p")
+    self.logger = set_usr_logger(logger_name)
+
     try:
       if not os.path.exists(dir_name):
         os.makedirs(dir_name)
