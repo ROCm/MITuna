@@ -114,11 +114,11 @@ class WorkerInterface(Process):
     #self.claim_num: int = self.num_procs.value * 3
     self.claim_num: int = 1
     self.last_reset: datetime = datetime.now()
-    logger_name: str = os.path.join(dir_name, str(self.gpu_id))
 
     dir_name: str = os.path.join(TUNA_LOG_DIR,
                                  type(self).__name__,
                                  f"{self.hostname}_{self.machine.port}p")
+    logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
 
     try:
