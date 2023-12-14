@@ -250,6 +250,7 @@ def finFindEval(){
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
 
         sh  "celery -A tuna.celery_app.celery worker -l info -E --detach --logfile=${celery_log} -n celery_worker"
+        sh "cat ${celery_log}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
         sh "cat ${celery_log}"
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
