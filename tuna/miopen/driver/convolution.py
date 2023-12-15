@@ -29,14 +29,14 @@
 from typing import Dict, Set, Optional, Any
 from re import search
 from tuna.utils.logger import setup_logger
-from tuna.miopen.driver.base import DriverBase
+from tuna.miopen.driver.base import MIOpenDriver
 from tuna.miopen.utils.metadata import CONV_CONFIG_COLS
 from tuna.miopen.utils.helper import get_db_id
 from tuna.miopen.db.miopen_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PREC_TO_CMD
 from tuna.miopen.utils.metadata import CONV_3D_DEFAULTS, TENSOR_COLS
-from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION
-from tuna.miopen.utils.metadata import DIRECTION, DIR_MAP, CONV_SKIP_ARGS, INVERS_DIR_MAP
+from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION, DIR_MAP
+from tuna.miopen.utils.metadata import DIRECTION, CONV_SKIP_ARGS, INVERS_DIR_MAP
 from tuna.miopen.utils.parsing import get_fd_name, conv_arg_valid, get_fds_from_cmd
 from tuna.miopen.utils.config_type import ConfigType
 
@@ -44,7 +44,7 @@ LOGGER = setup_logger('driver_conv')
 
 
 #pylint: disable=too-many-instance-attributes
-class DriverConvolution(DriverBase):
+class DriverConvolution(MIOpenDriver):
   """Represents an MIOpenDriver convolution command"""
 
   def __init__(self,
@@ -124,23 +124,26 @@ class DriverConvolution(DriverBase):
       )
     self._cmd = value
 
-  def get_layouts(self):
-    """Get convolution layouts"""
-    return ["in_layout", "out_layout", 'fil_layout']
-
   def parse_fdb_key(self, line: str) -> None:
-    """import config attributes from fdb key line"""
-    fds: str
+    """Import config attributes from fdb key line"""
+    fds: dict
     direction: str
     fds, _, direction = get_fds_from_cmd(line)
-    setattr(self, 'direction', DIR_MAP[direction])
+    setattr(self, 'direction',
+            DIR_MAP.get(direction,
+                        ''))  # Use .get() to safely access the dictionary
+
     for key in self.to_dict():
       if key in fds:
         setattr(self, key, fds[key])
 
-    pattern_3d = '[0-9]x[0-9]x[0-9]'
+    pattern_3d = '[0-9]+x[0-9]+x[0-9]+'
     if search(pattern_3d, line):
       setattr(self, 'spatial_dim', 3)
+
+  def get_layouts(self):
+    """Get convolution layouts"""
+    return ["in_layout", "out_layout", 'fil_layout']
 
   def parse_driver_line(self, line: str) -> None:
     """Parse MIOpenDriver line"""
