@@ -69,7 +69,7 @@ def setup_arg_parser(desc: str,
           default=None,
           required=False,
           help='Architecture of machines',
-          choices=['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a', 'gfx940'])
+          choices=['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a', 'gfx940', 'gfx942'])
     if TunaArgs.NUM_CU in arg_list:
       parser.add_argument(
           '-n',
