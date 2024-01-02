@@ -73,9 +73,15 @@ class RocMLIR(MITunaInterface):
                         help='How many workers per GPU',
                         default=1.0,
                         type=float)
+    parser.add_argument(
+        '--tuning_space',
+        dest='tuning_space',
+        default='exhaustive',
+        choices=['quick', 'full', 'exhaustive'],
+        help='Which space of tuning configs should be used while tuning')
 
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
-    )
+        required=True)
     group.add_argument('--add_tables',
                        dest='add_tables',
                        action='store_true',
@@ -83,7 +89,6 @@ class RocMLIR(MITunaInterface):
 
     # pylint: disable=duplicate-code
     group.add_argument(
-        '-e',
         '--execute',
         dest='execute',
         action='store_true',
@@ -153,8 +158,10 @@ class RocMLIR(MITunaInterface):
     # pylint: disable=duplicate-code
     """Generates the library specific schema to the connected SQL server."""
     ret_t: bool = create_tables(get_tables())
-    recreate_triggers(['conv_timestamp_trigger', 'gemm_timestamp_trigger'],
-                      get_timestamp_trigger())
+    recreate_triggers([
+        'conv_timestamp_trigger', 'gemm_timestamp_trigger',
+        'attention_timestamp_trigger'
+    ], get_timestamp_trigger())
     self.logger.info('DB creation successful: %s', ret_t)
     return True
 
@@ -177,6 +184,8 @@ class RocMLIR(MITunaInterface):
         SessionRocMLIR().add_new_session(self.args, worker)
       return None
 
+    # Must be --execute, because the mutually-exclusive-group argument is
+    # required, and we just checked for --add_tables and --init_session.
     res = self.compose_worker_list(machines)
     return res
 

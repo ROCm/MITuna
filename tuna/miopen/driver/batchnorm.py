@@ -27,7 +27,7 @@
 """Module that encapsulates the DB representation of a batch_normDriver cmd"""
 
 from tuna.utils.logger import setup_logger
-from tuna.miopen.driver.base import DriverBase
+from tuna.miopen.driver.base import MIOpenDriver
 from tuna.miopen.utils.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS, PREC_TO_CMD
 from tuna.miopen.utils.metadata import SUPPORTED_BN_CMDS, TABLE_COLS_BN_MAP, BN_DEFAULTS
 from tuna.miopen.utils.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
@@ -40,7 +40,7 @@ LOGGER = setup_logger('driver_bn')
 
 
 #pylint: disable=too-many-instance-attributes
-class DriverBatchNorm(DriverBase):
+class DriverBatchNorm(MIOpenDriver):
   """Represents db tables based on ConfigType"""
 
   def __init__(self,
@@ -86,10 +86,6 @@ class DriverBatchNorm(DriverBase):
   def parse_driver_line(self, line: str) -> None:
     super().parse_driver_line(line)
     self.compute_direction()
-
-  def parse_fdb_key(self, line):
-    """ Overidden Method"""
-    raise NotImplementedError("Not implemented")
 
   def compose_weight_t(self):
     """ Overridden Method """

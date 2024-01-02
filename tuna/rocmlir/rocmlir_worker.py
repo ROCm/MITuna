@@ -32,6 +32,7 @@ from time import sleep
 import random
 import functools
 import logging
+import traceback
 from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random
 
 from sqlalchemy.inspection import inspect
@@ -75,6 +76,11 @@ class RocMLIRWorker(WorkerInterface):
     print(f"arch = '{arch}', num_cu = '{num_cu}', config = '{config}', \
           perf_config = '{perf_config}', tflops = {tflops}",
           file=sys.stderr)
+
+    # Sanity checks.
+    if not perf_config or perf_config == 'None' or tflops == '-inf':
+      self.logger.warning('Bad data for job_id=%s, skipping', self.job.id)
+      return True  # To avoid an update retry.
 
     obj.valid = 1
     obj.session = self.dbt.session.id
@@ -141,18 +147,15 @@ class RocMLIRWorker(WorkerInterface):
               self.logger.info(msg)
               self.set_job_state('error', result=msg)
             else:
-              with open(self.output_filename(), 'r',
-                        encoding='utf8') as results:
-                # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
-                string = results.read().replace(':', r'\:')
-                self.set_job_state('completed', result=string)
-                self.process_result(string)
-              os.remove(self.output_filename())
+              # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
+              string = cmd_output.replace(':', r'\:')
+              self.set_job_state('completed', result=string)
+              self.process_result(string)
     # pylint: disable=broad-exception-caught
     # Not sure what to expect beyond OSError.
     except Exception as exc:
-      self.logger.warning('Exception occurred while running job %s:  %s',
-                          self.job.id, exc)
+      self.logger.error('Exception occurred while running job %s:  %s',
+                        self.job.id, traceback.format_exc())
       self.set_job_state('error', result=str(exc).replace("'", r"\'"))
 
     return True
@@ -170,8 +173,12 @@ class RocMLIRWorker(WorkerInterface):
       special_args = "--operation conv"
     elif self.dbt.config_type == ConfigType.gemm:
       special_args = "--operation gemm"
+    elif self.dbt.config_type == ConfigType.attention:
+      special_args = "--operation attention --verify-mode none"
     else:
       raise ValueError(f"Config type {self.dbt.config_type} not yet supported.")
+    if self.dbt.session.tuning_space:
+      special_args += f" --tuning-space={self.dbt.session.tuning_space.name}"
 
     if not os.path.exists("./bin/tuningRunner.py"):
       raise FileNotFoundError("tuningRunner.py not found;"
@@ -179,8 +186,8 @@ class RocMLIRWorker(WorkerInterface):
 
     cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
-                     --output={self.output_filename()} --tflops \
-                     --rocmlir_gen_flags='--device={self.gpu_id}'"
+                     --output=- --tflops \
+                     --rocmlir_gen_flags='--device={self.gpu_id}' 2>/dev/null"
 
     retcode, out = super().run_command(cmd)
 
