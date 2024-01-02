@@ -48,10 +48,10 @@ def initSession(){
 
 def VerifyArgs()
 {
-    if(params.rocm_version == '' && params.osdb_bkc_version == '')
-    {
-      error "Either ROCm version or OSDB build number is required"
-    }
+    //if(params.rocm_version == '' && params.osdb_bkc_version == '')
+    //{
+    //  error "Either ROCm version or OSDB build number is required"
+    //}
 
     if(params.rocm_version != '' && params.osdb_bkc_version != '')
     {
