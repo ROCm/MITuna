@@ -62,9 +62,11 @@ def tune(library, blocking=None):
       LOGGER.info('Collecting result for group task: %s ', result.id)
       while not result.ready():
         time.sleep(5)
-      LOGGER.info('Group %s ready: %s', result.id, result.ready())
+        LOGGER.info('Sleeping...')
+      #LOGGER.info('Group %s ready: %s', result.id, result.ready())
       LOGGER.info('Group successful: %s', result.successful())
       LOGGER.info(result.get())
+      LOGGER.info(result.join())
 
     #v = ResultGroup = tree, leafs are AsyncTasks
     #print([
