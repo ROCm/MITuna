@@ -721,13 +721,14 @@ def LoadJobs()
 
 def getSessionVals(session_id)
 {
-  String res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${session_id};")
+  String res = runsql("select arch, num_cu, rocm_v, miopen_v, docker from session where id=${session_id};")
 
   def arch = res.split("[ \t]+")[0]
   def num_cu = res.split("[ \t]+")[1]
   def rocm_v = res.split("[ \t]+")[2]
   def miopen_v = res.split("[ \t]+")[3]
-  echo "$arch $num_cu $rocm_v $miopen_v"
+  def base_image = res.split("[ \t]+")[4]
+  echo "$arch $num_cu $rocm_v $miopen_v $base_image"
 
   def partition = "${arch}_${num_cu}"
 
@@ -735,7 +736,8 @@ def getSessionVals(session_id)
   def rocm_version = ''
   def subv_i = rocm_v.indexOf('-')
   def ver_len = rocm_v.length() - subv_i - 1
-  if(ver_len > 3)
+  if(base_image != ''){}
+  else if(ver_len > 3)
   {
     osdb_bkc_version=rocm_v.substring(subv_i+1)
   }
@@ -761,22 +763,26 @@ def getSessionVals(session_id)
     miopen_v = miopen_v.substring(0, subv_i)
   }
 
-  return [partition, osdb_bkc_version, rocm_version, miopen_v]
+  return [partition, osdb_bkc_version, rocm_version, miopen_v, base_image]
 }
 
+def getBuildArgs(){
+  (partition, osdb_bkc_version, rocm_version, miopen_v, base_image) = getSessionVals(params.session_id)
+
+  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  if(base_image != '')
+  {
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image}"
+  }
+  sh "echo ${build_args}"
+
+  return [build_args, partition]
+}
 
 def applicUpdate(){
   def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
-  (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
-
-  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
-
-  if(params.base_image != '')
-  {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
-  }
-  sh "echo ${build_args}"
+  (build_args, _) = getBuildArgs()
 
   tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
   tuna_docker.push()
@@ -815,16 +821,8 @@ def compile()
 {
   def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
-  (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
+  (build_args, _) = getBuildArgs()
 
-  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
-
-  if(params.base_image != '')
-  {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
-  }
-
-  sh "echo ${build_args}"
   tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
 
   tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
@@ -879,16 +877,8 @@ def evaluate(params)
 {
   def tuna_docker_name = getDockerName("${backend}")
   def tuna_docker
-  (partition, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
+  (build_args, partition) = getBuildArgs()
 
-  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
-
-  if(params.base_image != '')
-  {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
-  }
-
-  sh "echo ${build_args}"
   tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
   tuna_docker.push()
 
