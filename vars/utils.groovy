@@ -772,7 +772,7 @@ def getBuildArgs(){
   def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
   if(base_image != '')
   {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image}"
+    build_args = build_args + " --build-arg BASEIMAGE=${base_image}"
   }
   sh "echo ${build_args}"
 
