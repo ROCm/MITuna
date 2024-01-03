@@ -26,7 +26,7 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 import logging
-import time
+#import time
 from itertools import islice
 #from celery.result import ResultBase
 
