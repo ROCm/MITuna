@@ -55,15 +55,19 @@ logger = get_task_logger(__name__)
 @app.task(trail=True)
 def group_tasks(chunk, worker_type, kwargs, arch, num_cu):
   """Returns a group of async tasks the size of chunk"""
-  return group(
+  #return group(
+  #    async_call.s([elem[0], elem[1], worker_type], kwargs, arch, num_cu)
+  #    for elem in chunk)()
+  return group([
       async_call.s([elem[0], elem[1], worker_type], kwargs, arch, num_cu)
-      for elem in chunk)()
+      for elem in chunk
+  ])
 
 
 @app.task(trail=True)
 def async_call(args, kwargs, arch, num_cu):
   """function call"""
-  return TUNING_QUEUE[arch + '-' + num_cu].delay(args, kwargs)
+  return TUNING_QUEUE[arch + '-' + num_cu](args, kwargs)
 
 
 @app.task(trail=True)

@@ -55,19 +55,19 @@ def tune(library, blocking=None):
   while chunk := list(islice(iterator, 5)):
     serialized_jobs = serialize_chunk(chunk)
     #delay launches each group in separate process
-    result = group_tasks.delay(serialized_jobs, library.worker_type, kwargs,
-                               library.dbt.session.arch,
-                               str(library.dbt.session.num_cu))
+    #result = group_tasks.delay(serialized_jobs, library.worker_type, kwargs,
+    #                           library.dbt.session.arch,
+    #                           str(library.dbt.session.num_cu))
+    job = group_tasks(serialized_jobs, library.worker_type, kwargs,
+                      library.dbt.session.arch, str(library.dbt.session.num_cu))
+    result = job.apply_async()
     if blocking:
       LOGGER.info('Collecting result for group task: %s ', result.id)
-      result.wait(timeout=10)
-      #while not result.ready():
-      #  time.sleep(20)
-      #  LOGGER.info('Sleeping...')
-      #LOGGER.info('Group %s ready: %s', result.id, result.ready())
+      #result.wait(timeout=10)
+      while not result.ready():
+        time.sleep(5)
       LOGGER.info('Group successful: %s', result.successful())
-      LOGGER.info('result.result: %s', result.result)
-      #LOGGER.info(result.get())
+      LOGGER.info(result.get())
 
     #v = ResultGroup = tree, leafs are AsyncTasks
     #print([
