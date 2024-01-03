@@ -60,13 +60,13 @@ def tune(library, blocking=None):
                                str(library.dbt.session.num_cu))
     if blocking:
       LOGGER.info('Collecting result for group task: %s ', result.id)
-      while not result.ready():
-        time.sleep(5)
-        LOGGER.info('Sleeping...')
+      result.wait()
+      #while not result.ready():
+      #  time.sleep(20)
+      #  LOGGER.info('Sleeping...')
       #LOGGER.info('Group %s ready: %s', result.id, result.ready())
       LOGGER.info('Group successful: %s', result.successful())
-      LOGGER.info(result.get())
-      LOGGER.info(result.join())
+      #LOGGER.info(result.get())
 
     #v = ResultGroup = tree, leafs are AsyncTasks
     #print([
