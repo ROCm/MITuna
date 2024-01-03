@@ -46,7 +46,7 @@ def buildSchema(){
 
 def getDockerName(backend)
 {
-    def docker_registry = "${headnode}:5000"
+    //def docker_registry = "${headnode}:5000"
     def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_id}_${backend}"
     return tuna_docker_name
 }
