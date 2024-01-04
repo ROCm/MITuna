@@ -730,7 +730,7 @@ def getSessionVals(session_id)
   def base_image = res.split("[ \t]+")[4]
   echo "$arch $num_cu $rocm_v $miopen_v $base_image"
 
-  def partition = "${arch}_${num_cu}"
+  def gfx_target = "${arch}_${num_cu}"
 
   def osdb_bkc_version = ''
   def rocm_version = ''
@@ -763,11 +763,11 @@ def getSessionVals(session_id)
     miopen_v = miopen_v.substring(0, subv_i)
   }
 
-  return [partition, osdb_bkc_version, rocm_version, miopen_v, base_image]
+  return [gfx_target, osdb_bkc_version, rocm_version, miopen_v, base_image]
 }
 
 def getBuildArgs(){
-  (partition, osdb_bkc_version, rocm_version, miopen_v, base_image) = getSessionVals(params.session_id)
+  (gfx_target, osdb_bkc_version, rocm_version, miopen_v, base_image) = getSessionVals(params.session_id)
 
   def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
   if(base_image != '')
@@ -776,7 +776,7 @@ def getBuildArgs(){
   }
   sh "echo ${build_args}"
 
-  return [build_args, partition]
+  return [build_args, gfx_target]
 }
 
 def applicUpdate(){
@@ -869,7 +869,7 @@ def compile()
   }
 
   // Run the jobs on the cluster
-  sh "srun --no-kill -p ${params.partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
