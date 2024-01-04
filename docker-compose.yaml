@@ -13,6 +13,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      #args:
+      #  - "BACKEND=HIPNOGPU"
     privileged: true
     group_add: 
       - video

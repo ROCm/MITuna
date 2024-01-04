@@ -582,6 +582,9 @@ class MIOpen(MITunaInterface):
     if self.args.subcommand and "load_job" in self.args.subcommand:
       return False
 
-    tuning_steps = ["miopen_find_compile", "miopen_find_eval"]
+    tuning_steps = [
+        "miopen_find_compile", "miopen_find_eval", "miopen_perf_compile",
+        "miopen_perf_eval"
+    ]
     return self.args.fin_steps and any(
         s in self.args.fin_steps for s in tuning_steps)
