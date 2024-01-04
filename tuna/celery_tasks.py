@@ -28,7 +28,7 @@
 import logging
 import time
 from itertools import islice
-from celery.result import GroupResult
+#from celery.result import GroupResult
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk
@@ -55,11 +55,10 @@ def tune(library, blocking=None):
   while chunk := list(islice(iterator, 5)):
     serialized_jobs = serialize_chunk(chunk)
     job = group_tasks(serialized_jobs, library.worker_type, kwargs,
-                               library.dbt.session.arch,
-                               str(library.dbt.session.num_cu))
+                      library.dbt.session.arch, str(library.dbt.session.num_cu))
     #result is of type GroupResult aka list of AsyncResult
+    result = job.apply_async()
     if blocking:
-      result = job.apply_async()
       LOGGER.info('Collecting result for group task: %s ', result.id)
       #result.wait(timeout=10)
       while not result.ready():
@@ -73,9 +72,9 @@ def tune(library, blocking=None):
     #  ])
     else:
       #async result gather
-      job.apply_async()
-      job.collect()
+      #job.apply_async()
+      #job.collect()
       #print(v for v in result.collect())
+      print('Non blocking result gather')
 
   return False
-
