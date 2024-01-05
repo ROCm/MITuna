@@ -1,5 +1,5 @@
 #default image to ubuntu + install rocm
-ARG BASEIMAGE=rocm/miopen:ci_3346f2
+ARG BASEIMAGE=rocm/miopen:ci_c1ca2a
 
 #FROM ubuntu:20.04 as dtuna-ver-0
 FROM $BASEIMAGE as dtuna-ver-0
