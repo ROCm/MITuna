@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2023 Advanced Micro Devices, Inc.
+# Copyright (c) 2022 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,36 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different configuration types supported by Tuna"""
-from enum import Enum
+""" Module for get/set/initialize DB - MIOpen/Conv/Fusion/Batchnorm tables"""
 
-ConfigType = Enum('ConfigType', ['convolution', 'gemm', 'attention'])
+from tuna.machine import Machine
+from tuna.miopen.db.benchmark import Framework, Model
+from tuna.miopen.db.solver import Solver
+from tuna.miopen.db.batch_norm_tables import BNBenchmark
+from tuna.miopen.db.convolutionjob_tables import ConvolutionBenchmark
+from tuna.miopen.db.tensortable import TensorTable
+from tuna.miopen.db.miopen_tables import add_bn_tables
+from tuna.miopen.db.miopen_tables import add_conv_tables
+from tuna.miopen.db.miopen_tables import add_fusion_tables
+from tuna.miopen.db.session import Session
+
+
+def get_miopen_tables():
+  """Returns a list of all MIOpen Tuna DB tables"""
+
+  miopen_tables = []
+  miopen_tables.append(Solver())
+  miopen_tables.append(Session())
+  miopen_tables.append(Framework())
+  miopen_tables.append(Model())
+  miopen_tables.append(Machine(local_machine=True))
+  miopen_tables.append(TensorTable())
+
+  miopen_tables = add_conv_tables(miopen_tables)
+  miopen_tables = add_fusion_tables(miopen_tables)
+  miopen_tables = add_bn_tables(miopen_tables)
+
+  miopen_tables.append(ConvolutionBenchmark())
+  miopen_tables.append(BNBenchmark())
+
+  return miopen_tables

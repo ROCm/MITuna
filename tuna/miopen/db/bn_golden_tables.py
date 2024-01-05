@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2023 Advanced Micro Devices, Inc.
+# Copyright (c) 2022 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,22 +24,23 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Database triggers for timestamps."""
+"""Represents Batchnorm Golden table definitions """
+
+from sqlalchemy import Column, Integer, UniqueConstraint, ForeignKey
+from tuna.dbBase.base_class import BASE
+from tuna.miopen.db.mixin_tables import GoldenMixin
 
 
-def get_timestamp_trigger():
-  """setting up for job table triggers"""
-  trigger_template = """CREATE trigger {op}_timestamp_trigger before UPDATE on rocmlir_{op}_job
-  for each row
-  begin
-   if NEW.state='running' then set NEW.compile_start=now();
-   elseif NEW.state='completed' then set NEW.compile_end=now();
-   elseif NEW.state='error' then set NEW.compile_end=now();
-   end if;
-  end;"""
+class BNGolden(BASE, GoldenMixin):
+  """Golden table for batch norm"""
+  __tablename__ = "bn_golden"
+  __table_args__ = (UniqueConstraint("golden_miopen_v",
+                                     "config",
+                                     "solver",
+                                     "arch",
+                                     "num_cu",
+                                     name="uq_idx"),)
 
-  return [
-      trigger_template.format(op='conv'),
-      trigger_template.format(op='gemm'),
-      trigger_template.format(op='attention')
-  ]
+  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
+
+  kernel_group = Column(Integer, nullable=True)

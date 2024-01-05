@@ -26,7 +26,8 @@
 
 from multiprocessing import Value
 
-from tuna.worker_interface import WorkerInterface
+#from tuna.worker_interface import WorkerInterface
+from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.session import Session
 from tuna.machine import Machine
 from tuna.miopen.utils.config_type import ConfigType
@@ -153,7 +154,7 @@ def add_test_session(arch='gfx908', num_cu=120, label=None):
   miopen = MIOpen()
   miopen.args = args
   kwargs = get_worker_args(args, machine, miopen)
-  worker = WorkerInterface(**kwargs)
+  worker = FinClass(**kwargs)
   session_id = Session().add_new_session(args, worker)
   assert (session_id)
   return session_id

@@ -24,43 +24,32 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for creating DB tables"""
-from sqlalchemy.exc import OperationalError
-from tuna.miopen.db.get_db_tables import get_miopen_tables
-from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
-from tuna.db_engine import ENGINE
-from tuna.utils.logger import setup_logger
-from tuna.utils.db_utility import create_tables
+""" Module for defining Tensor Table and model enums  """
+
+from sqlalchemy import Column, Integer, String, UniqueConstraint
+from tuna.dbBase.base_class import BASE
 
 #pylint: disable=too-few-public-methods
-LOGGER = setup_logger('db_tables')
 
 
-def recreate_triggers(drop_triggers, create_triggers):
-  """Drop and recreate triggers"""
+class TensorTable(BASE):
+  """Represents tensor table"""
+  __tablename__ = "tensor"
+  __table_args__ = (UniqueConstraint("dim0",
+                                     "dim1",
+                                     "dim2",
+                                     "dim3",
+                                     "dim4",
+                                     "layout",
+                                     "num_dims",
+                                     "data_type",
+                                     name="uq_idx"),)
 
-  with ENGINE.connect() as conn:
-    for dtg in drop_triggers:
-      conn.execute(f"drop trigger if exists {dtg}")
-    for trg in create_triggers:
-      try:
-        conn.execute(trg)
-      except OperationalError as oerr:
-        LOGGER.warning("Operational Error occurred while adding trigger: '%s'",
-                       trg)
-        LOGGER.info('%s \n', oerr)
-        continue
-
-  return True
-
-
-def main():
-  """Main script function"""
-  #setup MIOpen DB
-  ret_t = create_tables(get_miopen_tables())
-  LOGGER.info('DB creation successful: %s', ret_t)
-  recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
-
-
-if __name__ == '__main__':
-  main()
+  dim0 = Column(Integer, nullable=False, server_default="0")
+  dim1 = Column(Integer, nullable=False, server_default="0")
+  dim2 = Column(Integer, nullable=False, server_default="0")
+  dim3 = Column(Integer, nullable=False, server_default="0")
+  dim4 = Column(Integer, nullable=False, server_default="0")
+  layout = Column(String(60), nullable=False, server_default="NCHW")
+  num_dims = Column(Integer, nullable=False, server_default="2")
+  data_type = Column(String(60), nullable=False, server_default="FP32")

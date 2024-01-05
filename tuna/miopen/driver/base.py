@@ -32,70 +32,70 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import Query
 from sqlalchemy.inspection import inspect
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.logger import setup_logger
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
-from tuna.miopen.db.miopen_tables import TensorTable
-from tuna.miopen.db.miopen_tables import ConvolutionConfig
+from tuna.miopen.db.tensortable import TensorTable
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import TENSOR_PRECISION
 from tuna.miopen.utils.parsing import parse_line
+from tuna.driver import DriverBase
 
-LOGGER = setup_logger('driver_base')
+LOGGER = setup_logger('MIOpenDriver_driver_base')
 
 
-class DriverBase():
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-public-methods
+class MIOpenDriver(DriverBase):
   """Represents db tables based on ConfigType"""
   tensor_attr: List[str] = [column.name for column in inspect(TensorTable).c]
   tensor_id_map: Dict[str, int] = {}
 
-  def __init__(self,
-               line: str = str(),
-               db_obj: ConvolutionConfig = None) -> None:
-    if line:
-      if not self.construct_driver(line):
-        raise ValueError(f"Error creating Driver from line: '{line}'")
-    elif db_obj:
-      if not self.construct_driver_from_db(db_obj):
-        raise ValueError(
-            f"Error creating Driver from db obj: '{db_obj.to_dict()}'")
-    else:
-      raise ValueError(
-          "Error creating Driver. MIOpen Driver cmd line or db_obj required")
+  def __init__(self, line: str = str(), db_obj: ConvolutionConfig = None):
+    super().__init__(line, db_obj)
 
-  def parse_fdb_key(self, line: str):
-    """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  def parse_row(self, db_obj: ConvolutionConfig):
-    """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  def set_cmd(self, data_type: str):
-    """Overloaded method.Defined in conv&bn driver child class"""
-    raise NotImplementedError("Not implemented")
-
-  def config_set_defaults(self):
-    """Overloaded method.Defined in conv&bn driver child class"""
+  @abstractmethod
+  def config_set_defaults(self) -> None:
+    """Setting config DB defaults to avoid duplicates through SELECT"""
     raise NotImplementedError("Not implemented")
 
   @abstractmethod
-  def compose_weight_t(self):
-    """Overloaded method.Defined in conv&br driver child class"""
+  def set_cmd(self, data_type: str) -> None:
+    """Set cmd based on tensor data type"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def compose_weight_t(self) -> dict:
+    """Build weight_tensor"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def parse_row(self, db_obj: ConvolutionConfig):
+    """Abstract/Inference for Overwritting base class function for batch_norm"""
+    raise NotImplementedError("Not implemented")
+
+  @abstractmethod
+  def get_layouts(self):
+    """Return operation layouts"""
+    raise NotImplementedError("Not implemented")
+
+  def parse_fdb_key(self, line: str) -> None:
+    """Import config attributes from fdb key line"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
   def test_skip_arg(tok1: str):
-    """Overloaded method.Defined in conv&br driver child class"""
+    """Check if token is skipable"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
   def get_params(tok1: str):
-    """Overloaded method.Defined in conv&br driver child class"""
+    """Get full arg name"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
   def get_check_valid(tok1: str, tok2: Union[str, int]):
-    """Overloaded method.Defined in conv&br driver child class"""
+    """Check if valid conv arg"""
     raise NotImplementedError("Not implemented")
 
   @staticmethod
@@ -104,7 +104,7 @@ class DriverBase():
     return ['wall', 'time', 'iter', 'verify']
 
   def construct_driver(self, line: str) -> bool:
-    """Takes a MIOpenDriver cmd or PDB key"""
+    """Takes MIOpen line description of a configuration"""
 
     LOGGER.info('Processing line: %s', line)
     if line.find('=') != -1:
@@ -122,7 +122,7 @@ class DriverBase():
     """Takes a <>_config row and returns a driver cmd"""
     LOGGER.info('Processing db_row: %s', db_obj.to_dict())
     #common tensor among convolution and batch norm
-    self.decompose_input_t(db_obj)
+    self.__decompose_input_t(db_obj)
     self.parse_row(db_obj)
 
     return True
@@ -157,7 +157,7 @@ class DriverBase():
 
     return ret_id
 
-  def insert_tensor(self, tensor_dict: dict) -> int:
+  def __insert_tensor(self, tensor_dict: dict) -> int:
     """Insert new row into tensor table and return primary key"""
     ret_id: int = -1
     session: Session
@@ -167,10 +167,10 @@ class DriverBase():
         tid.valid = 1
         key = build_dict_val_key(tid)
         #cache the tensor table to avoid queries
-        if not DriverBase.tensor_id_map:
-          DriverBase.tensor_id_map = get_session_val_map(
-              session, TensorTable, DriverBase.tensor_attr)
-        id_map = DriverBase.tensor_id_map
+        if not MIOpenDriver.tensor_id_map:
+          MIOpenDriver.tensor_id_map = get_session_val_map(
+              session, TensorTable, MIOpenDriver.tensor_attr)
+        id_map = MIOpenDriver.tensor_id_map
         if key in id_map:
           ret_id = id_map[key]
           LOGGER.info("Get Tensor: %s", ret_id)
@@ -184,8 +184,8 @@ class DriverBase():
         LOGGER.warning(err)
         session.rollback()
         #update tensor table cache
-        DriverBase.tensor_id_map = get_session_val_map(session, TensorTable,
-                                                       DriverBase.tensor_attr)
+        MIOpenDriver.tensor_id_map = get_session_val_map(
+            session, TensorTable, MIOpenDriver.tensor_attr)
         ret_id = self.get_tensor_id(session, tensor_dict)
         LOGGER.info("Get Tensor: %s", ret_id)
     return ret_id
@@ -196,12 +196,12 @@ class DriverBase():
     ret_id: int = -1
     i_dict: Dict[str, int]
 
-    i_dict = self.compose_input_t()
-    ret_id = self.insert_tensor(i_dict)
+    i_dict = self.__compose_input_t()
+    ret_id = self.__insert_tensor(i_dict)
 
     return ret_id
 
-  def compose_input_t(self) -> Dict[str, int]:
+  def __compose_input_t(self) -> Dict[str, int]:
     """Build input_tensor"""
     i_dict: Dict[str, int] = {}
     i_dict['data_type'] = TENSOR_PRECISION[self.cmd]
@@ -223,7 +223,7 @@ class DriverBase():
 
     return i_dict
 
-  def decompose_input_t(self, db_obj: Any) -> bool:
+  def __decompose_input_t(self, db_obj: Any) -> bool:
     """Use input_tensor to assign local variables to build driver cmd """
     #pylint: disable=attribute-defined-outside-init
 
@@ -251,7 +251,7 @@ class DriverBase():
     w_dict: dict = {}
 
     w_dict = self.compose_weight_t()
-    ret_id = self.insert_tensor(w_dict)
+    ret_id = self.__insert_tensor(w_dict)
     return ret_id
 
   def parse_driver_line(self, line: str):
@@ -266,6 +266,8 @@ class DriverBase():
     assert tok[1] != ''
 
     self.compose_fds(tok, line)
+    if "_layout" in line:
+      self.update_default_layouts(line)
 
   def compose_fds(self, tok: list, line: str) -> bool:
     """Compose fds from driver line"""
@@ -292,6 +294,22 @@ class DriverBase():
             f'Invalid command line arg for {self.cmd}: {flag_sh_value[0]} - {f_digi_v} line: {line}'
         )
     return True
+
+  def update_default_layouts(self, line: str):
+    """Overwrite default layouts by the specified layout(s)"""
+    value_set: set = set()
+    layouts: list = self.get_layouts()
+
+    for layout in layouts:
+      if layout in line:
+        value_set.add(getattr(self, layout))
+
+    if len(value_set) != 1:
+      raise ValueError(f"Layouts do not match: [x for x in {layouts}]")
+
+    driver_layout = value_set.pop()
+    for layout in layouts:
+      setattr(self, layout, driver_layout)
 
   def to_dict(self) -> Dict[str, Union[str, int]]:
     """Return class to dictionary"""

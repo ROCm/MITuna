@@ -34,6 +34,7 @@ from sqlalchemy.exc import NoInspectionAvailable
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
+
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict
@@ -41,9 +42,6 @@ from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_ta
 from tuna.miopen.db.miopen_tables import FinStep, get_miopen_tables
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
-#from tuna.miopen.worker.fin_builder import FinBuilder
-#from tuna.miopen.worker.fin_eval import FinEvaluator
-from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
@@ -289,7 +287,7 @@ class MIOpen(MITunaInterface):
       worker_lst.append(worker)
       return True
 
-    worker = WorkerInterface(**kwargs)
+    worker = FinClass(**kwargs)
     ret = False
     if self.args.check_status:
       if not super().check_status(worker, f_vals["b_first"], gpu_idx,

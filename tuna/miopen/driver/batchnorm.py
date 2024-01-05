@@ -27,11 +27,11 @@
 """Module that encapsulates the DB representation of a batch_normDriver cmd"""
 
 from tuna.utils.logger import setup_logger
-from tuna.miopen.driver.base import DriverBase
+from tuna.miopen.driver.base import MIOpenDriver
 from tuna.miopen.utils.metadata import BN_CONFIG_COLS, IN_TENSOR_COLS, PREC_TO_CMD
 from tuna.miopen.utils.metadata import SUPPORTED_BN_CMDS, TABLE_COLS_BN_MAP, BN_DEFAULTS
 from tuna.miopen.utils.metadata import DIRECTION, DIR_MAP, BN_SKIP_ARGS
-from tuna.miopen.db.miopen_tables import BNConfig
+from tuna.miopen.db.batch_norm_tables import BNConfig
 from tuna.miopen.utils.parsing import get_fd_name, arg_valid
 from tuna.miopen.utils.helper import get_db_id
 from tuna.miopen.utils.config_type import ConfigType
@@ -40,7 +40,7 @@ LOGGER = setup_logger('driver_bn')
 
 
 #pylint: disable=too-many-instance-attributes
-class DriverBatchNorm(DriverBase):
+class DriverBatchNorm(MIOpenDriver):
   """Represents db tables based on ConfigType"""
 
   def __init__(self,
@@ -87,10 +87,6 @@ class DriverBatchNorm(DriverBase):
     super().parse_driver_line(line)
     self.compute_direction()
 
-  def parse_fdb_key(self, line):
-    """ Overidden Method"""
-    raise NotImplementedError("Not implemented")
-
   def compose_weight_t(self):
     """ Overridden Method """
     raise NotImplementedError("Not implemented")
@@ -116,6 +112,7 @@ class DriverBatchNorm(DriverBase):
       if key not in ('id', 'input_t', 'driver'):
         setattr(self, key, value)
     self.compute_direction()
+    self.in_layout = db_obj.in_layout
 
   def compose_tensors(self, keep_id: bool = False) -> dict:
     """Get tensors needed for DB table based on config type"""
@@ -125,6 +122,10 @@ class DriverBatchNorm(DriverBase):
       c_dict['id'] = get_db_id(c_dict, BNConfig)
 
     return c_dict
+
+  def get_layouts(self):
+    """Get batch norm layouts"""
+    return ["in_layout"]
 
   def get_bn_dict(self) -> dict:
     """Populate c_dict with conv table elems"""

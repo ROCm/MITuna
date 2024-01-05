@@ -81,7 +81,7 @@ def getMachine() {
 def addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port) {
     runsql("TRUNCATE machine;")
 // TODO: this should come from different nodes
-    runsql("INSERT INTO machine(hostname, local_ip, local_port,  avail_gpus, user, password, port, arch, arch_full, num_cu, available, ipmi_inaccessible) VALUES(\'${machine_ip}\', \'${machine_local_ip}\', 22, \'0,1,2,3\', \'${username}\', \'${pwd}\', ${port}, \'${arch}\', \'${arch}\', ${num_cu}, TRUE, TRUE)" )
+    runsql("INSERT INTO machine(hostname, local_ip, local_port,  avail_gpus, user, password, port, arch, num_cu, available, ipmi_inaccessible) VALUES(\'${machine_ip}\', \'${machine_local_ip}\', 22, \'0,1,2,3\', \'${username}\', \'${pwd}\', ${port}, \'${arch}\', ${num_cu}, TRUE, TRUE)" )
 }
 
 
@@ -367,6 +367,7 @@ def solverAnalyticsTest(){
         // install SolverAnalytics
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
+        sh "cd SolverAnalytics; git checkout sp/solver_changes; git pull;"
         sh "pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt"
 
         // run SolverAnalytics tests
@@ -628,11 +629,11 @@ def runLint() {
             sh "mypy tuna/miopen/subcmd/export_db.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/subcmd/update_golden.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports"
+            sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/flask_example.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/go_fish.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports"
+            sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_utils.py --ignore-missing-imports --follow-imports=skip"

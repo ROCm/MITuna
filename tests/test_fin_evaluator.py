@@ -44,7 +44,7 @@ from tuna.miopen.subcmd.load_job import add_jobs
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
 from tuna.miopen.worker.fin_class import FinClass
-from tuna.utils.db_utility import get_solver_ids
+from tuna.miopen.db.solver import get_solver_ids
 from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.utils.miopen_utility import load_machines

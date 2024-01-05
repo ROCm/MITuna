@@ -394,19 +394,6 @@ class WorkerInterface(Process):
 
     return ret_code, strout, err
 
-  def get_miopen_v(self) -> str:
-    """Interface function to get new branch hash"""
-    commit_hash: str
-    _, commit_hash, _ = self.exec_docker_cmd(
-        "cat /opt/rocm/include/miopen/version.h "
-        "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-    if "No such file" in commit_hash:
-      _, commit_hash, _ = self.exec_docker_cmd(
-          "cat /opt/rocm/miopen/include/miopen/version.h "
-          "| grep MIOPEN_VERSION_TWEAK | cut -d ' ' -f 3")
-    self.logger.info('Got branch commit hash: %s', commit_hash)
-    return commit_hash
-
   def get_rocm_v(self) -> str:
     """Interface function to get rocm version info"""
     rocm_ver: str
@@ -421,12 +408,6 @@ class WorkerInterface(Process):
       raise ValueError(
           f'session rocm_v {self.dbt.session.rocm_v} does not match env rocm_v {env_rocm_v}'
       )
-    env_miopen_v: str = self.get_miopen_v()
-    if self.dbt.session.miopen_v != env_miopen_v:
-      raise ValueError(
-          f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v {env_miopen_v}'
-      )
-
     return True
 
   def set_barrier(self, funct: Callable, with_timeout: bool) -> bool:

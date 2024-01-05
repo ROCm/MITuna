@@ -39,7 +39,6 @@ from typing import Callable, Any, List, Dict
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
-from tuna.miopen.db.miopen_tables import Solver
 from tuna.utils.metadata import NUM_SQL_RETRIES
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
@@ -106,36 +105,6 @@ def create_indices(all_indices):
       except (OperationalError, ProgrammingError) as oerr:
         LOGGER.info('%s \n', oerr)
         continue
-
-
-def get_solver_ids():
-  """DB solver name to id map"""
-  # TODO: Get this info from the SQLAlchemy class  # pylint: disable=fixme
-  solver_id_map = {}
-  with DbSession() as session:
-    query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
-    res = session_retry(session, query.all, lambda x: x(), LOGGER)
-    for slv, sid in res:
-      solver_id_map[slv] = sid
-      solver_id_map[slv.replace(', ', '-')] = sid
-
-  return solver_id_map
-
-
-def get_id_solvers():
-  """DB solver id to name map"""
-  solver_id_map_c = {}
-  solver_id_map_h = {}
-  with DbSession() as session:
-    query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
-    res = session_retry(session, query.all, lambda x: x(), LOGGER)
-    for slv, sid in res:
-      solver_id_map_c[slv] = sid
-      solver_id_map_h[slv.replace(', ', '-')] = sid
-    id_solver_map_c = {val: key for key, val in solver_id_map_c.items()}
-    id_solver_map_h = {val: key for key, val in solver_id_map_h.items()}
-
-  return id_solver_map_c, id_solver_map_h
 
 
 def session_retry(session: DbSession,
@@ -221,7 +190,7 @@ def gen_select_objs(session, attribs, tablename, cond_str):
   ret = session.execute(query)
   entries = []
   for row in ret:
-    LOGGER.info('select_row: %s', row)
+    #LOGGER.info('select_row: %s', row)
     entry = SimpleDict()
     for i, col in enumerate(attribs):
       setattr(entry, col, row[i])

@@ -37,15 +37,11 @@ this_path = os.path.dirname(__file__)
 
 from tuna.miopen.subcmd.load_job import arg_fin_steps, arg_solvers
 from tuna.miopen.subcmd.load_job import config_query, compose_query
-from tuna.miopen.subcmd.load_job import add_jobs, run_load_job
-from tuna.utils.db_utility import get_solver_ids
-from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
+from tuna.miopen.db.solver import get_solver_ids
+from tuna.miopen.utils.metadata import ALG_SLV_MAP
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.sql import DbCursor
-from tuna.utils.logger import setup_logger
 from utils import LdJobArgs
-from tuna.utils.db_utility import connect_db
 
 
 #arg_fin_steps function
