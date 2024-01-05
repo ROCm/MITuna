@@ -146,23 +146,15 @@ class RocMLIRWorker(WorkerInterface):
               self.logger.info(msg)
               self.set_job_state('error', result=msg)
             else:
+              # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
               string = cmd_output.replace(':', r'\:')
               self.set_job_state('completed', result=string)
               self.process_result(string)
-
-
-#               with open(self.output_filename(), 'r',
-#                         encoding='utf8') as results:
-#                 # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
-#                 string = results.read().replace(':', r'\:')
-#                 self.set_job_state('completed', result=string)
-#                 self.process_result(string)
-#               os.remove(self.output_filename())
-# pylint: disable=broad-exception-caught
-# Not sure what to expect beyond OSError.
+    # pylint: disable=broad-exception-caught
+    # Not sure what to expect beyond OSError.
     except Exception as exc:
       self.logger.error('Exception occurred while running job %s:  %s',
-                        self.job.id, traceback.format_exc(exc))
+                        self.job.id, traceback.format_exc())
       self.set_job_state('error', result=str(exc).replace("'", r"\'"))
 
     return True
