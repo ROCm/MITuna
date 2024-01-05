@@ -451,7 +451,7 @@ class MIOpen(MITunaInterface):
       conds.append(f"reason='{label}'")
 
     conds.append(f"retries<{self.max_job_retries}")
-    conds.append(f"state='{find_state}'")
+    conds.append(f"state in {find_state}")
 
     entries = self.compose_work_objs(session, conds, dbt, job_attr, fin_steps)
     return entries
@@ -568,7 +568,7 @@ class MIOpen(MITunaInterface):
         self.fetch_state = 'new'
         self.worker_type = "fin_build_worker"
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
-        self.fetch_state = 'compiled'
+        self.fetch_state = ('new', 'compiled')
         self.worker_type = "fin_eval_worker"
 
     if self.args.update_applicability:

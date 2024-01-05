@@ -8,6 +8,7 @@ services:
     expose:
       - "6380"
     restart: always
+    container_name: mituna_redis
 
   celery:
     build:
@@ -15,6 +16,7 @@ services:
       dockerfile: Dockerfile
       #args:
       #  - "BACKEND=HIPNOGPU"
+    container_name: mituna_celery
     privileged: true
     group_add: 
       - video

@@ -89,7 +89,7 @@ def main() -> bool:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
 
   blocking: bool = 0  #type: ignore
-  if 'TUNA_BLOCKING' in os.environ:
+  if 'CELERY_BLOCKING' in os.environ:
     blocking = 1  #type: ignore
 
   #worker_lst: list

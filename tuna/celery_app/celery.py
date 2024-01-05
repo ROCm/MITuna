@@ -25,22 +25,19 @@
 #
 ###############################################################################
 """Module to define celery jobs"""
+import os
 from celery import Celery
 from celery import group
 from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
 
-#docker-compose app needs to connect to mituna_redis_1 docker
-#when running in a dockerized env
-#app = Celery('celery_app',
-#             broker_url="redis://mituna_redis_1:6379//",
-#             result_backend="redis://mituna_redis_1:6379/")
-
-#when running on localhost:
+CELERY_BROKER = 'mituna_redis'
+if 'CELERY_BROKER' in os.environ:
+  CELERY_BROKER = os.environ['CELERY_BROKER']
 app = Celery('celery_app',
-             broker_url="redis://localhost:6379//",
-             result_backend="redis://localhost:6379/")
+             broker_url=f"redis://{CELERY_BROKER}:6379//",
+             result_backend=f"redis://{CELERY_BROKER}:6379/")
 
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
