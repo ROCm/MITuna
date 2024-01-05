@@ -401,7 +401,7 @@ class ConvolutionResults(BASE, ResultsMixin):  # pylint: disable=too-many-instan
   """Collects the results of convolution tuning."""
 
   __tablename__ = "rocmlir_conv_results"
-  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
+  __table_args__ = (UniqueConstraint("config_str", "session", name="uq_idx"),)
 
   config = Column(Integer,
                   ForeignKey("rocmlir_conv_config.id"),
@@ -570,7 +570,7 @@ class GEMMResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance-attr
   """Collects the results of GEMM tuning."""
 
   __tablename__ = "rocmlir_gemm_results"
-  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
+  __table_args__ = (UniqueConstraint("config_str", "session", name="uq_idx"),)
 
   config = Column(Integer,
                   ForeignKey("rocmlir_gemm_config.id"),
@@ -720,7 +720,7 @@ class AttentionResults(BASE, ResultsMixin):  # pylint: disable=too-many-instance
   """Collects the results of Attention tuning."""
 
   __tablename__ = "rocmlir_attention_results"
-  __table_args__ = (UniqueConstraint("config", "session", name="uq_idx"),)
+  __table_args__ = (UniqueConstraint("config_str", "session", name="uq_idx"),)
 
   config = Column(Integer,
                   ForeignKey("rocmlir_attention_config.id"),
