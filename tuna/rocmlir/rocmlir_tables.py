@@ -164,9 +164,9 @@ class ConvolutionConfig(BASE):
   __tablename__ = "rocmlir_conv_config"
 
   data_type = Column(String(length=60), nullable=False, server_default="")
-  fil_layout = Column(String(60), nullable=False, server_default="NCHW")
-  in_layout = Column(String(60), nullable=False, server_default="NCHW")
-  out_layout = Column(String(60), nullable=False, server_default="NCHW")
+  fil_layout = Column(String(length=60), nullable=False, server_default="NCHW")
+  in_layout = Column(String(length=60), nullable=False, server_default="NCHW")
+  out_layout = Column(String(length=60), nullable=False, server_default="NCHW")
   direction = Column(String(length=8), nullable=False)
   in_channels = Column(Integer, nullable=False, server_default="0")
   in_h = Column(Integer, nullable=False, server_default="0")
@@ -354,7 +354,7 @@ class ResultsMixin():  # pylint: disable=too-many-instance-attributes
     """session column"""
     return Column(Integer, ForeignKey("session_rocmlir.id"), nullable=False)
 
-  config_str = Column(Text, nullable=False)
+  config_str = Column(String(length=500), nullable=False)
 
   perf_config = Column(Text, nullable=False)
   kernel_tflops = Column(Float, nullable=False)
