@@ -27,4 +27,12 @@
 """Module that encapsulates different configuration types supported by Tuna"""
 from enum import Enum
 
-ConfigType = Enum('ConfigType', ['convolution', 'gemm', 'attention'])
+#ConfigType = Enum('ConfigType', ['convolution', 'gemm', 'attention'])
+
+class ConfigType(Enum):
+  convolution: str = 'convolution'
+  gemm: str = 'gemm'
+  attention: str = 'attention'
+
+  def __str__(self) -> str:
+    return self.value

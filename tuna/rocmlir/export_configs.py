@@ -45,9 +45,18 @@ def main():
                       dest='append',
                       action='store_true',
                       help='Append to file instead of overwriting')
+  parser.add_argument('--csv',
+                      dest='csv',
+                      action='store_true',
+                      help='Also write CSV')
   args = parser.parse_args()
   dbt = RocMLIRDBTables(session_id=args.session_id)
   dbt.results().export_as_tsv(args.file_name, dbt, args.append)
+  if args.csv:
+    kind = dbt.session.config_type.name
+    dbt.results().export_as_csv(f"{kind}-results.csv")
+    dbt.config_table().export_as_csv(f"{kind}-config.csv")
+    dbt.session_table().export_as_csv(f"{kind}-session.csv")
 
 
 if __name__ == '__main__':

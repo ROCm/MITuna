@@ -30,15 +30,18 @@
 import sys
 import enum
 import itertools
+import csv
 
 from typing import List
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy import Text, Enum, Float, DateTime, Boolean
 from sqlalchemy import delete as sql_delete
+from sqlalchemy import select as sql_select
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy.inspection import inspect
 
+from tuna.sql import DbCursor
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
 from tuna.machine import Machine
@@ -108,6 +111,16 @@ class SessionRocMLIR(BASE, SessionMixin):
 
     return self.insert_session()
 
+  def export_as_csv(self, filename):
+    with open(filename, 'w', encoding='utf8') as f:
+      outcsv = csv.writer(f)
+#       with DbCursor() as cur:
+#         # (may need list(cur....))
+#         outcsv.writerows(cur.execute(f"select * from {self.__tablename__};"))
+      with DbSession() as session:
+        query = sql_select(self.__table__.columns).order_by(type(self).id.desc()).limit(1)
+        outcsv.writerows(session.execute(query))
+
 
 class JobEnum(enum.Enum):
   """Job status.  Numbers chosen to match miopen, which has more states."""
@@ -151,6 +164,18 @@ class ConvolutionJob(BASE, JobMixin):
                   index=True)
 
 
+class SimpleCSVMixin():
+  """Just a method to write whole table as CSV."""
+  def export_as_csv(self, filename):
+    with open(filename, 'w', encoding='utf8') as f:
+      outcsv = csv.writer(f)
+#       with DbCursor() as cur:
+#         # (may need list(cur....))
+#         outcsv.writerows(cur.execute(f"select * from {self.__tablename__};"))
+      with DbSession() as session:
+        outcsv.writerows(session.execute(sql_select(self.__table__.columns)))
+
+
 def make_option_if_not_in_line(option, value, line):
   """If option is not already in line, make an option-value string."""
   if f"{option} " in line:
@@ -159,7 +184,7 @@ def make_option_if_not_in_line(option, value, line):
   return f"{option} {value} "
 
 
-class ConvolutionConfig(BASE):
+class ConvolutionConfig(BASE, SimpleCSVMixin):
   """Represents convolution config table"""
   __tablename__ = "rocmlir_conv_config"
 
@@ -340,7 +365,7 @@ class ConvolutionConfig(BASE):
     return configs
 
 
-class ResultsMixin():  # pylint: disable=too-many-instance-attributes
+class ResultsMixin(SimpleCSVMixin):  # pylint: disable=too-many-instance-attributes
   """Collects the results of tuning."""
 
   def __init__(self, **kwargs):
@@ -420,7 +445,7 @@ class GEMMJob(BASE, JobMixin):
                   index=True)
 
 
-class GEMMConfig(BASE):
+class GEMMConfig(BASE, SimpleCSVMixin):
   """Represents GEMM config table"""
   __tablename__ = "rocmlir_gemm_config"
 
@@ -589,7 +614,7 @@ class AttentionJob(BASE, JobMixin):
                   index=True)
 
 
-class AttentionConfig(BASE):
+class AttentionConfig(BASE, SimpleCSVMixin):
   """Represents Attention config table"""
   __tablename__ = "rocmlir_attention_config"
 
