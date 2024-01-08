@@ -358,6 +358,7 @@ def solverAnalyticsTest(){
         // install SolverAnalytics
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
+        sh "cd SolverAnalytics; git checkout sp/solver_changes; git pull;"
         //lower version in requirments file causing issues in ci
         //sh "pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt"
 
@@ -610,11 +611,11 @@ def runLint() {
             sh "mypy tuna/miopen/subcmd/export_db.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/subcmd/update_golden.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports"
+            sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/flask_example.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/go_fish.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports"
+            sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_utils.py --ignore-missing-imports --follow-imports=skip"

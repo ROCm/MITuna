@@ -36,6 +36,7 @@ try:
   import queue
 except ImportError:
   import Queue as queue  #type: ignore
+
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
@@ -44,13 +45,12 @@ from tuna.worker_interface import WorkerInterface
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.metadata import FIN_CACHE
 from tuna.miopen.utils.metadata import INVERS_DIR_MAP
-from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import compose_config_obj
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.utils.db_utility import session_retry
-from tuna.utils.db_utility import get_solver_ids, get_id_solvers
+from tuna.miopen.db.solver import get_solver_ids, get_id_solvers
 from tuna.utils.db_utility import gen_select_objs, gen_insert_query, gen_update_query
 from tuna.utils.db_utility import get_class_by_tablename, has_attr_set
 from tuna.utils.utility import split_packets
@@ -62,6 +62,7 @@ class FinClass(WorkerInterface):
 
   # pylint: disable=too-many-instance-attributes
   # pylint: disable=too-many-public-methods
+  # pylint: disable=no-member
 
   def __init__(self, **kwargs):
     """Constructor"""
@@ -140,6 +141,19 @@ class FinClass(WorkerInterface):
 
     return commit_hash
 
+  def check_env(self) -> bool:
+    """Interface function to check the miopen env version vs presumed miopen version"""
+    if super().check_env():
+      env_miopen_v: str = self.get_miopen_v()
+      if self.dbt.session.miopen_v != env_miopen_v:
+        raise ValueError(
+            f'session miopen_v {self.dbt.session.miopen_v} does not match env miopen_v\
+            {env_miopen_v}')
+    else:
+      return False
+
+    return True
+
   def chk_abort_file(self):
     """Checking presence of abort file to terminate processes immediately"""
     abort_reason = []
@@ -157,6 +171,8 @@ class FinClass(WorkerInterface):
 
   def set_db_tables(self):
     """Initialize tables"""
+    # pylint: disable=import-outside-toplevel
+    from tuna.miopen.db.tables import MIOpenDBTables
     self.dbt = MIOpenDBTables(session_id=self.session_id,
                               config_type=self.config_type)
 

@@ -24,43 +24,23 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for creating DB tables"""
-from sqlalchemy.exc import OperationalError
-from tuna.miopen.db.get_db_tables import get_miopen_tables
-from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
-from tuna.db_engine import ENGINE
-from tuna.utils.logger import setup_logger
-from tuna.utils.db_utility import create_tables
+"""Represents Batchnorm Golden table definitions """
 
-#pylint: disable=too-few-public-methods
-LOGGER = setup_logger('db_tables')
+from sqlalchemy import Column, Integer, UniqueConstraint, ForeignKey
+from tuna.dbBase.base_class import BASE
+from tuna.miopen.db.mixin_tables import GoldenMixin
 
 
-def recreate_triggers(drop_triggers, create_triggers):
-  """Drop and recreate triggers"""
+class BNGolden(BASE, GoldenMixin):
+  """Golden table for batch norm"""
+  __tablename__ = "bn_golden"
+  __table_args__ = (UniqueConstraint("golden_miopen_v",
+                                     "config",
+                                     "solver",
+                                     "arch",
+                                     "num_cu",
+                                     name="uq_idx"),)
 
-  with ENGINE.connect() as conn:
-    for dtg in drop_triggers:
-      conn.execute(f"drop trigger if exists {dtg}")
-    for trg in create_triggers:
-      try:
-        conn.execute(trg)
-      except OperationalError as oerr:
-        LOGGER.warning("Operational Error occurred while adding trigger: '%s'",
-                       trg)
-        LOGGER.info('%s \n', oerr)
-        continue
+  config = Column(Integer, ForeignKey("bn_config.id"), nullable=False)
 
-  return True
-
-
-def main():
-  """Main script function"""
-  #setup MIOpen DB
-  ret_t = create_tables(get_miopen_tables())
-  LOGGER.info('DB creation successful: %s', ret_t)
-  recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
-
-
-if __name__ == '__main__':
-  main()
+  kernel_group = Column(Integer, nullable=True)

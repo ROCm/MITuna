@@ -32,7 +32,7 @@ from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import get_id_solvers
+from tuna.miopen.db.solver import get_id_solvers
 
 LOGGER = setup_logger('report')
 
