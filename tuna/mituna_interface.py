@@ -51,7 +51,7 @@ class MITunaInterface():
     self.args: argparse.Namespace
 
     self.worker_type: str = WorkerInterface.name
-    self.fetch_state = set()
+    self.fetch_state: set = set()
     #self.fetch_state.add('new')
     self.max_job_retries = 10
     self.dbt = None
