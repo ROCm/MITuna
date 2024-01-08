@@ -118,7 +118,7 @@ def test_fin_builder():
   miopen.args.update_applicability = False
   miopen.args.fin_steps = ["miopen_find_compile"]
   miopen.args.label = 'tuna_pytest_fin_builder'
-  miopen.fetch_state = 'new'
+  miopen.fetch_state.add('new')
   miopen.worker_type = 'fin_build_worker'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)

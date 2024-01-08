@@ -198,7 +198,7 @@ def test_fin_evaluator():
 
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
-  miopen.fetch_state = 'compiled'
+  miopen.fetch_state.add('compiled')
   miopen.worker_type = 'fin_eval_worker'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)

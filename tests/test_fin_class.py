@@ -59,7 +59,7 @@ def test_set_all_configs():
       'use_tuner': False,
       'job_queue': Queue(),
       'queue_lock': Lock(),
-      'fetch_state': ['compiled'],
+      'fetch_state': {'compiled'},
       'end_jobs': e,
       'config_type': ConfigType.batch_norm,
       'session_id': 1
