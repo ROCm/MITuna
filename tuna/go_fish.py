@@ -91,7 +91,7 @@ def main() -> bool:
   blocking: bool = 0  #type: ignore
   if 'CELERY_BLOCKING' in os.environ:
     blocking = 1  #type: ignore
-  group_size: str = 128
+  group_size: int = 128
   if 'CELERY_GROUP_SIZE' in os.environ:
     group_size = int(os.environ['CELERY_GROUP_SIZE'])
 
