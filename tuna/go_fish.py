@@ -91,6 +91,9 @@ def main() -> bool:
   blocking: bool = 0  #type: ignore
   if 'CELERY_BLOCKING' in os.environ:
     blocking = 1  #type: ignore
+  group_size: str = 128
+  if 'CELERY_GROUP_SIZE' in os.environ:
+    group_size = int(os.environ['CELERY_GROUP_SIZE'])
 
   #worker_lst: list
   try:
@@ -102,7 +105,7 @@ def main() -> bool:
 
       if library.has_tunable_operation():
         #celery tasks
-        tune(library, blocking=blocking)
+        tune(library, group_size, blocking=blocking)
       else:
         #non-celery operations
         #returns a list of workers/processes it started

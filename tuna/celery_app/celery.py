@@ -69,8 +69,8 @@ def celery_enqueue_gfx908_120(args, kwargs):
   logger.info("Enqueueing gfx908-120")
   kwargs = prep_kwargs(kwargs, args)
   worker = get_worker(kwargs, args[2])
-  worker.run()
-  return 'RET VAL'
+  ret = worker.run()
+  return ret
 
 
 @app.task(trail=True)

@@ -38,9 +38,10 @@ from tuna.machine import Machine
 LOGGER: logging.Logger = setup_logger('tune')
 
 
-def tune(library, blocking=None):
+def tune(library, group_size, blocking=None):
   """tuning loop to spin out celery tasks"""
 
+  LOGGER.info('Celery running with group size: %s', group_size)
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
@@ -52,7 +53,7 @@ def tune(library, blocking=None):
   iterator = iter(job_config_rows)
   #test launching 5 async jobs at a time,
   #celery default is 72
-  while chunk := list(islice(iterator, 5)):
+  while chunk := list(islice(iterator, group_size)):
     serialized_jobs = serialize_chunk(chunk)
     job = group_tasks(serialized_jobs, library.worker_type, kwargs,
                       library.dbt.session.arch, str(library.dbt.session.num_cu))
@@ -70,11 +71,12 @@ def tune(library, blocking=None):
     #print([
     #    v for v in result.collect() if not isinstance(v, (ResultBase, tuple))
     #  ])
-    else:
-      #async result gather
-      #job.apply_async()
-      #job.collect()
-      #print(v for v in result.collect())
-      print('Non blocking result gather')
+    #else:
+    #async result gather
+    #job.apply_async()
+    #job.collect()
+    #print(v for v in result.collect())
+    #print('Non blocking result gather')
+  LOGGER.info('Done launching celery groups')
 
   return False
