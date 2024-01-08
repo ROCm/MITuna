@@ -94,7 +94,8 @@ class WorkerInterface(Process):
     self.end_jobs = None
     #job detail vars
     self.envmt: List = []
-    self.fetch_state: str = ('new')  # pylint: disable=superfluous-parens
+    self.fetch_state = set()
+    self.fetch_state.add('new')
     self.label: str = None
     self.session_id: int = None
     self.worker_type = "generic_worker"

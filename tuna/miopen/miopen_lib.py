@@ -437,7 +437,7 @@ class MIOpen(MITunaInterface):
 
   def get_job_objs(self,
                    session: DbSession,
-                   find_state: str,
+                   find_state: list,
                    label: str,
                    dbt: DBTablesInterface,
                    job_attr: List[str],
@@ -450,7 +450,7 @@ class MIOpen(MITunaInterface):
       conds.append(f"reason='{label}'")
 
     conds.append(f"retries<{self.max_job_retries}")
-    conds.append(f"state in {find_state}")
+    conds.append("state in (" + str(find_state).strip('{').strip('}') + ")")
 
     entries = self.compose_work_objs(session, conds, dbt, job_attr, fin_steps)
     return entries
@@ -564,15 +564,16 @@ class MIOpen(MITunaInterface):
     if self.args.fin_steps:
       if 'miopen_find_compile' in self.args.fin_steps \
       or 'miopen_perf_compile' in self.args.fin_steps:
-        self.fetch_state = ('new')  # pylint: disable=superfluous-parens
+        self.fetch_state.add('new')
         self.worker_type = "fin_build_worker"
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
-        self.fetch_state = ('new', 'compiled')
+        self.fetch_state.add('new')
+        self.fetch_state.add('compiled')
         self.worker_type = "fin_eval_worker"
 
     if self.args.update_applicability:
       self.worker_type = "fin_class_worker"
-      self.fetch_state = ("new")  # pylint: disable=superfluous-parens
+      self.fetch_state.add("new")
 
   def has_tunable_operation(self):
     """Check if its a tuning loop operation"""
