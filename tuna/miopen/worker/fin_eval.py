@@ -279,18 +279,17 @@ class FinEvaluator(FinClass):
       return False
     return True
 
-  """
-  def manage_queue(self):
-    """Try to acquire a job, or manage the result queue if no job is available."""
-    if not self.get_job("compiled", "eval_start", True):
-      if not self.get_job("new", "eval_start", True):
-        with self.bar_lock:
-          self.num_procs.value -= 1
-        while not self.result_queue_drain():
-          sleep(random.randint(1, 10))
-        return False
-    return True
-  """
+  #def manage_queue(self):
+  #  """Try to acquire a job, or manage the result queue if no job is available."""
+  #  if not self.get_job("compiled", "eval_start", True):
+  #    if not self.get_job("new", "eval_start", True):
+  #      with self.bar_lock:
+  #        self.num_procs.value -= 1
+  #      while not self.result_queue_drain():
+  #        sleep(random.randint(1, 10))
+  #      return False
+  #  return True
+  #
 
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs

@@ -563,7 +563,7 @@ class MIOpen(MITunaInterface):
     if self.args.fin_steps:
       if 'miopen_find_compile' in self.args.fin_steps \
       or 'miopen_perf_compile' in self.args.fin_steps:
-        self.fetch_state = 'new'
+        self.fetch_state = ('new')
         self.worker_type = "fin_build_worker"
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
         self.fetch_state = ('new', 'compiled')
@@ -571,7 +571,7 @@ class MIOpen(MITunaInterface):
 
     if self.args.update_applicability:
       self.worker_type = "fin_class_worker"
-      self.fetch_state = "new"
+      self.fetch_state = ("new")
 
   def has_tunable_operation(self):
     """Check if its a tuning loop operation"""

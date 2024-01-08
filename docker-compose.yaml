@@ -14,6 +14,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      #perf_compile step requires HIPNOGPU
       #args:
       #  - "BACKEND=HIPNOGPU"
     container_name: mituna_celery
