@@ -39,7 +39,8 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
-from tuna.miopen.db.miopen_tables import FinStep, get_miopen_tables
+from tuna.miopen.db.get_db_tables import get_miopen_tables
+from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.session import Session
@@ -563,7 +564,7 @@ class MIOpen(MITunaInterface):
     if self.args.fin_steps:
       if 'miopen_find_compile' in self.args.fin_steps \
       or 'miopen_perf_compile' in self.args.fin_steps:
-        self.fetch_state = ('new')
+        self.fetch_state = ('new')  # pylint: disable=superfluous-parens
         self.worker_type = "fin_build_worker"
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
         self.fetch_state = ('new', 'compiled')
@@ -571,7 +572,7 @@ class MIOpen(MITunaInterface):
 
     if self.args.update_applicability:
       self.worker_type = "fin_class_worker"
-      self.fetch_state = ("new")
+      self.fetch_state = ("new")  # pylint: disable=superfluous-parens
 
   def has_tunable_operation(self):
     """Check if its a tuning loop operation"""

@@ -56,7 +56,7 @@ from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_se
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
-from tuna.miopen.db.miopen_tables import JobMixin
+from tuna.db.tuna_tables import JobMixin
 
 
 class WorkerInterface(Process):
@@ -94,7 +94,7 @@ class WorkerInterface(Process):
     self.end_jobs = None
     #job detail vars
     self.envmt: List = []
-    self.fetch_state: str = ('new')
+    self.fetch_state: str = ('new')  # pylint: disable=superfluous-parens
     self.label: str = None
     self.session_id: int = None
     self.worker_type = "generic_worker"
