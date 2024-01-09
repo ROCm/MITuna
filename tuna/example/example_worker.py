@@ -51,7 +51,7 @@ class ExampleWorker(WorkerInterface):
   def step(self) -> bool:
     """Main functionality of the worker class. It picks up jobs in new state and executes them"""
 
-    if not self.get_job("new", "running", False):
+    if not self.get_job({"new"}, "running", False):
       #Sleep in case of DB contention
       sleep(random.randint(1, 10))
       return False
