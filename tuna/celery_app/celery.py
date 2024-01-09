@@ -32,12 +32,12 @@ from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
 
-CELERY_BROKER = 'mituna_redis'
-if 'CELERY_BROKER' in os.environ:
-  CELERY_BROKER = os.environ['CELERY_BROKER']
+#CELERY_BROKER = 'mituna_redis'
+#if 'CELERY_BROKER' in os.environ:
+#  CELERY_BROKER = os.environ['CELERY_BROKER']
 app = Celery('celery_app',
-             broker_url=f"redis://{CELERY_BROKER}:6379//",
-             result_backend=f"redis://{CELERY_BROKER}:6379/")
+             broker_url="redis://localhost:6379//",
+             result_backend="redis://localhost:6379/")
 
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
