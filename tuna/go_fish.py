@@ -89,11 +89,11 @@ def main() -> bool:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
 
   blocking: bool = 0  #type: ignore
-  if 'CELERY_BLOCKING' in os.environ:
+  if 'TUNA_CELERY_BLOCKING' in os.environ:
     blocking = 1  #type: ignore
   group_size: int = 128
-  if 'CELERY_GROUP_SIZE' in os.environ:
-    group_size = int(os.environ['CELERY_GROUP_SIZE'])
+  if 'TUNA_CELERY_GROUP_SIZE' in os.environ:
+    group_size = int(os.environ['TUNA_CELERY_GROUP_SIZE'])
 
   #worker_lst: list
   try:
