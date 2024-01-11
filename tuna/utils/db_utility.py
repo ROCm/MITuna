@@ -140,7 +140,7 @@ def get_attr_vals(obj, attr_list):
     val = getattr(obj, attr)
     if val is None:
       val = 'NULL'
-    elif isinstance(val, (datetime, str))
+    elif isinstance(val, (datetime, str)):
       val = f"'{val}'"
     elif isinstance(val, bytes):
       val = val.decode('utf-8')
