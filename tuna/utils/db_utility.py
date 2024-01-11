@@ -212,7 +212,8 @@ def get_class_by_tablename(tablename):
   """use tablename to find class"""
   # pylint: disable=protected-access
   for class_name in BASE._decl_class_registry.values():
-    if hasattr(class_name, '__tablename__') and class_name.__tablename__ == tablename:
+    if hasattr(class_name,
+               '__tablename__') and class_name.__tablename__ == tablename:
       return class_name
   return None
 
