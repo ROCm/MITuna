@@ -36,7 +36,6 @@ from typing import Callable, Any, List, Dict
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
 from sqlalchemy import create_engine
-from typing import Callable, Any, List, Dict
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
