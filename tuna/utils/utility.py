@@ -138,6 +138,8 @@ def get_mmi_env_vars(env_vars={}):
   return env_vars
 
 
+# pylint: disable=too-few-public-methods
+# pylint: disable=too-many-instance-attributes
 class SimpleDict:
   """empty object"""
 
