@@ -221,6 +221,7 @@ def build_dict_val_key(obj: SimpleDict, exclude: List[str] = None):
   """take object with to_dict function and create a key using values from the object's \
   sorted keys"""
   obj_dict = obj.to_dict()
+  exclude = ['id']
   for val in exclude:
     obj_dict.pop(val, False)
   obj_vals = [str(obj_dict[key]) for key in sorted(obj_dict.keys())]
