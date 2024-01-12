@@ -192,6 +192,7 @@ def get_db_id(db_elems, config_table):
   """Return unique DB id for config dict"""
   cid = None
   query = Query(config_table.id).filter_by(**db_elems)
+  LOGGER.info("ID query: %s", str(db_elems))
   with DbSession() as session:
     try:
       res = session.execute(query).fetchall()

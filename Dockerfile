@@ -1,5 +1,5 @@
 #default image to ubuntu + install rocm
-ARG BASEIMAGE=rocm/miopen:ci_5450cc
+ARG BASEIMAGE=rocm/miopen:ci_3346f2
 
 #FROM ubuntu:20.04 as dtuna-ver-0
 FROM $BASEIMAGE as dtuna-ver-0
@@ -90,11 +90,6 @@ ENV UBSAN_OPTIONS=print_stacktrace=1
 RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64.deb
 RUN dpkg -i dumb-init_*.deb && rm dumb-init_*.deb
 
-# Install cget
-#RUN pip install cget
-
-# Install rclone
-#RUN pip install https://github.com/pfultz2/rclone/archive/master.tar.gz
 
 ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
@@ -107,8 +102,13 @@ ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=/opt/rocm
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
-#RUN cmake -P install_deps.cmake --prefix $MIOPEN_DEPS
-#RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
+RUN . /env; if [ -z $NO_ROCM_INST ]; then\
+        pip install cget; \
+        pip install https://github.com/pfultz2/rclone/archive/master.tar.gz; \
+        sed -i "s~ROCmSoftwarePlatform/composable_kernel~#ROCmSoftwarePlatform/composable_kernel~g" requirements.txt; \
+        cget install -f ./dev-requirements.txt --prefix $PREFIX; \
+        git stash; \
+    fi
 
 ARG TUNA_USER=miopenpdb
 ARG BACKEND=HIP
@@ -135,7 +135,7 @@ RUN git submodule update --init --recursive
 ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=
+ARG FIN_BRANCH=develop
 RUN if ! [ -z $FIN_BRANCH ]; then \
         git fetch && git checkout $FIN_BRANCH; \
     fi

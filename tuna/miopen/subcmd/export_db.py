@@ -246,14 +246,16 @@ def build_miopen_kdb(dbt: MIOpenDBTables, find_db, logger: logging.Logger):
   with DbSession() as session:
     total = len(find_db.items())
     last_pcnt = 0
-    for _, entries in find_db.items():
+    for fdb_key, entries in find_db.items():
       num_fdb_entries += 1
       entries.sort(key=lambda x: float(x.kernel_time))
       fastest_slv = entries[0]
       query = session.query(dbt.kernel_cache)\
           .filter(dbt.kernel_cache.kernel_group == fastest_slv.kernel_group)\
           .filter(dbt.kernel_cache.valid == 1)
+      #logger.warning("adding fdb_key:%s, config:%s, solver:%s, kernel group: %s", fdb_key, fastest_slv.config, fastest_slv.solver, fastest_slv.kernel_group)
       for kinder in query.all():
+        #logger.warning("adding kernel_name:%s, kernel_args:%s", kinder.kernel_name, kinder.kernel_args)
         num_kdb_blobs += 1
         kern_db.append(kinder)
       pcnt = int(num_fdb_entries * 100 / total)
