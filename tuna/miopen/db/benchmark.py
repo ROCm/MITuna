@@ -71,7 +71,7 @@ class ModelEnum(pyenum):
   VGG11 = 'Vgg11'
   DENSENET = 'Densenet'
   DENSENET201 = 'Densenet201'
-  ATOA_SMALL= 'atoa_small'
+  ATOA_SMALL = 'atoa_small'
   ATOA_MEDIUM = 'atoa_medium'
   PEAK = 'peak'
   DENSENET121 = 'densenet121'
@@ -98,8 +98,6 @@ class ModelEnum(pyenum):
   VGG13_BN = 'Vgg13_bn'
   VGG16_BN = 'Vgg16_bn'
   VGG19_BN = 'Vgg19_bn'
-
-
 
   def __str__(self):
     return self.value
