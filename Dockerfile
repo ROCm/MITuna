@@ -105,8 +105,8 @@ ARG MIOPEN_DEPS=/opt/rocm
 RUN . /env; if [ -z $NO_ROCM_INST ]; then\
         pip install cget; \
         pip install https://github.com/pfultz2/rclone/archive/master.tar.gz; \
-        sed -i "s~ROCmSoftwarePlatform/composable_kernel~#ROCmSoftwarePlatform/composable_kernel~g" requirements.txt; \
-        cget install -f ./dev-requirements.txt --prefix $PREFIX; \
+        sed -i "s~f requirements~f dev-requirements~g" install_deps.cmake; \
+        cmake -P install_deps.cmake --prefix $PREFIX; \
         git stash; \
     fi
 
