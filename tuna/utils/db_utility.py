@@ -167,7 +167,6 @@ def gen_update_query(obj, attribs, tablename):
 
 def gen_insert_query(obj, attribs, tablename):
   """create a select query and generate name space objects for the results"""
-  #attr_list = [attr for attr in attribs]
   attr_list = list(attribs)
   attr_list.remove('id')
   attr_str = ','.join(attr_list)
@@ -217,8 +216,7 @@ def get_class_by_tablename(tablename):
   return None
 
 
-def build_dict_val_key(obj: SimpleDict, exclude: List[str] = ['id']):
-  #pylint: disable=dangerous-default-value
+def build_dict_val_key(obj: SimpleDict, exclude: List[str] = ['id']):  # pylint: disable=W0102
   """take object with to_dict function and create a key using values from the object's \
   sorted keys"""
   obj_dict = obj.to_dict()
