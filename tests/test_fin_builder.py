@@ -36,7 +36,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_class import FinClass
-from tuna.utils.db_utility import connect_db
+from tuna.utils.db_utility import connect_db, db_rows_to_obj
 from tuna.miopen.subcmd.import_configs import import_cfgs
 from tuna.miopen.subcmd.load_job import add_jobs
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
@@ -122,7 +122,12 @@ def test_fin_builder():
   miopen.worker_type = 'fin_build_worker'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
-  job_config_rows = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
+  jobs = None
+  with DbSession() as session:
+    jobs = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
+  job_entries = db_rows_to_obj(jobs, library.get_job_attr())
+  job_config_rows = library.compose_work_objs_fin(session, job_entries,
+                                                  library.dbt)
   assert (job_config_rows)
 
   f_vals = miopen.get_f_vals(Machine(local_machine=True), range(0))

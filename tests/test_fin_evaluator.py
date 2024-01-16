@@ -45,7 +45,7 @@ from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.solver import get_solver_ids
-from tuna.utils.db_utility import connect_db
+from tuna.utils.db_utility import connect_db, db_rows_to_obj
 from tuna.utils.logger import setup_logger
 from tuna.utils.miopen_utility import load_machines
 from tuna.machine import Machine
@@ -202,7 +202,11 @@ def test_fin_evaluator():
   miopen.worker_type = 'fin_eval_worker'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
-  job_config_rows = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
+  with DbSession() as session:
+    jobs = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
+  job_entries = db_rows_to_obj(jobs, library.get_job_attr())
+  job_config_rows = library.compose_work_objs_fin(session, job_entries,
+                                                  library.dbt)
   assert (len(job_config_rows) == 80)
 
   f_vals = miopen.get_f_vals(machine, range(0))
