@@ -422,6 +422,7 @@ class MIOpen(MITunaInterface):
       job_attr.remove("update_ts")
     except NoInspectionAvailable as error:
       self.logger.warning("Ignoring error for init_session: %s", error)
+    return job_attr
 
   def get_jobs(self, session, find_state: str, session_id: int) -> bool:
     """Interface function to get jobs based on session and find_state"""
@@ -431,12 +432,14 @@ class MIOpen(MITunaInterface):
     job_attr: List[str] = self.get_job_attr()
 
     job_rows = self.get_job_objs(session, find_state, self.args.label, self.dbt,
-                                 job_attr, self.args.fin_steps)
+                                 job_attr, self.args.fin_steps).fetchall()
 
     if not self.check_jobs_found(job_rows, find_state, session_id):
       return False
 
-    ids = [row[0].id for row in job_rows]
+    print(job_rows)
+    print()
+    ids = [row.id for row in job_rows]
     self.logger.info("%s jobs %s", find_state, ids)
 
     return job_rows

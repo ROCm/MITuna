@@ -41,7 +41,7 @@ LOGGER: logging.Logger = setup_logger('tune')
 
 
 #pylint: disable=too-many-locals
-def tune(library, group_size, blocking=None):
+def tune(library, group_size, blocking=None, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
   LOGGER.info('Celery running with group size: %s', group_size)
@@ -53,13 +53,13 @@ def tune(library, group_size, blocking=None):
                                        library.args.session_id)
     if not job_config_rows:
       return False
-    batch_size = 1000
 
-    for i in range(0, len(job_config_rows), batch_size):
-      batch_jobs = job_config_rows[i:1 + batch_size]
+    job_batch_size = 1000
+    for i in range(0, len(job_config_rows), job_batch_size):
+      batch_jobs = job_config_rows[i:1 + job_batch_size]
       job_entries = db_rows_to_obj(batch_jobs, library.get_job_attr())
       entries = [(job,) for job in job_entries]
-      if library.fin_steps:
+      if library.args.fin_steps:
         entries = library.compose_work_objs_fin(session, entries, library.dbt)
 
       iterator = iter(entries)
