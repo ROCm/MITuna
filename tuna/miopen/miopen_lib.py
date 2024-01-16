@@ -27,7 +27,7 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
-from typing import List, Tuple, Any, Sequence, Union
+from typing import List, Tuple, Any, Sequence
 
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import NoInspectionAvailable
