@@ -27,7 +27,7 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Any, Sequence, Union
 
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import NoInspectionAvailable
@@ -424,18 +424,20 @@ class MIOpen(MITunaInterface):
       self.logger.warning("Ignoring error for init_session: %s", error)
     return job_attr
 
-  def get_jobs(self, session, find_state: str, session_id: int) -> bool:
+  def get_jobs(self, session: DbSession, find_state: List[Any],
+               session_id: int):
     """Interface function to get jobs based on session and find_state"""
-    job_rows: List[Tuple[SimpleDict, ...]]
+    #job_rows:
     ids: list
     row: SimpleDict
     job_attr: List[str] = self.get_job_attr()
 
     job_rows = self.get_job_objs(session, find_state, self.args.label, self.dbt,
-                                 job_attr, self.args.fin_steps).fetchall()
+                                 job_attr,
+                                 self.args.fin_steps).fetchall()  # type: ignore
 
     if not self.check_jobs_found(job_rows, find_state, session_id):
-      return False
+      return None
 
     print(job_rows)
     print()
@@ -450,9 +452,9 @@ class MIOpen(MITunaInterface):
                    label: str,
                    dbt: DBTablesInterface,
                    job_attr: List[str],
-                   fin_steps: List[str] = None) -> List[Tuple[SimpleDict, ...]]:
+                   fin_steps: List[str] = None) -> Sequence[Tuple[Any, ...]]:
     """Get list of job objects"""
-    entries: List[Tuple[SimpleDict, ...]]
+    entries: Sequence[Tuple[Any, ...]]
     conds: List[str] = [f"session={dbt.session.id}", "valid=1"]
 
     if label:
@@ -546,7 +548,7 @@ class MIOpen(MITunaInterface):
                             rel_cond_str)[0])
     return cfg_entries
 
-  def check_jobs_found(self, job_rows: List[SimpleDict], find_state: str,
+  def check_jobs_found(self, job_rows: List[SimpleDict], find_state: List[Any],
                        session_id: int) -> bool:
     """check for end of jobs"""
     if not job_rows:
