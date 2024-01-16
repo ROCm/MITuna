@@ -183,11 +183,23 @@ def gen_insert_query(obj, attribs, tablename):
 
 def gen_select_objs(session, attribs, tablename, cond_str):
   """create a select query and generate name space objects for the results"""
+  ret = get_job_rows(session, attribs, tablename, cond_str)
+  entries = db_rows_to_obj(ret, attribs)
+  return entries
+
+
+def get_job_rows(session, attribs, tablename, cond_str):
+  """Get db rows"""
   attr_str = ','.join(attribs)
   query = f"SELECT {attr_str} FROM {tablename}"\
           f" {cond_str};"
   LOGGER.info('Query Select: %s', query)
   ret = session.execute(query)
+  return ret
+
+
+def db_rows_to_obj(ret, attribs):
+  """Compose SimpleDict list of db jobs"""
   entries = []
   for row in ret:
     #LOGGER.info('select_row: %s', row)

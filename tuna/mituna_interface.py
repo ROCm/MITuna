@@ -227,6 +227,6 @@ class MITunaInterface():
 
     return kwargs
 
-  def get_jobs(self, find_state: str, session_id: int) -> bool:
+  def get_jobs(self, session, find_state: str, session_id: int) -> bool:
     """Interface function to get jobs based on find_state"""
     raise NotImplementedError("Not implemented")

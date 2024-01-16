@@ -39,6 +39,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
+from tuna.utils.db_utility import get_job_rows
 from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
@@ -62,6 +63,8 @@ from tuna.miopen.db.tables import MIOpenDBTables
 
 class MIOpen(MITunaInterface):
   """Class to support MIOpen specific tuning functionality"""
+
+  # pylint: disable=too-many-public-methods
 
   def __init__(self):
     super().__init__(library=Library.MIOPEN)
@@ -410,11 +413,8 @@ class MIOpen(MITunaInterface):
 
     return kwargs
 
-  def get_jobs(self, find_state: str, session_id: int) -> bool:
-    """Interface function to get jobs based on session and find_state"""
-    job_rows: List[Tuple[SimpleDict, ...]]
-    ids: list
-    row: SimpleDict
+  def get_job_attr(self):
+    """Get job attr for row selection"""
     job_attr: List[str]
     try:
       job_attr = [column.name for column in inspect(self.dbt.job_table).c]
@@ -423,15 +423,21 @@ class MIOpen(MITunaInterface):
     except NoInspectionAvailable as error:
       self.logger.warning("Ignoring error for init_session: %s", error)
 
-    with DbSession() as session:
-      job_rows = self.get_job_objs(session, find_state, self.args.label,
-                                   self.dbt, job_attr, self.args.fin_steps)
+  def get_jobs(self, session, find_state: str, session_id: int) -> bool:
+    """Interface function to get jobs based on session and find_state"""
+    job_rows: List[Tuple[SimpleDict, ...]]
+    ids: list
+    row: SimpleDict
+    job_attr: List[str] = self.get_job_attr()
 
-      if not self.check_jobs_found(job_rows, find_state, session_id):
-        return False
+    job_rows = self.get_job_objs(session, find_state, self.args.label, self.dbt,
+                                 job_attr, self.args.fin_steps)
 
-      ids = [row[0].id for row in job_rows]
-      self.logger.info("%s jobs %s", find_state, ids)
+    if not self.check_jobs_found(job_rows, find_state, session_id):
+      return False
+
+    ids = [row[0].id for row in job_rows]
+    self.logger.info("%s jobs %s", find_state, ids)
 
     return job_rows
 
@@ -473,16 +479,20 @@ class MIOpen(MITunaInterface):
     if cond_str:
       cond_str = f"WHERE {cond_str}"
     cond_str += " ORDER BY retries,config ASC"
+
+    ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
+
     #try once without waiting for lock
-    job_entries = gen_select_objs(session, job_attr,
-                                  dbt.job_table.__tablename__, cond_str)
+    #job_entries = gen_select_objs(session, job_attr,
+    #                              dbt.job_table.__tablename__, cond_str)
 
-    entries = [(job,) for job in job_entries]
-    if fin_steps:
-      ret = self.compose_work_objs_fin(session, entries, dbt)
-    else:
-      ret = entries
+    #entries = [(job,) for job in job_entries]
+    #if fin_steps:
+    #  ret = self.compose_work_objs_fin(session, entries, dbt)
+    #else:
+    #  ret = entries
 
+    #return ret
     return ret
 
   def compose_work_objs_fin(self, session, job_entries, dbt):
