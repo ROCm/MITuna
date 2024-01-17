@@ -203,7 +203,7 @@ def test_fin_evaluator():
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
   with DbSession() as session:
-    jobs = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
+    jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.args.session_id)
   job_entries = db_rows_to_obj(jobs, library.get_job_attr())
   job_config_rows = library.compose_work_objs_fin(session, job_entries,
                                                   library.dbt)

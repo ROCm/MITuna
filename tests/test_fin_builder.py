@@ -124,7 +124,7 @@ def test_fin_builder():
                               config_type=ConfigType.convolution)
   jobs = None
   with DbSession() as session:
-    jobs = miopen.get_jobs(miopen.fetch_state, miopen.args.session_id)
+    jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.args.session_id)
   job_entries = db_rows_to_obj(jobs, library.get_job_attr())
   job_config_rows = library.compose_work_objs_fin(session, job_entries,
                                                   library.dbt)
