@@ -125,9 +125,9 @@ def test_fin_builder():
   jobs = None
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.args.session_id)
-  job_entries = db_rows_to_obj(jobs, library.get_job_attr())
-  job_config_rows = library.compose_work_objs_fin(session, job_entries,
-                                                  library.dbt)
+  job_entries = db_rows_to_obj(jobs, miopen.get_job_attr())
+  job_config_rows = miopen.compose_work_objs_fin(session, job_entries,
+                                                 miopen.dbt)
   assert (job_config_rows)
 
   f_vals = miopen.get_f_vals(Machine(local_machine=True), range(0))
