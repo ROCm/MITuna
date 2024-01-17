@@ -205,8 +205,8 @@ def test_fin_evaluator():
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.args.session_id)
   job_entries = db_rows_to_obj(jobs, miopen.get_job_attr())
-  job_config_rows = miopen.compose_work_objs_fin(session, job_entries,
-                                                 miopen.dbt)
+  entries = [(job,) for job in job_entries]
+  job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
   assert (len(job_config_rows) == 80)
 
   f_vals = miopen.get_f_vals(machine, range(0))
