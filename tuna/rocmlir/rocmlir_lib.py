@@ -210,7 +210,7 @@ class RocMLIR(MITunaInterface):
 
     return kwargs
 
-  def get_jobs(self, find_state: str, session_id: int) -> bool:
+  def get_jobs(self, session, find_state: str, session_id: int) -> bool:
     """Get jobs based on find_state"""
     self.logger.info('Placeholder')
 
