@@ -56,7 +56,7 @@ def tune(library, group_size, blocking=None, job_batch_size=1000):
 
     job_batch_size = 1000
     for i in range(0, len(job_config_rows), job_batch_size):
-      batch_jobs = job_config_rows[i:1 + job_batch_size]
+      batch_jobs = job_config_rows[i:min(i + job_batch_size, len(job_config_rows))]
       job_entries = db_rows_to_obj(batch_jobs, library.get_job_attr())
       entries = [(job,) for job in job_entries]
       if library.args.fin_steps:
