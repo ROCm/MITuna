@@ -202,9 +202,10 @@ def db_rows_to_obj(ret, attribs):
   """Compose SimpleDict list of db jobs"""
   entries = []
   for row in ret:
-    #LOGGER.info('select_row: %s', row)
+    # LOGGER.info('select_row: %s', row)
     entry = SimpleDict()
     for i, col in enumerate(attribs):
+      # LOGGER.info('attrib: %s, val: %s', col, row[i])
       setattr(entry, col, row[i])
     entries.append(entry)
   return entries
