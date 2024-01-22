@@ -39,7 +39,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
-from tuna.utils.db_utility import get_job_rows
+from tuna.utils.db_utility import get_job_rows, gen_update_query
 from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
@@ -424,27 +424,36 @@ class MIOpen(MITunaInterface):
       self.logger.warning("Ignoring error for init_session: %s", error)
     return job_attr
 
-  def get_jobs(self, session: DbSession, find_state: List[Any],
-               session_id: int):
+  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
+               session_id: int, claim_num: int):
     """Interface function to get jobs based on session and find_state"""
-    #job_rows:
+    job_rows: List[SimpleDict]
     ids: list
     row: SimpleDict
     job_attr: List[str] = self.get_job_attr()
 
-    job_rows = self.get_job_objs(session, find_state, self.args.label, self.dbt,
+    job_list = self.get_job_objs(session, find_state, self.args.label, self.dbt,
                                  job_attr,
-                                 self.args.fin_steps).fetchall()  # type: ignore
+                                 claim_num,
+                                 self.args.fin_steps)
 
-    if not self.check_jobs_found(job_rows, find_state, session_id):
-      return None
+    if not self.check_jobs_found(job_list, find_state, session_id):
+      return []
 
-    print(job_rows)
+    print(job_list)
     print()
-    ids = [row.id for row in job_rows]
-    self.logger.info("%s jobs %s", find_state, ids)
 
-    return job_rows
+    ids = [row.id for row in job_list]
+    self.logger.info("%s jobs %s", find_state, ids)
+    for job in job_list:
+      job.state = set_state
+      query: str = gen_update_query(job, ['state'],
+                                    self.dbt.job_table.__tablename__)
+      session.execute(query)
+
+    session.commit()
+
+    return job_list
 
   def get_job_objs(self,
                    session: DbSession,
@@ -452,9 +461,10 @@ class MIOpen(MITunaInterface):
                    label: str,
                    dbt: DBTablesInterface,
                    job_attr: List[str],
-                   fin_steps: List[str] = None) -> Sequence[Tuple[Any, ...]]:
+                   claim_num: int,
+                   fin_steps: List[str] = None) -> List[SimpleDict]:
     """Get list of job objects"""
-    entries: Sequence[Tuple[Any, ...]]
+    entries: List[Tuple[SimpleDict, ...]]
     conds: List[str] = [f"session={dbt.session.id}", "valid=1"]
 
     if label:
@@ -463,7 +473,7 @@ class MIOpen(MITunaInterface):
     conds.append(f"retries<{self.max_job_retries}")
     conds.append("state in (" + str(find_state).strip('{').strip('}') + ")")
 
-    entries = self.compose_work_objs(session, conds, dbt, job_attr, fin_steps)
+    entries = self.compose_work_objs(session, conds, dbt, job_attr, claim_num, fin_steps)
     return entries
 
   def compose_work_objs(
@@ -472,7 +482,8 @@ class MIOpen(MITunaInterface):
       conds: List[str],
       dbt: DBTablesInterface,
       job_attr: List[str],
-      fin_steps: List[str] = None) -> List[Tuple[SimpleDict, SimpleDict]]:
+      claim_num: int,
+      fin_steps: List[str] = None) -> List[SimpleDict]:
     """Query a job list for update"""
     ret = []
     if fin_steps:
@@ -483,15 +494,14 @@ class MIOpen(MITunaInterface):
     cond_str = ' AND '.join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
-    cond_str += " ORDER BY retries,config ASC"
+    cond_str += f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE SKIP LOCKED"
 
-    ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
+    #ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
 
-    #try once without waiting for lock
-    #job_entries = gen_select_objs(session, job_attr,
-    #                              dbt.job_table.__tablename__, cond_str)
+    job_entries = gen_select_objs(session, job_attr,
+                                  dbt.job_table.__tablename__, cond_str)
 
-    #entries = [(job,) for job in job_entries]
+    ret = job_entries
     #if fin_steps:
     #  ret = self.compose_work_objs_fin(session, entries, dbt)
     #else:
@@ -500,7 +510,7 @@ class MIOpen(MITunaInterface):
     #return ret
     return ret
 
-  def compose_work_objs_fin(self, session, job_entries, dbt):
+  def compose_work_objs_fin(self, session, job_entries, dbt) -> List[Tuple[SimpleDict, SimpleDict]]:
     """Return jobs for fin work"""
     ret = []
 
@@ -513,7 +523,7 @@ class MIOpen(MITunaInterface):
     }
 
     if job_entries:
-      id_str = ','.join([str(job[0].config) for job in job_entries])
+      id_str = ','.join([str(job.config) for job in job_entries])
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
       cfg_attr = [column.name for column in inspect(dbt.config_table).c]
       cfg_entries = gen_select_objs(session, cfg_attr,
@@ -525,7 +535,7 @@ class MIOpen(MITunaInterface):
       cfg_map = {cfg.id: cfg for cfg in cfg_entries}
 
       for job in job_entries:
-        ret.append((job[0], cfg_map[job[0].config]))
+        ret.append((job, cfg_map[job.config]))
 
     return ret
 
@@ -580,10 +590,12 @@ class MIOpen(MITunaInterface):
       if 'miopen_find_compile' in self.args.fin_steps \
       or 'miopen_perf_compile' in self.args.fin_steps:
         self.fetch_state.add('new')
+        self.set_state = 'compile_start'
         self.worker_type = "fin_build_worker"
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
         self.fetch_state.add('new')
         self.fetch_state.add('compiled')
+        self.set_state = 'eval_start'
         self.worker_type = "fin_eval_worker"
 
     if self.args.update_applicability:

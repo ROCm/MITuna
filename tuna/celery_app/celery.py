@@ -83,9 +83,20 @@ def celery_enqueue_gfx1030_36(args, kwargs):
   return 'RET VAL'
 
 
+@app.task(trail=True)
+def celery_enqueue_gfx942_304(args, kwargs):
+  """Defines a celery task"""
+  logger.info("Enqueueing gfx942-304")
+  kwargs = prep_kwargs(kwargs, args)
+  worker = get_worker(kwargs, args[2])
+  ret = worker.run()
+  return ret
+
+
 TUNING_QUEUE = {
     "gfx908-120": celery_enqueue_gfx908_120,
-    "gfx1030-36": celery_enqueue_gfx1030_36
+    "gfx1030-36": celery_enqueue_gfx1030_36,
+    "gfx942-304": celery_enqueue_gfx942_304
 }
 
 if __name__ == '__main__':

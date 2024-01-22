@@ -48,48 +48,59 @@ def tune(library, group_size, blocking=None, job_batch_size=1000):
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
-  with DbSession() as session:
-    job_config_rows = library.get_jobs(session, library.fetch_state,
-                                       library.args.session_id)
-    if not job_config_rows:
-      return False
+  results_list = []
+  while True:
+    job_list = []
+    with DbSession() as session:
+      job_list = library.get_jobs(session, library.fetch_state, library.set_state,
+                                         library.args.session_id, job_batch_size)
 
-    job_batch_size = 1000
-    for i in range(0, len(job_config_rows), job_batch_size):
-      batch_jobs = job_config_rows[i:1 + job_batch_size]
-      job_entries = db_rows_to_obj(batch_jobs, library.get_job_attr())
-      entries = [(job,) for job in job_entries]
-      if library.args.fin_steps:
-        entries = library.compose_work_objs_fin(session, entries, library.dbt)
+      for i in range(0, len(job_list), job_batch_size):
+        batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
+        if library.args.fin_steps:
+          entries = library.compose_work_objs_fin(session, batch_jobs, library.dbt)
 
-      iterator = iter(entries)
-      #test launching 5 async jobs at a time,
-      #celery default is 72
-      while chunk := list(islice(iterator, group_size)):
-        serialized_jobs = serialize_chunk(chunk)
-        job = group_tasks(serialized_jobs, library.worker_type, kwargs,
-                          library.dbt.session.arch,
-                          str(library.dbt.session.num_cu))
-        #result is of type GroupResult aka list of AsyncResult
-        result = job.apply_async()
-        if blocking:
-          LOGGER.info('Collecting result for group task: %s ', result.id)
-          #result.wait(timeout=10)
-          while not result.ready():
-            time.sleep(5)
-          LOGGER.info('Group successful: %s', result.successful())
-          LOGGER.info(result.get())
+        iterator = iter(entries)
+        while chunk := list(islice(iterator, group_size)):
+          serialized_jobs = serialize_chunk(chunk)
+          job = group_tasks(serialized_jobs, library.worker_type, kwargs,
+                            library.dbt.session.arch,
+                            str(library.dbt.session.num_cu))
+          #result is of type GroupResult aka list of AsyncResult
+          result = job.apply_async()
+          results_list.append(result)
+          if blocking:
+            LOGGER.info('Collecting result for group task: %s ', result.id)
+            #result.wait(timeout=10)
+            while not result.ready():
+              time.sleep(5)
+            LOGGER.info('Group successful: %s', result.successful())
+            LOGGER.info(result.get())
 
-        #v = ResultGroup = tree, leafs are AsyncTasks
-        #print([
-        #    v for v in result.collect() if not isinstance(v, (ResultBase, tuple))
-        #  ])
-        #else:
-        #async result gather
-        #job.apply_async()
-        #job.collect()
-        #print(v for v in result.collect())
-        #print('Non blocking result gather')
-      LOGGER.info('Done launching celery groups')
+          #v = ResultGroup = tree, leafs are AsyncTasks
+          #print([
+          #    v for v in result.collect() if not isinstance(v, (ResultBase, tuple))
+          #  ])
+          #else:
+          #async result gather
+          #job.apply_async()
+          #job.collect()
+          #print(v for v in result.collect())
+          #print('Non blocking result gather')
+
+        LOGGER.info('Done launching %s celery groups', len(job_list))
+
+    if not job_list:
+      if not results_list:
+        LOGGER.info('Last celery group finished')
+        return False
+      #wait for last group
+      while results_list:
+        result = results_list.pop(0)
+        while not result.ready():
+          time.sleep(10)
+        if len(results_list) < group_size:
+          break
+      #check if more jobs appeared
 
   return False
