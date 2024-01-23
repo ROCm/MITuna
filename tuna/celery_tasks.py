@@ -90,7 +90,7 @@ def tune(library, group_size, blocking=None, job_batch_size=1000):
 
         LOGGER.info('Done launching %s celery groups', len(job_list))
 
-    while len(results_list) > (2 * group_size):
+    while len(results_list) > 2:
       result = results_list.pop(0)
       while not result.ready():
         time.sleep(10)
@@ -99,14 +99,10 @@ def tune(library, group_size, blocking=None, job_batch_size=1000):
       if not results_list:
         LOGGER.info('Last celery group finished')
         return False
-      #wait for last group
-      while len(results_list) > 0:
-        result = results_list.pop(0)
-        while not result.ready():
-          time.sleep(10)
-        if len(results_list) < group_size:
-          break
-      #check if more jobs appeared 
+      result = results_list.pop(0)
+      while not result.ready():
+        time.sleep(10)
+      #check if more jobs appeared
 
 
   return False
