@@ -61,12 +61,16 @@ def connect_db():
   else:
     raise ValueError('DB name must be specified in env variable: TUNA_DB_NAME')
 
-  try:
-    ENGINE.execute(f'Use {db_name}')
-    return
-  except OperationalError:  # as err:
-    LOGGER.warning('Database %s does not exist, attempting to create database',
-                   db_name)
+  for idx in range(NUM_SQL_RETRIES):
+    try:
+      ENGINE.execute(f'Use {db_name}')
+      return
+    except OperationalError as error:
+      logger.warning('%s, DB contention sleeping (%s)...', error, idx)
+      sleep(random.randint(1, 30))
+
+  LOGGER.warning('Database %s does not exist, attempting to create database',
+                 db_name)
 
   try:
     ENGINE.execute(f'Create database if not exists {db_name}')
