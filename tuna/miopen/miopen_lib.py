@@ -438,7 +438,7 @@ class MIOpen(MITunaInterface):
                                  self.args.fin_steps)
 
     if not self.check_jobs_found(job_list, find_state, session_id):
-      return [] 
+      return []
 
     print(job_list)
     print()
@@ -446,7 +446,7 @@ class MIOpen(MITunaInterface):
     ids = [row.id for row in job_list]
     self.logger.info("%s jobs %s", find_state, ids)
     for job in job_list:
-      job.state = set_state 
+      job.state = set_state
       query: str = gen_update_query(job, ['state'],
                                     self.dbt.job_table.__tablename__)
       session.execute(query)
@@ -494,7 +494,7 @@ class MIOpen(MITunaInterface):
     cond_str = ' AND '.join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
-    cond_str += f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE SKIP LOCKED"
+    cond_str += f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE"
 
     #ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
 

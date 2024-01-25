@@ -103,7 +103,5 @@ def tune(library, group_size, blocking=None, job_batch_size=1000):
         result = results_list.pop(0)
         while not result.ready():
           time.sleep(10)
-      #check if more jobs appeared
-
 
   return False
