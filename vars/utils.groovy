@@ -890,10 +890,10 @@ def compile()
   }
 
   // Run the jobs on the cluster
-  sh ("srun --no-kill -p ${partition} -N 1-10 -l bash -c \" "
-      +" docker run ${docker_args} ${tuna_docker_name} sh -c 'celery -A tuna.celery_app.celery worker -l info -E --logfile=/tmp/tunalogs -n celery_worker' &"
-      +" docker run ${docker_args} ${tuna_docker_name} sh -c 'python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}';\""
-      )
+  sh ("srun --no-kill -p ${partition} -N 1-10 -J ${branch_id}_celery -l bash -c \" "
+      +" docker run ${docker_args} ${tuna_docker_name} sh -c 'celery -A tuna.celery_app.celery worker -l info -E --logfile=/tmp/tunalogs -n celery_worker' \" &")
+  sh "docker run ${docker_args} ${tuna_docker_name} sh -c 'python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+  sh "scancel -n ${branch_id}_celery"
 }
 
 
