@@ -25,20 +25,27 @@
 #
 ###############################################################################
 """Module that encapsulates the DB representation based on configuration type"""
-from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
-from tuna.miopen.db.miopen_tables import ConvolutionJob, ConvolutionConfig, ConvolutionConfigTags
-from tuna.miopen.db.miopen_tables import ConvJobCache, Solver
-from tuna.miopen.db.miopen_tables import BNJob, BNConfig, BNJobCache, BNFinJobCache, BNConfigTags
-from tuna.miopen.db.miopen_tables import ConvSolverApplicability, BNSolverApplicability
-from tuna.miopen.db.miopen_tables import ConvFinJobCache, BNKernelCache, ConvolutionKernelCache
-from tuna.miopen.db.miopen_tables import TensorTable, ConvolutionGolden, ConvolutionBenchmark
-from tuna.miopen.db.miopen_tables import BNBenchmark
-from tuna.miopen.db.miopen_tables import ConvSolverAnalyticsAggregated, ConvSolverAnalyticsDetailed
-from tuna.miopen.db.benchmark import Framework, Model
-from tuna.miopen.db.session import Session
 
+from tuna.miopen.db.batch_norm_tables import BNBenchmark, BNConfig
+from tuna.miopen.db.batch_norm_tables import BNConfigTags, BNFinJobCache
+from tuna.miopen.db.batch_norm_tables import BNJob, BNJobCache, BNKernelCache
+from tuna.miopen.db.batch_norm_tables import BNSolverApplicability
+from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
+from tuna.miopen.db.convolutionjob_tables import ConvolutionJob
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfigTags
+from tuna.miopen.db.convolutionjob_tables import ConvJobCache
+from tuna.miopen.db.convolutionjob_tables import ConvSolverApplicability
+from tuna.miopen.db.convolutionjob_tables import ConvolutionGolden, ConvolutionBenchmark
+from tuna.miopen.db.convolutionjob_tables import ConvFinJobCache, ConvolutionKernelCache
+from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsAggregated
+from tuna.miopen.db.convolutionjob_tables import ConvSolverAnalyticsDetailed
+from tuna.miopen.db.solver import Solver
+from tuna.miopen.db.tensortable import TensorTable
+from tuna.miopen.db.benchmark import Framework, Model
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.tables_interface import DBTablesInterface
+from tuna.miopen.db.session import Session
 
 
 #pylint: disable=too-many-instance-attributes

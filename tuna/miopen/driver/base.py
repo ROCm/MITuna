@@ -35,8 +35,8 @@ from sqlalchemy.inspection import inspect
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import build_dict_val_key, get_session_val_map
-from tuna.miopen.db.miopen_tables import TensorTable
-from tuna.miopen.db.miopen_tables import ConvolutionConfig
+from tuna.miopen.db.tensortable import TensorTable
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import TENSOR_PRECISION
 from tuna.miopen.utils.parsing import parse_line
 from tuna.driver import DriverBase

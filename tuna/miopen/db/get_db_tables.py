@@ -24,43 +24,36 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for creating DB tables"""
-from sqlalchemy.exc import OperationalError
-from tuna.miopen.db.get_db_tables import get_miopen_tables
-from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
-from tuna.db_engine import ENGINE
-from tuna.utils.logger import setup_logger
-from tuna.utils.db_utility import create_tables
+""" Module for get/set/initialize DB - MIOpen/Conv/Fusion/Batchnorm tables"""
 
-#pylint: disable=too-few-public-methods
-LOGGER = setup_logger('db_tables')
-
-
-def recreate_triggers(drop_triggers, create_triggers):
-  """Drop and recreate triggers"""
-
-  with ENGINE.connect() as conn:
-    for dtg in drop_triggers:
-      conn.execute(f"drop trigger if exists {dtg}")
-    for trg in create_triggers:
-      try:
-        conn.execute(trg)
-      except OperationalError as oerr:
-        LOGGER.warning("Operational Error occurred while adding trigger: '%s'",
-                       trg)
-        LOGGER.info('%s \n', oerr)
-        continue
-
-  return True
+from tuna.machine import Machine
+from tuna.miopen.db.benchmark import Framework, Model
+from tuna.miopen.db.solver import Solver
+from tuna.miopen.db.batch_norm_tables import BNBenchmark
+from tuna.miopen.db.convolutionjob_tables import ConvolutionBenchmark
+from tuna.miopen.db.tensortable import TensorTable
+from tuna.miopen.db.miopen_tables import add_bn_tables
+from tuna.miopen.db.miopen_tables import add_conv_tables
+from tuna.miopen.db.miopen_tables import add_fusion_tables
+from tuna.miopen.db.session import Session
 
 
-def main():
-  """Main script function"""
-  #setup MIOpen DB
-  ret_t = create_tables(get_miopen_tables())
-  LOGGER.info('DB creation successful: %s', ret_t)
-  recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
+def get_miopen_tables():
+  """Returns a list of all MIOpen Tuna DB tables"""
 
+  miopen_tables = []
+  miopen_tables.append(Solver())
+  miopen_tables.append(Session())
+  miopen_tables.append(Framework())
+  miopen_tables.append(Model())
+  miopen_tables.append(Machine(local_machine=True))
+  miopen_tables.append(TensorTable())
 
-if __name__ == '__main__':
-  main()
+  miopen_tables = add_conv_tables(miopen_tables)
+  miopen_tables = add_fusion_tables(miopen_tables)
+  miopen_tables = add_bn_tables(miopen_tables)
+
+  miopen_tables.append(ConvolutionBenchmark())
+  miopen_tables.append(BNBenchmark())
+
+  return miopen_tables
