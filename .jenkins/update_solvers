@@ -23,7 +23,7 @@ pipeline {
       db_user = "${params.db_user}"
       db_password = "${params.db_password}"
       branch_name = "${params.branch_name}"
-      backend = 'HIPNOGPU'
+      backend = 'HIP'
       branch_id = "${params.branch_name}_${BUILD_ID}"
   }
   parameters {
