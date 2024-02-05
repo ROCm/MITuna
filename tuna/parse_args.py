@@ -61,15 +61,17 @@ def setup_arg_parser(desc: str,
       parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
 
     if TunaArgs.ARCH in arg_list:
-      parser.add_argument(
-          '-a',
-          '--arch',
-          type=str,
-          dest='arch',
-          default=None,
-          required=False,
-          help='Architecture of machines',
-          choices=['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a', 'gfx940', 'gfx942'])
+      parser.add_argument('-a',
+                          '--arch',
+                          type=str,
+                          dest='arch',
+                          default=None,
+                          required=False,
+                          help='Architecture of machines',
+                          choices=[
+                              'gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a',
+                              'gfx940', 'gfx942'
+                          ])
     if TunaArgs.NUM_CU in arg_list:
       parser.add_argument(
           '-n',

@@ -359,7 +359,8 @@ def solverAnalyticsTest(){
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
         sh "cd SolverAnalytics; git checkout sp/solver_changes; git pull;"
-        sh "pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt"
+        //lower version in requirments file causing issues in ci
+        //sh "pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt"
 
         // run SolverAnalytics tests
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"

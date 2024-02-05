@@ -1,13 +1,24 @@
-#default image to ubuntu + install rocm
-ARG BASEIMAGE=rocm/miopen:ci_3346f2
-
-#FROM ubuntu:20.04 as dtuna-ver-0
-FROM $BASEIMAGE as dtuna-ver-0
 #install rocm
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
-#'12969'
-ENV NO_ROCM_INST=
+
+#test if rocm version was set
+ARG HASVER=${ROCMVERSION:+$ROCMVERSION}
+ARG HASVER=${HASVER:-$OSDB_BKC_VERSION}
+
+ARG BASEIMAGE=rocm/miopen:ci_c1ca2a
+ARG UBUNTU=ubuntu:20.04
+
+#use UBUNTU with rocm version set
+ARG USEIMAGE=${HASVER:+${UBUNTU}}
+ARG USEIMAGE=${USEIMAGE:-$BASEIMAGE}
+
+FROM $USEIMAGE as dtuna-ver-0
+
+#args before from are wiped
+ARG ROCMVERSION=
+ARG OSDB_BKC_VERSION=
+
 # Add rocm repository
 RUN apt-get update && apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
@@ -95,7 +106,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=b5c9cd5b0fa65bc77004dd59adcbb336ead031af
+ARG MIOPEN_BRANCH=38a0ebfd4a6b2e3eb356a09721a199f11d4a9a37
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -104,10 +115,7 @@ ARG MIOPEN_DEPS=/opt/rocm
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
 RUN . /env; if [ -z $NO_ROCM_INST ]; then\
         pip install cget; \
-        pip install https://github.com/pfultz2/rclone/archive/master.tar.gz; \
-        sed -i "s~f requirements~f dev-requirements~g" install_deps.cmake; \
-        cmake -P install_deps.cmake --prefix $PREFIX; \
-        git stash; \
+        CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $PREFIX; \
     fi
 
 ARG TUNA_USER=miopenpdb
