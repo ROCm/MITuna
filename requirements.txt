@@ -25,7 +25,7 @@ opentelemetry-distro==0.32b0
 opentelemetry-exporter-otlp-proto-http==1.11.1
 packaging==20.4
 pandas==1.5.3
-paramiko==2.10.1
+paramiko==3.4.0
 parso==0.3.1
 pathlib2==2.3.5
 pexpect==4.6.0
