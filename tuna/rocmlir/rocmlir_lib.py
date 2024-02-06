@@ -43,6 +43,7 @@ from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.miopen.db.build_schema import recreate_triggers
 from tuna.rocmlir.triggers import get_timestamp_trigger
 from tuna.rocmlir.config_type import ConfigType
+from tuna.dbBase.sql_alchemy import DbSession
 
 
 class RocMLIR(MITunaInterface):
@@ -210,7 +211,8 @@ class RocMLIR(MITunaInterface):
 
     return kwargs
 
-  def get_jobs(self, session, find_state: str, session_id: int) -> bool:
+  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
+               session_id: int, claim_num: int):
     """Get jobs based on find_state"""
     self.logger.info('Placeholder')
 

@@ -25,82 +25,149 @@
 #
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
+import os
 import logging
+import subprocess
 import time
-from itertools import islice
-#from celery.result import GroupResult
+from celery.result import ResultSet
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk
-from tuna.utils.db_utility import db_rows_to_obj
-from tuna.celery_app.celery import group_tasks
+from tuna.celery_app.celery import hardware_pick, app
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.miopen_utility import load_machines
 
 LOGGER: logging.Logger = setup_logger('tune')
 
 
+def launch_worker_compile():
+  """Launch celery worker for compile"""
+  cmd = "celery -A tuna.celery_app.celery worker -l info -E -n compile_worker".split(
+      ' ')
+  try:
+    _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+  except Exception as exp:  #pylint: disable=broad-exception-caught
+    LOGGER.warning(exp)
+    return False
+
+  LOGGER.info('Successfully launched celery worker for compile')
+
+  return True
+
+
+def launch_worker_eval(library):
+  """Launch celery worker for eval"""
+  machines = load_machines(library.args)
+  curr_env = dict(os.environ.copy())
+  for machine in machines:
+    num_gpus = machine.get_avail_gpus()
+    try:
+      for gpu_id in num_gpus:
+        cmd = f"celery -A tuna.celery_app.celery worker -l info -E -c 1 -n eval_worker_{gpu_id}".split(' ')  #pylint: disable=line-too-long
+        curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
+        _ = subprocess.Popen(cmd, env=curr_env)  #pylint: disable=consider-using-with
+        LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
+    except Exception as exp:  #pylint: disable=broad-exception-caught
+      LOGGER.warning(exp)
+      return False
+
+  return True
+
+
+def launch_celery_worker(library):
+  """Helper function to launch celery workers"""
+  if 'miopen_find_compile' in library.args.fin_steps \
+  or 'miopen_perf_compile' in library.args.fin_steps:
+    ret = launch_worker_compile()
+  elif 'miopen_find_eval' in library.args.fin_steps or 'miopen_perf_eval' in library.args.fin_steps:
+    ret = launch_worker_eval(library)
+  else:
+    raise ValueError('Operation does not support celery workers')
+
+  return ret
+
+
+def stop_active_workers():
+  """Shutdown active workers"""
+  if app.control.inspect.active() is not None:
+    app.control.shutdown()
+
+
+def result_callback(task_id, value):
+  """Function callback for celery async jobs to store resutls"""
+  result = app.AsyncResult(task_id).get()
+  print(f'{task_id} : done, {result}')
+  print(f'{value} : done, {value}')
+
+
 #pylint: disable=too-many-locals
-def tune(library, group_size, blocking=None, job_batch_size=1000):
+def tune(library, blocking=None, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
-  LOGGER.info('Celery running with group size: %s', group_size)
+  #stop_active_workers()
+  if not launch_celery_worker(library):
+    return False
+
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
-  results_list = []
+  res_set = ResultSet([])
+
   while True:
     job_list = []
     with DbSession() as session:
-      job_list = library.get_jobs(session, library.fetch_state, library.set_state,
-                                         library.args.session_id, job_batch_size)
+      job_list = library.get_jobs(session, library.fetch_state,
+                                  library.set_state, library.args.session_id,
+                                  job_batch_size)
 
       for i in range(0, len(job_list), job_batch_size):
         batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
         if library.args.fin_steps:
-          entries = library.compose_work_objs_fin(session, batch_jobs, library.dbt)
+          entries = library.compose_work_objs_fin(session, batch_jobs,
+                                                  library.dbt)
 
-        iterator = iter(entries)
-        while chunk := list(islice(iterator, group_size)):
-          serialized_jobs = serialize_chunk(chunk)
-          job = group_tasks(serialized_jobs, library.worker_type, kwargs,
-                            library.dbt.session.arch,
-                            str(library.dbt.session.num_cu))
-          #result is of type GroupResult aka list of AsyncResult
-          result = job.apply_async()
-          results_list.append(result)
+        entries = library.compose_work_objs_fin(session, job_list, library.dbt)
+        serialized_jobs = serialize_chunk(entries)
+
+        for job in serialized_jobs:
+          #res_set.add(
+          print(job[0])
+          print(job[1])
+          print(kwargs)
+          context = {
+              'job': job[0],
+              'config': job[1],
+              'worker_type': library.worker_type,
+              'arch': library.dbt.session.arch,
+              'num_cu': library.dbt.session.num_cu,
+              'kwargs': kwargs
+          }
+          res = hardware_pick.apply_async((context,), queue="celery")
+          #for CI
           if blocking:
-            LOGGER.info('Collecting result for group task: %s ', result.id)
-            #result.wait(timeout=10)
-            while not result.ready():
+            while not res.ready():
               time.sleep(5)
-            LOGGER.info('Group successful: %s', result.successful())
-            LOGGER.info(result.get())
-
-          #v = ResultGroup = tree, leafs are AsyncTasks
-          #print([
-          #    v for v in result.collect() if not isinstance(v, (ResultBase, tuple))
-          #  ])
-          #else:
-          #async result gather
-          #job.apply_async()
-          #job.collect()
-          #print(v for v in result.collect())
-          #print('Non blocking result gather')
-
-        LOGGER.info('Done launching %s celery groups', len(job_list))
+            LOGGER.info('Job successful: %s', res.successful())
+            LOGGER.info(res.get())
+          else:
+            res_set.add(res)
 
     if not job_list:
-      if not results_list:
-        LOGGER.info('Last celery group finished')
+      print('All tasks added to queue')
+      if not blocking:
+        _ = res_set.join(callback=result_callback)
+        break
+      if not res_set:
+        LOGGER.info('Last job finished')
         return False
       #wait for last group
-      while results_list:
-        result = results_list.pop(0)
-        while not result.ready():
-          time.sleep(10)
-        if len(results_list) < group_size:
-          break
+      #while results_list:
+      #  result = results_list.pop(0)
+      #  while not result.ready():
+      #    time.sleep(10)
+      #  if len(results_list) < group_size:
+      #    break
       #check if more jobs appeared
 
   return False

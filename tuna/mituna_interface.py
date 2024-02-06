@@ -36,6 +36,7 @@ from tuna.machine import Machine
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
+from tuna.dbBase.sql_alchemy import DbSession
 
 
 class MITunaInterface():
@@ -227,6 +228,7 @@ class MITunaInterface():
 
     return kwargs
 
-  def get_jobs(self, session, find_state: str, session_id: int) -> bool:
+  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
+               session_id: int, claim_num: int):
     """Interface function to get jobs based on find_state"""
     raise NotImplementedError("Not implemented")

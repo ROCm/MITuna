@@ -40,6 +40,7 @@ from tuna.utils.db_utility import create_tables
 from tuna.example.example_tables import get_tables
 from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
+from tuna.dbBase.sql_alchemy import DbSession
 
 
 class Example(MITunaInterface):
@@ -169,7 +170,8 @@ class Example(MITunaInterface):
 
     return kwargs
 
-  def get_jobs(self, session, find_state: str, session_id: int) -> bool:
+  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
+               session_id: int, claim_num: int):
     """Get jobs based on find_state"""
     self.logger.info('Placeholder')
 

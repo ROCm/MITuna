@@ -46,21 +46,11 @@ logger = get_task_logger(__name__)
 
 
 @app.task(trail=True)
-def group_tasks(chunk, worker_type, kwargs, arch, num_cu):
-  """Returns a group of async tasks the size of chunk"""
-  #return group(
-  #    async_call.s([elem[0], elem[1], worker_type], kwargs, arch, num_cu)
-  #    for elem in chunk)()
-  return group([
-      async_call.s([elem[0], elem[1], worker_type], kwargs, arch, num_cu)
-      for elem in chunk
-  ])
-
-
-@app.task(trail=True)
-def async_call(args, kwargs, arch, num_cu):
+def hardware_pick(context):
   """function call"""
-  return TUNING_QUEUE[arch + '-' + num_cu](args, kwargs)
+  return TUNING_QUEUE[context['arch'] + '-' + str(context['num_cu'])](
+      [context['job'], context['config'], context['worker_type']],
+      context['kwargs'])
 
 
 @app.task(trail=True)
@@ -80,7 +70,7 @@ def celery_enqueue_gfx1030_36(args, kwargs):
   kwargs = prep_kwargs(kwargs, args)
   worker = get_worker(kwargs, args[2])
   worker.run()
-  return 'RET VAL'
+  return ret
 
 
 @app.task(trail=True)
