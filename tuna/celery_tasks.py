@@ -155,12 +155,10 @@ def tune(library, blocking=None, job_batch_size=1000):
 
     if not job_list:
       print('All tasks added to queue')
-      if not blocking:
-        _ = res_set.join(callback=result_callback)
-        break
       if not res_set:
         LOGGER.info('Last job finished')
         return False
+      break
       #wait for last group
       #while results_list:
       #  result = results_list.pop(0)
@@ -169,5 +167,7 @@ def tune(library, blocking=None, job_batch_size=1000):
       #  if len(results_list) < group_size:
       #    break
       #check if more jobs appeared
+    if not blocking:
+      _ = res_set.join(callback=result_callback)
 
   return False
