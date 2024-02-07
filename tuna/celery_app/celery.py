@@ -69,7 +69,7 @@ def celery_enqueue_gfx1030_36(args, kwargs):
   logger.info("Enqueueing gfx1030-36")
   kwargs = prep_kwargs(kwargs, args)
   worker = get_worker(kwargs, args[2])
-  worker.run()
+  ret = worker.run()
   return ret
 
 

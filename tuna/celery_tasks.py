@@ -28,7 +28,7 @@
 import os
 import logging
 import subprocess
-import time
+#import time
 from celery.result import ResultSet
 
 from tuna.utils.logger import setup_logger
@@ -93,12 +93,14 @@ def stop_active_workers():
   if app.control.inspect.active() is not None:
     app.control.shutdown()
 
+  return True
+
 
 def result_callback(task_id, value):
   """Function callback for celery async jobs to store resutls"""
-  result = app.AsyncResult(task_id).get()
-  print(f'{task_id} : done, {result}')
-  print(f'{value} : done, {value}')
+  _ = app.AsyncResult(task_id).get()
+  #LOGGER.info('task id %s : done', task_id)
+  LOGGER.info('result : %s', value)
 
 
 #pylint: disable=too-many-locals
@@ -131,10 +133,6 @@ def tune(library, blocking=None, job_batch_size=1000):
         serialized_jobs = serialize_chunk(entries)
 
         for job in serialized_jobs:
-          #res_set.add(
-          print(job[0])
-          print(job[1])
-          print(kwargs)
           context = {
               'job': job[0],
               'config': job[1],
@@ -143,31 +141,25 @@ def tune(library, blocking=None, job_batch_size=1000):
               'num_cu': library.dbt.session.num_cu,
               'kwargs': kwargs
           }
-          res = hardware_pick.apply_async((context,), queue="celery")
+          res_set.add(hardware_pick.apply_async((context,), queue="celery"))
+
           #for CI
-          if blocking:
-            while not res.ready():
-              time.sleep(5)
-            LOGGER.info('Job successful: %s', res.successful())
-            LOGGER.info(res.get())
-          else:
-            res_set.add(res)
+          #if blocking:
+          #  while not res.ready():
+          #    time.sleep(5)
+          #  LOGGER.info('Job successful: %s', res.successful())
+          #  LOGGER.info(res.get())
+          #else:
+          #  res_set.add(res)
 
     if not job_list:
-      print('All tasks added to queue')
       if not res_set:
-        LOGGER.info('Last job finished')
         return False
+      LOGGER.info('All tasks added to queue')
       break
-      #wait for last group
-      #while results_list:
-      #  result = results_list.pop(0)
-      #  while not result.ready():
-      #    time.sleep(10)
-      #  if len(results_list) < group_size:
-      #    break
-      #check if more jobs appeared
-    if not blocking:
-      _ = res_set.join(callback=result_callback)
 
-  return False
+  if not blocking:
+    LOGGER.info('Gathering async results')
+    _ = res_set.join(callback=result_callback)
+
+  return True
