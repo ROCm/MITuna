@@ -51,7 +51,7 @@ def getDockerName(backend)
 }
 
 def buildDockers(){
-    docker.withRegistry("$docker_registry", 'tuna-dockerhub'){
+    docker.withRegistry('', 'tuna-dockerhub'){
         def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
         tuna_docker_hipnogpu.push()
         def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
