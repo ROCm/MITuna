@@ -46,7 +46,6 @@ def buildSchema(){
 
 def getDockerName(backend)
 {
-    //def docker_registry = "${headnode}:5000"
     def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_id}_${backend}"
     return tuna_docker_name
 }
@@ -661,6 +660,7 @@ def getJobReason()
 
 
 def killContainer() {
+  def tuna_docker_name = getDockerName("${backend}")
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker system prune -f'"
 }

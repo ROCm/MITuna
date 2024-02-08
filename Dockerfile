@@ -148,7 +148,7 @@ RUN if ! [ -z $FIN_BRANCH ]; then \
         git fetch && git checkout $FIN_BRANCH; \
     fi
 # Install dependencies
-RUN cmake -P install_deps.cmake 
+#RUN cmake -P install_deps.cmake
 
 WORKDIR $FIN_DIR/_hip
 RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$MIOPEN_DEPS $FIN_DIR
