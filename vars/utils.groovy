@@ -60,8 +60,9 @@ def buildDockers(){
 }
 
 def getDocker(backend){
+    def tuna_docker
     docker.withRegistry('', "$DOCKER_CRED"){
-        def tuna_docker = docker.image(getDockerName(backend))
+        tuna_docker = docker.image(getDockerName(backend))
         tuna_docker.pull()
     }
     return tuna_docker
