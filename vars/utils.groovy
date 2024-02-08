@@ -60,8 +60,10 @@ def buildDockers(){
 }
 
 def getDocker(backend){
-    def tuna_docker = docker.image(getDockerName(backend))
-    tuna_docker.pull()
+    docker.withRegistry('', 'tuna-dockerhub'){
+        def tuna_docker = docker.image(getDockerName(backend))
+        tuna_docker.pull()
+    }
     return tuna_docker
 }
 
