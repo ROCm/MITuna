@@ -51,7 +51,7 @@ def getDockerName(backend)
 }
 
 def buildDockers(){
-    docker.withRegistry('', $DOCKER_CRED){
+    docker.withRegistry('', "$DOCKER_CRED"){
         def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
         tuna_docker_hipnogpu.push()
         def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
@@ -60,7 +60,7 @@ def buildDockers(){
 }
 
 def getDocker(backend){
-    docker.withRegistry('', $DOCKER_CRED){
+    docker.withRegistry('', "$DOCKER_CRED"){
         def tuna_docker = docker.image(getDockerName(backend))
         tuna_docker.pull()
     }
