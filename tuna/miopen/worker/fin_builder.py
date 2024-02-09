@@ -127,6 +127,7 @@ class FinBuilder(FinClass):
     self.set_job_state('compiling')
     fin_json = self.run_fin_cmd()
 
+    """
     failed_job = True
     result_str = ''
     if fin_json:
@@ -161,4 +162,6 @@ class FinBuilder(FinClass):
     else:
       self.set_job_state('compiled', result=result_str)
 
-    return False
+    #return False
+    """
+    return fin_json

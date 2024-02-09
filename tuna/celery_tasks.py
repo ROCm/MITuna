@@ -96,11 +96,26 @@ def stop_active_workers():
   return True
 
 
-def result_callback(task_id, value):
+def result_callback(task_id, value, worker_type):
   """Function callback for celery async jobs to store resutls"""
   _ = app.AsyncResult(task_id).get()
   #LOGGER.info('task id %s : done', task_id)
   LOGGER.info('result : %s', value)
+  LOGGER.info('worker_type: %s', worker_type)
+  if 'worker_type' == 'fin_build_worker':
+    process_fin_builder_results()
+  else:
+    process_fin_evaluator_results()
+
+
+
+def process_fin_builder_results():
+  """Process result from fin_build worker"""
+  return True
+
+def process_fin_evaluator_results():
+  """Process result from fin_eval worker"""
+  return True
 
 
 #pylint: disable=too-many-locals
@@ -160,6 +175,7 @@ def tune(library, blocking=None, job_batch_size=1000):
 
   if not blocking:
     LOGGER.info('Gathering async results')
-    _ = res_set.join(callback=result_callback)
+    #_ = res_set.join(callback=result_callback(context={'worker_type' : library.worker_type}))
+    _ = res_set.join(callback=result_callback))
 
   return True

@@ -476,12 +476,13 @@ class WorkerInterface(Process):
       except queue.Empty:
         break
 
-  def run(self) -> bool:  #type: ignore[override]
+  def run(self) -> dict:  #type: ignore[override]
     """
     Main run function of WorkerInterface Process
     #type: ignore[override] - parent class returns None type.
     """
 
+    ret = None
     self.machine.set_logger(self.logger)
     usage: float
     try:
@@ -509,11 +510,12 @@ class WorkerInterface(Process):
           self.set_barrier(lambda: (), True)
           continue
         # the step member is defined in the derived class
-        ret: bool = self.step()
+        ret: dict = self.step()
         self.logger.info("proc %s step %s", self.gpu_id, ret)
-        if not ret:
-          self.logger.warning('No more steps, quitting...')
-          return True
+        #if not ret:
+        #  self.logger.warning('Tuna worker did not return a value...')
+        return ret
+        #  return True
           #with self.bar_lock:
           #  self.num_procs.value -= 1
           #return True
@@ -522,12 +524,11 @@ class WorkerInterface(Process):
       self.reset_job_state()
       #with self.bar_lock:
       #  self.num_procs.value -= 1
-      return False
 
     #with self.bar_lock:
     #  self.num_procs.value -= 1
 
-    return True
+    return ret 
 
   def run_command(self, cmd: str) -> Tuple[int, str]:
     """Run cmd and return ret_code"""
