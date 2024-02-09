@@ -14,10 +14,8 @@ pipeline {
         db_password = "${DB_USER_PASSWORD}"
         pipeline_user = "${PIPELINE_USER}"
         pipeline_pwd = "${PIPELINE_PWD}"
-        arch = 'gfx908'
-        num_cu = '120'
-        arch_908 = 'gfx908'
-        num_cu_120 = '120'
+        arch = 'gfx90a'
+        num_cu = '104'
         machine_ip = "${machine_ip}"
         machine_local_ip =  "${machine_local_ip}"
         username = "${username}"
@@ -102,7 +100,7 @@ pipeline {
             }
         }
         stage("fin find eval"){
-        agent{  label "gfx908" }
+        agent{  label "${arch}" }
         steps {
             script {
             utils.finFindEval()
@@ -125,11 +123,11 @@ pipeline {
             }
             }
         }
-        stage("perf eval gfx908"){
-        agent{  label "gfx908" }
+        stage("perf eval ${arch}"){
+        agent{  label "${arch}" }
         steps{
             script {
-            utils.perfEval_gfx908()
+            utils.perfEval()
             }
             }
         }

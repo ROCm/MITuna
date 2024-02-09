@@ -135,9 +135,9 @@ def finApplicability(){
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch ${arch} --num_cu ${num_cu}"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch ${arch} --num_cu ${num_cu}"
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/go_fish.py miopen import_configs --add_model Alexnet --md_version 1"
@@ -412,7 +412,7 @@ def perfCompile() {
     }
 }
 
-def perfEval_gfx908() {
+def perfEval() {
     def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
