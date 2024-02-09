@@ -100,7 +100,7 @@ pipeline {
             }
         }
         stage("fin find eval"){
-        agent{  label "${arch}" }
+        agent{  label "gfx90a" }
         steps {
             script {
             utils.finFindEval()
@@ -123,8 +123,8 @@ pipeline {
             }
             }
         }
-        stage("perf eval ${arch}"){
-        agent{  label "${arch}" }
+        stage("perf eval gfx90a"){
+        agent{  label "gfx90a" }
         steps{
             script {
             utils.perfEval()
