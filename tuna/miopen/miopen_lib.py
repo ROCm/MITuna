@@ -325,6 +325,18 @@ class MIOpen(MITunaInterface):
       else:
         worker_ids = super().get_num_procs(machine)
 
+      if self.args.update_applicability:
+        f_vals = super().get_f_vals(machine, [1])
+        kwargs = self.get_kwargs(0, f_vals)
+        kwargs['fin_steps'] = ['applicability']
+        worker = FinClass(**kwargs)
+        query = worker.query_cfgs(self.args.label)
+        cfg_rows = query.all()
+        len_rows = len(cfg_rows)
+        proc_lim = (len_rows+99) / 100
+        while len(worker_ids) > proc_lim:
+          worker_ids.pop()
+
       if len(worker_ids) == 0:
         return None
 
