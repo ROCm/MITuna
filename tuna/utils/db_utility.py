@@ -32,10 +32,10 @@ import random
 import logging
 from time import sleep
 from datetime import datetime
+from typing import Callable, Any, List, Dict
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
 from sqlalchemy import create_engine
-from typing import Callable, Any, List, Dict
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
@@ -139,7 +139,7 @@ def get_attr_vals(obj, attr_list):
     val = getattr(obj, attr)
     if val is None:
       val = 'NULL'
-    elif isinstance(val, str) or isinstance(val, datetime):
+    elif isinstance(val, (datetime, str)):
       val = f"'{val}'"
     elif isinstance(val, bytes):
       val = val.decode('utf-8')
@@ -167,7 +167,7 @@ def gen_update_query(obj, attribs, tablename):
 
 def gen_insert_query(obj, attribs, tablename):
   """create a select query and generate name space objects for the results"""
-  attr_list = [attr for attr in attribs]
+  attr_list = list(attribs)
   attr_list.remove('id')
   attr_str = ','.join(attr_list)
 
@@ -220,13 +220,17 @@ def has_attr_set(obj, attribs):
 
 def get_class_by_tablename(tablename):
   """use tablename to find class"""
-  for c in BASE._decl_class_registry.values():
-    if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
-      return c
+  # pylint: disable=protected-access
+  for class_name in BASE._decl_class_registry.values():
+    if hasattr(class_name,
+               '__tablename__') and class_name.__tablename__ == tablename:
+      return class_name
+  return None
 
 
-def build_dict_val_key(obj: SimpleDict, exclude: List[str] = ['id']):
-  """take object with to_dict function and create a key using values from the object's sorted keys"""
+def build_dict_val_key(obj: SimpleDict, exclude: List[str] = ['id']):  # pylint: disable=W0102
+  """take object with to_dict function and create a key using values from the object's \
+  sorted keys"""
   obj_dict = obj.to_dict()
   for val in exclude:
     obj_dict.pop(val, False)

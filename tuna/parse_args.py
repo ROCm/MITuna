@@ -141,7 +141,7 @@ def setup_arg_parser(desc: str,
           '--docker_name',
           dest='docker_name',
           type=str,
-          default='miopentuna',
+          default='',
           help='Select a docker to run on. (default miopentuna)')
 
   return parser
