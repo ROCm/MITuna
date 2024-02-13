@@ -1,13 +1,24 @@
-#default image to ubuntu + install rocm
-ARG BASEIMAGE=rocm/miopen:ci_5450cc
-
-#FROM ubuntu:20.04 as dtuna-ver-0
-FROM $BASEIMAGE as dtuna-ver-0
 #install rocm
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
-#'12969'
-ENV NO_ROCM_INST=
+
+#test if rocm version was set
+ARG HASVER=${ROCMVERSION:+$ROCMVERSION}
+ARG HASVER=${HASVER:-$OSDB_BKC_VERSION}
+
+ARG BASEIMAGE=rocm/miopen:ci_c1ca2a
+ARG UBUNTU=ubuntu:20.04
+
+#use UBUNTU with rocm version set
+ARG USEIMAGE=${HASVER:+${UBUNTU}}
+ARG USEIMAGE=${USEIMAGE:-$BASEIMAGE}
+
+FROM $USEIMAGE as dtuna-ver-0
+
+#args before from are wiped
+ARG ROCMVERSION=
+ARG OSDB_BKC_VERSION=
+
 # Add rocm repository
 RUN apt-get update && apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
@@ -90,25 +101,22 @@ ENV UBSAN_OPTIONS=print_stacktrace=1
 RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64.deb
 RUN dpkg -i dumb-init_*.deb && rm dumb-init_*.deb
 
-# Install cget
-#RUN pip install cget
-
-# Install rclone
-#RUN pip install https://github.com/pfultz2/rclone/archive/master.tar.gz
 
 ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=b5c9cd5b0fa65bc77004dd59adcbb336ead031af
+ARG MIOPEN_BRANCH=38a0ebfd4a6b2e3eb356a09721a199f11d4a9a37
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=/opt/rocm
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
-#RUN cmake -P install_deps.cmake --prefix $MIOPEN_DEPS
-#RUN CXXFLAGS='-isystem $PREFIX/include' cget install -f ./mlir-requirements.txt
+RUN . /env; if [ -z $NO_ROCM_INST ]; then\
+        pip install cget; \
+        CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $PREFIX; \
+    fi
 
 ARG TUNA_USER=miopenpdb
 ARG BACKEND=HIP
@@ -140,7 +148,7 @@ RUN if ! [ -z $FIN_BRANCH ]; then \
         git fetch && git checkout $FIN_BRANCH; \
     fi
 # Install dependencies
-RUN cmake -P install_deps.cmake 
+#RUN cmake -P install_deps.cmake
 
 WORKDIR $FIN_DIR/_hip
 RUN CXX=/opt/rocm/llvm/bin/clang++ cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=$MIOPEN_DEPS $FIN_DIR
