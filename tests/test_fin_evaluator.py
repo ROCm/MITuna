@@ -200,10 +200,12 @@ def test_fin_evaluator():
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.fetch_state.add('compiled')
   miopen.worker_type = 'fin_eval_worker'
+  miopen.set_state = 'eval start'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
   with DbSession() as session:
-    jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.args.session_id)
+    jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
+                           miopen.args.session_id, 1)
   job_entries = db_rows_to_obj(jobs, miopen.get_job_attr())
   entries = [(job,) for job in job_entries]
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
