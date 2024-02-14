@@ -46,20 +46,25 @@ def buildSchema(){
 
 def getDockerName(backend)
 {
-    def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_id}_${backend}"
+    def tuna_docker_name = "${docker_registry}:ci-tuna_${branch_id}_${backend}"
     return tuna_docker_name
 }
 
 def buildDockers(){
-    def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
-    tuna_docker_hipnogpu.push()
-    def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
-    tuna_docker_hip.push()
+    docker.withRegistry('', "$DOCKER_CRED"){
+        def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
+        tuna_docker_hipnogpu.push()
+        def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
+        tuna_docker_hip.push()
+    }
 }
 
 def getDocker(backend){
-    def tuna_docker = docker.image(getDockerName(backend))
-    tuna_docker.pull()
+    def tuna_docker
+    docker.withRegistry('', "$DOCKER_CRED"){
+        tuna_docker = docker.image(getDockerName(backend))
+        tuna_docker.pull()
+    }
     return tuna_docker
 }
 
@@ -130,9 +135,9 @@ def finApplicability(){
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch ${arch} --num_cu ${num_cu}"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch ${arch} --num_cu ${num_cu}"
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/go_fish.py miopen import_configs --add_model Alexnet --md_version 1"
@@ -281,14 +286,6 @@ def finFindEval(){
         archiveArtifacts "${kdb_file_nchw}"
     }
 }
-def buildTunaDocker(){
-    // The purpose of this job is to ensure that the Tuna Docker is uptodate on the eval/build machine for the CI jobs
-    checkout scm
-    def tuna_docker = docker.build("ci-tuna:${branch_id}")
-    tuna_docker.inside("--network host "){
-        sh "pwd"
-    }
-}
 
 def loadJobTest() {
     def tuna_docker = getDocker("HIPNOGPU")
@@ -383,7 +380,7 @@ def perfCompile() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         runsql("DELETE FROM conv_job;")
@@ -415,7 +412,7 @@ def perfCompile() {
     }
 }
 
-def perfEval_gfx908() {
+def perfEval() {
     def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -425,7 +422,7 @@ def perfEval_gfx908() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
@@ -474,7 +471,7 @@ def pytestSuite1() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_pytest1"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}_pytest1"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
@@ -522,7 +519,7 @@ def pytestSuite2() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_pytest2"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}_pytest2"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
@@ -919,7 +916,7 @@ def evaluate(params)
 def doxygen() {
     node {
           checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+          def tuna_docker = docker.build("ci-tuna_${branch_id}", " .")
           tuna_docker.inside("") {
             sh "cd doc && doxygen Doxyfile"
             def empty = sh returnStdout: true, script: "ls doc | wc -l"

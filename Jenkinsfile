@@ -9,15 +9,13 @@ pipeline {
         branch_master = "develop"
         db_name = "${TUNA_DB_NAME}_${branch}_${BUILD_ID}"
         docker_args = '--privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw -v /var/lib/docker/:/var/lib/docker --group-add video'
-        db_host = 'localhost'
+        db_host = "${CI_DB_HOSTNAME}" 
         db_user = "${DB_USER_NAME}"
         db_password = "${DB_USER_PASSWORD}"
         pipeline_user = "${PIPELINE_USER}"
         pipeline_pwd = "${PIPELINE_PWD}"
-        arch = 'gfx908'
-        num_cu = '120'
-        arch_908 = 'gfx908'
-        num_cu_120 = '120'
+        arch = 'gfx90a'
+        num_cu = '104'
         machine_ip = "${machine_ip}"
         machine_local_ip =  "${machine_local_ip}"
         username = "${username}"
@@ -102,7 +100,7 @@ pipeline {
             }
         }
         stage("fin find eval"){
-        agent{  label "gfx908" }
+        agent{  label "gfx90a" }
         steps {
             script {
             utils.finFindEval()
@@ -125,11 +123,11 @@ pipeline {
             }
             }
         }
-        stage("perf eval gfx908"){
-        agent{  label "gfx908" }
+        stage("perf eval gfx90a"){
+        agent{  label "gfx90a" }
         steps{
             script {
-            utils.perfEval_gfx908()
+            utils.perfEval()
             }
             }
         }
