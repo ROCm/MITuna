@@ -205,7 +205,7 @@ def test_fin_evaluator():
                               config_type=ConfigType.convolution)
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
-                           miopen.args.session_id, 1)
+                           miopen.args.session_id)
   entries = [job for job in jobs]
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
   assert (len(job_config_rows) == 80)
