@@ -104,7 +104,7 @@ def result_callback(task_id, value):
 
 
 #pylint: disable=too-many-locals
-def tune(library, blocking=None, job_batch_size=1000):
+def tune(library, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
   #stop_active_workers()
@@ -142,15 +142,6 @@ def tune(library, blocking=None, job_batch_size=1000):
               'kwargs': kwargs
           }
           res_set.add(hardware_pick.apply_async((context,), queue="celery"))
-
-          #for CI
-          #if blocking:
-          #  while not res.ready():
-          #    time.sleep(5)
-          #  LOGGER.info('Job successful: %s', res.successful())
-          #  LOGGER.info(res.get())
-          #else:
-          #  res_set.add(res)
 
     if not job_list:
       if not res_set:
