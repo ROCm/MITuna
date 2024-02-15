@@ -158,8 +158,8 @@ def tune(library, blocking=None, job_batch_size=1000):
       LOGGER.info('All tasks added to queue')
       break
 
-  if not blocking:
-    LOGGER.info('Gathering async results')
-    _ = res_set.join(callback=result_callback)
+  LOGGER.info('Gathering async results')
+  _ = res_set.join(callback=result_callback)
+  LOGGER.info('Done gathering results')
 
   return True
