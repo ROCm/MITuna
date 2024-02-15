@@ -425,8 +425,12 @@ class MIOpen(MITunaInterface):
       self.logger.warning("Ignoring error for init_session: %s", error)
     return job_attr
 
-  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
-               session_id: int, claim_num: int):
+  def get_jobs(self,
+               session: DbSession,
+               find_state: List[str],
+               set_state: str,
+               session_id: int,
+               claim_num: int = None):
     """Interface function to get jobs based on session and find_state"""
     #job_rows: List[SimpleDict]
     ids: list
@@ -460,7 +464,7 @@ class MIOpen(MITunaInterface):
                    label: str,
                    dbt: DBTablesInterface,
                    job_attr: List[str],
-                   claim_num: int,
+                   claim_num: int = None,
                    fin_steps: List[str] = None) -> List[SimpleDict]:
     """Get list of job objects"""
     entries: List[Tuple[SimpleDict, ...]]
@@ -481,7 +485,7 @@ class MIOpen(MITunaInterface):
                         conds: List[str],
                         dbt: DBTablesInterface,
                         job_attr: List[str],
-                        claim_num: int,
+                        claim_num: int = None,
                         fin_steps: List[str] = None) -> List[SimpleDict]:
     """Query a job list for update"""
     ret = []
@@ -493,7 +497,10 @@ class MIOpen(MITunaInterface):
     cond_str = ' AND '.join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
-    cond_str += f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE SKIP LOCKED"
+    if claim_num:
+      cond_str += f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE SKIP LOCKED"
+    else:
+      cond_str += " ORDER BY retries,config ASC FOR UPDATE SKIP LOCKED"
 
     #ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
 

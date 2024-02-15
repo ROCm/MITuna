@@ -145,7 +145,7 @@ class SimpleDict:
 
   def __init__(self, **kwargs):
     for key, value in kwargs.items():
-      if type(value) == dict:
+      if isinstance(value, dict):
         setattr(self, key, self.from_dict(value))
       else:
         setattr(self, key, value)
