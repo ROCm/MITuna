@@ -112,7 +112,7 @@ def test_fin_builder():
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_builder'
   num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
-  #assert (num_jobs)
+  assert (num_jobs)
 
   #compile
   miopen.args.update_applicability = False
@@ -126,7 +126,7 @@ def test_fin_builder():
   jobs = None
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
-                           miopen.args.session_id, 1)
+                           miopen.args.session_id)
   #job_entries = db_rows_to_obj(jobs, miopen.get_job_attr())
   entries = [job for job in jobs]
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
