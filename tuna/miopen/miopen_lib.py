@@ -432,7 +432,6 @@ class MIOpen(MITunaInterface):
                session_id: int,
                claim_num: int = None):
     """Interface function to get jobs based on session and find_state"""
-    #job_rows: List[SimpleDict]
     ids: list
     row: SimpleDict
     job_attr: List[str] = self.get_job_attr()
@@ -442,9 +441,6 @@ class MIOpen(MITunaInterface):
 
     if not self.check_jobs_found(job_list, find_state, session_id):
       return []
-
-    print(job_list)
-    print()
 
     ids = [row.id for row in job_list]
     self.logger.info("%s jobs %s", find_state, ids)
@@ -502,18 +498,10 @@ class MIOpen(MITunaInterface):
     else:
       cond_str += " ORDER BY retries,config ASC FOR UPDATE SKIP LOCKED"
 
-    #ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
-
     job_entries = gen_select_objs(session, job_attr,
                                   dbt.job_table.__tablename__, cond_str)
 
     ret = job_entries
-    #if fin_steps:
-    #  ret = self.compose_work_objs_fin(session, entries, dbt)
-    #else:
-    #  ret = entries
-
-    #return ret
     return ret
 
   def compose_work_objs_fin(self, session, job_entries,

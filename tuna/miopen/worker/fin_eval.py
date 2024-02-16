@@ -39,7 +39,6 @@ from tuna.miopen.worker.fin_utils import fin_job
 from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry, gen_update_query
-#from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -53,15 +52,6 @@ class FinEvaluator(FinClass):
     if self.gpu_id != -1:
       self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
     self.worker_type = "fin_eval_worker"
-
-  #def get_job(self, find_state, set_state, imply_end):
-  #  """Polling to see if job available"""
-  #  self.logger.info('find job: %s', find_state)
-  #  if not super().get_job(find_state, set_state, imply_end):
-  #    with self.bar_lock:
-  #      self.num_procs.value -= 1
-  #    return False
-  #  return True
 
   def check_gpu(self):
     """Function to check gpu heartbeat"""
@@ -279,33 +269,16 @@ class FinEvaluator(FinClass):
       return False
     return True
 
-  #def manage_queue(self):
-  #  """Try to acquire a job, or manage the result queue if no job is available."""
-  #  if not self.get_job("compiled", "eval_start", True):
-  #    if not self.get_job("new", "eval_start", True):
-  #      with self.bar_lock:
-  #        self.num_procs.value -= 1
-  #      while not self.result_queue_drain():
-  #        sleep(random.randint(1, 10))
-  #      return False
-  #  return True
-  #
-
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
     self.pending = []
-    #self.result_queue_drain()
     # pylint:disable=duplicate-code
     while not self.result_queue_drain():
       sleep(random.randint(1, 10))
 
     if not self.init_check_env():
       return False
-
-    #self.solver_id_map = get_solver_ids()
-    #_, self.id_solver_map = get_id_solvers(
-    #)  #hyphenated names used by miopen::solver.ToString()
 
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)

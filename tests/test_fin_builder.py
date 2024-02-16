@@ -141,10 +141,6 @@ def test_fin_builder():
     worker = get_worker(worker_kwargs, miopen.worker_type)
     worker.run()
 
-  #worker_lst = miopen.compose_worker_list(machine_lst)
-  #for worker in worker_lst:
-  #  worker.join()
-
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='errored')\

@@ -36,14 +36,9 @@ def get_worker(kwargs, worker_type):
   """Return worker based on worker_type"""
 
   worker = WorkerInterface(**kwargs)
-  #if worker_type == "fin_class_worker":
-  #  kwargs['fin_steps'] = 'applicability'
-  #  worker = FinClass(**kwargs)
   if worker_type == "fin_build_worker":
-    #kwargs['fetch_state'] = 'new'
     worker = FinBuilder(**kwargs)
   elif worker_type == "fin_eval_worker":
-    #kwargs['fetch_state'] = ['new', 'compiled']
     worker = FinEvaluator(**kwargs)
 
   return worker

@@ -56,32 +56,6 @@ from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 
 solver_id_map = get_solver_ids()
-"""
-def get_kwargs(dbt):
-  num_gpus = Value('i', 1)
-  v = Value('i', 0)
-  e = Value('i', 0)
-
-  kwargs = {
-      'machine': DummyMachine(False),
-      'gpu_id': 0,
-      'num_procs': num_gpus,
-      'barred': v,
-      'bar_lock': Lock(),
-      'envmt': ["MIOPEN_LOG_LEVEL=7"],
-      'reset_interval': False,
-      'app_test': False,
-      'label': 'tuna_pytest_fin_eval',
-      'fin_steps': ['miopen_find_eval'],
-      'use_tuner': False,
-      'job_queue': Queue(),
-      'queue_lock': Lock(),
-      'fetch_state': ['compiled'],
-      'end_jobs': e,
-      'session_id': dbt.session_id
-  }
-  return kwargs
-"""
 
 
 def add_cfgs():
@@ -191,7 +165,6 @@ def test_fin_evaluator():
     job_query = session.query(
         dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)
     job_query.update({dbt.job_table.state: 'compiled'})
-    print(job_query)
     session.commit()
 
     add_fake_fdb_entries(job_query, dbt, job_query.first().id)

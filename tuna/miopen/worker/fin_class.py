@@ -89,7 +89,6 @@ class FinClass(WorkerInterface):
     self.first_pass = True
     self.dynamic_solvers_only = False
     self.worker_type = "fin_class_worker"
-    #self.solver_id_map = None
     self.solver_id_map = get_solver_ids()
 
     self.__dict__.update(
@@ -129,7 +128,6 @@ class FinClass(WorkerInterface):
     ]
     self.fdb_attr.remove("insert_ts")
     self.fdb_attr.remove("update_ts")
-    #self.num_procs = int(self.machine.get_num_cpus() * .6)
     self.num_procs = Value(
         'i', len(list(range(int(self.machine.get_num_cpus() * .6)))))
 
@@ -880,11 +878,6 @@ class FinClass(WorkerInterface):
       return True
     return False
 
-  #def reset_job_state(self):
-  #  """finish committing result queue"""
-  #super().reset_job_state()
-  #self.result_queue_drain()
-
   def init_check_env(self):
     """check environment on the first run"""
     if self.first_pass:
@@ -915,13 +908,11 @@ class FinClass(WorkerInterface):
     # load the output json file and strip the env
     fin_json = json.loads(self.machine.read_file(fin_output))[1:]
     assert len(fin_json) == 1
-    # JD: if we implement multiple jobs per fin launch, this would be a loop
     fin_json = fin_json[0]
     return fin_json
 
   def step(self):
     """Inner loop for Process run defined in worker_interface"""
-    #self.solver_id_map = get_solver_ids()
     _, self.id_solver_map = get_id_solvers(
     )  #hyphenated names used by miopen::solver.ToString()
     self.multiproc = True

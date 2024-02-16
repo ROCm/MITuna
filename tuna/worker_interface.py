@@ -80,7 +80,6 @@ class WorkerInterface(Process):
 
     self.reset_interval: bool = None
     #system vars
-    #self.machine: Machine = Machine(local_machine=True)
     self.machine: Machine = None
     #multiprocess vars
     self.gpu_id: int = None
@@ -95,7 +94,6 @@ class WorkerInterface(Process):
     #job detail vars
     self.envmt: List = []
     self.fetch_state = set()
-    #self.fetch_state.add('new')
     self.label: str = None
     self.session_id: int = None
     self.worker_type = "generic_worker"
@@ -112,7 +110,6 @@ class WorkerInterface(Process):
     self.set_db_tables()
 
     self.hostname: str = self.machine.hostname
-    #self.claim_num: int = self.num_procs.value * 3
     self.claim_num: int = 1
     self.last_reset: datetime = datetime.now()
 
@@ -488,11 +485,8 @@ class WorkerInterface(Process):
       self.cnx = self.machine.connect(chk_abort_file)
 
       while True:
-        #self.check_wait_barrier()
 
         if chk_abort_file(self.machine.id, self.logger, self.machine.arch):
-          #with self.bar_lock:
-          #  self.num_procs.value -= 1
           return False
 
         # re-establish node connection
@@ -514,18 +508,10 @@ class WorkerInterface(Process):
         if not ret:
           self.logger.warning('No more steps, quitting...')
           return True
-          #with self.bar_lock:
-          #  self.num_procs.value -= 1
-          #return True
     except KeyboardInterrupt as err:
       self.logger.error('%s', err)
       self.reset_job_state()
-      #with self.bar_lock:
-      #  self.num_procs.value -= 1
       return False
-
-    #with self.bar_lock:
-    #  self.num_procs.value -= 1
 
     return True
 
