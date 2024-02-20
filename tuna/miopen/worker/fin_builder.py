@@ -83,30 +83,30 @@ class FinBuilder(FinClass):
 
     return True
 
-  def process_pdb_compile(self, session, fin_json):
-    """retrieve perf db compile json results"""
-    status = []
-    if fin_json['miopen_perf_compile_result']:
-
-      def actuator(func, pdb_obj):
-        return func(session, pdb_obj)
-
-      for pdb_obj in fin_json['miopen_perf_compile_result']:
-        slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
-        status.append(slv_stat)
-        if pdb_obj['perf_compiled']:
-          session_retry(session, self.compose_job_cache_entrys,
-                        functools.partial(actuator, pdb_obj=pdb_obj),
-                        self.logger)
-          self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
-    else:
-      status = [{
-          'solver': 'all',
-          'success': False,
-          'result': 'Perf Compile: No results'
-      }]
-
-    return status
+  #def process_pdb_compile(self, session, fin_json):
+  #  """retrieve perf db compile json results"""
+  #  status = []
+  #  if fin_json['miopen_perf_compile_result']:
+  #
+  #    def actuator(func, pdb_obj):
+  #      return func(session, pdb_obj)
+  #
+  #    for pdb_obj in fin_json['miopen_perf_compile_result']:
+  #      slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
+  #      status.append(slv_stat)
+  #      if pdb_obj['perf_compiled']:
+  #        session_retry(session, self.compose_job_cache_entrys,
+  #                      functools.partial(actuator, pdb_obj=pdb_obj),
+  #                      self.logger)
+  #        self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
+  #  else:
+  #    status = [{
+  #        'solver': 'all',
+  #        'success': False,
+  #        'result': 'Perf Compile: No results'
+  #    }]
+  #
+  #  return status
 
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""

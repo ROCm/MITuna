@@ -37,6 +37,8 @@ from tuna.celery_app.celery import hardware_pick, app
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
+from tuna.miopen.utils.json_to_sql import process_fdb_w_kernel, process_pdb_compile 
+from tuna.miopen.db.tables import MIOpenDBTables
 
 LOGGER: logging.Logger = setup_logger('tune')
 
@@ -96,21 +98,52 @@ def stop_active_workers():
   return True
 
 
-def result_callback(task_id, value, worker_type):
+def result_callback(task_id, value, worker_type, job, config, kwargs):
   """Function callback for celery async jobs to store resutls"""
   _ = app.AsyncResult(task_id).get()
   #LOGGER.info('task id %s : done', task_id)
   LOGGER.info('result : %s', value)
   LOGGER.info('worker_type: %s', worker_type)
   if 'worker_type' == 'fin_build_worker':
-    process_fin_builder_results()
+    process_fin_builder_results(value, job, config, kwargs)
   else:
-    process_fin_evaluator_results()
+    process_fin_evaluator_results(value, job, config, kwargs)
 
 
 
-def process_fin_builder_results():
+def process_fin_builder_results(value):
   """Process result from fin_build worker"""
+  failed_job = True
+  result_str = ''
+  if fin_json:
+    failed_job = False
+    with DbSession() as session:
+      try:
+        if 'miopen_find_compile_result' in fin_json:
+          status = process_fdb_w_kernels(session, fin_json, job, config, kwargs, DBT)
+
+        elif 'miopen_perf_compile_result' in fin_json:
+          status = process_pdb_compile(session, fin_json, job, config, kwargs, DBT)
+
+        success, result_str = get_fin_result(status)
+        failed_job = not success
+
+      except (OperationalError, IntegrityError) as err:
+        LOGGER.warning('FinBuild: Unable to update Database %s', err)
+        session.rollback()
+        failed_job = True
+      except DataError as err:
+        LOGGER.warning(
+            'FinBuild: Invalid data, likely large workspace. DB Error: %s',
+            err)
+        session.rollback()
+        failed_job = True
+
+  if failed_job:
+    self.set_job_state('errored', result=result_str)
+  else:
+    self.set_job_state('compiled', result=result_str)
+
   return True
 
 def process_fin_evaluator_results():
@@ -125,6 +158,10 @@ def tune(library, blocking=None, job_batch_size=1000):
   #stop_active_workers()
   if not launch_celery_worker(library):
     return False
+
+  global DBT
+  DBT = MIOpenDBTables(session_id=library.args.session_id,
+                              config_type=library.args.config_type)
 
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals, tuning=True)

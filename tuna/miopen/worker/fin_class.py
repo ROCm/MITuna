@@ -651,33 +651,33 @@ class FinClass(WorkerInterface):
 
     return True
 
-  def get_fdb_entry(self, session, solver):
-    """ Get FindDb entry from db """
-    obj = None
-    fdb_entry = None
-
-    conds = [
-        f"session={self.dbt.session.id}", f"config={self.config.id}",
-        f"solver={solver}", "opencl=0"
-    ]
-    cond_str = f"where {' AND '.join(conds)}"
-    entries = gen_select_objs(session, self.fdb_attr,
-                              self.dbt.find_db_table.__tablename__, cond_str)
-
-    if entries:
-      assert len(entries) == 1
-      obj = entries[0]
-    else:
-      fdb_entry = SimpleDict()
-      for attr in self.fdb_attr:
-        setattr(fdb_entry, attr, None)
-      setattr(fdb_entry, 'session', self.dbt.session.id)
-      setattr(fdb_entry, 'config', self.config.id)
-      setattr(fdb_entry, 'solver', solver)
-      setattr(fdb_entry, 'opencl', False)
-      setattr(fdb_entry, 'logger', self.logger)
-
-    return obj, fdb_entry
+  #def get_fdb_entry(self, session, solver):
+  #  """ Get FindDb entry from db """
+  #  obj = None
+  #  fdb_entry = None
+  #
+  #  conds = [
+  #      f"session={self.dbt.session.id}", f"config={self.config.id}",
+  #      f"solver={solver}", "opencl=0"
+  #  ]
+  #  cond_str = f"where {' AND '.join(conds)}"
+  #  entries = gen_select_objs(session, self.fdb_attr,
+  #                            self.dbt.find_db_table.__tablename__, cond_str)
+  #
+  #  if entries:
+  #    assert len(entries) == 1
+  #    obj = entries[0]
+  #  else:
+  #    fdb_entry = SimpleDict()
+  #    for attr in self.fdb_attr:
+  #      setattr(fdb_entry, attr, None)
+  #    setattr(fdb_entry, 'session', self.dbt.session.id)
+  #    setattr(fdb_entry, 'config', self.config.id)
+  #    setattr(fdb_entry, 'solver', solver)
+  #    setattr(fdb_entry, 'opencl', False)
+  #    setattr(fdb_entry, 'logger', self.logger)
+  #
+  #  return obj, fdb_entry
 
   #def __update_fdb_entry(self, session, solver):
   #  """ Add a new entry to fdb if there isnt one already """

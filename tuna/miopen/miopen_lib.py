@@ -254,7 +254,7 @@ class MIOpen(MITunaInterface):
 
   def check_blacklist(self, parser):
     """! Helper function
-       @param parser The command line argument parser
+       @param parser The command_ line argument parser
     """
     self.args.blacklist = self.args.blacklist.split(',')
     for sol in self.args.blacklist:
