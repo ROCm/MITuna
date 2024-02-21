@@ -836,49 +836,45 @@ def compile()
     }
     // push the image
     tuna_docker.push()
-    env_list = params.env.split(' ')
-    for(item in env_list)
+  }
+
+  env_list = params.env.split(' ')
+  for(item in env_list)
+  {
+    if(item.replaceAll("\\s","") != "")
     {
-      if(item.replaceAll("\\s","") != "")
+      if(item.contains("="))
       {
-        if(item.contains("="))
-        {
-          docker_args += " -e ${item}"
-        }
-        else
-        {
-          error "Not added to env: ${item}"
-        }
+        docker_args += " -e ${item}"
+      }
+      else
+      {
+        error "Not added to env: ${item}"
       }
     }
-
-    if(params.stage == 'perf')
-    {
-      docker_args += " --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
-    }
-
-    def compile_cmd = ''
-    if(params.stage == 'fin_find')
-    {
-      compile_cmd = '--fin_steps miopen_find_compile'
-    }
-    else
-    {
-      compile_cmd = '--fin_steps miopen_perf_compile'
-    }
-    if(params.dynamic_solvers_only)
-    {
-      compile_cmd += ' --dynamic_solvers_only'
-    }
-
-    // Run the jobs on the cluster
-    //withCredentials([usernamePassword(credentialsId: 'DOCKER_CRED', usernameVariable: 'UNAME', passwordVariable: 'PWORD')]){
-      sh 'echo $env.CREDS_USR'
-      sh 'echo $env.CREDS_PSW'
-      sh 'echo $CREDS_USR'
-      sh 'echo $CREDS_PSW'
-      sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker login -u ${env.CREDS_USR} -p ${env.CREDS_PSW} && docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
   }
+
+  if(params.stage == 'perf')
+  {
+    docker_args += " --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
+  }
+
+  def compile_cmd = ''
+  if(params.stage == 'fin_find')
+  {
+    compile_cmd = '--fin_steps miopen_find_compile'
+  }
+  else
+  {
+    compile_cmd = '--fin_steps miopen_perf_compile'
+  }
+  if(params.dynamic_solvers_only)
+  {
+    compile_cmd += ' --dynamic_solvers_only'
+  }
+
+  // Run the jobs on the cluster
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | docker login -u ${env.CREDS_USR} --password-stdin && docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
