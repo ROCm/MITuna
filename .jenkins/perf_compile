@@ -25,7 +25,7 @@ pipeline {
       db_name = "${params.db_name}"
       partition = "${params.slurm_partition}"
       branch_id = "${params.branch_name}_${BUILD_ID}"
-      CREDS = credentials($DOCKER_CRED)
+      CREDS = credentials("$DOCKER_CRED")
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'compile_pipe_gold', description: '')
