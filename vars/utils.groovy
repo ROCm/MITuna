@@ -705,16 +705,18 @@ def LoadJobs()
   def docker_run_args = "--network host --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
   sh "echo ${build_args}"
-  def tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.inside("${docker_run_args}") {
-      env.PYTHONPATH=env.WORKSPACE
-      env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-      env.TUNA_LOGLEVEL="${tuna_loglevel}"
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+    tuna_docker.inside("${docker_run_args}") {
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_LOGLEVEL="${tuna_loglevel}"
 
-      echo "./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
-      sh "python3 ./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
+        echo "./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
+        sh "python3 ./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
+    }
+    tuna_docker.push()
   }
-  tuna_docker.push()
 }
 
 
@@ -779,138 +781,143 @@ def getBuildArgs(){
 }
 
 def applicUpdate(){
-  def tuna_docker_name = getDockerName("${backend}")
-  def tuna_docker
-  (build_args, _) = getBuildArgs()
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker_name = getDockerName("${backend}")
+    def tuna_docker
+    (build_args, _) = getBuildArgs()
 
-  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.push()
+    tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+    tuna_docker.push()
 
-  def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
+    def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
-  def use_tag = ''
-  if(params.config_tag != '')
-  {
-    use_tag = "-l '${params.config_tag}'"
-  }
+    def use_tag = ''
+    if(params.config_tag != '')
+    {
+      use_tag = "-l '${params.config_tag}'"
+    }
 
-  if(params.UPDATE_SOLVERS)
-  {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
-    def num_solvers = runsql("SELECT count(*) from solver;")
-    println "Number of solvers: ${num_solvers}"
-    if (num_solvers.toInteger() == 0){
-        error("Unable to add solvers from Fin")
+    if(params.UPDATE_SOLVERS)
+    {
+      sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
+      def num_solvers = runsql("SELECT count(*) from solver;")
+      println "Number of solvers: ${num_solvers}"
+      if (num_solvers.toInteger() == 0){
+          error("Unable to add solvers from Fin")
+      }
+    }
+    if(params.UPDATE_APPLICABILITY)
+    {
+      sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
+      def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
+      println "Session ${params.session_id} applicability: ${num_sapp}"
+      if (num_sapp.toInteger() == 0){
+        error("Unable to get applicability from Fin")
+      }
     }
   }
-  if(params.UPDATE_APPLICABILITY)
-  {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
-    def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
-    println "Session ${params.session_id} applicability: ${num_sapp}"
-    if (num_sapp.toInteger() == 0){
-      error("Unable to get applicability from Fin")
-    }
-  }
-
 }
 
 
 def compile()
 {
-  def tuna_docker_name = getDockerName("${backend}")
-  def tuna_docker
-  (build_args, _) = getBuildArgs()
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker_name = getDockerName("${backend}")
+    def tuna_docker
+    (build_args, _) = getBuildArgs()
 
-  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+    tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
 
-  tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
-      env.PYTHONPATH=env.WORKSPACE
-      env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-      env.TUNA_LOGLEVEL="${tuna_loglevel}"
-      sh "pwd"
-  }
-  // push the image
-  tuna_docker.push()
-  env_list = params.env.split(' ')
-  for(item in env_list)
-  {
-    if(item.replaceAll("\\s","") != "")
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_LOGLEVEL="${tuna_loglevel}"
+        sh "pwd"
+    }
+    // push the image
+    tuna_docker.push()
+    env_list = params.env.split(' ')
+    for(item in env_list)
     {
-      if(item.contains("="))
+      if(item.replaceAll("\\s","") != "")
       {
-        docker_args += " -e ${item}"
-      }
-      else
-      {
-        error "Not added to env: ${item}"
+        if(item.contains("="))
+        {
+          docker_args += " -e ${item}"
+        }
+        else
+        {
+          error "Not added to env: ${item}"
+        }
       }
     }
-  }
 
-  if(params.stage == 'perf')
-  {
-    docker_args += " --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
-  }
+    if(params.stage == 'perf')
+    {
+      docker_args += " --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
+    }
 
-  def compile_cmd = ''
-  if(params.stage == 'fin_find')
-  {
-    compile_cmd = '--fin_steps miopen_find_compile'
-  }
-  else
-  {
-    compile_cmd = '--fin_steps miopen_perf_compile'
-  }
-  if(params.dynamic_solvers_only)
-  {
-    compile_cmd += ' --dynamic_solvers_only'
-  }
+    def compile_cmd = ''
+    if(params.stage == 'fin_find')
+    {
+      compile_cmd = '--fin_steps miopen_find_compile'
+    }
+    else
+    {
+      compile_cmd = '--fin_steps miopen_perf_compile'
+    }
+    if(params.dynamic_solvers_only)
+    {
+      compile_cmd += ' --dynamic_solvers_only'
+    }
 
-  // Run the jobs on the cluster
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+    // Run the jobs on the cluster
+    sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+  }
 }
 
 
 def evaluate(params)
 {
-  def tuna_docker_name = getDockerName("${backend}")
-  def tuna_docker
-  (build_args, partition) = getBuildArgs()
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker_name = getDockerName("${backend}")
+    def tuna_docker
+    (build_args, partition) = getBuildArgs()
 
-  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.push()
+    tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+    tuna_docker.push()
 
-  env_list = params.env.split(' ')
-  for(item in env_list)
-  {
-    if(item.replaceAll("\\s","") != "")
+    env_list = params.env.split(' ')
+    for(item in env_list)
     {
-      if(item.contains("="))
+      if(item.replaceAll("\\s","") != "")
       {
-        docker_args += " -e ${item}"
-      }
-      else
-      {
-        error "Not added to env: ${item}"
+        if(item.contains("="))
+        {
+          docker_args += " -e ${item}"
+        }
+        else
+        {
+          error "Not added to env: ${item}"
+        }
       }
     }
-  }
-  def eval_cmd = ''
-  if(params.stage == 'fin_find')
-  {
-    eval_cmd = '--fin_steps miopen_find_eval'
-  }
-  else
-  {
-    eval_cmd = '--fin_steps miopen_perf_eval'
-  }
-  if(params.dynamic_solvers_only)
-  {
-    eval_cmd += ' --dynamic_solvers_only'
-  }
+    def eval_cmd = ''
+    if(params.stage == 'fin_find')
+    {
+      eval_cmd = '--fin_steps miopen_find_eval'
+    }
+    else
+    {
+      eval_cmd = '--fin_steps miopen_perf_eval'
+    }
+    if(params.dynamic_solvers_only)
+    {
+      eval_cmd += ' --dynamic_solvers_only'
+    }
 
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
+    sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
+  }
 }
 
 def doxygen() {
