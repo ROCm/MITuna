@@ -874,7 +874,7 @@ def compile()
   }
 
   // Run the jobs on the cluster
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | docker login -u ${env.CREDS_USR} --password-stdin && docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo \'${env.CREDS_PSW}\' | docker login -u ${env.CREDS_USR} --password-stdin && docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
