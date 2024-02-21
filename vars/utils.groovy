@@ -873,6 +873,8 @@ def compile()
 
     // Run the jobs on the cluster
     withCredentials([usernamePassword(credentialsId: 'DOCKER_CRED', usernameVariable: 'UNAME', passwordVariable: 'PWORD')]){
+      sh 'echo $PWORD'
+      echo UNAME
       sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker login -u ${UNAME} -p ${PWORD} && docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
     }
   }
