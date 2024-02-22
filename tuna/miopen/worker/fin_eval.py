@@ -109,8 +109,7 @@ class FinEvaluator(FinClass):
 
       assert perf_compile_res
       fjob['miopen_perf_compile_result'] = perf_compile_res
-    fjob = [fjob]
-    return fjob
+    return [fjob]
 
   def fin_fdb_input(self, _fjob: Dict) -> List[Dict]:
     """prepare find db command input for fin"""
@@ -160,19 +159,17 @@ class FinEvaluator(FinClass):
           compile_entry = find_compile_res[solvers.index(slv_name)]
           compile_entry['find_compiled'] = True
 
-          kernel_objects = []
           blobs = session.query(self.dbt.kernel_cache).filter(
               self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
           res = session_retry(session, blobs.all, lambda x: x(), self.logger)
           for obj in res:
-            kernel_objects.append({
+            compile_entry['kernel_objects'].append({
                 'blob': obj.kernel_blob.decode('utf-8'),
                 'comp_options': obj.kernel_args,
                 'kernel_file': obj.kernel_name,
                 'md5_sum': obj.kernel_hash,
                 'uncompressed_size': obj.uncompressed_size
             })
-          compile_entry['kernel_objects'] = kernel_objects
 
       assert find_compile_res
       fjob['miopen_find_compile_result'] = find_compile_res
