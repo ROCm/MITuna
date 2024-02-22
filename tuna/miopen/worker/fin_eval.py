@@ -116,6 +116,28 @@ class FinEvaluator(FinClass):
     """prepare find db command input for fin"""
     fjob = _fjob.copy()
     with DbSession() as session:
+      find_compile_res = []
+
+      # pylint: disable=comparison-with-callable
+      query = session.query(self.dbt.solver_app).filter(
+          self.dbt.solver_app.session == self.dbt.session.id,
+          self.dbt.solver_app.config == self.job.config,
+          self.dbt.solver_app.applicable == 1)
+      # pylint: enable=comparison-with-callable
+
+      res = session_retry(session, query.all, lambda x: x(), self.logger)
+      for slv_entry in res:
+        slv_name = self.id_solver_map[slv_entry.solver]
+        if not self.job.solver or slv_name == self.job.solver:
+          compile_entry = {
+              'solver_name': slv_name,
+              'find_compiled': False,
+              'kernel_objects': []
+          }
+          find_compile_res.append(compile_entry)
+
+      solvers = [x['solver_name'] for x in find_compile_res]
+
       fdb_entry = self.dbt.find_db_table()
       fdb_entry.num_cu = self.dbt.session.num_cu
       fdb_entry.config = self.config.id
@@ -130,18 +152,14 @@ class FinEvaluator(FinClass):
       fdb_query = fdb_query.filter(self.dbt.find_db_table.workspace_sz != -1,
                                    self.dbt.find_db_table.valid == 1)
 
-      find_compile_res = []
-      # Enumerate all solvers for this config
       res = session_retry(session, fdb_query.all, lambda x: x(), self.logger)
+
       for fdb_rec in res:
         slv_name = self.id_solver_map[fdb_rec.solver]
         if not self.job.solver or slv_name == self.job.solver:
-          compile_entry = {
-              'algorithm': fdb_rec.alg_lib,
-              'find_compiled': True,
-              'solver_name': slv_name,
-              'workspace': fdb_rec.workspace_sz
-          }
+          compile_entry = find_compile_res[solvers.index(slv_name)]
+          compile_entry['find_compiled'] = True
+
           kernel_objects = []
           blobs = session.query(self.dbt.kernel_cache).filter(
               self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
@@ -155,7 +173,6 @@ class FinEvaluator(FinClass):
                 'uncompressed_size': obj.uncompressed_size
             })
           compile_entry['kernel_objects'] = kernel_objects
-          find_compile_res.append(compile_entry)
 
       assert find_compile_res
       fjob['miopen_find_compile_result'] = find_compile_res
