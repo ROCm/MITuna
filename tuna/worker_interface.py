@@ -516,9 +516,9 @@ class WorkerInterface(Process):
         #  self.logger.warning('Tuna worker did not return a value...')
         return ret
         #  return True
-          #with self.bar_lock:
-          #  self.num_procs.value -= 1
-          #return True
+        #with self.bar_lock:
+        #  self.num_procs.value -= 1
+        #return True
     except KeyboardInterrupt as err:
       self.logger.error('%s', err)
       self.reset_job_state()
@@ -528,7 +528,7 @@ class WorkerInterface(Process):
     #with self.bar_lock:
     #  self.num_procs.value -= 1
 
-    return ret 
+    return ret
 
   def run_command(self, cmd: str) -> Tuple[int, str]:
     """Run cmd and return ret_code"""

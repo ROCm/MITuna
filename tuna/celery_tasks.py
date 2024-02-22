@@ -29,6 +29,9 @@ import os
 import logging
 import subprocess
 #import time
+from sqlalchemy.exc import OperationalError, DataError, IntegrityError
+from sqlalchemy.inspection import inspect
+
 from celery.result import ResultSet
 
 from tuna.utils.logger import setup_logger
@@ -37,11 +40,12 @@ from tuna.celery_app.celery import hardware_pick, app
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
-from tuna.miopen.utils.json_to_sql import process_fdb_w_kernel, process_pdb_compile 
+from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
 from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.miopen.worker.fin_utils import get_fin_result
+from tuna.miopen.db.solver import get_solver_ids
 
 LOGGER: logging.Logger = setup_logger('tune')
-
 
 def launch_worker_compile():
   """Launch celery worker for compile"""
@@ -104,46 +108,92 @@ def result_callback(task_id, value, worker_type, job, config, kwargs):
   #LOGGER.info('task id %s : done', task_id)
   LOGGER.info('result : %s', value)
   LOGGER.info('worker_type: %s', worker_type)
-  if 'worker_type' == 'fin_build_worker':
+  if worker_type == 'fin_build_worker':
     process_fin_builder_results(value, job, config, kwargs)
   else:
-    process_fin_evaluator_results(value, job, config, kwargs)
+    process_fin_evaluator_results()
 
 
 
-def process_fin_builder_results(value):
+def process_fin_builder_results(fin_json, job, config, kwargs):
   """Process result from fin_build worker"""
+  print('TESTING')
+  print(job)
+  print(config)
+  print(kwargs)
+  return True
   failed_job = True
   result_str = ''
-  if fin_json:
-    failed_job = False
-    with DbSession() as session:
-      try:
-        if 'miopen_find_compile_result' in fin_json:
-          status = process_fdb_w_kernels(session, fin_json, job, config, kwargs, DBT)
+  failed_job = False
+  with DbSession() as session:
+    try:
+      if 'miopen_find_compile_result' in fin_json:
+        status = process_fdb_w_kernels(session, fin_json, job, config, kwargs, DBT,
+                                       FDB_ATTR, SOLVER_ID_MAP)
 
-        elif 'miopen_perf_compile_result' in fin_json:
-          status = process_pdb_compile(session, fin_json, job, config, kwargs, DBT)
+      elif 'miopen_perf_compile_result' in fin_json:
+        status = process_pdb_compile(session, fin_json, job, config, kwargs,
+                                     DBT, FDB_ATTR, SOLVER_ID_MAP)
 
-        success, result_str = get_fin_result(status)
-        failed_job = not success
+      success, result_str = get_fin_result(status)
+      failed_job = not success
 
-      except (OperationalError, IntegrityError) as err:
-        LOGGER.warning('FinBuild: Unable to update Database %s', err)
-        session.rollback()
-        failed_job = True
-      except DataError as err:
-        LOGGER.warning(
-            'FinBuild: Invalid data, likely large workspace. DB Error: %s',
-            err)
-        session.rollback()
-        failed_job = True
+    except (OperationalError, IntegrityError) as err:
+      LOGGER.warning('FinBuild: Unable to update Database %s', err)
+      session.rollback()
+      failed_job = True
+    except DataError as err:
+      LOGGER.warning(
+          'FinBuild: Invalid data, likely large workspace. DB Error: %s',
+          err)
+      session.rollback()
+      failed_job = True
 
-  if failed_job:
-    self.set_job_state('errored', result=result_str)
-  else:
-    self.set_job_state('compiled', result=result_str)
+    if failed_job:
+      set_job_state(session, job, DBT, 'errored', False, result=result_str)
+    else:
+      set_job_state(session, job, DBT, 'compiled', False, result=result_str)
 
+  return True
+
+def set_job_state(session,
+                  job,
+                  dbt,
+                  state,
+                  increment_retries,
+                  result):
+  """Interface function to update job state for builder/evaluator"""
+  """
+  job_set_attr: List[str]
+
+  LOGGER.info('Setting job id %s state to %s', job.id, state)
+  job_set_attr = ['state', 'gpu_id']
+  job.state = state
+  if result:
+    job_set_attr.append('result')
+    job.result = result
+  if increment_retries:
+    job_set_attr.append('retries')
+    job.retries += 1
+
+  if '_start' in state:
+    job_set_attr.append('cache_loc')
+    cache: str = '~/.cache/miopen_'
+    blurr: str = ''.join(
+        random.choice(string.ascii_lowercase) for i in range(10))
+    cache_loc: str = cache + blurr
+    job.cache_loc = cache_loc
+
+  query: str = gen_update_query(job, job_set_attr,
+                                dbt.job_table.__tablename__)
+
+  def callback() -> bool:
+    session.execute(query)
+    session.commit()
+    return True
+
+  assert session_retry(session, callback, lambda x: x(), LOGGER)
+  """
   return True
 
 def process_fin_evaluator_results():
@@ -159,9 +209,20 @@ def tune(library, blocking=None, job_batch_size=1000):
   if not launch_celery_worker(library):
     return False
 
-  global DBT
+  global DBT #pylint: disable=global-variable-undefined
+  global FDB_ATTR #pylint: disable=global-variable-undefined
+  global SOLVER_ID_MAP #pylint: disable=global-variable-undefined
+
   DBT = MIOpenDBTables(session_id=library.args.session_id,
                               config_type=library.args.config_type)
+
+  FDB_ATTR = [
+      column.name for column in inspect(DBT.find_db_table).c
+  ]
+  FDB_ATTR.remove("insert_ts")
+  FDB_ATTR.remove("update_ts")
+
+  SOLVER_ID_MAP = get_solver_ids()
 
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
@@ -213,6 +274,6 @@ def tune(library, blocking=None, job_batch_size=1000):
   if not blocking:
     LOGGER.info('Gathering async results')
     #_ = res_set.join(callback=result_callback(context={'worker_type' : library.worker_type}))
-    _ = res_set.join(callback=result_callback))
+    _ = res_set.join(callback=result_callback)
 
   return True

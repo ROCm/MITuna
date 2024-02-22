@@ -111,7 +111,7 @@ class FinBuilder(FinClass):
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
     # pylint:disable=duplicate-code
-    self.pending = []
+    #self.pending = []
     #self.result_queue_drain()
     while not self.result_queue_drain():
       sleep(random.randint(1, 10))

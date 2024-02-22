@@ -33,6 +33,10 @@ def __update_fdb_w_kernels(session: DbSession,
                            fin_json: dict,
                            config,
                            session_id,
+                           dbt,
+                           job,
+                           fdb_attr,
+                           solver_id_map,
                            result_str: str = 'miopen_find_compile_result',
                            check_str: str = 'find_compiled') -> list:
   """update find db + kernels from json results"""
@@ -44,30 +48,30 @@ def __update_fdb_w_kernels(session: DbSession,
 
       if fdb_obj[check_str]:
         #returned entry is added to the table
-        fdb_entry = __compose_fdb_entry(session, fin_json, fdb_obj, session_id)
+        fdb_entry = __compose_fdb_entry(session, fin_json, fdb_obj, session_id, dbt, config, job, fdb_attr, solver_id_map)
         __check_layout_mismatch(fdb_entry, slv_stat, config)
-        if not self.pending:
-          query = gen_update_query(fdb_entry, self.fdb_attr,
-                                   self.dbt.find_db_table.__tablename__)
-          session.execute(query)
-        else:
-          assert len(self.pending) == 1
-          self.pending.pop()
-          query = gen_insert_query(fdb_entry, self.fdb_attr,
-                                   self.dbt.find_db_table.__tablename__)
-          session.execute(query)
+        #if not self.pending:
+        #  query = gen_update_query(fdb_entry, fdb_attr,
+        #                           dbt.find_db_table.__tablename__)
+        #  session.execute(query)
+        #else:
+        #assert len(self.pending) == 1
+        #self.pending.pop()
+        query = gen_insert_query(fdb_entry, fdb_attr,
+                                 dbt.find_db_table.__tablename__)
+        session.execute(query)
 
-          fdb_entry = __update_fdb_entry(
-              session, self.solver_id_map[fdb_obj['solver_name']])
-          fdb_entry.kernel_group = fdb_entry.id
-          query = gen_update_query(fdb_entry, ['kernel_group'],
-                                   self.dbt.find_db_table.__tablename__)
-          session.execute(query)
+        fdb_entry = __update_fdb_entry(
+            session, solver_id_map[fdb_obj['solver_name']], dbt)
+        fdb_entry.kernel_group = fdb_entry.id
+        query = gen_update_query(fdb_entry, ['kernel_group'],
+                                 dbt.find_db_table.__tablename__)
+        session.execute(query)
 
         if fdb_obj['reason'] == 'Success':
-          __compose_kernel_entry(session, fdb_obj, fdb_entry)
+          __compose_kernel_entry(session, fdb_obj, fdb_entry, dbt)
           LOGGER.info('Updating find Db(Build) for job_id=%s',
-                           self.job.id)
+                           job.id)
         else:
           # JD: add info about reason to the logs table
           fdb_entry.valid = False
@@ -85,7 +89,7 @@ def __update_fdb_w_kernels(session: DbSession,
 
   return status
 
-def process_pdb_compile(session, fin_json, job, config, kwargs, dbt):
+def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr, solver_id_map):
   """retrieve perf db compile json results"""
   status = []
   if fin_json['miopen_perf_compile_result']:
@@ -137,62 +141,62 @@ def __check_layout_mismatch(fdb_entry: SimpleDict,
 
   return True
 
-def __compose_kernel_entry(session, fdb_obj, fdb_entry):
+def __compose_kernel_entry(session, fdb_obj, fdb_entry, dbt):
   """Compose a new Kernel Cache entry from fin input"""
   # Now we have the ID, lets add the binary cache objects
   for kern_obj in fdb_obj['kernel_objects']:
-    kernel_obj = self.dbt.kernel_cache()
+    kernel_obj = dbt.kernel_cache()
     populate_kernels(kern_obj, kernel_obj)
     kernel_obj.kernel_group = fdb_entry.kernel_group
     session.add(kernel_obj)
   return True
 
-def __update_fdb_entry(session, solver, session_id):
+def __update_fdb_entry(session, solver, session_id, dbt, config, job, fdb_attr):
   """ Add a new entry to fdb if there isnt one already """
-  obj, fdb_entry = get_fdb_entry(session, solver, session_id)
+  obj, fdb_entry = get_fdb_entry(session, solver, session_id, dbt, config, fdb_attr)
   if obj:  # existing entry in db
     # This can be removed if we implement the delete orphan cascade
     fdb_entry = obj
     session.query(
-        self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
+        dbt.kernel_cache).filter(dbt.kernel_cache.kernel_group ==
                                       fdb_entry.kernel_group).delete()
-  else:
+  #else:
     # Bundle Insert for later
-    self.pending.append((self.job, fdb_entry))
+    #self.pending.append((job, fdb_entry))
   return fdb_entry
 
-def get_fdb_entry(session, solver, session_id):
+def get_fdb_entry(session, solver, session_id, dbt, config, fdb_attr):
   """ Get FindDb entry from db """
   obj = None
   fdb_entry = None
 
   conds = [
-      f"session={session_id}", f"config={self.config.id}",
+      f"session={session_id}", f"config={config.id}",
       f"solver={solver}", "opencl=0"
   ]
   cond_str = f"where {' AND '.join(conds)}"
-  entries = gen_select_objs(session, self.fdb_attr,
-                            self.dbt.find_db_table.__tablename__, cond_str)
+  entries = gen_select_objs(session, fdb_attr,
+                            dbt.find_db_table.__tablename__, cond_str)
 
   if entries:
     assert len(entries) == 1
     obj = entries[0]
   else:
     fdb_entry = SimpleDict()
-    for attr in self.fdb_attr:
+    for attr in fdb_attr:
       setattr(fdb_entry, attr, None)
     setattr(fdb_entry, 'session', session_id)
-    setattr(fdb_entry, 'config', self.config.id)
+    setattr(fdb_entry, 'config', config.id)
     setattr(fdb_entry, 'solver', solver)
     setattr(fdb_entry, 'opencl', False)
     setattr(fdb_entry, 'logger', LOGGER)
 
   return obj, fdb_entry
 
-def __compose_fdb_entry(self, session, fin_json, fdb_obj, session_id):
+def __compose_fdb_entry(session, fin_json, fdb_obj, session_id, dbt, config, job, fdb_attr, solver_id_map):
   """Compose a FindDB table entry from fin_output"""
-  solver = self.solver_id_map[fdb_obj['solver_name']]
-  fdb_entry = __update_fdb_entry(session, solver, session_id)
+  solver = solver_id_map[fdb_obj['solver_name']]
+  fdb_entry = __update_fdb_entry(session, solver, session_id, dbt, config, job, fdb_attr)
   fdb_entry.fdb_key = fin_json['db_key']
   fdb_entry.alg_lib = fdb_obj['algorithm']
   fdb_entry.params = fdb_obj['params']
@@ -213,6 +217,8 @@ def process_fdb_w_kernels(session,
                           config,
                           kwargs,
                           dbt,
+                          fdb_attr,
+                          solver_id_map,
                           result_str='miopen_find_compile_result',
                           check_str='find_compiled'):
   """initiate find db update"""
@@ -220,7 +226,7 @@ def process_fdb_w_kernels(session,
   callback = __update_fdb_w_kernels
   status = session_retry(
       session, callback,
-      lambda x: x(session, fin_json, result_str, check_str, config, kwargs['session_id']), LOGGER)
+      lambda x: x(session, fin_json, result_str, check_str, config, kwargs['session_id'], dbt, job, fdb_attr, solver_id_map), LOGGER)
 
   if not status:
     LOGGER.warning('Fin: Unable to update Database')
