@@ -788,32 +788,32 @@ def applicUpdate(){
 
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
     tuna_docker.push()
+  }
 
-    def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
+  def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
-    def use_tag = ''
-    if(params.config_tag != '')
-    {
-      use_tag = "-l '${params.config_tag}'"
+  def use_tag = ''
+  if(params.config_tag != '')
+  {
+    use_tag = "-l '${params.config_tag}'"
+  }
+
+  if(params.UPDATE_SOLVERS)
+  {
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
+    def num_solvers = runsql("SELECT count(*) from solver;")
+    println "Number of solvers: ${num_solvers}"
+    if (num_solvers.toInteger() == 0){
+        error("Unable to add solvers from Fin")
     }
-
-    if(params.UPDATE_SOLVERS)
-    {
-      sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
-      def num_solvers = runsql("SELECT count(*) from solver;")
-      println "Number of solvers: ${num_solvers}"
-      if (num_solvers.toInteger() == 0){
-          error("Unable to add solvers from Fin")
-      }
-    }
-    if(params.UPDATE_APPLICABILITY)
-    {
-      sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
-      def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
-      println "Session ${params.session_id} applicability: ${num_sapp}"
-      if (num_sapp.toInteger() == 0){
-        error("Unable to get applicability from Fin")
-      }
+  }
+  if(params.UPDATE_APPLICABILITY)
+  {
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
+    def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
+    println "Session ${params.session_id} applicability: ${num_sapp}"
+    if (num_sapp.toInteger() == 0){
+      error("Unable to get applicability from Fin")
     }
   }
 }
@@ -887,38 +887,38 @@ def evaluate(params)
 
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
     tuna_docker.push()
+  }
 
-    env_list = params.env.split(' ')
-    for(item in env_list)
+  env_list = params.env.split(' ')
+  for(item in env_list)
+  {
+    if(item.replaceAll("\\s","") != "")
     {
-      if(item.replaceAll("\\s","") != "")
+      if(item.contains("="))
       {
-        if(item.contains("="))
-        {
-          docker_args += " -e ${item}"
-        }
-        else
-        {
-          error "Not added to env: ${item}"
-        }
+        docker_args += " -e ${item}"
+      }
+      else
+      {
+        error "Not added to env: ${item}"
       }
     }
-    def eval_cmd = ''
-    if(params.stage == 'fin_find')
-    {
-      eval_cmd = '--fin_steps miopen_find_eval'
-    }
-    else
-    {
-      eval_cmd = '--fin_steps miopen_perf_eval'
-    }
-    if(params.dynamic_solvers_only)
-    {
-      eval_cmd += ' --dynamic_solvers_only'
-    }
-
-    sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
   }
+  def eval_cmd = ''
+  if(params.stage == 'fin_find')
+  {
+    eval_cmd = '--fin_steps miopen_find_eval'
+  }
+  else
+  {
+    eval_cmd = '--fin_steps miopen_perf_eval'
+  }
+  if(params.dynamic_solvers_only)
+  {
+    eval_cmd += ' --dynamic_solvers_only'
+  }
+
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
 }
 
 def doxygen() {
