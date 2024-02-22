@@ -821,8 +821,8 @@ def applicUpdate(){
 
 def compile()
 {
+  def tuna_docker_name = getDockerName("${backend}")
   docker.withRegistry('', "$DOCKER_CRED"){
-    def tuna_docker_name = getDockerName("${backend}")
     def tuna_docker
     (build_args, _) = getBuildArgs()
 
@@ -873,17 +873,16 @@ def compile()
     compile_cmd += ' --dynamic_solvers_only'
   }
 
-  sh "echo ${env.CREDS_PSW}"
-  sh "echo ${env.CREDS_PSW} && hostname"
   // Run the jobs on the cluster
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | docker login -u ${env.CREDS_USR} --password-stdin && docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | docker login -u ${env.CREDS_USR} --password-stdin'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
 def evaluate(params)
 {
+  def tuna_docker_name = getDockerName("${backend}")
   docker.withRegistry('', "$DOCKER_CRED"){
-    def tuna_docker_name = getDockerName("${backend}")
     def tuna_docker
     (build_args, partition) = getBuildArgs()
 
