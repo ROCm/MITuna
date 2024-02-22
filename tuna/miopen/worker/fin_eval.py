@@ -313,7 +313,12 @@ class FinEvaluator(FinClass):
     result_str = ''
     if fin_json:
       if 'miopen_find_eval_result' in fin_json:
-        status = self.process_fdb_eval(fin_json)
+        with DbSession() as session:
+          status = self.process_fdb_w_kernels(
+              session,
+              fin_json,
+              result_str='miopen_find_eval_result',
+              check_str='evaluated')
 
       elif 'miopen_perf_eval_result' in fin_json:
         with DbSession() as session:
