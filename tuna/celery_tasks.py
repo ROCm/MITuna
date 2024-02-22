@@ -108,6 +108,8 @@ def result_callback(task_id, value, worker_type, job, config, kwargs):
   #LOGGER.info('task id %s : done', task_id)
   LOGGER.info('result : %s', value)
   LOGGER.info('worker_type: %s', worker_type)
+
+  #enqueue and make sure value is not None
   if worker_type == 'fin_build_worker':
     process_fin_builder_results(value, job, config, kwargs)
   else:
@@ -117,11 +119,6 @@ def result_callback(task_id, value, worker_type, job, config, kwargs):
 
 def process_fin_builder_results(fin_json, job, config, kwargs):
   """Process result from fin_build worker"""
-  print('TESTING')
-  print(job)
-  print(config)
-  print(kwargs)
-  return True
   failed_job = True
   result_str = ''
   failed_job = False
@@ -202,7 +199,7 @@ def process_fin_evaluator_results():
 
 
 #pylint: disable=too-many-locals
-def tune(library, blocking=None, job_batch_size=1000):
+def tune(library, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
   #stop_active_workers()
@@ -256,24 +253,18 @@ def tune(library, blocking=None, job_batch_size=1000):
           }
           res_set.add(hardware_pick.apply_async((context,), queue="celery"))
 
-          #for CI
-          #if blocking:
-          #  while not res.ready():
-          #    time.sleep(5)
-          #  LOGGER.info('Job successful: %s', res.successful())
-          #  LOGGER.info(res.get())
-          #else:
-          #  res_set.add(res)
-
     if not job_list:
       if not res_set:
         return False
       LOGGER.info('All tasks added to queue')
       break
 
-  if not blocking:
-    LOGGER.info('Gathering async results')
-    #_ = res_set.join(callback=result_callback(context={'worker_type' : library.worker_type}))
-    _ = res_set.join(callback=result_callback)
+  #start draining DB queue in separate thread
+
+  LOGGER.info('Gathering async results')
+  #_ = res_set.join(callback=result_callback(context={'worker_type' : library.worker_type}))
+  _ = res_set.join(callback=result_callback())
+
+  #terminate DB drain process with special queue token NONE? 
 
   return True
