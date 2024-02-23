@@ -381,9 +381,8 @@ class FinClass(WorkerInterface):
 
       block_size = len_rows // num_blk  #size of the config block
       extra = len_rows % num_blk  #leftover configs, don't divide evenly
-      self.logger.info(
-          "cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk,
-          block_size, extra)
+      self.logger.info("cfg workdiv: num_blocks: %s, block_size: %s, extra: %s",
+                       num_blk, block_size, extra)
       for i in range(num_blk):
         start = i * block_size  #start of a process block
         end = (i + 1) * block_size
@@ -556,16 +555,17 @@ class FinClass(WorkerInterface):
                       functools.partial(actuator, pack=pack), self.logger)
 
       # print result to log
-      query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id), self.dbt.solver_app.applicable)
-      query = query.filter(self.dbt.solver_app.session == self.session_id) # pylint: disable=W0143
+      query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id),
+                            self.dbt.solver_app.applicable)
+      query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
       if self.label:
         query = query.filter(self.dbt.solver_app.config == self.dbt.config_tags_table.config)\
             .filter(self.dbt.config_tags_table.tag == self.label)
       query = query.group_by(self.dbt.solver_app.applicable)
       sapp_count = query.all()
       self.logger.warning(
-          "Finished parsing solver applicability, label(%s): %s",
-          self.label, sapp_count)
+          "Finished parsing solver applicability, label(%s): %s", self.label,
+          sapp_count)
     return True
 
   def __invalidate_solvers(self, sids, max_id):
