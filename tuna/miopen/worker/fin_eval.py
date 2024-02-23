@@ -319,6 +319,7 @@ class FinEvaluator(FinClass):
     except AssertionError:
       self.logger.error('Error building Fin input, job(%s)', self.job.id)
       self.set_job_state('errored', result='Error building Fin input')
+      return True
 
     failed_job = True
     result_str = ''
