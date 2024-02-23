@@ -187,7 +187,7 @@ class FinEvaluator(FinClass):
         fjob = self.fin_pdb_input(fjob)
       elif self.fin_steps[0] == 'miopen_find_eval':
         fjob = self.fin_fdb_input(fjob)
-    except AssertionError as err:
+    except (AssertionError, ValueError) as err:
       self.logger.error('Unable to get compiled objects for job %s : %s',
                         self.job.id, err)
       raise AssertionError from err
@@ -313,7 +313,12 @@ class FinEvaluator(FinClass):
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
-    fin_json = self.run_fin_cmd()
+    fin_json = None
+    try:
+      fin_json = self.run_fin_cmd()
+    except AssertionError:
+      self.logger.error('Error building Fin input, job(%s)', self.job.id)
+      self.set_job_state('errored', result='Error building Fin input')
 
     failed_job = True
     result_str = ''
