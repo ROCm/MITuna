@@ -259,14 +259,20 @@ class FinEvaluator(FinClass):
     """Remove the fin cache kernel entries for this job"""
     with DbSession() as session:
       try:
-        old_cache = session.query(self.dbt.fin_cache_table)\
+        self.logger.info('Delete kernel cache entries job(%s)', self.job.id)
+        job_cache = session.query(self.dbt.fin_cache_table)\
             .filter(self.dbt.fin_cache_table.job_id == self.job.id)
-        old_cache.delete()
+        job_cache.delete()
+        invalid_fdb_cache = session.query(self.dbt.kernel_cache)\
+            .filter(self.dbt.kernel_cache.valid == 0)
+        invalid_fdb_cache.delete()
         session.commit()
       except OperationalError as err:
         session.rollback()
-        self.logger.warning('FinEval: Unable to clean %s: %s',
-                            self.dbt.fin_cache_table.__tablename__, err)
+        self.logger.warning('FinEval: Unable to clean %s / %s: %s',
+                            self.dbt.fin_cache_table.__tablename__,
+                            self.dbt.kernel_cache.__tablename__,
+                            err)
 
   def close_job(self):
     """mark a job complete"""
