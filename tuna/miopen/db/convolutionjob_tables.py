@@ -138,12 +138,16 @@ class ConvFinJobCache(BASE, KernelCacheMixin):
                                 ondelete="CASCADE"),
                      nullable=False)
 
+  idx_job = Index('job_id')
+
 
 class ConvolutionKernelCache(BASE, KernelCacheMixin):
   """Represents kernel_cache table for convolutions"""
   __tablename__ = "conv_kernel_cache"
 
   kernel_group = Column(Integer, nullable=True)
+  idx_kgroup = Index('kernel_group')
+  idx_valid = Index('valid', 'kernel_group')
 
 
 class ConvolutionGolden(BASE, GoldenMixin):

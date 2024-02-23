@@ -679,9 +679,12 @@ class FinClass(WorkerInterface):
     if obj:  # existing entry in db
       # This can be removed if we implement the delete orphan cascade
       fdb_entry = obj
-      session.query(
-          self.dbt.kernel_cache).filter(self.dbt.kernel_cache.kernel_group ==
-                                        fdb_entry.kernel_group).delete()
+      if not fdb_entry.kernel_group is None:
+        self.logger.info('Invalidate kernel_group %s', fdb_entry.kernel_group)
+        session.query(self.dbt.kernel_cache)\
+            .filter(self.dbt.kernel_cache.kernel_group ==
+                                          fdb_entry.kernel_group)\
+            .update({'valid': 0})
     else:
       # Bundle Insert for later
       self.pending.append((self.job, fdb_entry))
