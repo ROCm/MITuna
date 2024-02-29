@@ -113,8 +113,8 @@ class FinBuilder(FinClass):
     # pylint:disable=duplicate-code
     #self.pending = []
     #self.result_queue_drain()
-    while not self.result_queue_drain():
-      sleep(random.randint(1, 10))
+    #while not self.result_queue_drain():
+    #  sleep(random.randint(1, 10))
 
     if not self.init_check_env():
       return False
@@ -124,9 +124,8 @@ class FinBuilder(FinClass):
     #_, self.id_solver_map = get_id_solvers(
     #)  #hyphenated names used by miopen::solver.ToString()
 
-    self.set_job_state('compiling')
+    #self.set_job_state('compiling')
     fin_json = self.run_fin_cmd()
-
     """
     failed_job = True
     result_str = ''

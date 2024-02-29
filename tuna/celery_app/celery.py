@@ -26,6 +26,8 @@
 ###############################################################################
 """Module to define celery jobs"""
 import os
+import json
+import copy
 from celery import Celery
 from celery import group
 from celery.utils.log import get_task_logger
@@ -48,29 +50,32 @@ logger = get_task_logger(__name__)
 @app.task(trail=True)
 def hardware_pick(context):
   """function call"""
-  return TUNING_QUEUE[context['arch'] + '-' + str(context['num_cu'])](
-      [context['job'], context['config'], context['worker_type']],
-      context['kwargs'])
+  return TUNING_QUEUE[context['arch'] + '-' + str(context['num_cu'])](context)
+
+
+def prep_worker(context):
+  args = [context['job'], context['config'], context['worker_type']]
+  kwargs = prep_kwargs(context['kwargs'], args)
+  worker = get_worker(kwargs, args[2])
+  return worker
 
 
 @app.task(trail=True)
-def celery_enqueue_gfx908_120(args, kwargs):
+def celery_enqueue_gfx908_120(context):
   """Defines a celery task"""
   logger.info("Enqueueing gfx908-120")
-  kwargs = prep_kwargs(kwargs, args)
-  worker = get_worker(kwargs, args[2])
+  worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
-  return ret
+  return ret, context
 
 
 @app.task(trail=True)
 def celery_enqueue_gfx1030_36(args, kwargs):
   """Defines a celery task"""
   logger.info("Enqueueing gfx1030-36")
-  kwargs = prep_kwargs(kwargs, args)
-  worker = get_worker(kwargs, args[2])
+  worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
-  return ret
+  return ret, context
 
 
 @app.task(trail=True)
@@ -80,7 +85,7 @@ def celery_enqueue_gfx942_304(args, kwargs):
   kwargs = prep_kwargs(kwargs, args)
   worker = get_worker(kwargs, args[2])
   ret = worker.run()
-  return ret
+  return ret, context
 
 
 TUNING_QUEUE = {

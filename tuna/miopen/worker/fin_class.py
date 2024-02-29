@@ -739,14 +739,14 @@ class FinClass(WorkerInterface):
   #  fds, vals, _, _ = parse_pdb_key(fdb_key)
   #  key_layout = vals[fds.index('out_layout')]
   #  cfg_layout = self.config.out_layout
- 
+
   #  if cfg_layout != key_layout:
   #    status['success'] = False
   #    status['result'] = f"fdb_key layout mismatch with config"\
   #                       f" {key_layout} != {cfg_layout}"
   #    fdb_entry.valid = False
   #    return False
-  
+
   #  return True
 
   #def __update_fdb_w_kernels(self,
@@ -825,7 +825,7 @@ class FinClass(WorkerInterface):
   #    }]
   #
   #  return status
-  
+
   def __add_sql_objs(self, session, obj_list):
     """add sql objects to the table"""
     for obj in obj_list:
