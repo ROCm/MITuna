@@ -35,6 +35,7 @@ from tuna.miopen.worker.fin_utils import fin_job
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.db_utility import session_retry
 
+
 class FinEvaluator(FinClass):
   """ The Evaluator class implements the worker class. Its purpose is to run benchmarking jobs
   and when completed sets the state of the job to evaluated. """
