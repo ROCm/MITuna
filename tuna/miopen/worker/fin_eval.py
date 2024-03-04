@@ -26,23 +26,14 @@
 ###############################################################################
 """Fin Evaluator class implements the worker interface. The purpose of this class
 is to run fin commands in benchmarking mode"""
-from time import sleep
-import random
-import functools
 import json
 
 from typing import List, Dict
-from sqlalchemy.exc import OperationalError
 
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_utils import fin_job
-from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import session_retry, gen_update_query
-#from tuna.utils.db_utility import get_solver_ids, get_id_solvers
-
-MAX_ERRORED_JOB_RETRIES = 3
-
+from tuna.utils.db_utility import session_retry
 
 class FinEvaluator(FinClass):
   """ The Evaluator class implements the worker class. Its purpose is to run benchmarking jobs
@@ -193,11 +184,6 @@ class FinEvaluator(FinClass):
     return self.machine.write_file(json.dumps(fjob, indent=2).encode(),
                                    is_temp=True)
 
-  def close_job(self):
-    """mark a job complete"""
-    self.set_job_state('evaluated')
-    self.clean_cache_table()
-
   def get_job(self, find_state, set_state, imply_end):
     """Polling to see if job available"""
     self.logger.info('find job: %s', find_state)
@@ -206,75 +192,14 @@ class FinEvaluator(FinClass):
       return False
     return True
 
-  #def manage_queue(self):
-  #  """Try to acquire a job, or manage the result queue if no job is available."""
-  #  if not self.get_job("compiled", "eval_start", True):
-  #    if not self.get_job("new", "eval_start", True):
-  #      with self.bar_lock:
-  #        self.num_procs.value -= 1
-  #      while not self.result_queue_drain():
-  #        sleep(random.randint(1, 10))
-  #      return False
-  #  return True
-  #
-
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
     self.pending = []
-    #self.result_queue_drain()
-    # pylint:disable=duplicate-code
-    #while not self.result_queue_drain():
-    #  sleep(random.randint(1, 10))
 
     if not self.init_check_env():
       return False
 
-    #self.solver_id_map = get_solver_ids()
-    #_, self.id_solver_map = get_id_solvers(
-    #)  #hyphenated names used by miopen::solver.ToString()
-
-    #orig_state = 'compiled'
-    #self.logger.info('Acquired new job: job_id=%s', self.job.id)
-    #self.set_job_state('evaluating')
     fin_json = self.run_fin_cmd()
+
     return fin_json
-    """
-    failed_job = True
-    result_str = ''
-    if fin_json:
-      if 'miopen_find_eval_result' in fin_json:
-        status = self.process_fdb_eval(fin_json)
-
-      elif 'miopen_perf_eval_result' in fin_json:
-        with DbSession() as session:
-          status = self.process_fdb_w_kernels(
-              session,
-              fin_json,
-              result_str='miopen_perf_eval_result',
-              check_str='evaluated')
-
-      success, result_str = get_fin_result(status)
-      failed_job = not success
-
-    if failed_job:
-      if not self.check_gpu():
-        return False
-      if self.job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):
-        self.logger.warning('max job retries exhausted, setting to errored')
-        self.set_job_state('errored', result=result_str)
-      else:
-        self.logger.warning('resetting job state to %s, incrementing retries',
-                            orig_state)
-        self.set_job_state(orig_state,
-                           increment_retries=True,
-                           result=result_str)
-    elif self.pending:
-      self.set_job_state('evaluated_pend', result=result_str)
-      self.result_queue.put(self.pending)
-    else:
-      self.set_job_state('evaluated', result=result_str)
-      self.clean_cache_table()
-    """
-
-    return False

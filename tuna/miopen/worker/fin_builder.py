@@ -26,20 +26,12 @@
 ###############################################################################
 """Builder class implements the worker interface. The purpose of this class is to run fin
 jobs in compile mode"""
-from time import sleep
-import random
-import functools
 import json
 
-from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
 
 from tuna.miopen.worker.fin_class import FinClass
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.worker.fin_utils import fin_job
-from tuna.miopen.worker.fin_utils import get_fin_slv_status, get_fin_result
-from tuna.utils.db_utility import session_retry
-#from tuna.utils.db_utility import get_solver_ids, get_id_solvers
 
 
 class FinBuilder(FinClass):
@@ -55,7 +47,6 @@ class FinBuilder(FinClass):
     self.jcache_attr.remove("update_ts")
     self.jcache_attr.remove("valid")  #use default, don't specify
     self.worker_type = "fin_build_worker"
-    #self.solver_id_map = get_solver_ids()
 
   def get_fin_input(self):
     """Create the input dict for fin, serialize to json and write to machine
@@ -83,84 +74,11 @@ class FinBuilder(FinClass):
 
     return True
 
-  #def process_pdb_compile(self, session, fin_json):
-  #  """retrieve perf db compile json results"""
-  #  status = []
-  #  if fin_json['miopen_perf_compile_result']:
-  #
-  #    def actuator(func, pdb_obj):
-  #      return func(session, pdb_obj)
-  #
-  #    for pdb_obj in fin_json['miopen_perf_compile_result']:
-  #      slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
-  #      status.append(slv_stat)
-  #      if pdb_obj['perf_compiled']:
-  #        session_retry(session, self.compose_job_cache_entrys,
-  #                      functools.partial(actuator, pdb_obj=pdb_obj),
-  #                      self.logger)
-  #        self.logger.info('Updating pdb job_cache for job_id=%s', self.job.id)
-  #  else:
-  #    status = [{
-  #        'solver': 'all',
-  #        'success': False,
-  #        'result': 'Perf Compile: No results'
-  #    }]
-  #
-  #  return status
-
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
-    # pylint:disable=duplicate-code
-    #self.pending = []
-    #self.result_queue_drain()
-    #while not self.result_queue_drain():
-    #  sleep(random.randint(1, 10))
 
     if not self.init_check_env():
       return False
 
-    #Alex note: should be moved to miopen_lib and passed in?
-    #self.solver_id_map = get_solver_ids()
-    #_, self.id_solver_map = get_id_solvers(
-    #)  #hyphenated names used by miopen::solver.ToString()
-
-    #self.set_job_state('compiling')
     fin_json = self.run_fin_cmd()
-    """
-    failed_job = True
-    result_str = ''
-    if fin_json:
-      failed_job = False
-      with DbSession() as session:
-        try:
-          if 'miopen_find_compile_result' in fin_json:
-            status = self.process_fdb_w_kernels(session, fin_json)
-
-          elif 'miopen_perf_compile_result' in fin_json:
-            status = self.process_pdb_compile(session, fin_json)
-
-          success, result_str = get_fin_result(status)
-          failed_job = not success
-
-        except (OperationalError, IntegrityError) as err:
-          self.logger.warning('FinBuild: Unable to update Database %s', err)
-          session.rollback()
-          failed_job = True
-        except DataError as err:
-          self.logger.warning(
-              'FinBuild: Invalid data, likely large workspace. DB Error: %s',
-              err)
-          session.rollback()
-          failed_job = True
-
-    if failed_job:
-      self.set_job_state('errored', result=result_str)
-    elif self.pending:
-      self.set_job_state('compiled_pend', result=result_str)
-      self.result_queue.put(self.pending)
-    else:
-      self.set_job_state('compiled', result=result_str)
-
-    #return False
-    """
     return fin_json
