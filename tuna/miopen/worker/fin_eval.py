@@ -193,79 +193,6 @@ class FinEvaluator(FinClass):
     return self.machine.write_file(json.dumps(fjob, indent=2).encode(),
                                    is_temp=True)
 
-  def update_fdb_eval_entry(self, session, fdb_obj):
-    """update fdb with individual fin json entry"""
-    if fdb_obj['evaluated']:
-      obj, _ = self.get_fdb_entry(session,
-                                  self.solver_id_map[fdb_obj['solver_name']])
-      if not obj:
-        self.logger.info(
-            'Unable to find fdb entry for config: %s, solver: %s, '\
-            'arch: %s, num_cu: %s, direction: %s',
-            self.config.id, self.solver_id_map[fdb_obj['solver_name']],
-            self.dbt.session.arch, self.dbt.session.num_cu, self.config.direction)
-        return False
-
-      fdb_entry = obj
-      fdb_entry.alg_lib = fdb_obj['algorithm']
-      fdb_entry.kernel_time = fdb_obj['time']
-      fdb_entry.workspace_sz = fdb_obj['workspace']
-      fdb_entry.session = self.dbt.session.id
-      fdb_entry.params = fdb_obj['params']
-
-      self.logger.info('Updating find db(Eval) for job_id=%s', self.job.id)
-      query = gen_update_query(fdb_entry, self.fdb_attr,
-                               self.dbt.find_db_table.__tablename__)
-      session.execute(query)
-      session.commit()
-    else:
-      self.logger.warning("Not evaluated: job(%s), solver(%s), %s", self.job.id,
-                          fdb_obj['solver_name'], fdb_obj['reason'])
-      return False
-
-    return True
-
-  def process_fdb_eval(
-      self,
-      fin_json: Dict,
-      result_str: str = 'miopen_find_eval_result') -> List[Dict]:
-    """process find db eval json results"""
-    status = []
-    fdb_obj = None
-    with DbSession() as session:
-
-      def actuator(func, fdb_obj):
-        return func(session, fdb_obj)
-
-      for fdb_obj in fin_json[result_str]:
-        self.logger.info('Processing object: %s', fdb_obj)
-        slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
-        #retry returns false on failure, callback return on success
-        ret = session_retry(session, self.update_fdb_eval_entry,
-                            functools.partial(actuator, fdb_obj=fdb_obj),
-                            self.logger)
-        if not ret:
-          self.logger.warning('FinEval: Unable to update Database')
-          slv_stat['success'] = False
-          slv_stat['result'] = fdb_obj['reason']
-
-        status.append(slv_stat)
-
-    return status
-
-  def clean_cache_table(self):
-    """Remove the fin cache kernel entries for this job"""
-    with DbSession() as session:
-      try:
-        old_cache = session.query(self.dbt.fin_cache_table)\
-            .filter(self.dbt.fin_cache_table.job_id == self.job.id)
-        old_cache.delete()
-        session.commit()
-      except OperationalError as err:
-        session.rollback()
-        self.logger.warning('FinEval: Unable to clean %s: %s',
-                            self.dbt.fin_cache_table.__tablename__, err)
-
   def close_job(self):
     """mark a job complete"""
     self.set_job_state('evaluated')
@@ -297,8 +224,8 @@ class FinEvaluator(FinClass):
     self.pending = []
     #self.result_queue_drain()
     # pylint:disable=duplicate-code
-    while not self.result_queue_drain():
-      sleep(random.randint(1, 10))
+    #while not self.result_queue_drain():
+    #  sleep(random.randint(1, 10))
 
     if not self.init_check_env():
       return False
@@ -307,11 +234,12 @@ class FinEvaluator(FinClass):
     #_, self.id_solver_map = get_id_solvers(
     #)  #hyphenated names used by miopen::solver.ToString()
 
-    orig_state = 'compiled'
-    self.logger.info('Acquired new job: job_id=%s', self.job.id)
-    self.set_job_state('evaluating')
+    #orig_state = 'compiled'
+    #self.logger.info('Acquired new job: job_id=%s', self.job.id)
+    #self.set_job_state('evaluating')
     fin_json = self.run_fin_cmd()
-
+    return fin_json
+    """
     failed_job = True
     result_str = ''
     if fin_json:
@@ -347,5 +275,6 @@ class FinEvaluator(FinClass):
     else:
       self.set_job_state('evaluated', result=result_str)
       self.clean_cache_table()
+    """
 
     return False

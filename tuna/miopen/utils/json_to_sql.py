@@ -25,12 +25,14 @@
 #
 ###############################################################################
 """Utility module for helper functions"""
+import functools
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.utility import SimpleDict
 from tuna.utils.db_utility import get_db_obj_by_id, session_retry, gen_select_objs, gen_update_query, gen_insert_query
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.parsing import parse_pdb_key
+from tuna.miopen.db.solver import get_solver_ids
 LOGGER = setup_logger('parse_results')
 
 
@@ -41,12 +43,12 @@ def __update_fdb_w_kernels(session: DbSession,
                            dbt,
                            job,
                            fdb_attr,
-                           solver_id_map,
                            pending,
                            result_str: str = 'miopen_find_compile_result',
                            check_str: str = 'find_compiled') -> list:
   """update find db + kernels from json results"""
   status = []
+  solver_id_map = get_solver_ids()
   if result_str in fin_json.keys():
     for fdb_obj in fin_json.get(result_str):
       slv_stat = get_fin_slv_status(fdb_obj, check_str)
@@ -99,8 +101,7 @@ def __update_fdb_w_kernels(session: DbSession,
   return status
 
 
-def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr,
-                        solver_id_map):
+def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr):
   """retrieve perf db compile json results"""
   status = []
   if fin_json['miopen_perf_compile_result']:
@@ -121,6 +122,49 @@ def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr,
         'success': False,
         'result': 'Perf Compile: No results'
     }]
+
+  return status
+
+
+def process_fdb_eval(fin_json,
+                     solver_id_map,
+                     config,
+                     dbt,
+                     session_id,
+                     fdb_attr,
+                     job,
+                     result_str: str = 'miopen_find_eval_result'):
+  """process find db eval json results"""
+  status = []
+  fdb_obj = None
+  with DbSession() as session:
+
+    def actuator(func, session, solver_id_map, config, dbt, fdb_obj, session_id,
+                 fdb_attr, job):
+      return func(session, solver_id_map, config, dbt, fdb_obj, session_id,
+                  fdb_attr, job)
+
+    for fdb_obj in fin_json[result_str]:
+      LOGGER.info('Processing object: %s', fdb_obj)
+      slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
+      #retry returns false on failure, callback return on success
+      ret = session_retry(
+          session, update_fdb_eval_entry,
+          functools.partial(actuator,
+                            session=session,
+                            solver_id_map=solver_id_map,
+                            config=config,
+                            dbt=dbt,
+                            fdb_obj=fdb_obj,
+                            session_id=session_id,
+                            fdb_attr=fdb_attr,
+                            job=job), LOGGER)
+      if not ret:
+        LOGGER.warning('FinEval: Unable to update Database')
+        slv_stat['success'] = False
+        slv_stat['result'] = fdb_obj['reason']
+
+      status.append(slv_stat)
 
   return status
 
@@ -236,7 +280,6 @@ def process_fdb_w_kernels(session,
                           context,
                           dbt,
                           fdb_attr,
-                          solver_id_map,
                           pending,
                           result_str='miopen_find_compile_result',
                           check_str='find_compiled'):
@@ -246,9 +289,9 @@ def process_fdb_w_kernels(session,
 
   callback = __update_fdb_w_kernels
   status = session_retry(
-      session, callback, lambda x: x(session, fin_json, config, context[
-          'kwargs']['session_id'], dbt, job, fdb_attr, solver_id_map, pending,
-                                     result_str, check_str), LOGGER)
+      session, callback,
+      lambda x: x(session, fin_json, config, context['kwargs']['session_id'],
+                  dbt, job, fdb_attr, pending, result_str, check_str), LOGGER)
 
   if not status:
     LOGGER.warning('Fin: Unable to update Database')
@@ -259,3 +302,64 @@ def process_fdb_w_kernels(session,
     }]
 
   return status
+
+
+def clean_cache_table(dbt, job):
+  """Remove the fin cache kernel entries for this job"""
+  with DbSession() as session:
+    try:
+      old_cache = session.query(dbt.fin_cache_table)\
+          .filter(dbt.fin_cache_table.job_id == job.id)
+      old_cache.delete()
+      session.commit()
+    except OperationalError as err:
+      session.rollback()
+      LOGGER.warning('FinEval: Unable to clean %s: %s',
+                     dbt.fin_cache_table.__tablename__, err)
+
+
+def update_fdb_eval_entry(session, solver_id_map, config, dbt, fdb_obj,
+                          session_id, fdb_attr, job):
+  """update fdb with individual fin json entry"""
+  if fdb_obj['evaluated']:
+    obj, _ = get_fdb_entry(session, solver_id_map[fdb_obj['solver_name']],
+                           session_id, dbt, config, fdb_attr)
+    if not obj:
+      LOGGER.info(
+          'Unable to find fdb entry for config: %s, solver: %s, '\
+          'arch: %s, num_cu: %s, direction: %s',
+          config.id, solver_id_map[fdb_obj['solver_name']],
+          dbt.session.arch, dbt.session.num_cu, config.direction)
+      return False
+
+    fdb_entry = obj
+    fdb_entry.alg_lib = fdb_obj['algorithm']
+    fdb_entry.kernel_time = fdb_obj['time']
+    fdb_entry.workspace_sz = fdb_obj['workspace']
+    fdb_entry.session = dbt.session.id
+    fdb_entry.params = fdb_obj['params']
+
+    LOGGER.info('Updating find db(Eval) for job_id=%s', job.id)
+    query = gen_update_query(fdb_entry, fdb_attr,
+                             dbt.find_db_table.__tablename__)
+    session.execute(query)
+    session.commit()
+  else:
+    LOGGER.warning("Not evaluated: job(%s), solver(%s), %s", job.id,
+                   fdb_obj['solver_name'], fdb_obj['reason'])
+    return False
+
+  return True
+
+
+def get_worker_type(args):
+  """Get worker_type from args"""
+  worker_type = None
+  if args.fin_steps:
+    if 'miopen_find_compile' in args.fin_steps \
+    or 'miopen_perf_compile' in args.fin_steps:
+      worker_type = "fin_build_worker"
+    elif 'miopen_find_eval' in args.fin_steps or 'miopen_perf_eval' in args.fin_steps:
+      worker_type = "fin_eval_worker"
+
+  return worker_type

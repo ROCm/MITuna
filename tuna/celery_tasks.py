@@ -41,45 +41,47 @@ from sqlalchemy.inspection import inspect
 from celery.result import ResultSet
 
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import serialize_chunk, SimpleDict
-from tuna.utils.db_utility import has_attr_set, get_db_obj_by_id, gen_insert_query, session_retry
+from tuna.utils.utility import serialize_chunk
+from tuna.utils.db_utility import get_db_obj_by_id, session_retry
 from tuna.utils.db_utility import gen_update_query
 from tuna.celery_app.celery import hardware_pick, app
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
+from tuna.miopen.utils.json_to_sql import process_fdb_eval, clean_cache_table, get_worker_type
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 
 LOGGER: logging.Logger = setup_logger('tune')
+MAX_ERRORED_JOB_RETRIES = 3
 
 
-def launch_worker_compile():
+def launch_worker_compile(q_name, machines, session_id):
   """Launch celery worker for compile"""
-  cmd = "celery -A tuna.celery_app.celery worker -l info -E -n compile_worker".split(
-      ' ')
-  try:
-    _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
-  except Exception as exp:  #pylint: disable=broad-exception-caught
-    LOGGER.warning(exp)
-    return False
+  for machine in machines:
+    cmd = f"celery -A tuna.celery_app.celery worker -l info -E -n tuna_{machine.hostname}_sess_{session_id} -Q {q_name}".split(  #pylint: disable=line-too-long
+        ' ')
+    try:
+      _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+    except Exception as exp:  #pylint: disable=broad-exception-caught
+      LOGGER.warning(exp)
+      return False
 
-  LOGGER.info('Successfully launched celery worker for compile')
+    LOGGER.info('Successfully launched celery worker for compile')
 
   return True
 
 
-def launch_worker_eval(library):
+def launch_worker_eval(q_name, machines, session_id):
   """Launch celery worker for eval"""
-  machines = load_machines(library.args)
   curr_env = dict(os.environ.copy())
   for machine in machines:
     num_gpus = machine.get_avail_gpus()
     try:
       for gpu_id in num_gpus:
-        cmd = f"celery -A tuna.celery_app.celery worker -l info -E -c 1 -n eval_worker_{gpu_id}".split(' ')  #pylint: disable=line-too-long
+        cmd = f"celery -A tuna.celery_app.celery worker -l info -E -c 1 -n tuna_{machine.hostname}_sess_{session_id}_gpu_id{gpu_id} -Q {q_name}".split(' ')  #pylint: disable=line-too-long
         curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
         _ = subprocess.Popen(cmd, env=curr_env)  #pylint: disable=consider-using-with
         LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
@@ -90,13 +92,13 @@ def launch_worker_eval(library):
   return True
 
 
-def launch_celery_worker(library):
+def launch_celery_worker(library, q_name, machines):
   """Helper function to launch celery workers"""
   if 'miopen_find_compile' in library.args.fin_steps \
   or 'miopen_perf_compile' in library.args.fin_steps:
-    ret = launch_worker_compile()
+    ret = launch_worker_compile(q_name, machines, library.dbt.session_id)
   elif 'miopen_find_eval' in library.args.fin_steps or 'miopen_perf_eval' in library.args.fin_steps:
-    ret = launch_worker_eval(library)
+    ret = launch_worker_eval(q_name, machines, library.dbt.session_id)
   else:
     raise ValueError('Operation does not support celery workers')
 
@@ -113,14 +115,13 @@ def stop_active_workers():
 
 def result_callback(task_id, value):
   """Function callback for celery async jobs to store resutls"""
-  #_ = app.AsyncResult(task_id).get()
   LOGGER.info('task id %s : done', task_id)
   LOGGER.info('fin_json : %s', value[0])
   LOGGER.info('context : %s', value[1])
   result_queue.put([value[0], value[1]])
 
 
-def close_job(session, job):
+def close_job(session, job, worker_type):
   """Setting final job state"""
   if worker_type == 'fin_builder':
     set_job_state(session, job, DBT, 'compiled')
@@ -128,87 +129,10 @@ def close_job(session, job):
     set_job_state(session, job, DBT, 'evaluated')
 
 
-def __result_queue_commit(session, close_job):  #pylint: disable=redefined-outer-name
-  """commit the result queue and set mark job complete"""
-  while not result_queue.empty():
-    obj_list = []
-    res_list = result_queue.get(True, 1)
-    res_job = res_list[1][0]
-    for _, obj in res_list:
-      obj_list.append(obj)
-
-    LOGGER.info("commit pending job %s, #objects: %s", res_job.id,
-                len(obj_list))
-    status = session_retry(session, __add_sql_objs,
-                           lambda x: x(session, obj_list, FDB_ATTR, DBT),
-                           LOGGER)
-    if not status:
-      LOGGER.error("Failed commit pending job %s", res_job.id)
-      return False
-
-    job = get_db_obj_by_id(res_job['id'], DBT.find_db_table.__tablename__)
-
-    close_job(session, job)
-
-  return True
-
-
-def __add_sql_objs(session, obj_list, fdb_attr, dbt):
-  """add sql objects to the table"""
-  for obj in obj_list:
-    if isinstance(obj, SimpleDict):
-      if has_attr_set(obj, fdb_attr):
-        query = gen_insert_query(obj, fdb_attr, dbt.find_db_table.__tablename__)
-        session.execute(query)
-      else:
-        return False
-    else:
-      session.add(obj)
-  session.commit()
-  return True
-
-
-def result_queue_drain():
-  """check for lock and commit the result queue"""
-  if result_queue_lock.acquire(block=False):
-    with DbSession() as session:
-      __result_queue_commit(session, close_job)
-    result_queue_lock.release()
-    return True
-  return False
-
-
-def reset_started_jobs(session, job_dict, fetch_state):  #pylint: disable=unused-argument
-  """finish committing result queue"""
-  print(job_dict)
-  job = get_db_obj_by_id(job_dict, DBT.job_table)
-  LOGGER.info(job)
-  LOGGER.info(fetch_state)
-  #reset_job_state(session, job, fetch_state)
-  #result_queue_drain()
-
-
-def reset_job_state(session, job, fetch_state):
-  """Helper function to reset job state during signal interrupt"""
-  #also filter pending states eg compiled_pend
-  if job and job['state'] in ("compile_start", "compiling", "eval_start",
-                              "evaluating"):
-    LOGGER.warning('resetting job state to %s', fetch_state)
-    if "new" in fetch_state:
-      set_job_state(session, job, DBT, 'new', False, "")
-    elif "compiled" in fetch_state:
-      set_job_state(session, job, DBT, 'compiled', False, "")
-
-
 def process_fin_builder_results(fin_json, context):
   """Process result from fin_build worker"""
   LOGGER.info('Processing fin_builder result')
-  print(context)
-  print(context['config']['id'])
-  config = get_db_obj_by_id(context['config']['id'], DBT.config_table)
-  print(config)
-  job = get_db_obj_by_id(context['job']['id'], DBT.job_table)
-  kwargs = context['kwargs'].copy()
+  config, job, kwargs = deserialize(context)
   pending = []
 
   failed_job = True
@@ -218,15 +142,13 @@ def process_fin_builder_results(fin_json, context):
     try:
       set_job_state(session, job, DBT, 'compiled')
       if 'miopen_find_compile_result' in fin_json:
-        print('miopen f compile')
         status = process_fdb_w_kernels(session, fin_json,
-                                       copy.deepcopy(context), DBT, FDB_ATTR,
-                                       SOLVER_ID_MAP, pending)
+                                       copy.deepcopy(context), DBT,
+                                       context['fdb_attr'], pending)
 
       elif 'miopen_perf_compile_result' in fin_json:
-        print('miopen pdb compile')
         status = process_pdb_compile(session, fin_json, job, config, kwargs,
-                                     DBT, FDB_ATTR, SOLVER_ID_MAP)
+                                     DBT, context['fdb_attr'])
 
       success, result_str = get_fin_result(status)
       failed_job = not success
@@ -245,6 +167,70 @@ def process_fin_builder_results(fin_json, context):
       set_job_state(session, job, DBT, 'errored', False, result=result_str)
     else:
       set_job_state(session, job, DBT, 'compiled', False, result=result_str)
+
+  return True
+
+
+def deserialize(context):
+  """Restore dict items(job, config) into objects"""
+  config = get_db_obj_by_id(context['config']['id'], DBT.config_table)
+  job = get_db_obj_by_id(context['job']['id'], DBT.job_table)
+  kwargs = context['kwargs'].copy()
+
+  return config, job, kwargs
+
+
+def process_fin_evaluator_results(fin_json, context):
+  """Process fin_json result"""
+  LOGGER.info('Processing fin_eval result')
+  config, job, _ = deserialize(context)
+  failed_job = True
+  result_str = ''
+  solver_id_map = get_solver_ids()
+  pending = []
+  orig_state = 'compiled'
+
+  with DbSession() as session:
+    try:
+      set_job_state(session, job, DBT, 'evaluated')
+      if 'miopen_find_eval_result' in fin_json:
+        status = process_fdb_eval(fin_json, solver_id_map, config, DBT,
+                                  context['kwargs']['session_id'],
+                                  context['fdb_attr'], job)
+      elif 'miopen_perf_eval_result' in fin_json:
+        status = process_fdb_w_kernels(session,
+                                       fin_json,
+                                       copy.deepcopy(context),
+                                       DBT,
+                                       context['fdb_attr'],
+                                       pending,
+                                       result_str='miopen_perf_eval_result',
+                                       check_str='evaluated')
+
+      success, result_str = get_fin_result(status)
+      failed_job = not success
+
+      if failed_job:
+        if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):
+          LOGGER.warning('max job retries exhausted, setting to errored')
+          set_job_state(session, job, DBT, 'errored', result=result_str)
+        else:
+          LOGGER.warning('resetting job state to %s, incrementing retries',
+                         orig_state)
+          set_job_state(session,
+                        job,
+                        DBT,
+                        orig_state,
+                        increment_retries=True,
+                        result=result_str)
+      else:
+        LOGGER.info("\n\n Setting job state to evaluated")
+        set_job_state(session, job, DBT, 'evaluated', result=result_str)
+        clean_cache_table(DBT, job)
+    except (OperationalError, IntegrityError) as err:
+      LOGGER.warning('FinBuild: Unable to update Database %s', err)
+      session.rollback()
+      failed_job = True
 
   return True
 
@@ -284,37 +270,35 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
   return True
 
 
-def process_fin_evaluator_results():
-  """Process result from fin_eval worker"""
-  return True
-
-
 #pylint: disable=too-many-locals
 def tune(library, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
+  worker_type = get_worker_type(library.args)
+  machines = load_machines(library.args)
+  q_name = None
+  if worker_type == 'fin_build_worker':
+    q_name = f"compile_q_session_{library.dbt.session_id}"
+  else:
+    q_name = f"eval_q_session_{library.dbt.session_id}"
+
   stop_active_workers()
-  if not launch_celery_worker(library):
+  if not launch_celery_worker(library, q_name, machines):
     return False
 
   global DBT  #pylint: disable=global-variable-undefined
-  global FDB_ATTR  #pylint: disable=global-variable-undefined
-  global SOLVER_ID_MAP  #pylint: disable=global-variable-undefined
   global result_queue  #pylint: disable=global-variable-undefined
   global result_queue_lock  #pylint: disable=global-variable-undefined
-  global worker_type  #pylint: disable=global-variable-undefined
 
   DBT = MIOpenDBTables(session_id=library.args.session_id,
                        config_type=library.args.config_type)
 
-  FDB_ATTR = [column.name for column in inspect(DBT.find_db_table).c]
-  FDB_ATTR.remove("insert_ts")
-  FDB_ATTR.remove("update_ts")
+  fdb_attr = [column.name for column in inspect(DBT.find_db_table).c]
+  fdb_attr.remove("insert_ts")
+  fdb_attr.remove("update_ts")
 
-  SOLVER_ID_MAP = get_solver_ids()
   result_queue = mpQueue()
   result_queue_lock = Lock()
-  worker_type = library.worker_type
 
   f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
@@ -343,13 +327,14 @@ def tune(library, job_batch_size=1000):
             context = {
                 'job': job,
                 'config': config,
-                'worker_type': library.worker_type,
+                'worker_type': worker_type,
                 'arch': library.dbt.session.arch,
                 'num_cu': library.dbt.session.num_cu,
-                'kwargs': kwargs
+                'kwargs': kwargs,
+                'fdb_attr': fdb_attr
             }
             #enqueuing to celery queue
-            res_set.add(hardware_pick.apply_async((context,), queue="celery"))
+            res_set.add(hardware_pick.apply_async((context,), queue=q_name))
 
       if not job_list:
         if not res_set:
@@ -359,25 +344,26 @@ def tune(library, job_batch_size=1000):
       LOGGER.info('TEST')
     except KeyboardInterrupt as err:
       LOGGER.error('%s', err)
-      reset_started_jobs(session, job, library.fetch_state)
+      #dump celery queue
 
   LOGGER.info('Started drain process')
   #start draining result_queue in subprocess
-  drain_process = Process(target=drain_queue)
+  drain_process = Process(target=drain_queue, args=[worker_type])
   drain_process.start()
 
-  LOGGER.info('Gathering async results in callback function')
+  LOGGER.info('Gathering async results in callback function, blocking')
   _ = res_set.join(callback=result_callback)
 
   #terminate result_queue drain process with special queue token (NONE,NONE)
   result_queue.put([None, None])
 
   drain_process.join()
+  #CTRL C needs to drain the redis queue and results_queue
 
   return True
 
 
-def drain_queue():
+def drain_queue(worker_type):
   """Drain results queue"""
   LOGGER.info('Draining queue')
   while True:
@@ -390,6 +376,9 @@ def drain_queue():
         break
       if worker_type == 'fin_build_worker':
         process_fin_builder_results(fin_json, context)
+      else:
+        LOGGER.info("\n\n Processing eval results")
+        process_fin_evaluator_results(fin_json, context)
     except queue.Empty as exc:
       LOGGER.warning(exc)
       LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
