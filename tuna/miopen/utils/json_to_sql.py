@@ -33,6 +33,7 @@ from tuna.utils.db_utility import get_db_obj_by_id, session_retry, gen_select_ob
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.miopen.db.solver import get_solver_ids
+
 LOGGER = setup_logger('parse_results')
 
 
