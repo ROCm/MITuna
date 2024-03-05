@@ -158,7 +158,7 @@ def test_fin_evaluator():
         slv_app_entry.session = dbt.session_id
         slv_app_entry.applicable = True
         session.add(slv_app_entry)
-    #session.commit()
+    session.commit()
 
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_eval'
