@@ -41,7 +41,7 @@ import random
 import string
 from io import StringIO
 from time import sleep
-from typing import List, Tuple, Union, Set, Callable, Optional
+from typing import List, Tuple, Union, Set, Callable, Optional, Any, Dict
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -143,7 +143,7 @@ class WorkerInterface(Process):
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
 
-  def step(self) -> bool:
+  def step(self) -> Optional[Dict[Any, Any]]:  #type: ignore[override]
     """Regular run loop operation, to be overloaded in class specialization """
     raise NotImplementedError("Not implemented")
 
@@ -476,7 +476,7 @@ class WorkerInterface(Process):
       except queue.Empty:
         break
 
-  def run(self) -> dict:  #type: ignore[override]
+  def run(self) -> dict:  #type: ignore
     """
     Main run function of WorkerInterface Process
     #type: ignore[override] - parent class returns None type.
@@ -494,7 +494,7 @@ class WorkerInterface(Process):
         if chk_abort_file(self.machine.id, self.logger, self.machine.arch):
           #with self.bar_lock:
           #  self.num_procs.value -= 1
-          return False
+          return None  #type: ignore
 
         # re-establish node connection
         usage = 0
@@ -510,11 +510,11 @@ class WorkerInterface(Process):
           self.set_barrier(lambda: (), True)
           continue
         # the step member is defined in the derived class
-        ret: dict = self.step()
+        ret = self.step()
         self.logger.info("proc %s step %s", self.gpu_id, ret)
         #if not ret:
         #  self.logger.warning('Tuna worker did not return a value...')
-        return ret
+        return ret  #type: ignore
         #  return True
         #with self.bar_lock:
         #  self.num_procs.value -= 1
@@ -528,7 +528,7 @@ class WorkerInterface(Process):
     #with self.bar_lock:
     #  self.num_procs.value -= 1
 
-    return ret
+    return ret  #type: ignore
 
   def run_command(self, cmd: str) -> Tuple[int, str]:
     """Run cmd and return ret_code"""
