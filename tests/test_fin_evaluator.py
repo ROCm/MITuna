@@ -28,6 +28,7 @@ import json
 import os
 import sys
 from multiprocessing import Value, Lock, Queue
+from sqlalchemy.inspection import inspect
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
@@ -45,7 +46,7 @@ from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.solver import get_solver_ids
-from tuna.utils.db_utility import connect_db
+from tuna.utils.db_utility import connect_db, get_db_obj_by_id
 from tuna.utils.logger import setup_logger
 from tuna.utils.miopen_utility import load_machines
 from tuna.machine import Machine
@@ -54,34 +55,10 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import serialize_job_config_row
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
+from tuna.miopen.utils.json_to_sql import process_fdb_eval
+from tuna.celery_tasks import set_job_state
 
 solver_id_map = get_solver_ids()
-"""
-def get_kwargs(dbt):
-  num_gpus = Value('i', 1)
-  v = Value('i', 0)
-  e = Value('i', 0)
-
-  kwargs = {
-      'machine': DummyMachine(False),
-      'gpu_id': 0,
-      'num_procs': num_gpus,
-      'barred': v,
-      'bar_lock': Lock(),
-      'envmt': ["MIOPEN_LOG_LEVEL=7"],
-      'reset_interval': False,
-      'app_test': False,
-      'label': 'tuna_pytest_fin_eval',
-      'fin_steps': ['miopen_find_eval'],
-      'use_tuner': False,
-      'job_queue': Queue(),
-      'queue_lock': Lock(),
-      'fetch_state': ['compiled'],
-      'end_jobs': e,
-      'session_id': dbt.session_id
-  }
-  return kwargs
-"""
 
 
 def add_cfgs():
@@ -181,7 +158,7 @@ def test_fin_evaluator():
         slv_app_entry.session = dbt.session_id
         slv_app_entry.applicable = True
         session.add(slv_app_entry)
-    session.commit()
+    #session.commit()
 
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_eval'
@@ -261,21 +238,20 @@ def test_fin_evaluator():
                                          .update({dbt.job_table.state: 'evaluated'})
     session.commit()
 
-  with DbSession() as session:
-    session.query(dbt.job_table).filter(dbt.job_table.session==dbt.session_id)\
-                                         .filter(dbt.job_table.state=='compiled')\
-                                         .filter(dbt.job_table.reason=='tuna_pytest_fin_eval')\
-                                         .filter(dbt.job_table.session==dbt.session_id)\
-                                         .update({dbt.job_table.state: 'evaluated'})
-    session.commit()
-
   #test get_job false branch
 
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
   assert len(fin_json) == 1
   fin_json = fin_json[0]
-  status = fin_eval.process_fdb_eval(fin_json)
+  job = get_db_obj_by_id(job_dict['id'], miopen.dbt.job_table)
+  config = get_db_obj_by_id(config_dict['id'], miopen.dbt.config_table)
+  fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
+  fdb_attr.remove("insert_ts")
+  fdb_attr.remove("update_ts")
+
+  status = process_fdb_eval(fin_json, solver_id_map, config, miopen.dbt,
+                            miopen.dbt.session_id, fdb_attr, job)
   for obj in status:
     print(obj)
     assert (obj['success'] == True)
@@ -289,7 +265,7 @@ def test_fin_evaluator():
     assert ('compiled' == session.query(dbt.job_table.state).filter(
         dbt.job_table.id == fin_eval.job.id).first()[0].name)
 
-  fin_eval.close_job()
+  set_job_state(session, job, miopen.dbt, 'evaluated')
   with DbSession() as session:
     assert ('evaluated' == session.query(dbt.job_table.state).filter(
         dbt.job_table.id == fin_eval.job.id).first()[0].name)

@@ -26,11 +26,14 @@
 
 import os
 import sys
+import copy
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
+
+from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
@@ -50,6 +53,7 @@ from tuna.utils.utility import serialize_job_config_row
 from tuna.miopen.utils.helper import prep_kwargs
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
+from tuna.celery_tasks import process_fin_builder_results
 
 
 def add_cfgs():
@@ -112,6 +116,7 @@ def test_fin_builder():
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_builder'
   num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
+  num_jobs = 4
   assert (num_jobs)
 
   #compile
@@ -133,17 +138,33 @@ def test_fin_builder():
 
   f_vals = miopen.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
+  fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
+  fdb_attr.remove("insert_ts")
+  fdb_attr.remove("update_ts")
 
+  res_set = []
   for elem in job_config_rows:
     job_dict, config_dict = serialize_job_config_row(elem)
-    worker_kwargs = prep_kwargs(kwargs,
+    context = {
+        'job': job_dict,
+        'config': config_dict,
+        'worker_type': miopen.worker_type,
+        'arch': miopen.dbt.session.arch,
+        'num_cu': miopen.dbt.session.num_cu,
+        'kwargs': kwargs,
+        'fdb_attr': fdb_attr
+    }
+    worker_kwargs = prep_kwargs(copy.deepcopy(context),
                                 [job_dict, config_dict, miopen.worker_type])
-    worker = get_worker(worker_kwargs, miopen.worker_type)
-    worker.run()
 
-  #worker_lst = miopen.compose_worker_list(machine_lst)
-  #for worker in worker_lst:
-  #  worker.join()
+    worker = get_worker(worker_kwargs, miopen.worker_type)
+    worker.dbt = miopen.dbt
+    worker.fin_steps = miopen.args.fin_steps
+    fin_json = worker.run()
+    res_set.append((fin_json, context))
+
+  for fin_json, context in res_set:
+    process_fin_builder_results(fin_json, context, miopen.dbt)
 
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\

@@ -121,34 +121,35 @@ def result_callback(task_id, value):
   result_queue.put([value[0], value[1]])
 
 
-def close_job(session, job, worker_type):
-  """Setting final job state"""
-  if worker_type == 'fin_builder':
-    set_job_state(session, job, DBT, 'compiled')
-  else:
-    set_job_state(session, job, DBT, 'evaluated')
+#def close_job(session, job, worker_type, dbt=DBT):
+#  """Setting final job state"""
+#  if worker_type == 'fin_builder':
+#    set_job_state(session, job, dbt, 'compiled')
+#  else:
+#    set_job_state(session, job, dbt, 'evaluated')
 
 
-def process_fin_builder_results(fin_json, context):
+def process_fin_builder_results(fin_json, context, dbt):
   """Process result from fin_build worker"""
   LOGGER.info('Processing fin_builder result')
-  config, job, kwargs = deserialize(context)
+  config, job, kwargs = deserialize(context, dbt)
   pending = []
 
   failed_job = True
   result_str = ''
   failed_job = False
+  status = None
   with DbSession() as session:
     try:
-      set_job_state(session, job, DBT, 'compiled')
+      set_job_state(session, job, dbt, 'compiled')
       if 'miopen_find_compile_result' in fin_json:
         status = process_fdb_w_kernels(session, fin_json,
-                                       copy.deepcopy(context), DBT,
+                                       copy.deepcopy(context), dbt,
                                        context['fdb_attr'], pending)
 
       elif 'miopen_perf_compile_result' in fin_json:
         status = process_pdb_compile(session, fin_json, job, config, kwargs,
-                                     DBT, context['fdb_attr'])
+                                     dbt, context['fdb_attr'])
 
       success, result_str = get_fin_result(status)
       failed_job = not success
@@ -164,26 +165,26 @@ def process_fin_builder_results(fin_json, context):
       failed_job = True
 
     if failed_job:
-      set_job_state(session, job, DBT, 'errored', False, result=result_str)
+      set_job_state(session, job, dbt, 'errored', False, result=result_str)
     else:
-      set_job_state(session, job, DBT, 'compiled', False, result=result_str)
+      set_job_state(session, job, dbt, 'compiled', False, result=result_str)
 
   return True
 
 
-def deserialize(context):
+def deserialize(context, dbt):
   """Restore dict items(job, config) into objects"""
-  config = get_db_obj_by_id(context['config']['id'], DBT.config_table)
-  job = get_db_obj_by_id(context['job']['id'], DBT.job_table)
+  config = get_db_obj_by_id(context['config']['id'], dbt.config_table)
+  job = get_db_obj_by_id(context['job']['id'], dbt.job_table)
   kwargs = context['kwargs'].copy()
 
   return config, job, kwargs
 
 
-def process_fin_evaluator_results(fin_json, context):
+def process_fin_evaluator_results(fin_json, context, dbt):
   """Process fin_json result"""
   LOGGER.info('Processing fin_eval result')
-  config, job, _ = deserialize(context)
+  config, job, _ = deserialize(context, dbt)
   failed_job = True
   result_str = ''
   solver_id_map = get_solver_ids()
@@ -192,16 +193,16 @@ def process_fin_evaluator_results(fin_json, context):
 
   with DbSession() as session:
     try:
-      set_job_state(session, job, DBT, 'evaluated')
+      set_job_state(session, job, dbt, 'evaluated')
       if 'miopen_find_eval_result' in fin_json:
-        status = process_fdb_eval(fin_json, solver_id_map, config, DBT,
+        status = process_fdb_eval(fin_json, solver_id_map, config, dbt,
                                   context['kwargs']['session_id'],
                                   context['fdb_attr'], job)
       elif 'miopen_perf_eval_result' in fin_json:
         status = process_fdb_w_kernels(session,
                                        fin_json,
                                        copy.deepcopy(context),
-                                       DBT,
+                                       dbt,
                                        context['fdb_attr'],
                                        pending,
                                        result_str='miopen_perf_eval_result',
@@ -213,20 +214,20 @@ def process_fin_evaluator_results(fin_json, context):
       if failed_job:
         if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):
           LOGGER.warning('max job retries exhausted, setting to errored')
-          set_job_state(session, job, DBT, 'errored', result=result_str)
+          set_job_state(session, job, dbt, 'errored', result=result_str)
         else:
           LOGGER.warning('resetting job state to %s, incrementing retries',
                          orig_state)
           set_job_state(session,
                         job,
-                        DBT,
+                        dbt,
                         orig_state,
                         increment_retries=True,
                         result=result_str)
       else:
         LOGGER.info("\n\n Setting job state to evaluated")
-        set_job_state(session, job, DBT, 'evaluated', result=result_str)
-        clean_cache_table(DBT, job)
+        set_job_state(session, job, dbt, 'evaluated', result=result_str)
+        clean_cache_table(dbt, job)
     except (OperationalError, IntegrityError) as err:
       LOGGER.warning('FinBuild: Unable to update Database %s', err)
       session.rollback()
@@ -348,7 +349,7 @@ def tune(library, job_batch_size=1000):
 
   LOGGER.info('Started drain process')
   #start draining result_queue in subprocess
-  drain_process = Process(target=drain_queue, args=[worker_type])
+  drain_process = Process(target=drain_queue, args=[worker_type, DBT])
   drain_process.start()
 
   LOGGER.info('Gathering async results in callback function, blocking')
@@ -363,7 +364,7 @@ def tune(library, job_batch_size=1000):
   return True
 
 
-def drain_queue(worker_type):
+def drain_queue(worker_type, dbt):
   """Drain results queue"""
   LOGGER.info('Draining queue')
   while True:
@@ -375,10 +376,10 @@ def drain_queue(worker_type):
         LOGGER.info('Reached end of results queue')
         break
       if worker_type == 'fin_build_worker':
-        process_fin_builder_results(fin_json, context)
+        process_fin_builder_results(fin_json, context, dbt)
       else:
         LOGGER.info("\n\n Processing eval results")
-        process_fin_evaluator_results(fin_json, context)
+        process_fin_evaluator_results(fin_json, context, dbt)
     except queue.Empty as exc:
       LOGGER.warning(exc)
       LOGGER.info('Sleeping for 2 sec, waiting on results from celery')

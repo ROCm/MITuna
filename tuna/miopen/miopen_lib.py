@@ -443,9 +443,6 @@ class MIOpen(MITunaInterface):
     if not self.check_jobs_found(job_list, find_state, session_id):
       return []
 
-    print(job_list)
-    print()
-
     ids = [row.id for row in job_list]
     self.logger.info("%s jobs %s", find_state, ids)
     for job in job_list:
