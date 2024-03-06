@@ -52,6 +52,7 @@ from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_com
 from tuna.miopen.utils.json_to_sql import clean_cache_table, get_worker_type
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
+from tuna.miopen.db.solver import get_solver_ids
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -120,19 +121,12 @@ def result_callback(task_id, value):
   result_queue.put([value[0], value[1]])
 
 
-#def close_job(session, job, worker_type, dbt=DBT):
-#  """Setting final job state"""
-#  if worker_type == 'fin_builder':
-#    set_job_state(session, job, dbt, 'compiled')
-#  else:
-#    set_job_state(session, job, dbt, 'evaluated')
-
-
 def process_fin_builder_results(fin_json, context, dbt):
   """Process result from fin_build worker"""
   LOGGER.info('Processing fin_builder result')
   config, job, kwargs = deserialize(context, dbt)
   pending = []
+  solver_id_map = get_solver_ids()
 
   failed_job = True
   result_str = ''
@@ -148,7 +142,7 @@ def process_fin_builder_results(fin_json, context, dbt):
 
       elif 'miopen_perf_compile_result' in fin_json:
         status = process_pdb_compile(session, fin_json, job, config, kwargs,
-                                     dbt, context['fdb_attr'])
+                                     dbt, context['fdb_attr'], solver_id_map)
 
       success, result_str = get_fin_result(status)
       failed_job = not success

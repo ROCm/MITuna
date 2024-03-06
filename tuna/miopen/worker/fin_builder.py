@@ -61,19 +61,6 @@ class FinBuilder(FinClass):
                                         is_temp=True)
     return fin_input
 
-  def compose_job_cache_entrys(self, session, pdb_obj):
-    """Compose new pdb kernel cache entry from fin input"""
-    for kern_obj in pdb_obj['kernel_objects']:
-      kernel_obj = self.dbt.fin_cache_table()
-      self.populate_kernels(kern_obj, kernel_obj)
-      kernel_obj.solver_id = self.solver_id_map[pdb_obj['solver_name']]
-      kernel_obj.job_id = self.job.id
-
-      session.add(kernel_obj)
-    session.commit()
-
-    return True
-
   def step(self):
     """Main functionality of the builder class. It picks up jobs in new state and compiles them"""
 

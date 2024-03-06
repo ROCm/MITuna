@@ -102,7 +102,8 @@ def __update_fdb_w_kernels(session: DbSession,
   return status
 
 
-def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr):
+def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr,
+                        solver_id_map):
   """retrieve perf db compile json results"""
   status = []
   if fin_json['miopen_perf_compile_result']:
@@ -114,8 +115,13 @@ def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr):
       slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
       status.append(slv_stat)
       if pdb_obj['perf_compiled']:
-        session_retry(session, LOGGER.compose_job_cache_entrys,
-                      functools.partial(actuator, pdb_obj=pdb_obj), LOGGER)
+        session_retry(
+            session, LOGGER.compose_job_cache_entrys,
+            functools.partial(actuator,
+                              pdb_obj=pdb_obj,
+                              dbt=dbt,
+                              job=job,
+                              solver_id_map=solver_id_map), LOGGER)
         LOGGER.info('Updating pdb job_cache for job_id=%s', job.id)
   else:
     status = [{
@@ -125,6 +131,20 @@ def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr):
     }]
 
   return status
+
+
+def compose_job_cache_entrys(session, pdb_obj, dbt, job, solver_id_map):
+  """Compose new pdb kernel cache entry from fin input"""
+  for kern_obj in pdb_obj['kernel_objects']:
+    kernel_obj = dbt.fin_cache_table()
+    populate_kernels(kern_obj, kernel_obj)
+    kernel_obj.solver_id = solver_id_map[pdb_obj['solver_name']]
+    kernel_obj.job_id = job.id
+
+    session.add(kernel_obj)
+  session.commit()
+
+  return True
 
 
 def populate_kernels(kern_obj, kernel_obj):
