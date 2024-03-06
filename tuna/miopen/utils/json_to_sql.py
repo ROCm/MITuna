@@ -127,49 +127,6 @@ def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr):
   return status
 
 
-def process_fdb_eval(fin_json,
-                     solver_id_map,
-                     config,
-                     dbt,
-                     session_id,
-                     fdb_attr,
-                     job,
-                     result_str: str = 'miopen_find_eval_result'):
-  """process find db eval json results"""
-  status = []
-  fdb_obj = None
-  with DbSession() as session:
-
-    def actuator(func, session, solver_id_map, config, dbt, fdb_obj, session_id,
-                 fdb_attr, job):
-      return func(session, solver_id_map, config, dbt, fdb_obj, session_id,
-                  fdb_attr, job)
-
-    for fdb_obj in fin_json[result_str]:
-      LOGGER.info('Processing object: %s', fdb_obj)
-      slv_stat = get_fin_slv_status(fdb_obj, 'evaluated')
-      #retry returns false on failure, callback return on success
-      ret = session_retry(
-          session, update_fdb_eval_entry,
-          functools.partial(actuator,
-                            session=session,
-                            solver_id_map=solver_id_map,
-                            config=config,
-                            dbt=dbt,
-                            fdb_obj=fdb_obj,
-                            session_id=session_id,
-                            fdb_attr=fdb_attr,
-                            job=job), LOGGER)
-      if not ret:
-        LOGGER.warning('FinEval: Unable to update Database')
-        slv_stat['success'] = False
-        slv_stat['result'] = fdb_obj['reason']
-
-      status.append(slv_stat)
-
-  return status
-
-
 def populate_kernels(kern_obj, kernel_obj):
   """populate kernel object"""
   kernel_obj.kernel_name = kern_obj['kernel_file']
@@ -218,10 +175,14 @@ def __update_fdb_entry(session, solver, session_id, dbt, config, job, fdb_attr,
   if obj:  # existing entry in db
     # This can be removed if we implement the delete orphan cascade
     fdb_entry = obj
-    session.query(dbt.kernel_cache).filter(
-        dbt.kernel_cache.kernel_group == fdb_entry.kernel_group).delete()
+    if not fdb_entry.kernel_group is None:
+      LOGGER.info('Invalidate kernel_group %s', fdb_entry.kernel_group)
+      session.query(dbt.kernel_cache)\
+          .filter(dbt.kernel_cache.kernel_group ==
+                                        fdb_entry.kernel_group)\
+          .update({'valid': 0})
   else:
-    #Bundle Insert for later
+    # Bundle Insert for later
     pending.append((job, fdb_entry))
   return fdb_entry
 
@@ -309,14 +270,19 @@ def clean_cache_table(dbt, job):
   """Remove the fin cache kernel entries for this job"""
   with DbSession() as session:
     try:
-      old_cache = session.query(dbt.fin_cache_table)\
+      LOGGER.info('Delete kernel cache entries job(%s)', job.id)
+      job_cache = session.query(dbt.fin_cache_table)\
           .filter(dbt.fin_cache_table.job_id == job.id)
-      old_cache.delete()
+      job_cache.delete()
+      invalid_fdb_cache = session.query(dbt.kernel_cache)\
+          .filter(dbt.kernel_cache.valid == 0)
+      invalid_fdb_cache.delete()
       session.commit()
     except OperationalError as err:
       session.rollback()
-      LOGGER.warning('FinEval: Unable to clean %s: %s',
-                     dbt.fin_cache_table.__tablename__, err)
+      LOGGER.warning('FinEval: Unable to clean %s / %s: %s',
+                     dbt.fin_cache_table.__tablename__,
+                     dbt.kernel_cache.__tablename__, err)
 
 
 def update_fdb_eval_entry(session, solver_id_map, config, dbt, fdb_obj,

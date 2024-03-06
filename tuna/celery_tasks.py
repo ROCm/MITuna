@@ -49,10 +49,9 @@ from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
-from tuna.miopen.utils.json_to_sql import process_fdb_eval, clean_cache_table, get_worker_type
+from tuna.miopen.utils.json_to_sql import clean_cache_table, get_worker_type
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
-from tuna.miopen.db.solver import get_solver_ids
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -184,10 +183,9 @@ def deserialize(context, dbt):
 def process_fin_evaluator_results(fin_json, context, dbt):
   """Process fin_json result"""
   LOGGER.info('Processing fin_eval result')
-  config, job, _ = deserialize(context, dbt)
+  _, job, _ = deserialize(context, dbt)
   failed_job = True
   result_str = ''
-  solver_id_map = get_solver_ids()
   pending = []
   orig_state = 'compiled'
 
@@ -195,9 +193,14 @@ def process_fin_evaluator_results(fin_json, context, dbt):
     try:
       set_job_state(session, job, dbt, 'evaluated')
       if 'miopen_find_eval_result' in fin_json:
-        status = process_fdb_eval(fin_json, solver_id_map, config, dbt,
-                                  context['kwargs']['session_id'],
-                                  context['fdb_attr'], job)
+        status = process_fdb_w_kernels(session,
+                                       fin_json,
+                                       copy.deepcopy(context),
+                                       dbt,
+                                       context['fdb_attr'],
+                                       pending,
+                                       result_str='miopen_find_eval_result',
+                                       check_str='evaluated')
       elif 'miopen_perf_eval_result' in fin_json:
         status = process_fdb_w_kernels(session,
                                        fin_json,

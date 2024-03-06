@@ -82,7 +82,6 @@ class FinClass(WorkerInterface):
     self.all_configs = []
     self.fin_list = []
     self.multiproc = False
-    self.pending = []
     self.first_pass = True
     self.dynamic_solvers_only = False
     self.worker_type = "fin_class_worker"
