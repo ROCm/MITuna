@@ -109,13 +109,34 @@ class FinEvaluator(FinClass):
 
       assert perf_compile_res
       fjob['miopen_perf_compile_result'] = perf_compile_res
-    fjob = [fjob]
-    return fjob
+    return [fjob]
 
   def fin_fdb_input(self, _fjob: Dict) -> List[Dict]:
     """prepare find db command input for fin"""
     fjob = _fjob.copy()
     with DbSession() as session:
+      find_compile_res = []
+
+      # pylint: disable=comparison-with-callable
+      query = session.query(self.dbt.solver_app).filter(
+          self.dbt.solver_app.session == self.dbt.session.id,
+          self.dbt.solver_app.config == self.job.config,
+          self.dbt.solver_app.applicable == 1)
+      # pylint: enable=comparison-with-callable
+
+      res = session_retry(session, query.all, lambda x: x(), self.logger)
+      for slv_entry in res:
+        slv_name = self.id_solver_map[slv_entry.solver]
+        if not self.job.solver or slv_name == self.job.solver:
+          compile_entry = {
+              'solver_name': slv_name,
+              'find_compiled': False,
+              'kernel_objects': []
+          }
+          find_compile_res.append(compile_entry)
+
+      solvers = [x['solver_name'] for x in find_compile_res]
+
       fdb_entry = self.dbt.find_db_table()
       fdb_entry.num_cu = self.dbt.session.num_cu
       fdb_entry.config = self.config.id
@@ -130,32 +151,25 @@ class FinEvaluator(FinClass):
       fdb_query = fdb_query.filter(self.dbt.find_db_table.workspace_sz != -1,
                                    self.dbt.find_db_table.valid == 1)
 
-      find_compile_res = []
-      # Enumerate all solvers for this config
       res = session_retry(session, fdb_query.all, lambda x: x(), self.logger)
+
       for fdb_rec in res:
         slv_name = self.id_solver_map[fdb_rec.solver]
         if not self.job.solver or slv_name == self.job.solver:
-          compile_entry = {
-              'algorithm': fdb_rec.alg_lib,
-              'find_compiled': True,
-              'solver_name': slv_name,
-              'workspace': fdb_rec.workspace_sz
-          }
-          kernel_objects = []
+          compile_entry = find_compile_res[solvers.index(slv_name)]
+          compile_entry['find_compiled'] = True
+
           blobs = session.query(self.dbt.kernel_cache).filter(
               self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
           res = session_retry(session, blobs.all, lambda x: x(), self.logger)
           for obj in res:
-            kernel_objects.append({
+            compile_entry['kernel_objects'].append({
                 'blob': obj.kernel_blob.decode('utf-8'),
                 'comp_options': obj.kernel_args,
                 'kernel_file': obj.kernel_name,
                 'md5_sum': obj.kernel_hash,
                 'uncompressed_size': obj.uncompressed_size
             })
-          compile_entry['kernel_objects'] = kernel_objects
-          find_compile_res.append(compile_entry)
 
       assert find_compile_res
       fjob['miopen_find_compile_result'] = find_compile_res
@@ -173,7 +187,7 @@ class FinEvaluator(FinClass):
         fjob = self.fin_pdb_input(fjob)
       elif self.fin_steps[0] == 'miopen_find_eval':
         fjob = self.fin_fdb_input(fjob)
-    except AssertionError as err:
+    except (AssertionError, ValueError) as err:
       self.logger.error('Unable to get compiled objects for job %s : %s',
                         self.job.id, err)
       raise AssertionError from err
@@ -245,14 +259,19 @@ class FinEvaluator(FinClass):
     """Remove the fin cache kernel entries for this job"""
     with DbSession() as session:
       try:
-        old_cache = session.query(self.dbt.fin_cache_table)\
+        self.logger.info('Delete kernel cache entries job(%s)', self.job.id)
+        job_cache = session.query(self.dbt.fin_cache_table)\
             .filter(self.dbt.fin_cache_table.job_id == self.job.id)
-        old_cache.delete()
+        job_cache.delete()
+        invalid_fdb_cache = session.query(self.dbt.kernel_cache)\
+            .filter(self.dbt.kernel_cache.valid == 0)
+        invalid_fdb_cache.delete()
         session.commit()
       except OperationalError as err:
         session.rollback()
-        self.logger.warning('FinEval: Unable to clean %s: %s',
-                            self.dbt.fin_cache_table.__tablename__, err)
+        self.logger.warning('FinEval: Unable to clean %s / %s: %s',
+                            self.dbt.fin_cache_table.__tablename__,
+                            self.dbt.kernel_cache.__tablename__, err)
 
   def close_job(self):
     """mark a job complete"""
@@ -269,7 +288,7 @@ class FinEvaluator(FinClass):
 
   def manage_queue(self):
     """Try to acquire a job, or manage the result queue if no job is available."""
-    if not self.get_job("compiled", "eval_start", True):
+    if not self.get_job("compiled", "eval_start", False):
       if not self.get_job("new", "eval_start", True):
         with self.bar_lock:
           self.num_procs.value -= 1
@@ -293,13 +312,24 @@ class FinEvaluator(FinClass):
     orig_state = 'compiled'
     self.logger.info('Acquired new job: job_id=%s', self.job.id)
     self.set_job_state('evaluating')
-    fin_json = self.run_fin_cmd()
+    fin_json = None
+    try:
+      fin_json = self.run_fin_cmd()
+    except AssertionError:
+      self.logger.error('Error building Fin input, job(%s)', self.job.id)
+      self.set_job_state('errored', result='Error building Fin input')
+      return True
 
     failed_job = True
     result_str = ''
     if fin_json:
       if 'miopen_find_eval_result' in fin_json:
-        status = self.process_fdb_eval(fin_json)
+        with DbSession() as session:
+          status = self.process_fdb_w_kernels(
+              session,
+              fin_json,
+              result_str='miopen_find_eval_result',
+              check_str='evaluated')
 
       elif 'miopen_perf_eval_result' in fin_json:
         with DbSession() as session:

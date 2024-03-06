@@ -106,7 +106,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCmSoftwarePlatform/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=38a0ebfd4a6b2e3eb356a09721a199f11d4a9a37
+ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -143,7 +143,7 @@ RUN git submodule update --init --recursive
 ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=
+ARG FIN_BRANCH=develop
 RUN if ! [ -z $FIN_BRANCH ]; then \
         git fetch && git checkout $FIN_BRANCH; \
     fi
