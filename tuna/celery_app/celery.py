@@ -70,7 +70,7 @@ def celery_enqueue_gfx908_120(context):
 
 
 @app.task(trail=True)
-def celery_enqueue_gfx1030_36(args, kwargs):
+def celery_enqueue_gfx1030_36(context):
   """Defines a celery task"""
   logger.info("Enqueueing gfx1030-36")
   worker = prep_worker(copy.deepcopy(context))
@@ -79,21 +79,19 @@ def celery_enqueue_gfx1030_36(args, kwargs):
 
 
 @app.task(trail=True)
-def celery_enqueue_gfx942_304(args, kwargs):
+def celery_enqueue_gfx942_304(context):
   """Defines a celery task"""
   logger.info("Enqueueing gfx942-304")
-  kwargs = prep_kwargs(kwargs, args)
-  worker = get_worker(kwargs, args[2])
+  worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
   return ret, context
 
 
 @app.task(trail=True)
-def celery_enqueue_gfx90a_104(args, kwargs):
+def celery_enqueue_gfx90a_104(context):
   """Defines a celery task"""
-  logger.info("Enqueueing gfx90a_104")
-  kwargs = prep_kwargs(kwargs, args)
-  worker = get_worker(kwargs, args[2])
+  logger.info("Enqueueing gfx90a-104")
+  worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
   return ret, context
 
