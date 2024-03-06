@@ -271,8 +271,7 @@ class FinEvaluator(FinClass):
         session.rollback()
         self.logger.warning('FinEval: Unable to clean %s / %s: %s',
                             self.dbt.fin_cache_table.__tablename__,
-                            self.dbt.kernel_cache.__tablename__,
-                            err)
+                            self.dbt.kernel_cache.__tablename__, err)
 
   def close_job(self):
     """mark a job complete"""
