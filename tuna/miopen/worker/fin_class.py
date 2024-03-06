@@ -348,52 +348,57 @@ class FinClass(WorkerInterface):
     session.commit()
     self.logger.info("Finished applic zeroing")
 
+  def query_cfgs(self, label=None):
+    """query all configs from table, optionally limit by label"""
+    with DbSession() as session:
+      query = session.query(self.dbt.config_table)\
+                        .filter(self.dbt.config_table.valid == 1)
+
+      if label:
+        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
+            .filter(self.dbt.config_tags_table.tag == label)
+
+      #order by id for splitting configs into blocks
+      query = query.order_by(self.dbt.config_table.id)
+      return query
+
   def __set_all_configs(self, idx: int = 0, num_blk: int = 1) -> bool:
     """Gathering all configs from Tuna DB to set up fin input file"""
     if idx == 0:
+      query = self.query_cfgs(self.label)
+      rows = query.all()
+
+      len_rows = len(rows)
+      master_cfg_list = []
+      for row in rows:
+        r_dict = compose_config_obj(row, self.config_type)
+        if self.config_type == ConfigType.batch_norm:
+          r_dict['direction'] = row.get_direction()
+        master_cfg_list.append(r_dict)
+
       with DbSession() as session:
-        query = session.query(self.dbt.config_table)\
-                          .filter(self.dbt.config_table.valid == 1)
-
-        if self.label:
-          query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
-              .filter(self.dbt.config_tags_table.tag == self.label)
-
-        #order by id for splitting configs into blocks
-        query = query.order_by(self.dbt.config_table.id)
-        rows = query.all()
-
-        len_rows = len(rows)
-        master_cfg_list = []
-        for row in rows:
-          r_dict = compose_config_obj(row, self.config_type)
-          if self.config_type == ConfigType.batch_norm:
-            r_dict['direction'] = row.get_direction()
-          master_cfg_list.append(r_dict)
-
         self.__rm_old_app(session, rows)
 
-        block_size = len_rows // num_blk  #size of the config block
-        extra = len_rows % num_blk  #leftover configs, don't divide evenly
-        self.logger.info(
-            "cfg workdiv: num_blocks: %s, block_size: %s, extra: %s", num_blk,
-            block_size, extra)
-        for i in range(num_blk):
-          start = i * block_size  #start of a process block
-          end = (i + 1) * block_size
-          #distributing leftover configs to processes
-          if i < extra:
-            start += i
-            end += 1 + i
-          else:
-            start += extra
-            end += extra
+      block_size = len_rows // num_blk  #size of the config block
+      extra = len_rows % num_blk  #leftover configs, don't divide evenly
+      self.logger.info("cfg workdiv: num_blocks: %s, block_size: %s, extra: %s",
+                       num_blk, block_size, extra)
+      for i in range(num_blk):
+        start = i * block_size  #start of a process block
+        end = (i + 1) * block_size
+        #distributing leftover configs to processes
+        if i < extra:
+          start += i
+          end += 1 + i
+        else:
+          start += extra
+          end += extra
 
-          if start >= len_rows:
-            self.job_queue.put([])
-          else:
-            self.logger.info("cfg workdiv: start %s, end %s", start, end)
-            self.job_queue.put(master_cfg_list[start:end])
+        if start >= len_rows:
+          self.job_queue.put([])
+        else:
+          self.logger.info("cfg workdiv: start %s, end %s", start, end)
+          self.job_queue.put(master_cfg_list[start:end])
     try:
       self.all_configs = self.job_queue.get(True, 180)
     except queue.Empty:
@@ -506,7 +511,6 @@ class FinClass(WorkerInterface):
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
-            return False
 
         for solver_id in app_slv_ids:
           obj = app_query.filter(
@@ -550,11 +554,17 @@ class FinClass(WorkerInterface):
         session_retry(session, self.__insert_applicability,
                       functools.partial(actuator, pack=pack), self.logger)
 
-      query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id))
+      # print result to log
+      query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id),
+                            self.dbt.solver_app.applicable)
       query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
-      sapp_count = query.one()[0]
+      if self.label:
+        query = query.filter(self.dbt.solver_app.config == self.dbt.config_tags_table.config)\
+            .filter(self.dbt.config_tags_table.tag == self.label)
+      query = query.group_by(self.dbt.solver_app.applicable)
+      sapp_count = query.all()
       self.logger.warning(
-          "Finished parsing solver applicability, new session size: %d entries",
+          "Finished parsing solver applicability, label(%s): %s", self.label,
           sapp_count)
     return True
 
