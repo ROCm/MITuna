@@ -53,7 +53,7 @@ from tuna.utils.metadata import LOG_TIMEOUT
 
 ROCMINFO: str = '/opt/rocm/bin/rocminfo'
 ROCMSMI: str = '/opt/rocm/bin/rocm-smi'
-CLINFO: str = '/opt/rocm/opencl/bin/clinfo'
+CLINFO: str = '/opt/rocm/bin/clinfo'
 
 
 class Machine(BASE):  #pylint: disable=too-many-instance-attributes
