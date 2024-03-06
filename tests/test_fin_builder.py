@@ -116,7 +116,6 @@ def test_fin_builder():
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_builder'
   num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
-  num_jobs = 4
   assert (num_jobs)
 
   #compile
