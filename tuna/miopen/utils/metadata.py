@@ -145,6 +145,8 @@ TABLE_COLS_BN_MAP = {
     's': ('save', 0)
 }
 
+SUPPORTED_LAYOUTS = ["NCHW", "NHWC", "NCDHW", "NDHWC"]
+
 #NOTE: dim0 for input_tensor is 1
 #3D layouts
 NCDHW_LAYOUT = {

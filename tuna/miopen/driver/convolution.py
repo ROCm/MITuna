@@ -37,6 +37,7 @@ from tuna.miopen.utils.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PR
 from tuna.miopen.utils.metadata import CONV_3D_DEFAULTS, TENSOR_COLS
 from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION, DIR_MAP
 from tuna.miopen.utils.metadata import DIRECTION, CONV_SKIP_ARGS, INVERS_DIR_MAP
+from tuna.miopen.utils.metadata import SUPPORTED_LAYOUTS
 from tuna.miopen.utils.parsing import get_fd_name, conv_arg_valid, get_fds_from_cmd
 from tuna.miopen.utils.config_type import ConfigType
 
@@ -109,6 +110,11 @@ class DriverConvolution(MIOpenDriver):
     if self.in_layout != self.out_layout != self.fil_layout:
       raise ValueError(
           'Layouts do not match: in_layout/out_layout/fil_layout must match.')
+    for layout in [self.in_layout, self.out_layout, self.fil_layout]:
+      if not layout in SUPPORTED_LAYOUTS:
+        raise ValueError(
+            f'Layout {layout} is not a supported layout: ({SUPPORTED_LAYOUTS}).'
+        )
 
   @property
   def cmd(self) -> str:
