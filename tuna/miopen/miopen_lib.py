@@ -333,7 +333,7 @@ class MIOpen(MITunaInterface):
         query = worker.query_cfgs(self.args.label)
         cfg_rows = query.all()
         len_rows = len(cfg_rows)
-        proc_lim = (len_rows+99) / 100
+        proc_lim = (len_rows + 99) / 100
         while len(worker_ids) > proc_lim:
           worker_ids.pop()
 
