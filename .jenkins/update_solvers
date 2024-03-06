@@ -25,6 +25,7 @@ pipeline {
       branch_name = "${params.branch_name}"
       backend = 'HIPNOGPU'
       branch_id = "${params.branch_name}_${BUILD_ID}"
+      CREDS = credentials("$DOCKER_CRED")
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'applic_pipe_gold', description: '')
