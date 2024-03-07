@@ -108,7 +108,7 @@ def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr,
   status = []
   if fin_json['miopen_perf_compile_result']:
 
-    def actuator(func, pdb_obj):
+    def actuator(func, pdb_obj, dbt, job, solver_id_map):
       return func(session, pdb_obj, dbt, job, solver_id_map)
 
     for pdb_obj in fin_json['miopen_perf_compile_result']:
