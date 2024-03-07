@@ -116,7 +116,7 @@ def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr,
       status.append(slv_stat)
       if pdb_obj['perf_compiled']:
         session_retry(
-            session, LOGGER.compose_job_cache_entrys,
+            session, compose_job_cache_entrys,
             functools.partial(actuator,
                               pdb_obj=pdb_obj,
                               dbt=dbt,
