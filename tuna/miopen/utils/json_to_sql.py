@@ -17,7 +17,7 @@
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE.
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -109,7 +109,7 @@ def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr,
   if fin_json['miopen_perf_compile_result']:
 
     def actuator(func, pdb_obj):
-      return func(session, pdb_obj)
+      return func(session, pdb_obj, dbt, job, solver_id_map)
 
     for pdb_obj in fin_json['miopen_perf_compile_result']:
       slv_stat = get_fin_slv_status(pdb_obj, 'perf_compiled')
