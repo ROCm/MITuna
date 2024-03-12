@@ -71,8 +71,6 @@ def parse_args() -> Dict[str, Any]:
 
 def main() -> bool:
   """Main function to start Tuna"""
-  LOGGER.info(sys.argv)
-  LOGGER.info(len(sys.argv))
 
   args: Dict[str, Any]
   args = parse_args()

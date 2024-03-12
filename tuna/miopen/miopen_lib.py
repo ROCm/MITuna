@@ -331,8 +331,10 @@ class MIOpen(MITunaInterface):
 
       if self.args.update_applicability:
         f_vals = super().get_f_vals(machine, [1])
+        print('f_vals: %s', f_vals)
         kwargs = self.get_kwargs(0, f_vals)
         kwargs['fin_steps'] = ['applicability']
+        print('kwargs: %s', kwargs)
         worker = FinClass(**kwargs)
         query = worker.query_cfgs(self.args.label)
         cfg_rows = query.all()

@@ -151,13 +151,19 @@ class MITunaInterface():
 
     return worker_ids
 
-  def get_f_vals(self, machine: Machine, worker_ids: range) -> Dict[str, Any]:
+  def get_f_vals(self,
+                 machine: Machine,
+                 worker_ids: range,
+                 tuning=False) -> Dict[str, Any]:
     #pylint:disable=unused-argument
     """Determine kwargs for worker_interface"""
     f_vals: Dict[str, Any]
     f_vals = self.compose_f_vals(machine)
-    #f_vals["num_procs"] = Value('i', len(worker_ids))
     f_vals['envmt'] = self.get_envmt()
+
+    if not tuning:
+      f_vals["num_procs"] = Value('i', len(worker_ids))
+
     return f_vals
 
   def get_envmt(self):
@@ -170,16 +176,7 @@ class MITunaInterface():
       @param machine Machine instance
     """
     f_vals: Dict[str, Any] = {}
-    #f_vals["barred"] = Value('i', 0)
-    #f_vals["bar_lock"] = Lock()
-    #multiprocess queue for jobs, shared on machine
-    #f_vals["job_queue"] = mpQueue()
-    #f_vals["job_queue_lock"] = Lock()
-    #f_vals["result_queue"] = mpQueue()
-    #f_vals["result_queue_lock"] = Lock()
-    #f_vals["machine"] = machine
     f_vals["b_first"] = True
-    #f_vals["end_jobs"] = Value('i', 0)
 
     #adding non-serializable obj when not running through celery
     if not tuning:
@@ -189,6 +186,7 @@ class MITunaInterface():
       #multiprocess queue for jobs, shared on machine
       f_vals["job_queue"] = mpQueue()
       f_vals["job_queue_lock"] = Lock()
+      f_vals["end_jobs"] = Value('i', 0)
 
     return f_vals
 
@@ -223,6 +221,12 @@ class MITunaInterface():
     #adding non-serializable obj when not running through celery
     if not tuning:
       kwargs["machine"] = f_vals["machine"]
+      kwargs["job_queue"] = f_vals["job_queue"]
+      kwargs["job_queue_lock"] = f_vals["job_queue_lock"]
+      kwargs["num_procs"] = f_vals["num_procs"]
+      kwargs["barred"] = f_vals["barred"]
+      kwargs["bar_lock"] = f_vals["bar_lock"]
+      kwargs["end_jobs"] = f_vals["end_jobs"]
       kwargs["job_queue"] = f_vals["job_queue"]
       kwargs["job_queue_lock"] = f_vals["job_queue_lock"]
 

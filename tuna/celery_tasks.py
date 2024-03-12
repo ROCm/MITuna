@@ -298,7 +298,9 @@ def tune(library, job_batch_size=1000):
   result_queue = mpQueue()
   result_queue_lock = Lock()
 
-  f_vals = library.get_f_vals(Machine(local_machine=True), range(0))
+  f_vals = library.get_f_vals(Machine(local_machine=True),
+                              range(0),
+                              tuning=True)
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
   res_set = ResultSet([])
