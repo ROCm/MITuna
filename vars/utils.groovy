@@ -724,11 +724,14 @@ def getSessionVals(session_id)
 {
   String res = runsql("select arch, num_cu, rocm_v, miopen_v, docker from session where id=${session_id};")
 
-  def arch = res.split("[ \t]+")[0]
-  def num_cu = res.split("[ \t]+")[1]
-  def rocm_v = res.split("[ \t]+")[2]
-  def miopen_v = res.split("[ \t]+")[3]
-  def base_image = res.split("[ \t]+")[4]
+  res_arr = res.split("[ \t]+")
+  def arch = res_arr[0]
+  def num_cu = res_arr[1]
+  def rocm_v = res_arr[2]
+  def miopen_v = res_arr[3]
+  def base_image = ""
+  if(res_arr.length() > 4)
+    base_image = res_arr[4]
   echo "$arch $num_cu $rocm_v $miopen_v $base_image"
 
   def gfx_target = "${arch}_${num_cu}"
@@ -880,9 +883,8 @@ def compile()
 
 def evaluate(params)
 {
-  def build_args
-  def partition
   (build_args, partition) = getBuildArgs()
+  params.partition = partition
   def tuna_docker_name = getDockerName("${backend}")
 
   docker.withRegistry('', "$DOCKER_CRED"){
