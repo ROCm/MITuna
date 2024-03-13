@@ -884,7 +884,6 @@ def compile()
 def evaluate(params)
 {
   (build_args, partition) = getBuildArgs()
-  params.partition = partition
   def tuna_docker_name = getDockerName("${backend}")
 
   docker.withRegistry('', "$DOCKER_CRED"){
