@@ -730,7 +730,7 @@ def getSessionVals(session_id)
   def rocm_v = res_arr[2]
   def miopen_v = res_arr[3]
   def base_image = ""
-  if(res_arr.length() > 4)
+  if(res_arr.size() > 4)
     base_image = res_arr[4]
   echo "$arch $num_cu $rocm_v $miopen_v $base_image"
 
