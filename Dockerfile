@@ -143,7 +143,7 @@ RUN git submodule update --init --recursive
 ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=develop
+ARG FIN_BRANCH=cderb/rm_clang-ocl
 RUN if ! [ -z $FIN_BRANCH ]; then \
         git fetch && git checkout $FIN_BRANCH; \
     fi
