@@ -880,11 +880,13 @@ def compile()
 
 def evaluate(params)
 {
+  def build_args
+  def partition
+  (build_args, partition) = getBuildArgs()
   def tuna_docker_name = getDockerName("${backend}")
+
   docker.withRegistry('', "$DOCKER_CRED"){
     def tuna_docker
-    (build_args, partition) = getBuildArgs()
-
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
     tuna_docker.push()
   }
