@@ -25,9 +25,7 @@
 #
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
-import os
 import logging
-import subprocess
 import time
 import copy
 import random
@@ -44,7 +42,6 @@ from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk
 from tuna.utils.db_utility import get_db_obj_by_id, session_retry
 from tuna.utils.db_utility import gen_update_query
-from tuna.celery_app.celery import hardware_pick, app
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
@@ -53,64 +50,11 @@ from tuna.miopen.utils.json_to_sql import clean_cache_table, get_worker_type
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
+from tuna.celery import launch_celery_worker, stop_active_workers
+from tuna.miopen.celery.celery_tasks import hardware_pick
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
-
-
-def launch_worker_compile(q_name, machines, session_id):
-  """Launch celery worker for compile"""
-  for machine in machines:
-    cmd = f"celery -A tuna.celery_app.celery worker -l info -E -n tuna_{machine.hostname}_sess_{session_id} -Q {q_name}".split(  #pylint: disable=line-too-long
-        ' ')
-    try:
-      _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
-    except Exception as exp:  #pylint: disable=broad-exception-caught
-      LOGGER.warning(exp)
-      return False
-
-    LOGGER.info('Successfully launched celery worker for compile')
-
-  return True
-
-
-def launch_worker_eval(q_name, machines, session_id):
-  """Launch celery worker for eval"""
-  curr_env = dict(os.environ.copy())
-  for machine in machines:
-    num_gpus = machine.get_avail_gpus()
-    try:
-      for gpu_id in num_gpus:
-        cmd = f"celery -A tuna.celery_app.celery worker -l info -E -c 1 -n tuna_{machine.hostname}_sess_{session_id}_gpu_id{gpu_id} -Q {q_name}".split(' ')  #pylint: disable=line-too-long
-        curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
-        _ = subprocess.Popen(cmd, env=curr_env)  #pylint: disable=consider-using-with
-        LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
-    except Exception as exp:  #pylint: disable=broad-exception-caught
-      LOGGER.warning(exp)
-      return False
-
-  return True
-
-
-def launch_celery_worker(library, q_name, machines):
-  """Helper function to launch celery workers"""
-  if 'miopen_find_compile' in library.args.fin_steps \
-  or 'miopen_perf_compile' in library.args.fin_steps:
-    ret = launch_worker_compile(q_name, machines, library.dbt.session_id)
-  elif 'miopen_find_eval' in library.args.fin_steps or 'miopen_perf_eval' in library.args.fin_steps:
-    ret = launch_worker_eval(q_name, machines, library.dbt.session_id)
-  else:
-    raise ValueError('Operation does not support celery workers')
-
-  return ret
-
-
-def stop_active_workers():
-  """Shutdown active workers"""
-  if app.control.inspect().active() is not None:
-    app.control.shutdown()
-
-  return True
 
 
 def result_callback(task_id, value):
@@ -268,20 +212,35 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
   return True
 
 
-#pylint: disable=too-many-locals
-def tune(library, job_batch_size=1000):
-  """tuning loop to spin out celery tasks"""
+def get_worker_granularity(library, worker_type):
+  """Check how many celery workers we need"""
+  worker_granularity = None
+  worker_granularity = get_worker_type(library.args)
+  if 'miopen_find_compile' in library.args.fin_steps \
+  or 'miopen_perf_compile' in library.args.fin_steps:
+    worker_granularity = 'worker_per_node'
+  elif 'miopen_find_eval' in library.args.fin_steps or 'miopen_perf_eval' in library.args.fin_steps:
+    worker_granularity = 'worker_per_gpu'
 
-  worker_type = get_worker_type(library.args)
-  machines = load_machines(library.args)
   q_name = None
   if worker_type == 'fin_build_worker':
     q_name = f"compile_q_session_{library.dbt.session_id}"
   else:
     q_name = f"eval_q_session_{library.dbt.session_id}"
 
+  return worker_granularity, q_name
+
+
+#pylint: disable=too-many-locals
+def tune(library, job_batch_size=1000):
+  """tuning loop to spin out celery tasks"""
+
+  worker_type = get_worker_type(library.args)
+  machines = load_machines(library.args)
+  worker_granularity, q_name = get_worker_granularity(library, worker_type)
+
   stop_active_workers()
-  if not launch_celery_worker(library, q_name, machines):
+  if not launch_celery_worker(library, q_name, machines, worker_granularity):
     return False
 
   global DBT  #pylint: disable=global-variable-undefined

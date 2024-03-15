@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Utility module for helper functions"""
+"""Utility module for parsing fin json results"""
 import functools
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession

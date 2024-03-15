@@ -38,7 +38,7 @@ from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example
 from tuna.yaml_parser import parse_yaml
 from tuna.parse_args import clean_args
-from tuna.celery_tasks import tune
+from tuna.miopen.celery.celery_tuning import tune
 
 # Setup logging
 LOGGER: logging.Logger = setup_logger('go_fish')
