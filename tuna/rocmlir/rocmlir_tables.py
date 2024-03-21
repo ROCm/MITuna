@@ -620,8 +620,10 @@ class AttentionConfig(BASE, SimpleCSVMixin):
 
   data_type = Column(String(length=60), nullable=False, server_default="")
   group_size = Column(Integer, nullable=False, server_default="0")
-  seq_len = Column(Integer, nullable=False, server_default="0")
-  head_dim = Column(Integer, nullable=False, server_default="0")
+  seq_len_q = Column(Integer, nullable=False, server_default="0")
+  seq_len_k = Column(Integer, nullable=False, server_default="0")
+  head_dim_qk = Column(Integer, nullable=False, server_default="0")
+  head_dim_v = Column(Integer, nullable=False, server_default="0")
   with_attn_scale = Column(Boolean, nullable=False, server_default="0")
   transpose_Q = Column(Boolean, nullable=False, server_default="0")
   transpose_K = Column(Boolean, nullable=False, server_default="0")
@@ -642,8 +644,10 @@ class AttentionConfig(BASE, SimpleCSVMixin):
       'transpose_V': '-transV',
       'transpose_O': '-transO',
       'group_size': '-g',
-      'seq_len': '-seq_len',
-      'head_dim': '-head_dim',
+      'seq_len_q': '-seq_len_q',
+      'seq_len_k': '-seq_len_k',
+      'head_dim_qk': '-head_dim_qk',
+      'head_dim_v': '-head_dim_v',
       'with_attn_scale': '-with-attn-scale',
       # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
       #    'kernel_repeats': '--kernel-repeats',
@@ -684,8 +688,10 @@ class AttentionConfig(BASE, SimpleCSVMixin):
         '-transV': 'transpose_V',
         '-transO': 'transpose_O',
         '-g': 'group_size',
-        '-seq_len': 'seq_len',
-        '-head_dim': 'head_dim',
+        '-seq_len_q': 'seq_len_q',
+        '-seq_len_k': 'seq_len_k',
+        '-head_dim_qk': 'head_dim_qk',
+        '-head_dim_v': 'head_dim_v',
         '-with-attn-scale': 'with_attn_scale',
         '-t': 'data_type'
     }
