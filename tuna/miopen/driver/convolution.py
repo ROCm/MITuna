@@ -79,9 +79,9 @@ class DriverConvolution(MIOpenDriver):
     self.trans_output_pad_h: int = 0
     self.trans_output_pad_w: int = 0
     self.trans_output_pad_d: int = 0
-    self.out_layout: str = 'NCHW'
-    self.in_layout: str = 'NCHW'
-    self.fil_layout: str = 'NCHW'
+    self.out_layout: str = None #use config_set_defaults to pull from 2D/3D defaults
+    self.in_layout: str = None
+    self.fil_layout: str = None
     self.in_d: int = 1
     self.in_h: int = 32
     self.in_w: int = 32
