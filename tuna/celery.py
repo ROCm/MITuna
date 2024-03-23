@@ -30,7 +30,6 @@ import logging
 import subprocess
 
 from tuna.utils.logger import setup_logger
-from tuna.celery_app.celery import app
 
 LOGGER: logging.Logger = setup_logger('celery')
 
@@ -79,11 +78,3 @@ def launch_celery_worker(library, q_name, machines, worker_granularity):
     raise ValueError('Operation does not support celery workers')
 
   return ret
-
-
-def stop_active_workers():
-  """Shutdown active workers"""
-  if app.control.inspect().active() is not None:
-    app.control.shutdown()
-
-  return True

@@ -50,8 +50,9 @@ from tuna.miopen.utils.json_to_sql import clean_cache_table, get_worker_type
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
-from tuna.celery import launch_celery_worker, stop_active_workers
-from tuna.miopen.celery.celery_tasks import hardware_pick
+from tuna.celery import launch_celery_worker
+from tuna.miopen.celery_tuning.celery_tasks import hardware_pick
+from tuna.celery_app.celery import stop_active_workers
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
