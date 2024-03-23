@@ -341,11 +341,17 @@ def tune(library, job_batch_size=1000):
           return False
         LOGGER.info('All tasks added to queue')
         break
-      LOGGER.info('TEST')
-    except KeyboardInterrupt as err:
-      LOGGER.error('%s', err)
-      #dump celery queue
+    except KeyboardInterrupt:
+      LOGGER.error('Keyboard interrupt caught, draining results queue')
+      results_gather(res_set, worker_type)
 
+  results_gather(res_set, worker_type)
+
+  return True
+
+
+def results_gather(res_set, worker_type):
+  """Start subproc to drain result queue and populate mysql DB"""
   LOGGER.info('Started drain process')
   #start draining result_queue in subprocess
   drain_process = Process(target=drain_queue, args=[worker_type, DBT])
@@ -355,12 +361,11 @@ def tune(library, job_batch_size=1000):
   _ = res_set.join(callback=result_callback)
 
   #terminate result_queue drain process with special queue token (NONE,NONE)
+  LOGGER.info('Adding terminatig token to result_queue')
   result_queue.put([None, None])
 
   drain_process.join()
-  #CTRL C needs to drain the redis queue and results_queue
-
-  return True
+  LOGGER.info('Done writing from result_queue to mySQL')
 
 
 def drain_queue(worker_type, dbt):
@@ -377,7 +382,6 @@ def drain_queue(worker_type, dbt):
       if worker_type == 'fin_build_worker':
         process_fin_builder_results(fin_json, context, dbt)
       else:
-        LOGGER.info("\n\n Processing eval results")
         process_fin_evaluator_results(fin_json, context, dbt)
     except queue.Empty as exc:
       LOGGER.warning(exc)
