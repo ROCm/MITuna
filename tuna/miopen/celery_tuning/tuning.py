@@ -265,6 +265,7 @@ def tune(library, job_batch_size=1000):
     try:
       job_list = []
       with DbSession() as session:
+        #get all the jobs from mySQL
         job_list = library.get_jobs(session, library.fetch_state,
                                     library.set_state, library.args.session_id,
                                     job_batch_size)
@@ -279,6 +280,7 @@ def tune(library, job_batch_size=1000):
                                                   library.dbt)
           serialized_jobs = serialize_chunk(entries)
 
+          #build context for each celery task
           for job, config in serialized_jobs:
             context = {
                 'job': job,
@@ -289,7 +291,8 @@ def tune(library, job_batch_size=1000):
                 'kwargs': kwargs,
                 'fdb_attr': fdb_attr
             }
-            #enqueuing to celery queue
+
+            #calling celery task, enqueuing to celery queue
             res_set.add(hardware_pick.apply_async((context,), queue=q_name))
 
       if not job_list:
@@ -314,6 +317,7 @@ def results_gather(res_set, worker_type):
   drain_process.start()
 
   LOGGER.info('Gathering async results in callback function, blocking')
+  #waiting on all results to come in
   _ = res_set.join(callback=result_callback)
 
   #terminate result_queue drain process with special queue token (NONE,NONE)

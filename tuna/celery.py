@@ -34,7 +34,7 @@ from tuna.utils.logger import setup_logger
 LOGGER: logging.Logger = setup_logger('celery')
 
 
-def launch_worker_compile(q_name, machines, session_id):
+def launch_worker_per_node(q_name, machines, session_id):
   """Launch celery worker for compile"""
   for machine in machines:
     cmd = f"celery -A tuna.celery_app.celery worker -l info -E -n tuna_{machine.hostname}_sess_{session_id} -Q {q_name}".split(  #pylint: disable=line-too-long
@@ -50,7 +50,7 @@ def launch_worker_compile(q_name, machines, session_id):
   return True
 
 
-def launch_worker_eval(q_name, machines, session_id):
+def launch_worker_per_gpu(q_name, machines, session_id):
   """Launch celery worker for eval"""
   curr_env = dict(os.environ.copy())
   for machine in machines:
@@ -71,9 +71,9 @@ def launch_worker_eval(q_name, machines, session_id):
 def launch_celery_worker(library, q_name, machines, worker_granularity):
   """Helper function to launch celery workers"""
   if worker_granularity == 'worker_per_node':
-    ret = launch_worker_compile(q_name, machines, library.dbt.session_id)
+    ret = launch_worker_per_node(q_name, machines, library.dbt.session_id)
   elif worker_granularity == 'worker_per_gpu':
-    ret = launch_worker_eval(q_name, machines, library.dbt.session_id)
+    ret = launch_worker_per_gpu(q_name, machines, library.dbt.session_id)
   else:
     raise ValueError('Operation does not support celery workers')
 
