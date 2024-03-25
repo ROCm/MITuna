@@ -43,7 +43,7 @@ from celery.result import ResultSet
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk, SimpleDict
-from tuna.utils.db_utility import get_db_obj_by_id, session_retry
+from tuna.utils.db_utility import session_retry
 from tuna.utils.db_utility import gen_update_query
 from tuna.celery_app.celery import hardware_pick, app
 from tuna.machine import Machine

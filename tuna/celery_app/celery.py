@@ -35,11 +35,16 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
 
 TUNA_CELERY_BROKER = 'mituna_redis'
+TUNA_REDIS_PORT = '6379'
+
 if 'TUNA_CELERY_BROKER' in os.environ:
   TUNA_CELERY_BROKER = os.environ['TUNA_CELERY_BROKER']
+if 'TUNA_REDIS_PORT' in os.environ:
+  TUNA_REDIS_PORT = os.environ['TUNA_REDIS_PORT']
+
 app = Celery('celery_app',
-             broker_url=f"redis://{TUNA_CELERY_BROKER}:6379//",
-             result_backend=f"redis://{TUNA_CELERY_BROKER}:6379/")
+             broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}//",
+             result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/")
 
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
