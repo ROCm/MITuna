@@ -40,12 +40,14 @@ app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
 app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
 
+
 def stop_active_workers():
   """Shutdown active workers"""
   if app.control.inspect().active() is not None:
     app.control.shutdown()
 
   return True
+
 
 if __name__ == '__main__':
   app.start()

@@ -26,10 +26,13 @@
 ###############################################################################
 """Utility module for parsing fin json results"""
 import functools
+from sqlalchemy.exc import OperationalError
+
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.utility import SimpleDict
-from tuna.utils.db_utility import get_db_obj_by_id, session_retry, gen_select_objs, gen_update_query, gen_insert_query
+from tuna.utils.db_utility import get_db_obj_by_id, session_retry, gen_select_objs
+from tuna.utils.db_utility import gen_update_query, gen_insert_query
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.parsing import parse_pdb_key
 from tuna.miopen.db.solver import get_solver_ids
@@ -37,16 +40,17 @@ from tuna.miopen.db.solver import get_solver_ids
 LOGGER = setup_logger('parse_results')
 
 
-def __update_fdb_w_kernels(session: DbSession,
-                           fin_json,
-                           config,
-                           session_id,
-                           dbt,
-                           job,
-                           fdb_attr,
-                           pending,
-                           result_str: str = 'miopen_find_compile_result',
-                           check_str: str = 'find_compiled') -> list:
+def __update_fdb_w_kernels(  #pylint: disable=too-many-arguments,too-many-locals
+    session: DbSession,
+    fin_json,
+    config,
+    session_id,
+    dbt,
+    job,
+    fdb_attr,
+    pending,
+    result_str: str = 'miopen_find_compile_result',
+    check_str: str = 'find_compiled') -> list:
   """update find db + kernels from json results"""
   status = []
   solver_id_map = get_solver_ids()
@@ -102,8 +106,7 @@ def __update_fdb_w_kernels(session: DbSession,
   return status
 
 
-def process_pdb_compile(session, fin_json, job, config, kwargs, dbt, fdb_attr,
-                        solver_id_map):
+def process_pdb_compile(session, fin_json, job, dbt, solver_id_map):
   """retrieve perf db compile json results"""
   status = []
   if fin_json['miopen_perf_compile_result']:
@@ -236,8 +239,9 @@ def get_fdb_entry(session, solver, session_id, dbt, config, fdb_attr):
   return obj, fdb_entry
 
 
-def __compose_fdb_entry(session, fin_json, fdb_obj, session_id, dbt, config,
-                        job, fdb_attr, solver_id_map, pending):
+def __compose_fdb_entry(  #pylint: disable=too-many-arguments
+    session, fin_json, fdb_obj, session_id, dbt, config, job, fdb_attr,
+    solver_id_map, pending):
   """Compose a FindDB table entry from fin_output"""
   solver = solver_id_map[fdb_obj['solver_name']]
   fdb_entry = __update_fdb_entry(session, solver, session_id, dbt, config, job,
