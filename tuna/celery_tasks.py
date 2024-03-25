@@ -37,11 +37,12 @@ import queue
 #import time
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
+import kombu
 
 from celery.result import ResultSet
 
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import serialize_chunk
+from tuna.utils.utility import serialize_chunk, SimpleDict
 from tuna.utils.db_utility import get_db_obj_by_id, session_retry
 from tuna.utils.db_utility import gen_update_query
 from tuna.celery_app.celery import hardware_pick, app
@@ -124,28 +125,27 @@ def result_callback(task_id, value):
 def process_fin_builder_results(fin_json, context, dbt):
   """Process result from fin_build worker"""
   LOGGER.info('Processing fin_builder result')
-  config, job, kwargs = deserialize(context, dbt)
+  job = SimpleDict(**context['job'])
   pending = []
   solver_id_map = get_solver_ids()
 
   failed_job = True
   result_str = ''
-  failed_job = False
   status = None
   with DbSession() as session:
     try:
-      set_job_state(session, job, dbt, 'compiled')
-      if 'miopen_find_compile_result' in fin_json:
-        status = process_fdb_w_kernels(session, fin_json,
-                                       copy.deepcopy(context), dbt,
-                                       context['fdb_attr'], pending)
+      if fin_json:
+        if 'miopen_find_compile_result' in fin_json:
+          status = process_fdb_w_kernels(session, fin_json,
+                                         copy.deepcopy(context), dbt,
+                                         context['fdb_attr'], pending)
 
-      elif 'miopen_perf_compile_result' in fin_json:
-        status = process_pdb_compile(session, fin_json, job, config, kwargs,
-                                     dbt, context['fdb_attr'], solver_id_map)
+        elif 'miopen_perf_compile_result' in fin_json:
+          status = process_pdb_compile(session, fin_json, job, dbt,
+                                       solver_id_map)
 
-      success, result_str = get_fin_result(status)
-      failed_job = not success
+        success, result_str = get_fin_result(status)
+        failed_job = not success
 
     except (OperationalError, IntegrityError) as err:
       LOGGER.warning('FinBuild: Unable to update Database %s', err)
@@ -165,19 +165,10 @@ def process_fin_builder_results(fin_json, context, dbt):
   return True
 
 
-def deserialize(context, dbt):
-  """Restore dict items(job, config) into objects"""
-  config = get_db_obj_by_id(context['config']['id'], dbt.config_table)
-  job = get_db_obj_by_id(context['job']['id'], dbt.job_table)
-  kwargs = context['kwargs'].copy()
-
-  return config, job, kwargs
-
-
 def process_fin_evaluator_results(fin_json, context, dbt):
   """Process fin_json result"""
   LOGGER.info('Processing fin_eval result')
-  _, job, _ = deserialize(context, dbt)
+  job = SimpleDict(**context['job'])
   failed_job = True
   result_str = ''
   pending = []
@@ -186,30 +177,31 @@ def process_fin_evaluator_results(fin_json, context, dbt):
   with DbSession() as session:
     try:
       set_job_state(session, job, dbt, 'evaluated')
-      if 'miopen_find_eval_result' in fin_json:
-        status = process_fdb_w_kernels(session,
-                                       fin_json,
-                                       copy.deepcopy(context),
-                                       dbt,
-                                       context['fdb_attr'],
-                                       pending,
-                                       result_str='miopen_find_eval_result',
-                                       check_str='evaluated')
-      elif 'miopen_perf_eval_result' in fin_json:
-        status = process_fdb_w_kernels(session,
-                                       fin_json,
-                                       copy.deepcopy(context),
-                                       dbt,
-                                       context['fdb_attr'],
-                                       pending,
-                                       result_str='miopen_perf_eval_result',
-                                       check_str='evaluated')
+      if fin_json:
+        if 'miopen_find_eval_result' in fin_json:
+          status = process_fdb_w_kernels(session,
+                                         fin_json,
+                                         copy.deepcopy(context),
+                                         dbt,
+                                         context['fdb_attr'],
+                                         pending,
+                                         result_str='miopen_find_eval_result',
+                                         check_str='evaluated')
+        elif 'miopen_perf_eval_result' in fin_json:
+          status = process_fdb_w_kernels(session,
+                                         fin_json,
+                                         copy.deepcopy(context),
+                                         dbt,
+                                         context['fdb_attr'],
+                                         pending,
+                                         result_str='miopen_perf_eval_result',
+                                         check_str='evaluated')
 
-      success, result_str = get_fin_result(status)
-      failed_job = not success
+        success, result_str = get_fin_result(status)
+        failed_job = not success
 
       if failed_job:
-        if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):
+        if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):  #pylint: disable=no-member
           LOGGER.warning('max job retries exhausted, setting to errored')
           set_job_state(session, job, dbt, 'errored', result=result_str)
         else:
@@ -280,8 +272,12 @@ def tune(library, job_batch_size=1000):
   else:
     q_name = f"eval_q_session_{library.dbt.session_id}"
 
-  stop_active_workers()
-  if not launch_celery_worker(library, q_name, machines):
+  try:
+    stop_active_workers()
+    if not launch_celery_worker(library, q_name, machines):
+      return False
+  except kombu.exceptions.OperationalError as k_err:
+    LOGGER.error('Redis error ocurred: %s', k_err)
     return False
 
   global DBT  #pylint: disable=global-variable-undefined

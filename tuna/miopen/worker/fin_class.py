@@ -124,13 +124,6 @@ class FinClass(WorkerInterface):
     ]
     self.fdb_attr.remove("insert_ts")
     self.fdb_attr.remove("update_ts")
-    #self.num_procs = int(self.machine.get_num_cpus() * .6)
-    #print('init num cpus: %s', self.machine.get_num_cpus() * .6)
-    #self.num_procs = Value(
-    #    'i', len(list(range(int(self.machine.get_num_cpus() * .6)))))
-    print(self.machine.get_num_cpus())
-    print(self.machine.get_num_cpus() * .6)
-    print('init num_procs: %s', self.num_procs)
 
   def get_miopen_v(self) -> str:
     """Interface function to get new branch hash"""
@@ -293,7 +286,6 @@ class FinClass(WorkerInterface):
             f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
 
       result = self.__parse_out()
-      print(result)
 
     return result
 
@@ -373,21 +365,14 @@ class FinClass(WorkerInterface):
     if idx == 0:
       query = self.query_cfgs(self.label)
       rows = query.all()
-      print('num configs: %s', len(rows))
-      print('num_blk : %s', num_blk)
-      print('idx: %s', idx)
 
       len_rows = len(rows)
-      print('len rows: %s', len_rows)
       master_cfg_list = []
       for row in rows:
         r_dict = compose_config_obj(row, self.config_type)
         if self.config_type == ConfigType.batch_norm:
-          print('conv')
           r_dict['direction'] = row.get_direction()
         master_cfg_list.append(r_dict)
-
-      print('master cfg list size %s', len(master_cfg_list))
 
       with DbSession() as session:
         self.__rm_old_app(session, rows)
@@ -414,15 +399,12 @@ class FinClass(WorkerInterface):
           self.job_queue.put(master_cfg_list[start:end])
     try:
       self.all_configs = self.job_queue.get(True, 180)
-      print('all configs: %s', len(self.all_configs))
     except queue.Empty:
       self.logger.warning('No jobs found for process %s...', idx)
       self.all_configs = []
 
     if not self.all_configs:
       return False
-
-    print('num configs: %s', self.all_configs)
 
     return True
 
@@ -438,14 +420,10 @@ class FinClass(WorkerInterface):
       self.logger.info("Creating dumplist for: %s", self.fin_steps[0])
       idx = 0
       num_blk = 1
-      print(self.multiproc)
       if self.multiproc:
         idx = self.gpu_id
-        print('gpu_id: %s', self.gpu_id)
         num_blk = self.num_procs.value
-        print('num_procs: %s', self.num_procs)
 
-      print('setting all configs with idx: % and num_blk: %s', idx, num_blk)
       if not self.__set_all_configs(idx, num_blk):
         return False
       return self.__compose_fin_list()
@@ -574,7 +552,6 @@ class FinClass(WorkerInterface):
         session_retry(session, self.__insert_applicability,
                       functools.partial(actuator, pack=pack), self.logger)
 
-      # print result to log
       query = session.query(sqlalchemy_func.count(self.dbt.solver_app.id),
                             self.dbt.solver_app.applicable)
       query = query.filter(self.dbt.solver_app.session == self.session_id)  # pylint: disable=W0143
