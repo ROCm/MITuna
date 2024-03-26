@@ -37,7 +37,7 @@ LOGGER: logging.Logger = setup_logger('celery')
 def launch_worker_per_node(q_name, machines, session_id):
   """Launch celery worker for compile"""
   for machine in machines:
-    cmd = f"celery -A tuna.celery_app.celery worker -l info -E -n tuna_{machine.hostname}_sess_{session_id} -Q {q_name}".split(  #pylint: disable=line-too-long
+    cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_{machine.hostname}_sess_{session_id} -Q {q_name}".split(  #pylint: disable=line-too-long
         ' ')
     try:
       _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
@@ -57,7 +57,7 @@ def launch_worker_per_gpu(q_name, machines, session_id):
     num_gpus = machine.get_avail_gpus()
     try:
       for gpu_id in num_gpus:
-        cmd = f"celery -A tuna.celery_app.celery worker -l info -E -c 1 -n tuna_{machine.hostname}_sess_{session_id}_gpu_id{gpu_id} -Q {q_name}".split(' ')  #pylint: disable=line-too-long
+        cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_{machine.hostname}_sess_{session_id}_gpu_id{gpu_id} -Q {q_name}".split(' ')  #pylint: disable=line-too-long
         curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
         _ = subprocess.Popen(cmd, env=curr_env)  #pylint: disable=consider-using-with
         LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
