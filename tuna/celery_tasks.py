@@ -57,6 +57,8 @@ from tuna.miopen.db.solver import get_solver_ids
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
+result_queue = mpQueue()
+result_queue_lock = Lock()
 
 
 def launch_worker_compile(q_name, machines, session_id):
@@ -260,10 +262,8 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
   return True
 
 
-#pylint: disable=too-many-locals
-def tune(library, job_batch_size=1000):
-  """tuning loop to spin out celery tasks"""
-
+def prep_tuning(library):
+  """Prep env for tuning start"""
   worker_type = get_worker_type(library.args)
   machines = load_machines(library.args)
   q_name = None
@@ -281,9 +281,6 @@ def tune(library, job_batch_size=1000):
     return False
 
   global DBT  #pylint: disable=global-variable-undefined
-  global result_queue  #pylint: disable=global-variable-undefined
-  global result_queue_lock  #pylint: disable=global-variable-undefined
-
   DBT = MIOpenDBTables(session_id=library.args.session_id,
                        config_type=library.args.config_type)
 
@@ -291,20 +288,29 @@ def tune(library, job_batch_size=1000):
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  result_queue = mpQueue()
-  result_queue_lock = Lock()
-
   f_vals = library.get_f_vals(Machine(local_machine=True),
                               range(0),
                               tuning=True)
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
+  return worker_type, kwargs, fdb_attr, q_name
+
+
+#pylint: disable=too-many-locals
+def tune(library, job_batch_size=1000):
+  """tuning loop to spin out celery tasks"""
+
+  tune_start_t = time.time()
+  worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
   res_set = ResultSet([])
+  job_start_t = None
+  job_end_t = None
 
   while True:
     try:
       job_list = []
       with DbSession() as session:
+        job_start_t = time.time()
         job_list = library.get_jobs(session, library.fetch_state,
                                     library.set_state, library.args.session_id,
                                     job_batch_size)
@@ -336,12 +342,17 @@ def tune(library, job_batch_size=1000):
         if not res_set:
           return False
         LOGGER.info('All tasks added to queue')
+        job_end_t = time.time()
         break
     except KeyboardInterrupt:
       LOGGER.error('Keyboard interrupt caught, draining results queue')
       results_gather(res_set, worker_type)
 
   results_gather(res_set, worker_type)
+  tune_end_t = time.time()
+  LOGGER.info(
+      'Took {%.4f} min to tune, {%.4f} of which where used to enqueue jobs',
+      (tune_end_t - tune_start_t) % 60, (job_end_t - job_start_t) % 60)
 
   return True
 
