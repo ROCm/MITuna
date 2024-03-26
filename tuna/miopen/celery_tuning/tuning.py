@@ -51,12 +51,14 @@ from tuna.miopen.utils.json_to_sql import clean_cache_table, get_worker_type
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
-from tuna.celery import launch_celery_worker
+from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import hardware_pick
-from tuna.celery_app.celery import stop_active_workers
+from tuna.celery_app.celery_app import stop_active_workers
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
+result_queue = mpQueue()
+result_queue_lock = Lock()
 
 
 def result_callback(task_id, value):
@@ -205,7 +207,7 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
   return True
 
 
-def get_worker_granularity(library, worker_type):
+def get_worker_granularity(library):
   """Check how many celery workers we need"""
   worker_granularity = None
   worker_granularity = get_worker_type(library.args)
@@ -215,35 +217,29 @@ def get_worker_granularity(library, worker_type):
   elif 'miopen_find_eval' in library.args.fin_steps or 'miopen_perf_eval' in library.args.fin_steps:
     worker_granularity = 'worker_per_gpu'
 
+  return worker_granularity
+
+
+def prep_tuning(library):
+  """Prep env for tuning start"""
+  worker_type = get_worker_type(library.args)
+  machines = load_machines(library.args)
   q_name = None
   if worker_type == 'fin_build_worker':
     q_name = f"compile_q_session_{library.dbt.session_id}"
   else:
     q_name = f"eval_q_session_{library.dbt.session_id}"
 
-  return worker_granularity, q_name
-
-
-#pylint: disable=too-many-locals
-def tune(library, job_batch_size=1000):
-  """tuning loop to spin out celery tasks"""
-
-  worker_type = get_worker_type(library.args)
-  machines = load_machines(library.args)
-  worker_granularity, q_name = get_worker_granularity(library, worker_type)
-
   try:
     stop_active_workers()
-    if not launch_celery_worker(library, q_name, machines):
+    if not launch_celery_worker(library, q_name, machines,
+                                get_worker_granularity(library)):
       return False
   except kombu.exceptions.OperationalError as k_err:
     LOGGER.error('Redis error ocurred: %s', k_err)
     return False
 
   global DBT  #pylint: disable=global-variable-undefined
-  global result_queue  #pylint: disable=global-variable-undefined
-  global result_queue_lock  #pylint: disable=global-variable-undefined
-
   DBT = MIOpenDBTables(session_id=library.args.session_id,
                        config_type=library.args.config_type)
 
@@ -251,21 +247,30 @@ def tune(library, job_batch_size=1000):
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  result_queue = mpQueue()
-  result_queue_lock = Lock()
-
   f_vals = library.get_f_vals(Machine(local_machine=True),
                               range(0),
                               tuning=True)
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
+  return worker_type, kwargs, fdb_attr, q_name
+
+
+#pylint: disable=too-many-locals
+def tune(library, job_batch_size=1000):
+  """tuning loop to spin out celery tasks"""
+
+  tune_start_t = time.time()
+  worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
   res_set = ResultSet([])
+  job_start_t = None
+  job_end_t = None
 
   while True:
     try:
       job_list = []
       with DbSession() as session:
         #get all the jobs from mySQL
+        job_start_t = time.time()
         job_list = library.get_jobs(session, library.fetch_state,
                                     library.set_state, library.args.session_id,
                                     job_batch_size)
@@ -299,12 +304,17 @@ def tune(library, job_batch_size=1000):
         if not res_set:
           return False
         LOGGER.info('All tasks added to queue')
+        job_end_t = time.time()
         break
     except KeyboardInterrupt:
       LOGGER.error('Keyboard interrupt caught, draining results queue')
       results_gather(res_set, worker_type)
 
   results_gather(res_set, worker_type)
+  tune_end_t = time.time()
+  LOGGER.info(
+      'Took {%.4f} min to tune, {%.4f} of which where used to enqueue jobs',
+      (tune_end_t - tune_start_t) % 60, (job_end_t - job_start_t) % 60)
 
   return True
 

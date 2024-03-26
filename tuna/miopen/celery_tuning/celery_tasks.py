@@ -30,7 +30,7 @@ import copy
 from celery.utils.log import get_task_logger
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.utils.helper import prep_kwargs
-from tuna.celery_app.celery import app
+from tuna.celery_app.celery_app import app
 
 logger = get_task_logger(__name__)
 
