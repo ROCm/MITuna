@@ -53,7 +53,7 @@ from tuna.utils.utility import serialize_job_config_row
 from tuna.miopen.utils.helper import prep_kwargs
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
-from tuna.celery_tasks import process_fin_builder_results
+from tuna.miopen.celery_tuning.tuning import process_fin_builder_results
 
 
 def add_cfgs():

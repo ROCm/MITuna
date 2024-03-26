@@ -56,7 +56,7 @@ from tuna.utils.utility import serialize_job_config_row
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 #from tuna.miopen.utils.json_to_sql import process_fdb_eval
-from tuna.celery_tasks import set_job_state
+from tuna.miopen.celery_tuning.tuning import set_job_state
 
 solver_id_map = get_solver_ids()
 
