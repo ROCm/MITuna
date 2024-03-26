@@ -340,6 +340,7 @@ def results_gather(res_set, worker_type):
 
 def drain_queue(worker_type, dbt):
   """Drain results queue"""
+  interrupt = False
   LOGGER.info('Draining queue')
   while True:
     try:
@@ -354,8 +355,16 @@ def drain_queue(worker_type, dbt):
       else:
         process_fin_evaluator_results(fin_json, context, dbt)
     except queue.Empty as exc:
+      if interrupt:
+        #Note: reset job state for those in flight that have not reached the res_queue yet
+        return True
       LOGGER.warning(exc)
       LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
       time.sleep(2)
+    except KeyboardInterrupt:
+      if result_queue.empty():
+        return True
+      interrupt = True
+      continue
 
   return True

@@ -39,7 +39,8 @@ if 'TUNA_REDIS_PORT' in os.environ:
 
 app = Celery('celery_app',
              broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}//",
-             result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/")
+             result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/",
+             include=['tuna.miopen.celery_tuning.celery_tasks'])
 
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
