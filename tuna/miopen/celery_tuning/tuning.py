@@ -342,6 +342,8 @@ def drain_queue(worker_type, dbt):
   """Drain results queue"""
   interrupt = False
   LOGGER.info('Draining queue')
+  drain_start_t = time.time()
+  sleep_time = 0
   while True:
     try:
       fin_json, context = result_queue.get(True, 1)
@@ -360,6 +362,7 @@ def drain_queue(worker_type, dbt):
         return True
       LOGGER.warning(exc)
       LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
+      sleep_time += 2
       time.sleep(2)
     except KeyboardInterrupt:
       if result_queue.empty():
@@ -367,4 +370,8 @@ def drain_queue(worker_type, dbt):
       interrupt = True
       continue
 
+  drain_end_t = time.time()
+  LOGGER.info(
+      'Took {%.4f} min to drain queue, {%.4f} of which where spent waiting on results from celery',
+      (drain_end_t - drain_start_t) % 60, sleep_time % 60)
   return True
