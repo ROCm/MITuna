@@ -115,13 +115,13 @@ def get_job(w):
     )
 
   #test get_job()
-  job = w.get_job({'new'}, 'compile_start', True)
+  job = w.get_job('new', 'compile_start', True)
   assert job == True
   with DbCursor() as cur:
     cur.execute(f"SELECT state FROM conv_job WHERE id={job_id}")
     res = cur.fetchall()
     assert (res[0][0] == 'compile_start')
-    job = w.get_job({'new'}, 'compile_start', True)
+    job = w.get_job('new', 'compile_start', True)
     assert job == False
     cur.execute(f"UPDATE conv_job SET valid=0 WHERE id={job_id}")
 
@@ -132,7 +132,7 @@ def multi_queue_test(w):
     cur.execute(
         "UPDATE conv_job SET state='new', valid=1 WHERE reason='tuna_pytest_worker' and session={} LIMIT {}"
         .format(w.session_id, w.claim_num + 1))
-  job = w.get_job({'new'}, 'compile_start', True)
+  job = w.get_job('new', 'compile_start', True)
   assert job == True
   res = None
   with DbCursor() as cur:
@@ -147,7 +147,7 @@ def multi_queue_test(w):
         f"UPDATE conv_job SET state='compiling' WHERE reason='tuna_pytest_worker' and session={w.session_id} AND state='compile_start' AND valid=1"
     )
   for i in range(w.claim_num - 1):
-    job = w.get_job({'new'}, 'compile_start', True)
+    job = w.get_job('new', 'compile_start', True)
     with DbCursor() as cur:
       assert job == True
       cur.execute(
@@ -156,7 +156,7 @@ def multi_queue_test(w):
       res = cur.fetchall()
       assert (len(res) == 0)
 
-  job = w.get_job({'new'}, 'compile_start', True)
+  job = w.get_job('new', 'compile_start', True)
   assert job == True
   with DbCursor() as cur:
     cur.execute(

@@ -185,7 +185,7 @@ class WorkerInterface(Process):
       conds.append(f"reason='{self.label}'")
 
     conds.append(f"retries<{MAX_JOB_RETRIES}")
-    conds.append("state in (" + str(find_state).strip('{').strip('}') + ")")
+    conds.append("state in (" + str(find_state) + ")")
 
     entries = self.compose_work_objs(session, conds)
     return entries
