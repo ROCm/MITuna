@@ -46,13 +46,13 @@ from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.utils.metadata import ALG_SLV_MAP
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.solver import get_solver_ids
-from tuna.utils.db_utility import connect_db, get_db_obj_by_id
+from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.utils.miopen_utility import load_machines
 from tuna.machine import Machine
 from tuna.miopen.utils.helper import prep_kwargs
 from tuna.miopen.utils.lib_helper import get_worker
-from tuna.utils.utility import serialize_job_config_row
+from tuna.utils.utility import serialize_job_config_row, SimpleDict
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 #from tuna.miopen.utils.json_to_sql import process_fdb_eval
@@ -241,8 +241,10 @@ def test_fin_evaluator():
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
   assert len(fin_json) == 1
   fin_json = fin_json[0]
-  job = get_db_obj_by_id(job_dict['id'], miopen.dbt.job_table)
-  config = get_db_obj_by_id(config_dict['id'], miopen.dbt.config_table)
+  #job = get_db_obj_by_id(job_dict['id'], miopen.dbt.job_table)
+  #config = get_db_obj_by_id(config_dict['id'], miopen.dbt.config_table)
+  job = SimpleDict(**job_dict)
+  config = SimpleDict(**config_dict)
   fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
