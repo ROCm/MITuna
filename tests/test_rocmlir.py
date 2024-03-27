@@ -114,6 +114,6 @@ def test_rocmlir():
     query = session.query(ConvolutionJob).filter(ConvolutionJob.session==session_id)\
                                          .filter(ConvolutionJob.state=='error')
     res = query.all()
-    #assert len(res) == 6, f"Should be 6 'error' jobs and there are {len(res)}"
+    assert len(res) == 6, f"Should be 6 'error' jobs and there are {len(res)}"
 
   return True

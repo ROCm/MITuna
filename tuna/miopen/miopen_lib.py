@@ -69,7 +69,6 @@ class MIOpen(MITunaInterface):
   def __init__(self):
     super().__init__(library=Library.MIOPEN)
     self.args = None
-    #self.parse_args()
     self.set_state = None
 
   def parse_args(self):
@@ -254,7 +253,7 @@ class MIOpen(MITunaInterface):
 
   def check_blacklist(self, parser):
     """! Helper function
-       @param parser The command_ line argument parser
+       @param parser The command line argument parser
     """
     self.args.blacklist = self.args.blacklist.split(',')
     for sol in self.args.blacklist:

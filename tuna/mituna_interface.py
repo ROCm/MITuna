@@ -53,7 +53,6 @@ class MITunaInterface():
 
     self.worker_type: str = WorkerInterface.name
     self.fetch_state: set = set()
-    #self.fetch_state.add('new')
     self.max_job_retries = 10
     self.dbt = None
 
@@ -202,19 +201,10 @@ class MITunaInterface():
     kwargs: Dict[str, Any] = {}
 
     kwargs = {
-        #'machine': f_vals["machine"],
         'gpu_id': gpu_idx,
-        #'num_procs': f_vals["num_procs"],
-        #'barred': f_vals["barred"],
-        #'bar_lock': f_vals["bar_lock"],
         'envmt': envmt,
-        #'job_queue': f_vals["job_queue"],
-        #'job_queue_lock': f_vals["job_queue_lock"],
-        #'resu,lt_queue': f_vals["result_queue"],
-        #'result_queue_lock': f_vals["result_queue_lock"],
         'label': self.args.label,
         'docker_name': self.args.docker_name,
-        #'end_jobs': f_vals['end_jobs'],
         'session_id': self.args.session_id
     }
 

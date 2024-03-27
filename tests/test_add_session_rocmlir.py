@@ -67,7 +67,7 @@ def test_add_session_rocmlir():
       'use_tuner': False,
       'job_queue': Queue(),
       'queue_lock': Lock(),
-      'fetch_state': {'compiled'},
+      'fetch_state': ['compiled'],
       'end_jobs': e,
   }
 

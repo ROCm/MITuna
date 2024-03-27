@@ -31,7 +31,7 @@ from sqlalchemy.exc import OperationalError
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.utility import SimpleDict
-from tuna.utils.db_utility import get_db_obj_by_id, session_retry, gen_select_objs
+from tuna.utils.db_utility import session_retry, gen_select_objs
 from tuna.utils.db_utility import gen_update_query, gen_insert_query
 from tuna.miopen.worker.fin_utils import get_fin_slv_status
 from tuna.miopen.utils.parsing import parse_pdb_key
@@ -270,8 +270,10 @@ def process_fdb_w_kernels(session,
                           result_str='miopen_find_compile_result',
                           check_str='find_compiled'):
   """initiate find db update"""
-  job = get_db_obj_by_id(context['job']['id'], dbt.job_table)
-  config = get_db_obj_by_id(context['config']['id'], dbt.config_table)
+  job = SimpleDict(**context['job'])
+  #get_db_obj_by_id(context['job']['id'], dbt.job_table)
+  config = SimpleDict(**context['config'])
+  #get_db_obj_by_id(context['config']['id'], dbt.config_table)
 
   callback = __update_fdb_w_kernels
   status = session_retry(

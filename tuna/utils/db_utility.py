@@ -35,7 +35,6 @@ from datetime import datetime
 from typing import Callable, Any, List, Dict
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import create_engine
 
 from tuna.dbBase.sql_alchemy import DbSession
@@ -211,16 +210,16 @@ def db_rows_to_obj(ret, attribs):
   return entries
 
 
-def get_db_obj_by_id(row_id, db_class):
-  """Fetch db row object based on id and table(db_class)"""
-  res = None
-  with DbSession() as session:
-    try:
-      res = session.query(db_class).filter(db_class.id == row_id).one()
-    except NoResultFound as dberr:
-      LOGGER.error(dberr)
-
-  return res
+#def get_db_obj_by_id(row_id, db_class):
+#  """Fetch db row object based on id and table(db_class)"""
+#  res = None
+#  with DbSession() as session:
+#    try:
+#      res = session.query(db_class).filter(db_class.id == row_id).one()
+#    except NoResultFound as dberr:
+#      LOGGER.error(dberr)
+#
+#  return res
 
 
 def has_attr_set(obj, attribs):

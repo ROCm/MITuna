@@ -168,7 +168,6 @@ def test_fin_evaluator():
     job_query = session.query(
         dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)
     job_query.update({dbt.job_table.state: 'compiled'})
-    print(job_query)
     session.commit()
 
     add_fake_fdb_entries(job_query, dbt, job_query.first().id)
@@ -188,10 +187,8 @@ def test_fin_evaluator():
   assert (len(job_config_rows) == 80)
 
   f_vals = miopen.get_f_vals(machine, range(0))
-  print('f_vals: %s', f_vals)
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
   assert (kwargs['fin_steps'] == ['miopen_find_eval'])
-  print('kwargs: %s', kwargs)
 
   num_gpus = Value('i', 1)
   v = Value('i', 0)
