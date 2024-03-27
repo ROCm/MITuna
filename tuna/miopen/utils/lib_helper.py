@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,26 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different configuration types supported by Tuna"""
-from enum import Enum
+"""Utility module for miopen library"""
+
+from tuna.miopen.worker.fin_builder import FinBuilder
+from tuna.miopen.worker.fin_eval import FinEvaluator
+#from tuna.miopen.worker.fin_class import FinClass
+from tuna.worker_interface import WorkerInterface
 
 
-#pylint: disable=too-few-public-methods
-class ConfigType(Enum):
-  """Enumerate supported configuration types"""
-  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  convolution: str = "convolution"
-  batch_norm: str = "batch_norm"
+def get_worker(kwargs, worker_type):
+  """Return worker based on worker_type"""
 
-  def __str__(self):
-    return self.value
+  worker = WorkerInterface(**kwargs)
+  #if worker_type == "fin_class_worker":
+  #  kwargs['fin_steps'] = 'applicability'
+  #  worker = FinClass(**kwargs)
+  if worker_type == "fin_build_worker":
+    #kwargs['fetch_state'] = 'new'
+    worker = FinBuilder(**kwargs)
+  elif worker_type == "fin_eval_worker":
+    #kwargs['fetch_state'] = ['new', 'compiled']
+    worker = FinEvaluator(**kwargs)
 
-  def __json__(self):
-    return self.value
+  return worker

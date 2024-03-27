@@ -183,11 +183,23 @@ def gen_insert_query(obj, attribs, tablename):
 
 def gen_select_objs(session, attribs, tablename, cond_str):
   """create a select query and generate name space objects for the results"""
+  ret = get_job_rows(session, attribs, tablename, cond_str)
+  entries = db_rows_to_obj(ret, attribs)
+  return entries
+
+
+def get_job_rows(session, attribs, tablename, cond_str):
+  """Get db rows"""
   attr_str = ','.join(attribs)
   query = f"SELECT {attr_str} FROM {tablename}"\
           f" {cond_str};"
   LOGGER.info('Query Select: %s', query)
   ret = session.execute(query)
+  return ret
+
+
+def db_rows_to_obj(ret, attribs):
+  """Compose SimpleDict list of db jobs"""
   entries = []
   for row in ret:
     #LOGGER.info('select_row: %s', row)
@@ -196,6 +208,18 @@ def gen_select_objs(session, attribs, tablename, cond_str):
       setattr(entry, col, row[i])
     entries.append(entry)
   return entries
+
+
+#def get_db_obj_by_id(row_id, db_class):
+#  """Fetch db row object based on id and table(db_class)"""
+#  res = None
+#  with DbSession() as session:
+#    try:
+#      res = session.query(db_class).filter(db_class.id == row_id).one()
+#    except NoResultFound as dberr:
+#      LOGGER.error(dberr)
+#
+#  return res
 
 
 def has_attr_set(obj, attribs):

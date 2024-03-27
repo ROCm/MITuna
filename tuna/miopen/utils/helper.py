@@ -26,6 +26,7 @@
 ###############################################################################
 """Utility module for helper functions"""
 
+from multiprocessing import Lock, Queue as mpQueue
 import random
 from time import sleep
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -40,6 +41,7 @@ from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT
 from tuna.miopen.utils.metadata import BN_DEFAULTS
 from tuna.miopen.utils.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.utils.metadata import NUM_SQL_RETRIES
+from tuna.utils.utility import SimpleDict
 
 LOGGER = setup_logger('helper')
 
@@ -200,3 +202,14 @@ def get_db_id(db_elems, config_table):
     if res:
       cid = res[0][0]
   return cid
+
+
+def prep_kwargs(kwargs, args):
+  """Populate kwargs with serialized job, config and machine"""
+  kwargs["job"] = SimpleDict(**args[0])
+  kwargs["config"] = SimpleDict(**args[1])
+  kwargs["machine"] = Machine(local_machine=True)
+  kwargs["result_queue"] = mpQueue()
+  kwargs["result_queue_lock"] = Lock()
+
+  return kwargs

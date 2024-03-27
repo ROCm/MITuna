@@ -143,6 +143,18 @@ def get_mmi_env_vars(env_vars={}):
 class SimpleDict:
   """empty object"""
 
+  def __init__(self, **kwargs):
+    for key, value in kwargs.items():
+      if isinstance(value, dict):
+        setattr(self, key, self.from_dict(value))
+      else:
+        setattr(self, key, value)
+
+  @classmethod
+  def from_dict(cls, dict_obj):
+    """recreate object from dict"""
+    return cls(**dict_obj)
+
   def to_dict(self, ommit_ts=True, ommit_valid=False):
     """return dict copy of object"""
     ret = {}
@@ -166,3 +178,23 @@ class SimpleDict:
         ret.pop('insert_ts')
 
     return ret
+
+
+def serialize_job_config_row(elem):
+  """Serialize job row from DB, including its foreign keys"""
+  config_dict = {}
+  for key, value in elem[1].to_dict().items():
+    if isinstance(value, SimpleDict):
+      config_dict[key] = value.to_dict()
+    else:
+      config_dict[key] = value
+
+  return (elem[0].to_dict(), config_dict)
+
+
+def serialize_chunk(chunk):
+  """Serialize a list of tuple(job, configs) rows"""
+  result = []
+  for elem in chunk:
+    result.append(serialize_job_config_row(elem))
+  return result

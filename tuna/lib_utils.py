@@ -36,7 +36,7 @@ from tuna.rocmlir.rocmlir_lib import RocMLIR
 def get_library(args: Dict[str, Any]) -> Union[Example, MIOpen, RocMLIR]:
   """Factory method to get lib based on args"""
   library: Union[Example, MIOpen, RocMLIR]
-  if 'lib' not in args.keys() or args['lib'].value == Library.MIOPEN.value:
+  if args['lib'].value == Library.MIOPEN.value:
     library = MIOpen()
   elif args['lib'].value == Library.EXAMPLE.value:
     library = Example()

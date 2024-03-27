@@ -27,17 +27,23 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
+from typing import List, Tuple, Any
 
+from sqlalchemy.inspection import inspect
+from sqlalchemy.exc import NoInspectionAvailable
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
-from tuna.miopen.db.mixin_tables import FinStep
+
+from tuna.dbBase.sql_alchemy import DbSession
+from tuna.tables_interface import DBTablesInterface
+from tuna.utils.utility import SimpleDict
+from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
+from tuna.utils.db_utility import gen_update_query
 from tuna.miopen.db.get_db_tables import get_miopen_tables
+from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
-from tuna.miopen.worker.fin_builder import FinBuilder
-from tuna.miopen.worker.fin_eval import FinEvaluator
-#from tuna.worker_interface import WorkerInterface
 from tuna.miopen.db.session import Session
 from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
@@ -52,14 +58,18 @@ from tuna.miopen.parse_miopen_args import get_update_golden_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
+from tuna.miopen.db.tables import MIOpenDBTables
 
 
 class MIOpen(MITunaInterface):
   """Class to support MIOpen specific tuning functionality"""
 
+  # pylint: disable=too-many-public-methods
+
   def __init__(self):
     super().__init__(library=Library.MIOPEN)
     self.args = None
+    self.set_state = None
 
   def parse_args(self):
     # pylint: disable=too-many-statements
@@ -176,6 +186,9 @@ class MIOpen(MITunaInterface):
 
     self.args = parser.parse_args()
 
+    if self.args.config_type is None:
+      self.args.config_type = ConfigType.convolution
+
     #overwritte common lib args with subcommand args value
     if self.args.subcommand is not None:
       self.overwrite_common_args()
@@ -211,6 +224,10 @@ class MIOpen(MITunaInterface):
 
     if (self.args.update_applicability or has_fin) and not self.args.session_id:
       parser.error("session_id must be specified with this operation")
+
+    self.dbt = MIOpenDBTables(session_id=self.args.session_id,
+                              config_type=self.args.config_type)
+    self.update_worker_type()
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
@@ -267,20 +284,6 @@ class MIOpen(MITunaInterface):
     # pylint: disable=too-many-branches
     worker = None
     kwargs = self.get_kwargs(gpu_idx, f_vals)
-
-    if self.args.fin_steps:
-      if 'miopen_find_compile' in self.args.fin_steps \
-      or 'miopen_perf_compile' in self.args.fin_steps:
-        kwargs['fetch_state'] = ['new']
-        worker = FinBuilder(**kwargs)
-      elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
-        kwargs['fetch_state'] = ['new', 'compiled']
-        worker = FinEvaluator(**kwargs)
-      else:
-        raise ValueError('Unsupported fin step')
-      worker.start()
-      worker_lst.append(worker)
-      return True
     if self.args.update_applicability:
       kwargs['fin_steps'] = ['applicability']
       worker = FinClass(**kwargs)
@@ -364,7 +367,8 @@ class MIOpen(MITunaInterface):
     # pylint: disable=duplicate-code
     """Main function to launch library"""
     res = None
-    self.parse_args()
+    if self.args is None:
+      self.parse_args()
     if self.args.add_tables:
       self.add_tables()
       return None
@@ -407,19 +411,222 @@ class MIOpen(MITunaInterface):
 
     return envmt
 
-  def get_kwargs(self, gpu_idx, f_vals):
+  def get_kwargs(self, gpu_idx, f_vals, tuning=False):
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param args The command line arguments
     """
-    if self.args.config_type is None:
-      self.args.config_type = ConfigType.convolution
-
-    kwargs = super().get_kwargs(gpu_idx, f_vals)
+    kwargs = super().get_kwargs(gpu_idx, f_vals, tuning)
     kwargs['fin_steps'] = self.args.fin_steps
     kwargs['dynamic_solvers_only'] = self.args.dynamic_solvers_only
     kwargs['config_type'] = self.args.config_type
     kwargs['reset_interval'] = self.args.reset_interval
 
     return kwargs
+
+  def get_job_attr(self):
+    """Get job attr for row selection"""
+    job_attr: List[str]
+    try:
+      job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+      job_attr.remove("insert_ts")
+      job_attr.remove("update_ts")
+    except NoInspectionAvailable as error:
+      self.logger.warning("Ignoring error for init_session: %s", error)
+    return job_attr
+
+  def get_jobs(self,
+               session: DbSession,
+               find_state: List[str],
+               set_state: str,
+               session_id: int,
+               claim_num: int = None):
+    """Interface function to get jobs based on session and find_state"""
+    #job_rows: List[SimpleDict]
+    ids: list
+    row: SimpleDict
+    job_attr: List[str] = self.get_job_attr()
+
+    job_list = self.get_job_objs(session, find_state, self.args.label, self.dbt,
+                                 job_attr, claim_num, self.args.fin_steps)
+
+    if not self.check_jobs_found(job_list, find_state, session_id):
+      return []
+
+    ids = [row.id for row in job_list]
+    self.logger.info("%s jobs %s", find_state, ids)
+    for job in job_list:
+      job.state = set_state
+      query: str = gen_update_query(job, ['state'],
+                                    self.dbt.job_table.__tablename__)
+      session.execute(query)
+
+    session.commit()
+
+    return job_list
+
+  def get_job_objs(self,
+                   session: DbSession,
+                   find_state: list,
+                   label: str,
+                   dbt: DBTablesInterface,
+                   job_attr: List[str],
+                   claim_num: int = None,
+                   fin_steps: List[str] = None) -> List[SimpleDict]:
+    """Get list of job objects"""
+    entries: List[Tuple[SimpleDict, ...]]
+    conds: List[str] = [f"session={dbt.session.id}", "valid=1"]
+
+    if label:
+      conds.append(f"reason='{label}'")
+
+    conds.append(f"retries<{self.max_job_retries}")
+    conds.append("state in (" + str(find_state).strip('{').strip('}') + ")")
+
+    entries = self.compose_work_objs(session, conds, dbt, job_attr, claim_num,
+                                     fin_steps)
+    return entries
+
+  def compose_work_objs(self,
+                        session: DbSession,
+                        conds: List[str],
+                        dbt: DBTablesInterface,
+                        job_attr: List[str],
+                        claim_num: int = None,
+                        fin_steps: List[str] = None) -> List[SimpleDict]:
+    """Query a job list for update"""
+    ret = []
+    if fin_steps:
+      conds.append(f"fin_step like '%{fin_steps[0]}%'")
+    else:
+      conds.append("fin_step='not_fin'")
+
+    cond_str = ' AND '.join(conds)
+    if cond_str:
+      cond_str = f"WHERE {cond_str}"
+    if claim_num:
+      cond_str += f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE SKIP LOCKED"
+    else:
+      cond_str += " ORDER BY retries,config ASC FOR UPDATE SKIP LOCKED"
+
+    #ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
+
+    job_entries = gen_select_objs(session, job_attr,
+                                  dbt.job_table.__tablename__, cond_str)
+
+    ret = job_entries
+    #if fin_steps:
+    #  ret = self.compose_work_objs_fin(session, entries, dbt)
+    #else:
+    #  ret = entries
+
+    #return ret
+    return ret
+
+  def compose_work_objs_fin(self, session, job_entries,
+                            dbt) -> List[Tuple[SimpleDict, SimpleDict]]:
+    """Return jobs for fin work"""
+    ret = []
+
+    cfg_rel = {
+        key: {
+            'key': list(val.local_columns)[0].name,
+            'ftble': str(list(val.remote_side)[0]).split('.', maxsplit=1)[0],
+            'fkey': str(list(val.remote_side)[0]).split('.')[1]
+        } for key, val in inspect(dbt.config_table).relationships.items()
+    }
+
+    if job_entries:
+      id_str = ','.join([str(job.config) for job in job_entries])
+      cfg_cond_str = f"where valid=1 and id in ({id_str})"
+      cfg_attr = [column.name for column in inspect(dbt.config_table).c]
+      cfg_entries = gen_select_objs(session, cfg_attr,
+                                    dbt.config_table.__tablename__,
+                                    cfg_cond_str)
+
+      cfg_entries = self.attach_tensors(session, cfg_rel, cfg_entries)
+
+      cfg_map = {cfg.id: cfg for cfg in cfg_entries}
+
+      for job in job_entries:
+        ret.append((job, cfg_map[job.config]))
+
+    return ret
+
+  def attach_tensors(self, session, cfg_rel, cfg_entries):
+    """attach tensor relationship information to config entries"""
+    for key, val in cfg_rel.items():
+      rel_attr = [
+          column.name
+          for column in inspect(get_class_by_tablename(val['ftble'])).c
+      ]
+      val['fattr'] = rel_attr
+
+    for cfg in cfg_entries:
+      for key, val in cfg_rel.items():
+        rel_val = getattr(cfg, val['key'])
+        rel_cond_str = f"where {val['fkey']}={rel_val}"
+        setattr(
+            cfg, key,
+            gen_select_objs(session, val['fattr'], val['ftble'],
+                            rel_cond_str)[0])
+    return cfg_entries
+
+  def check_jobs_found(self, job_rows: List[SimpleDict], find_state: List[Any],
+                       session_id: int) -> bool:
+    """check for end of jobs"""
+    if not job_rows:
+      # we are done
+      self.logger.warning('No %s jobs found, session %s', find_state,
+                          session_id)
+      return False
+    return True
+
+  def get_job_tables(self, job_rows: List[Tuple[SimpleDict, ...]],
+                     job_attr: List[str]) -> List[SimpleDict]:
+    """find job tables in query results"""
+    if has_attr_set(job_rows[0], job_attr):
+      job_tables: List[SimpleDict] = job_rows
+    else:
+      job_i: int = 0
+      tble: SimpleDict
+      for i, tble in enumerate(job_rows[0]):
+        if has_attr_set(tble, job_attr):
+          job_i = i
+          break
+      job_tables = [row[job_i] for row in job_rows]
+
+    return job_tables
+
+  def update_worker_type(self):
+    """Update the workers type that this library needs"""
+    if self.args.fin_steps:
+      if 'miopen_find_compile' in self.args.fin_steps \
+      or 'miopen_perf_compile' in self.args.fin_steps:
+        self.fetch_state.add('new')
+        self.set_state = 'compile_start'
+        self.worker_type = "fin_build_worker"
+      elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
+        self.fetch_state.add('new')
+        self.fetch_state.add('compiled')
+        self.set_state = 'eval_start'
+        self.worker_type = "fin_eval_worker"
+
+    if self.args.update_applicability:
+      self.worker_type = "fin_class_worker"
+      self.fetch_state.add("new")
+
+  def has_tunable_operation(self):
+    """Check if its a tuning loop operation"""
+    if self.args is None:
+      self.parse_args()
+    if self.args.subcommand and "load_job" in self.args.subcommand:
+      return False
+
+    tuning_steps = [
+        "miopen_find_compile", "miopen_find_eval", "miopen_perf_compile",
+        "miopen_perf_eval"
+    ]
+    return self.args.fin_steps and any(
+        s in self.args.fin_steps for s in tuning_steps)

@@ -41,7 +41,7 @@ import random
 import string
 from io import StringIO
 from time import sleep
-from typing import List, Tuple, Union, Set, Callable, Optional
+from typing import List, Tuple, Union, Set, Callable, Optional, Any, Dict
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -56,6 +56,7 @@ from tuna.utils.db_utility import gen_select_objs, gen_update_query, has_attr_se
 from tuna.connection import Connection
 from tuna.utils.utility import SimpleDict
 from tuna.utils.logger import set_usr_logger
+from tuna.db.tuna_tables import JobMixin
 
 
 class WorkerInterface(Process):
@@ -73,7 +74,8 @@ class WorkerInterface(Process):
     allowed_keys: Set[str] = set([
         'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
         'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id'
+        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id',
+        'job', 'config'
     ])
 
     self.reset_interval: bool = None
@@ -91,9 +93,12 @@ class WorkerInterface(Process):
     self.end_jobs = None
     #job detail vars
     self.envmt: List = []
-    self.fetch_state: List = ['new']
+    self.fetch_state = set()
     self.label: str = None
     self.session_id: int = None
+    self.worker_type = "generic_worker"
+    self.job: SimpleDict = None
+    self.config: dict = None
 
     for key, value in kwargs.items():
       if key in allowed_keys:
@@ -105,21 +110,22 @@ class WorkerInterface(Process):
     self.set_db_tables()
 
     self.hostname: str = self.machine.hostname
-    self.claim_num: int = self.num_procs.value * 3
+    self.claim_num: int = 1
     self.last_reset: datetime = datetime.now()
 
     dir_name: str = os.path.join(TUNA_LOG_DIR,
                                  type(self).__name__,
                                  f"{self.hostname}_{self.machine.port}p")
-    if not os.path.exists(dir_name):
-      os.makedirs(dir_name)
+    try:
+      if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+    except FileExistsError:
+      pass
 
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
 
     connect_db()
-
-    self.job: SimpleDict = SimpleDict()
 
     try:
       self.job_attr: List[str] = [
@@ -134,7 +140,7 @@ class WorkerInterface(Process):
     #also set cnx here in case WorkerInterface exec_command etc called directly
     self.cnx: Connection = self.machine.connect(chk_abort_file)
 
-  def step(self) -> bool:
+  def step(self) -> Optional[Dict[Any, Any]]:  #type: ignore[override]
     """Regular run loop operation, to be overloaded in class specialization """
     raise NotImplementedError("Not implemented")
 
@@ -147,6 +153,7 @@ class WorkerInterface(Process):
     self.machine.restart_server()
     self.last_reset = datetime.now()
 
+  #deprecated
   def compose_work_objs(self, session: DbSession,
                         conds: List[str]) -> List[Tuple[SimpleDict, ...]]:
     """Query a job list for update"""
@@ -164,6 +171,7 @@ class WorkerInterface(Process):
 
     return [(job,) for job in entries]
 
+  #deprecated
   def get_job_objs(self, session: DbSession,
                    find_state: str) -> List[Tuple[SimpleDict, ...]]:
     """Get list of job objects"""
@@ -174,16 +182,18 @@ class WorkerInterface(Process):
       conds.append(f"reason='{self.label}'")
 
     conds.append(f"retries<{MAX_JOB_RETRIES}")
-    conds.append(f"state='{find_state}'")
+    conds.append("state in (\"" + find_state + "\")")
 
     entries = self.compose_work_objs(session, conds)
     return entries
 
+  #deprecated
   def queue_end_reset(self) -> None:
     """resets end queue flag"""
     with self.bar_lock:
       self.end_jobs.value = 0
 
+  #deprecated
   def check_jobs_found(self, job_rows: List[SimpleDict], find_state: str,
                        imply_end: bool) -> bool:
     """check for end of jobs"""
@@ -197,6 +207,7 @@ class WorkerInterface(Process):
       return False
     return True
 
+  #deprecated
   def get_job_from_tuple(
       self, job_tuple: Tuple[SimpleDict, ...]) -> Optional[SimpleDict]:
     """find job table in a job tuple"""
@@ -209,9 +220,11 @@ class WorkerInterface(Process):
         return tble
     return None
 
+  #deprecated
   def get_job_tables(
       self, job_rows: List[Tuple[SimpleDict, ...]]) -> List[SimpleDict]:
     """find job tables in query results"""
+    #pylint:disable=duplicate-code
     if has_attr_set(job_rows[0], self.job_attr):
       job_tables: List[SimpleDict] = job_rows
     else:
@@ -224,6 +237,7 @@ class WorkerInterface(Process):
       job_tables = [row[job_i] for row in job_rows]
     return job_tables
 
+  #deprecated
   def job_queue_push(self, job_rows: List[Tuple[SimpleDict, ...]]) -> None:
     """load job_queue with info for job ids"""
     job: SimpleDict
@@ -233,12 +247,14 @@ class WorkerInterface(Process):
       job = self.get_job_from_tuple(job_tuple)
       self.logger.info("Put job %s %s %s", job.id, job.state, job.reason)
 
+  #deprecated
   def job_queue_pop(self) -> None:
     """load job from top of job queue"""
     self.job = self.job_queue.get(True, 1)[0]
     self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
                      self.job.reason)
 
+  #deprecated
   #pylint: disable=too-many-branches
   def get_job(self, find_state: str, set_state: str, imply_end: bool) -> bool:
     """Interface function to get new job for builder/evaluator"""
@@ -300,6 +316,11 @@ class WorkerInterface(Process):
         '%s retries exhausted to update job status (host = %s, worker = %s), exiting ... ',
         NUM_SQL_RETRIES, self.hostname, self.gpu_id)
     return False
+
+  def set_job(self, job: JobMixin):
+    """Set worker job"""
+    self.job = job
+    self.job.gpu_id = self.gpu_id
 
   #TODO_: This should take a session obj as an input to remove the creation of an extraneous
   # session
@@ -452,24 +473,25 @@ class WorkerInterface(Process):
       except queue.Empty:
         break
 
-  def run(self) -> bool:  #type: ignore[override]
+  def run(self) -> dict:  #type: ignore
     """
     Main run function of WorkerInterface Process
     #type: ignore[override] - parent class returns None type.
     """
 
+    ret = None
     self.machine.set_logger(self.logger)
     usage: float
     try:
       self.cnx = self.machine.connect(chk_abort_file)
 
       while True:
-        self.check_wait_barrier()
+        #self.check_wait_barrier()
 
         if chk_abort_file(self.machine.id, self.logger, self.machine.arch):
-          with self.bar_lock:
-            self.num_procs.value -= 1
-          return False
+          #with self.bar_lock:
+          #  self.num_procs.value -= 1
+          return None  #type: ignore
 
         # re-establish node connection
         usage = 0
@@ -485,24 +507,14 @@ class WorkerInterface(Process):
           self.set_barrier(lambda: (), True)
           continue
         # the step member is defined in the derived class
-        ret: bool = self.step()
+        ret = self.step()
         self.logger.info("proc %s step %s", self.gpu_id, ret)
-        if not ret:
-          self.logger.warning('No more steps, quitting...')
-          with self.bar_lock:
-            self.num_procs.value -= 1
-          return True
+        return ret  #type: ignore
     except KeyboardInterrupt as err:
       self.logger.error('%s', err)
       self.reset_job_state()
-      with self.bar_lock:
-        self.num_procs.value -= 1
-      return False
 
-    with self.bar_lock:
-      self.num_procs.value -= 1
-
-    return True
+    return ret  #type: ignore
 
   def run_command(self, cmd: str) -> Tuple[int, str]:
     """Run cmd and return ret_code"""

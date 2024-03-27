@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,36 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different configuration types supported by Tuna"""
-from enum import Enum
+"""Module to define celery app"""
+import os
+from celery import Celery
+from celery.utils.log import get_task_logger
+
+TUNA_CELERY_BROKER = 'mituna_redis'
+TUNA_REDIS_PORT = '6379'
+
+if 'TUNA_CELERY_BROKER' in os.environ:
+  TUNA_CELERY_BROKER = os.environ['TUNA_CELERY_BROKER']
+if 'TUNA_REDIS_PORT' in os.environ:
+  TUNA_REDIS_PORT = os.environ['TUNA_REDIS_PORT']
+
+app = Celery('celery_app',
+             broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}//",
+             result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/",
+             include=['tuna.miopen.celery_tuning.celery_tasks'])
+
+app.conf.update(result_expires=3600,)
+app.autodiscover_tasks()
+app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
 
 
-#pylint: disable=too-few-public-methods
-class ConfigType(Enum):
-  """Enumerate supported configuration types"""
-  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  convolution: str = "convolution"
-  batch_norm: str = "batch_norm"
+def stop_active_workers():
+  """Shutdown active workers"""
+  if app.control.inspect().active() is not None:
+    app.control.shutdown()
 
-  def __str__(self):
-    return self.value
+  return True
 
-  def __json__(self):
-    return self.value
+
+if __name__ == '__main__':
+  app.start()

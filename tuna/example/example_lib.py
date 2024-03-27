@@ -40,6 +40,7 @@ from tuna.utils.db_utility import create_tables
 from tuna.example.example_tables import get_tables
 from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
+from tuna.dbBase.sql_alchemy import DbSession
 
 
 class Example(MITunaInterface):
@@ -157,7 +158,10 @@ class Example(MITunaInterface):
     envmt: List[str] = []
     return envmt
 
-  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
+  def get_kwargs(self,
+                 gpu_idx: int,
+                 f_vals: Dict[str, Any],
+                 tuning=False) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing process specific runtime information
@@ -165,3 +169,10 @@ class Example(MITunaInterface):
     kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
 
     return kwargs
+
+  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
+               session_id: int, claim_num: int):
+    """Get jobs based on find_state"""
+    self.logger.info('Placeholder')
+
+    return True

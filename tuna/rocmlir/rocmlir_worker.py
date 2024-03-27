@@ -33,9 +33,10 @@ import random
 import functools
 import logging
 import traceback
-from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random
 
 from sqlalchemy.inspection import inspect
+
+from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.worker_interface import WorkerInterface
