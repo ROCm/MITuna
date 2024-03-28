@@ -784,10 +784,10 @@ def getBuildArgs(){
 }
 
 def applicUpdate(){
+  (build_args, _) = getBuildArgs()
+  def tuna_docker_name = getDockerName("${backend}")
   docker.withRegistry('', "$DOCKER_CRED"){
-    def tuna_docker_name = getDockerName("${backend}")
     def tuna_docker
-    (build_args, _) = getBuildArgs()
 
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
     tuna_docker.push()
@@ -824,10 +824,10 @@ def applicUpdate(){
 
 def compile()
 {
+  (build_args, _) = getBuildArgs()
   def tuna_docker_name = getDockerName("${backend}")
   docker.withRegistry('', "$DOCKER_CRED"){
     def tuna_docker
-    (build_args, _) = getBuildArgs()
 
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
 
