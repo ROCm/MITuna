@@ -784,7 +784,7 @@ def getBuildArgs(){
 }
 
 def applicUpdate(){
-  (build_args, _) = getBuildArgs()
+  (build_args, partition) = getBuildArgs()
   def tuna_docker_name = getDockerName("${backend}")
   docker.withRegistry('', "$DOCKER_CRED"){
     def tuna_docker
@@ -812,7 +812,7 @@ def applicUpdate(){
   }
   if(params.UPDATE_APPLICABILITY)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
+    sh "srun --no-kill -p ${partition} -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
     def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
     println "Session ${params.session_id} applicability: ${num_sapp}"
     if (num_sapp.toInteger() == 0){
