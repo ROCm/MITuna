@@ -111,7 +111,7 @@ To create the database run the following script:
 ```
 
 The installation and setup are now complete. To start a tuning cycle, please follow the steps
-documented in [TuningCycle](https://github.com/ROCmSoftwarePlatform/MITuna/blob/develop/doc/src/TuningCycle.md)
+documented in [TuningCycle](https://github.com/ROCm/MITuna/blob/develop/doc/src/TuningCycle.md)
 
 Code formatting
 ---------------
