@@ -53,9 +53,14 @@ def launch_worker_per_node(q_name, machines, session_id):
 def launch_worker_per_gpu(q_name, machines, session_id):
   """Launch celery worker for eval"""
   curr_env = dict(os.environ.copy())
+
   for machine in machines:
     num_gpus = machine.get_avail_gpus()
     try:
+      if not num_gpus:
+        LOGGER.warning(
+            'No available GPUs detected, unable to launch celery worker')
+        return False
       for gpu_id in num_gpus:
         cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_{machine.hostname}_sess_{session_id}_gpu_id{gpu_id} -Q {q_name}".split(' ')  #pylint: disable=line-too-long
         curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)

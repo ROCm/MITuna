@@ -344,6 +344,8 @@ def drain_queue(worker_type, dbt):
   LOGGER.info('Draining queue')
   drain_start_t = time.time()
   sleep_time = 0
+  wait_limit = 1800  #max wait time
+  seen_res = False
   while True:
     try:
       fin_json, context = result_queue.get(True, 1)
@@ -354,21 +356,31 @@ def drain_queue(worker_type, dbt):
         break
       if worker_type == 'fin_build_worker':
         process_fin_builder_results(fin_json, context, dbt)
+        seen_res = True
       else:
         process_fin_evaluator_results(fin_json, context, dbt)
+        seen_res = True
+    except KeyboardInterrupt:
+      if result_queue.empty():
+        return True
+      interrupt = True
+      #continue
     except queue.Empty as exc:
       if interrupt:
         #Note: reset job state for those in flight that have not reached the res_queue yet
         return True
       LOGGER.warning(exc)
       LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
+      if not seen_res:
+        wait_limit -= 2
+        if max(0, wait_limit) == 0:
+          LOGGER.info(
+              'Max wait limit of %s seconds has been reached, terminating...',
+              wait_limit)
+          return False
       sleep_time += 2
       time.sleep(2)
-    except KeyboardInterrupt:
-      if result_queue.empty():
-        return True
-      interrupt = True
-      continue
+      seen_res = False
 
   drain_end_t = time.time()
   LOGGER.info(

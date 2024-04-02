@@ -538,7 +538,7 @@ class MIOpen(MITunaInterface):
     }
 
     if job_entries:
-      id_str = ','.join([str(job.config) for job in job_entries])
+      id_str = ','.join({str(job.config) for job in job_entries})
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
       cfg_attr = [column.name for column in inspect(dbt.config_table).c]
       cfg_entries = gen_select_objs(session, cfg_attr,
