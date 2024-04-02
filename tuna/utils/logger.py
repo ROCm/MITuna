@@ -55,7 +55,8 @@ def setup_logger(logger_name: str = 'Tuna',
     stream_handler: logging.StreamHandler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
     stream_handler.setLevel(logging.INFO)
-    logger.addHandler(stream_handler)
+    if not logger.hasHandlers():
+      logger.addHandler(stream_handler)
 
   logger.setLevel(log_level.upper() if log_level else logging.DEBUG)
   return logger
