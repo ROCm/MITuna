@@ -69,50 +69,48 @@ def result_callback(task_id, value):
   result_queue.put([value[0], value[1]])
 
 
-def process_fin_builder_results(fin_json, context, dbt):
+def process_fin_builder_results(session, fin_json, context, dbt):
   """Process result from fin_build worker"""
   LOGGER.info('Processing fin_builder result')
   job = SimpleDict(**context['job'])
   pending = []
   solver_id_map = get_solver_ids()
 
-  failed_job = True
+  failed_job = False
   result_str = ''
   status = None
-  with DbSession() as session:
-    try:
-      if fin_json:
-        if 'miopen_find_compile_result' in fin_json:
-          status = process_fdb_w_kernels(session, fin_json,
-                                         copy.deepcopy(context), dbt,
-                                         context['fdb_attr'], pending)
+  try:
+    if fin_json:
+      if 'miopen_find_compile_result' in fin_json:
+        status = process_fdb_w_kernels(session, fin_json,
+                                       copy.deepcopy(context), dbt,
+                                       context['fdb_attr'], pending)
 
-        elif 'miopen_perf_compile_result' in fin_json:
-          status = process_pdb_compile(session, fin_json, job, dbt,
-                                       solver_id_map)
+      elif 'miopen_perf_compile_result' in fin_json:
+        status = process_pdb_compile(session, fin_json, job, dbt, solver_id_map)
 
-        success, result_str = get_fin_result(status)
-        failed_job = not success
+      success, result_str = get_fin_result(status)
+      failed_job = not success
 
-    except (OperationalError, IntegrityError) as err:
-      LOGGER.warning('FinBuild: Unable to update Database %s', err)
-      session.rollback()
-      failed_job = True
-    except DataError as err:
-      LOGGER.warning(
-          'FinBuild: Invalid data, likely large workspace. DB Error: %s', err)
-      session.rollback()
-      failed_job = True
+  except (OperationalError, IntegrityError) as err:
+    LOGGER.warning('FinBuild: Unable to update Database %s', err)
+    session.rollback()
+    failed_job = True
+  except DataError as err:
+    LOGGER.warning(
+        'FinBuild: Invalid data, likely large workspace. DB Error: %s', err)
+    session.rollback()
+    failed_job = True
 
-    if failed_job:
-      set_job_state(session, job, dbt, 'errored', False, result=result_str)
-    else:
-      set_job_state(session, job, dbt, 'compiled', False, result=result_str)
+  if failed_job:
+    set_job_state(session, job, dbt, 'errored', False, result=result_str)
+  else:
+    set_job_state(session, job, dbt, 'compiled', False, result=result_str)
 
   return True
 
 
-def process_fin_evaluator_results(fin_json, context, dbt):
+def process_fin_evaluator_results(session, fin_json, context, dbt):
   """Process fin_json result"""
   LOGGER.info('Processing fin_eval result')
   job = SimpleDict(**context['job'])
@@ -121,53 +119,52 @@ def process_fin_evaluator_results(fin_json, context, dbt):
   pending = []
   orig_state = 'compiled'
 
-  with DbSession() as session:
-    try:
-      set_job_state(session, job, dbt, 'evaluated')
-      if fin_json:
-        if 'miopen_find_eval_result' in fin_json:
-          status = process_fdb_w_kernels(session,
-                                         fin_json,
-                                         copy.deepcopy(context),
-                                         dbt,
-                                         context['fdb_attr'],
-                                         pending,
-                                         result_str='miopen_find_eval_result',
-                                         check_str='evaluated')
-        elif 'miopen_perf_eval_result' in fin_json:
-          status = process_fdb_w_kernels(session,
-                                         fin_json,
-                                         copy.deepcopy(context),
-                                         dbt,
-                                         context['fdb_attr'],
-                                         pending,
-                                         result_str='miopen_perf_eval_result',
-                                         check_str='evaluated')
+  try:
+    set_job_state(session, job, dbt, 'evaluated')
+    if fin_json:
+      if 'miopen_find_eval_result' in fin_json:
+        status = process_fdb_w_kernels(session,
+                                       fin_json,
+                                       copy.deepcopy(context),
+                                       dbt,
+                                       context['fdb_attr'],
+                                       pending,
+                                       result_str='miopen_find_eval_result',
+                                       check_str='evaluated')
+      elif 'miopen_perf_eval_result' in fin_json:
+        status = process_fdb_w_kernels(session,
+                                       fin_json,
+                                       copy.deepcopy(context),
+                                       dbt,
+                                       context['fdb_attr'],
+                                       pending,
+                                       result_str='miopen_perf_eval_result',
+                                       check_str='evaluated')
 
-        success, result_str = get_fin_result(status)
-        failed_job = not success
+      success, result_str = get_fin_result(status)
+      failed_job = not success
 
-      if failed_job:
-        if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):  #pylint: disable=no-member
-          LOGGER.warning('max job retries exhausted, setting to errored')
-          set_job_state(session, job, dbt, 'errored', result=result_str)
-        else:
-          LOGGER.warning('resetting job state to %s, incrementing retries',
-                         orig_state)
-          set_job_state(session,
-                        job,
-                        dbt,
-                        orig_state,
-                        increment_retries=True,
-                        result=result_str)
+    if failed_job:
+      if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):  #pylint: disable=no-member
+        LOGGER.warning('max job retries exhausted, setting to errored')
+        set_job_state(session, job, dbt, 'errored', result=result_str)
       else:
-        LOGGER.info("\n\n Setting job state to evaluated")
-        set_job_state(session, job, dbt, 'evaluated', result=result_str)
-        clean_cache_table(dbt, job)
-    except (OperationalError, IntegrityError) as err:
-      LOGGER.warning('FinBuild: Unable to update Database %s', err)
-      session.rollback()
-      failed_job = True
+        LOGGER.warning('resetting job state to %s, incrementing retries',
+                       orig_state)
+        set_job_state(session,
+                      job,
+                      dbt,
+                      orig_state,
+                      increment_retries=True,
+                      result=result_str)
+    else:
+      LOGGER.info("\n\n Setting job state to evaluated")
+      set_job_state(session, job, dbt, 'evaluated', result=result_str)
+      clean_cache_table(dbt, job)
+  except (OperationalError, IntegrityError) as err:
+    LOGGER.warning('FinBuild: Unable to update Database %s', err)
+    session.rollback()
+    failed_job = True
 
   return True
 
@@ -346,41 +343,42 @@ def drain_queue(worker_type, dbt):
   sleep_time = 0
   wait_limit = 1800  #max wait time
   seen_res = False
-  while True:
-    try:
-      fin_json, context = result_queue.get(True, 1)
-      LOGGER.info('Parsing: %s', fin_json)
-      LOGGER.info('Parsing context: %s', context)
-      if fin_json is None and context is None:
-        LOGGER.info('Reached end of results queue')
-        break
-      if worker_type == 'fin_build_worker':
-        process_fin_builder_results(fin_json, context, dbt)
-        seen_res = True
-      else:
-        process_fin_evaluator_results(fin_json, context, dbt)
-        seen_res = True
-    except KeyboardInterrupt:
-      if result_queue.empty():
-        return True
-      interrupt = True
-      #continue
-    except queue.Empty as exc:
-      if interrupt:
-        #Note: reset job state for those in flight that have not reached the res_queue yet
-        return True
-      LOGGER.warning(exc)
-      LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
-      if not seen_res:
-        wait_limit -= 2
-        if max(0, wait_limit) == 0:
-          LOGGER.info(
-              'Max wait limit of %s seconds has been reached, terminating...',
-              wait_limit)
-          return False
-      sleep_time += 2
-      time.sleep(2)
-      seen_res = False
+  with DbSession() as session:
+    while True:
+      try:
+        fin_json, context = result_queue.get(True, 1)
+        LOGGER.info('Parsing: %s', fin_json)
+        LOGGER.info('Parsing context: %s', context)
+        if fin_json is None and context is None:
+          LOGGER.info('Reached end of results queue')
+          break
+        if worker_type == 'fin_build_worker':
+          process_fin_builder_results(session, fin_json, context, dbt)
+          seen_res = True
+        else:
+          process_fin_evaluator_results(session, fin_json, context, dbt)
+          seen_res = True
+      except KeyboardInterrupt:
+        if result_queue.empty():
+          return True
+        interrupt = True
+        #continue
+      except queue.Empty as exc:
+        if interrupt:
+          #Note: reset job state for those in flight that have not reached the res_queue yet
+          return True
+        LOGGER.warning(exc)
+        LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
+        if not seen_res:
+          wait_limit -= 2
+          if max(0, wait_limit) == 0:
+            LOGGER.info(
+                'Max wait limit of %s seconds has been reached, terminating...',
+                wait_limit)
+            return False
+        sleep_time += 2
+        time.sleep(2)
+        seen_res = False
 
   drain_end_t = time.time()
   LOGGER.info(
