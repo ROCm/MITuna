@@ -162,8 +162,9 @@ def test_fin_builder():
     fin_json = worker.run()
     res_set.append((fin_json, context))
 
-  for fin_json, context in res_set:
-    process_fin_builder_results(fin_json, context, miopen.dbt)
+  with DbSession() as session:
+    for fin_json, context in res_set:
+      process_fin_builder_results(session, fin_json, context, miopen.dbt)
 
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\

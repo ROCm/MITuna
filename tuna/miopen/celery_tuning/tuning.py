@@ -231,7 +231,7 @@ def prep_tuning(library):
     stop_active_workers()
     if not launch_celery_worker(library, q_name, machines,
                                 get_worker_granularity(library)):
-      return False
+      raise ValueError('Could not launch celery worker')
   except kombu.exceptions.OperationalError as k_err:
     LOGGER.error('Redis error ocurred: %s', k_err)
     return False
@@ -256,18 +256,21 @@ def prep_tuning(library):
 def tune(library, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
-  tune_start_t = time.time()
-  worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
+  try:
+    worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
+  except ValueError as verr:
+    LOGGER.error(verr)
+    return False
+
   res_set = ResultSet([])
   job_start_t = None
   job_end_t = None
 
-  while True:
-    try:
-      job_list = []
-      with DbSession() as session:
+  with DbSession() as session:
+    while True:
+      try:
+        job_list = []
         #get all the jobs from mySQL
-        job_start_t = time.time()
         job_list = library.get_jobs(session, library.fetch_state,
                                     library.set_state, library.args.session_id,
                                     job_batch_size)
@@ -297,21 +300,18 @@ def tune(library, job_batch_size=1000):
             #calling celery task, enqueuing to celery queue
             res_set.add(hardware_pick.apply_async((context,), queue=q_name))
 
-      if not job_list:
-        if not res_set:
-          return False
-        LOGGER.info('All tasks added to queue')
-        job_end_t = time.time()
-        break
-    except KeyboardInterrupt:
-      LOGGER.error('Keyboard interrupt caught, draining results queue')
-      results_gather(res_set, worker_type)
+        if not job_list:
+          if not res_set:
+            return False
+          LOGGER.info('All tasks added to queue')
+          break
+      except KeyboardInterrupt:
+        LOGGER.error('Keyboard interrupt caught, draining results queue')
+        session.rollback()
+        results_gather(res_set, worker_type)
 
   results_gather(res_set, worker_type)
-  tune_end_t = time.time()
-  LOGGER.info(
-      'Took {%.4f} min to tune, {%.4f} of which where used to enqueue jobs',
-      (tune_end_t - tune_start_t) % 60, (job_end_t - job_start_t) % 60)
+  LOGGER.info('Took {%.6f} min to tune', (job_end_t - job_start_t) % 60)
 
   return True
 
@@ -339,7 +339,6 @@ def drain_queue(worker_type, dbt):
   """Drain results queue"""
   interrupt = False
   LOGGER.info('Draining queue')
-  drain_start_t = time.time()
   sleep_time = 0
   wait_limit = 1800  #max wait time
   seen_res = False
@@ -347,8 +346,8 @@ def drain_queue(worker_type, dbt):
     while True:
       try:
         fin_json, context = result_queue.get(True, 1)
-        LOGGER.info('Parsing: %s', fin_json)
-        LOGGER.info('Parsing context: %s', context)
+        #LOGGER.info('Parsing: %s', fin_json)
+        #LOGGER.info('Parsing context: %s', context)
         if fin_json is None and context is None:
           LOGGER.info('Reached end of results queue')
           break
@@ -380,8 +379,4 @@ def drain_queue(worker_type, dbt):
         time.sleep(2)
         seen_res = False
 
-  drain_end_t = time.time()
-  LOGGER.info(
-      'Took {%.4f} min to drain queue, {%.4f} of which where spent waiting on results from celery',
-      (drain_end_t - drain_start_t) % 60, sleep_time % 60)
   return True
