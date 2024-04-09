@@ -263,8 +263,7 @@ def tune(library, job_batch_size=1000):
     return False
 
   res_set = ResultSet([])
-  job_start_t = None
-  job_end_t = None
+  start = time.time()
 
   with DbSession() as session:
     while True:
@@ -311,7 +310,8 @@ def tune(library, job_batch_size=1000):
         results_gather(res_set, worker_type)
 
   results_gather(res_set, worker_type)
-  LOGGER.info('Took {%.6f} min to tune', (job_end_t - job_start_t) % 60)
+  end = time.time()
+  LOGGER.info("Took {:0.2f} min to tune".format((end - start) % 60))
 
   return True
 
