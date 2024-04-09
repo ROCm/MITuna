@@ -30,9 +30,9 @@ import time
 import copy
 import random
 import string
+from datetime import timedelta
 from multiprocessing import Queue as mpQueue, Process, Lock
 import queue
-#import time
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
 import kombu
@@ -314,7 +314,7 @@ def tune(library, job_batch_size=1000):
 
   results_gather(res_set, worker_type)
   end = time.time()
-  LOGGER.info('Took {:0.4f} min to tune'.format((end - start) % 60))  #pylint: disable=consider-using-f-string
+  LOGGER.info("Took {:0>8}".format(str(timedelta(seconds=(end - start)))))
 
   return True
 
