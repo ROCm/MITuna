@@ -46,21 +46,25 @@ def buildSchema(){
 
 def getDockerName(backend)
 {
-    def docker_registry = "${headnode}:5000"
-    def tuna_docker_name = "${docker_registry}/ci-tuna:${branch_id}_${backend}"
+    def tuna_docker_name = "${docker_registry}:ci-tuna_${branch_id}_${backend}"
     return tuna_docker_name
 }
 
 def buildDockers(){
-    def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
-    tuna_docker_hipnogpu.push()
-    def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
-    tuna_docker_hip.push()
+    docker.withRegistry('', "$DOCKER_CRED"){
+        def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
+        tuna_docker_hipnogpu.push()
+        def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
+        tuna_docker_hip.push()
+    }
 }
 
 def getDocker(backend){
-    def tuna_docker = docker.image(getDockerName(backend))
-    tuna_docker.pull()
+    def tuna_docker
+    docker.withRegistry('', "$DOCKER_CRED"){
+        tuna_docker = docker.image(getDockerName(backend))
+        tuna_docker.pull()
+    }
     return tuna_docker
 }
 
@@ -131,9 +135,9 @@ def finApplicability(){
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session --arch ${arch} --num_cu ${num_cu}"
         def sesh1 = 1 //runsql("select id from session order by id asc limit 1")
-        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch gfx908 --num_cu 120"
+        sh "./tuna/go_fish.py miopen --init_session -l new_session2 --arch ${arch} --num_cu ${num_cu}"
         def sesh2 = 2 //runsql("select id from session order by id desc limit 1")
 
         sh "./tuna/go_fish.py miopen import_configs --add_model Alexnet --md_version 1"
@@ -282,14 +286,6 @@ def finFindEval(){
         archiveArtifacts "${kdb_file_nchw}"
     }
 }
-def buildTunaDocker(){
-    // The purpose of this job is to ensure that the Tuna Docker is uptodate on the eval/build machine for the CI jobs
-    checkout scm
-    def tuna_docker = docker.build("ci-tuna:${branch_id}")
-    tuna_docker.inside("--network host "){
-        sh "pwd"
-    }
-}
 
 def loadJobTest() {
     def tuna_docker = getDocker("HIPNOGPU")
@@ -359,7 +355,8 @@ def solverAnalyticsTest(){
         sh "rm -rf SolverAnalytics"
         sh "git clone https://${FIN_TOKEN}:x-oauth-basic@github.com/ROCmSoftwarePlatform/SolverAnalytics.git"
         sh "cd SolverAnalytics; git checkout sp/solver_changes; git pull;"
-        sh "pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt"
+        //lower version in requirments file causing issues in ci
+        //sh "pip3 install --default-timeout=100000 -r SolverAnalytics/requirements.txt"
 
         // run SolverAnalytics tests
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
@@ -383,7 +380,7 @@ def perfCompile() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         runsql("DELETE FROM conv_job;")
@@ -415,7 +412,7 @@ def perfCompile() {
     }
 }
 
-def perfEval_gfx908() {
+def perfEval() {
     def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -425,7 +422,7 @@ def perfEval_gfx908() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
@@ -474,7 +471,7 @@ def pytestSuite1() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_pytest1"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}_pytest1"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
@@ -522,7 +519,7 @@ def pytestSuite2() {
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.TUNA_DOCKER_NAME="ci-tuna:${branch_id}_pytest2"
+        env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}_pytest2"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
@@ -660,6 +657,7 @@ def getJobReason()
 
 
 def killContainer() {
+  def tuna_docker_name = getDockerName("${backend}")
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker system prune -f'"
 }
@@ -707,36 +705,40 @@ def LoadJobs()
   def docker_run_args = "--network host --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
   sh "echo ${build_args}"
-  def tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.inside("${docker_run_args}") {
-      env.PYTHONPATH=env.WORKSPACE
-      env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-      env.TUNA_LOGLEVEL="${tuna_loglevel}"
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+    tuna_docker.inside("${docker_run_args}") {
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_LOGLEVEL="${tuna_loglevel}"
 
-      echo "./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
-      sh "python3 ./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
+        echo "./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
+        sh "python3 ./tuna/go_fish.py miopen load_job --session_id ${params.session_id} ${script_args}"
+    }
+    tuna_docker.push()
   }
-  tuna_docker.push()
 }
 
 
 def getSessionVals(session_id)
 {
-  String res = runsql("select arch, num_cu, rocm_v, miopen_v from session where id=${session_id};")
+  String res = runsql("select arch, num_cu, rocm_v, miopen_v, docker from session where id=${session_id};")
 
   def arch = res.split("[ \t]+")[0]
   def num_cu = res.split("[ \t]+")[1]
   def rocm_v = res.split("[ \t]+")[2]
   def miopen_v = res.split("[ \t]+")[3]
-  echo "$arch $num_cu $rocm_v $miopen_v"
+  def base_image = res.split("[ \t]+")[4]
+  echo "$arch $num_cu $rocm_v $miopen_v $base_image"
 
-  def partition = "${arch}_${num_cu}"
+  def gfx_target = "${arch}_${num_cu}"
 
   def osdb_bkc_version = ''
   def rocm_version = ''
   def subv_i = rocm_v.indexOf('-')
   def ver_len = rocm_v.length() - subv_i - 1
-  if(ver_len > 3)
+  if(base_image != ''){}
+  else if(ver_len > 3)
   {
     osdb_bkc_version=rocm_v.substring(subv_i+1)
   }
@@ -762,25 +764,31 @@ def getSessionVals(session_id)
     miopen_v = miopen_v.substring(0, subv_i)
   }
 
-  return [partition, osdb_bkc_version, rocm_version, miopen_v]
+  return [gfx_target, osdb_bkc_version, rocm_version, miopen_v, base_image]
 }
 
-
-def applicUpdate(){
-  def tuna_docker_name = getDockerName("${backend}")
-  def tuna_docker
-  (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
+def getBuildArgs(){
+  (gfx_target, osdb_bkc_version, rocm_version, miopen_v, base_image) = getSessionVals(params.session_id)
 
   def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
-
-  if(params.base_image != '')
+  if(base_image != '')
   {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
+    build_args = build_args + " --build-arg BASEIMAGE=${base_image}"
   }
   sh "echo ${build_args}"
 
-  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.push()
+  return [build_args, gfx_target]
+}
+
+def applicUpdate(){
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker_name = getDockerName("${backend}")
+    def tuna_docker
+    (build_args, _) = getBuildArgs()
+
+    tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+    tuna_docker.push()
+  }
 
   def docker_args = "--network host  --dns 8.8.8.8 -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} -e TUNA_LOGLEVEL=${params.tuna_loglevel}"
 
@@ -792,7 +800,7 @@ def applicUpdate(){
 
   if(params.UPDATE_SOLVERS)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
     def num_solvers = runsql("SELECT count(*) from solver;")
     println "Number of solvers: ${num_solvers}"
     if (num_solvers.toInteger() == 0){
@@ -801,41 +809,35 @@ def applicUpdate(){
   }
   if(params.UPDATE_APPLICABILITY)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
     def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
     println "Session ${params.session_id} applicability: ${num_sapp}"
     if (num_sapp.toInteger() == 0){
       error("Unable to get applicability from Fin")
     }
   }
-
 }
 
 
 def compile()
 {
   def tuna_docker_name = getDockerName("${backend}")
-  def tuna_docker
-  (_, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker
+    (build_args, _) = getBuildArgs()
 
-  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+    tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
 
-  if(params.base_image != '')
-  {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_LOGLEVEL="${tuna_loglevel}"
+        sh "pwd"
+    }
+    // push the image
+    tuna_docker.push()
   }
 
-  sh "echo ${build_args}"
-  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-
-  tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
-      env.PYTHONPATH=env.WORKSPACE
-      env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-      env.TUNA_LOGLEVEL="${tuna_loglevel}"
-      sh "pwd"
-  }
-  // push the image
-  tuna_docker.push()
   env_list = params.env.split(' ')
   for(item in env_list)
   {
@@ -872,26 +874,20 @@ def compile()
   }
 
   // Run the jobs on the cluster
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
 def evaluate(params)
 {
   def tuna_docker_name = getDockerName("${backend}")
-  def tuna_docker
-  (partition, osdb_bkc_version, rocm_version, miopen_v) = getSessionVals(params.session_id)
+  docker.withRegistry('', "$DOCKER_CRED"){
+    def tuna_docker
+    (build_args, partition) = getBuildArgs()
 
-  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=HIP --build-arg MIOPEN_BRANCH=${miopen_v} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${params.db_user} --build-arg DB_USER_PASSWORD=${params.db_password} --build-arg DB_HOSTNAME=${params.db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
-
-  if(params.base_image != '')
-  {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
+    tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
+    tuna_docker.push()
   }
-
-  sh "echo ${build_args}"
-  tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
-  tuna_docker.push()
 
   env_list = params.env.split(' ')
   for(item in env_list)
@@ -922,13 +918,13 @@ def evaluate(params)
     eval_cmd += ' --dynamic_solvers_only'
   }
 
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
 }
 
 def doxygen() {
     node {
           checkout scm
-          def tuna_docker = docker.build("ci-tuna:${branch_id}", " .")
+          def tuna_docker = docker.build("ci-tuna_${branch_id}", " .")
           tuna_docker.inside("") {
             sh "cd doc && doxygen Doxyfile"
             def empty = sh returnStdout: true, script: "ls doc | wc -l"

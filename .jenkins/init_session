@@ -28,12 +28,12 @@ def initSession(){
   if(params.arch != '' && params.num_cu != '')
   {
     def margs = "-a ${params.arch} -n ${params.num_cu}"
-    sh "docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs}"
+    sh "docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs} --docker_name ${base_image}"
   }
   else
   {
     tuna_docker.push()
-    sh "srun --no-kill -p ${slurm_partition} -N 1 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label}'"
+    sh "srun --no-kill -p ${slurm_partition} -N 1 -l bash -c 'docker run ${docker_run_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} --docker_name ${base_image}'"
   }
 
   def num_session_now = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
@@ -48,11 +48,6 @@ def initSession(){
 
 def VerifyArgs()
 {
-    if(params.rocm_version == '' && params.osdb_bkc_version == '')
-    {
-      error "Either ROCm version or OSDB build number is required"
-    }
-
     if(params.rocm_version != '' && params.osdb_bkc_version != '')
     {
       error "Can only specify either the ROCm version or the OSDB build number"
@@ -65,7 +60,7 @@ def VerifyArgs()
 }
 
 pipeline {
-  agent { node { label 'mysql' } }
+  agent { node { label 'build-node' } }
   environment {
       db_name = "${params.db_name}"
       db_host = "${params.db_host}"
@@ -88,7 +83,7 @@ pipeline {
     string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
-    string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
+    string(name: 'docker_registry', defaultValue: "${DOCKER_REGISTRY}", description: 'Name of the docker registry for pushing images')
     string(name: 'base_image', defaultValue: '', description: 'Put a fully qualified docker name here to use (optional)')
   }
   stages {

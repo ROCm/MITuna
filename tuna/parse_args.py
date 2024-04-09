@@ -61,15 +61,17 @@ def setup_arg_parser(desc: str,
       parser.add_argument('--yaml', action=jsonargparse.ActionConfigFile)
 
     if TunaArgs.ARCH in arg_list:
-      parser.add_argument(
-          '-a',
-          '--arch',
-          type=str,
-          dest='arch',
-          default=None,
-          required=False,
-          help='Architecture of machines',
-          choices=['gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a', 'gfx940'])
+      parser.add_argument('-a',
+                          '--arch',
+                          type=str,
+                          dest='arch',
+                          default=None,
+                          required=False,
+                          help='Architecture of machines',
+                          choices=[
+                              'gfx900', 'gfx906', 'gfx908', 'gfx1030', 'gfx90a',
+                              'gfx940', 'gfx942'
+                          ])
     if TunaArgs.NUM_CU in arg_list:
       parser.add_argument(
           '-n',
@@ -79,7 +81,7 @@ def setup_arg_parser(desc: str,
           default=None,
           required=False,
           help='Number of CUs on GPU',
-          choices=['36', '56', '60', '64', '104', '110', '120', '228'])
+          choices=['36', '56', '60', '64', '104', '110', '120', '228', '304'])
     if TunaArgs.DIRECTION in arg_list:
       parser.add_argument(
           '-d',
@@ -139,7 +141,7 @@ def setup_arg_parser(desc: str,
           '--docker_name',
           dest='docker_name',
           type=str,
-          default='miopentuna',
+          default='',
           help='Select a docker to run on. (default miopentuna)')
 
   return parser
