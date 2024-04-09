@@ -26,6 +26,7 @@
 ###############################################################################
 """Module to define celery app"""
 import os
+from subprocess import Popen, PIPE
 from celery import Celery
 from celery.utils.log import get_task_logger
 
@@ -51,6 +52,22 @@ def stop_active_workers():
   """Shutdown active workers"""
   if app.control.inspect().active() is not None:
     app.control.shutdown()
+
+  return True
+
+
+def purge_queue(q_names):
+  """Purge jobs in queue"""
+  for q_name in q_names:
+    try:
+      cmd = f"celery -A tuna.celery_app.celery_app purge -Q {q_name}"
+      process = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+      inputdata = "y"
+      stdoutdata, stderrdata = process.communicate(input=inputdata)
+      process.join()
+    except Exception as ex:
+      LOGGER.info()
+      return False
 
   return True
 

@@ -53,7 +53,7 @@ from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import hardware_pick
-from tuna.celery_app.celery_app import stop_active_workers
+from tuna.celery_app.celery_app import stop_active_workers, purge_queue
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -263,8 +263,7 @@ def tune(library, job_batch_size=1000):
     return False
 
   res_set = ResultSet([])
-  job_start_t = None
-  job_end_t = None
+  start = time.time()
 
   with DbSession() as session:
     while True:
@@ -299,6 +298,8 @@ def tune(library, job_batch_size=1000):
 
             #calling celery task, enqueuing to celery queue
             res_set.add(hardware_pick.apply_async((context,), queue=q_name))
+            purge_queue(q_name)
+            exit()
 
         if not job_list:
           if not res_set:
@@ -308,10 +309,12 @@ def tune(library, job_batch_size=1000):
       except KeyboardInterrupt:
         LOGGER.error('Keyboard interrupt caught, draining results queue')
         session.rollback()
+        purge_queue(q_name)
         results_gather(res_set, worker_type)
 
   results_gather(res_set, worker_type)
-  LOGGER.info('Took {%.6f} min to tune', (job_end_t - job_start_t) % 60)
+  end = time.time()
+  LOGGER.info('Took {:0.4f} min to tune'.format((end - start) % 60))  #pylint: disable=consider-using-f-string
 
   return True
 
