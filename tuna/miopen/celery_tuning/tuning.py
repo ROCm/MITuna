@@ -298,8 +298,6 @@ def tune(library, job_batch_size=1000):
 
             #calling celery task, enqueuing to celery queue
             res_set.add(hardware_pick.apply_async((context,), queue=q_name))
-            purge_queue(q_name)
-            exit()
 
         if not job_list:
           if not res_set:
@@ -309,7 +307,7 @@ def tune(library, job_batch_size=1000):
       except KeyboardInterrupt:
         LOGGER.error('Keyboard interrupt caught, draining results queue')
         session.rollback()
-        purge_queue(q_name)
+        purge_queue([q_name], LOGGER)
         results_gather(res_set, worker_type)
 
   results_gather(res_set, worker_type)
