@@ -312,7 +312,7 @@ def tune(library, job_batch_size=1000):
 
   results_gather(res_set, worker_type)
   end = time.time()
-  LOGGER.info("Took {:0>8}".format(str(timedelta(seconds=(end - start)))))
+  LOGGER.info("Took {:0>8}".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
 
   return True
 
