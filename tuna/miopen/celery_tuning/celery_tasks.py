@@ -35,12 +35,6 @@ from tuna.celery_app.celery_app import app
 logger = get_task_logger(__name__)
 
 
-@app.task(trail=True)
-def hardware_pick(context):
-  """function call"""
-  return TUNING_QUEUE[context['arch'] + '-' + str(context['num_cu'])](context)
-
-
 def prep_worker(context):
   """Creating tuna worker object based on context"""
   args = [context['job'], context['config'], context['worker_type']]
@@ -50,44 +44,9 @@ def prep_worker(context):
 
 
 @app.task(trail=True)
-def celery_enqueue_gfx908_120(context):
+def celery_enqueue(context):
   """Defines a celery task"""
   logger.info("Enqueueing gfx908-120")
   worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
   return ret, context
-
-
-@app.task(trail=True)
-def celery_enqueue_gfx1030_36(context):
-  """Defines a celery task"""
-  logger.info("Enqueueing gfx1030-36")
-  worker = prep_worker(copy.deepcopy(context))
-  ret = worker.run()
-  return ret, context
-
-
-@app.task(trail=True)
-def celery_enqueue_gfx942_304(context):
-  """Defines a celery task"""
-  logger.info("Enqueueing gfx942-304")
-  worker = prep_worker(copy.deepcopy(context))
-  ret = worker.run()
-  return ret, context
-
-
-@app.task(trail=True)
-def celery_enqueue_gfx90a_104(context):
-  """Defines a celery task"""
-  logger.info("Enqueueing gfx90a-104")
-  worker = prep_worker(copy.deepcopy(context))
-  ret = worker.run()
-  return ret, context
-
-
-TUNING_QUEUE = {
-    "gfx908-120": celery_enqueue_gfx908_120,
-    "gfx1030-36": celery_enqueue_gfx1030_36,
-    "gfx942-304": celery_enqueue_gfx942_304,
-    "gfx90a-104": celery_enqueue_gfx90a_104
-}

@@ -124,6 +124,11 @@ class MIOpen(MITunaInterface):
         default=None,
         help='Limit the number of gpu workers created by Tuna, index from 0')
 
+    parser.add_argument('--enqueue_only',
+                        action='store_true',
+                        dest='enqueue_only',
+                        help='Enqueue jobs to celery queue')
+
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
                                get_import_cfg_parser(),

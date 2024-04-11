@@ -52,7 +52,7 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
-from tuna.miopen.celery_tuning.celery_tasks import hardware_pick
+from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.celery_app.celery_app import stop_active_workers
 
 LOGGER: logging.Logger = setup_logger('tune')
@@ -227,14 +227,15 @@ def prep_tuning(library):
   else:
     q_name = f"eval_q_session_{library.dbt.session_id}"
 
-  try:
-    stop_active_workers()
-    if not launch_celery_worker(library, q_name, machines,
-                                get_worker_granularity(library)):
-      raise ValueError('Could not launch celery worker')
-  except kombu.exceptions.OperationalError as k_err:
-    LOGGER.error('Redis error ocurred: %s', k_err)
-    return False
+  if not library.args.enqueue_only:
+    try:
+      #stop_active_workers()
+      if not launch_celery_worker(library, q_name, machines,
+                                  get_worker_granularity(library)):
+        raise ValueError('Could not launch celery worker')
+    except kombu.exceptions.OperationalError as k_err:
+      LOGGER.error('Redis error ocurred: %s', k_err)
+      return False
 
   global DBT  #pylint: disable=global-variable-undefined
   DBT = MIOpenDBTables(session_id=library.args.session_id,
@@ -261,6 +262,10 @@ def tune(library, job_batch_size=1000):
   except ValueError as verr:
     LOGGER.error(verr)
     return False
+
+  #if enqueue_only is False, we only launch the workers
+  if not library.args.enqueue_only:
+    return True
 
   res_set = ResultSet([])
   start = time.time()
@@ -297,7 +302,7 @@ def tune(library, job_batch_size=1000):
             }
 
             #calling celery task, enqueuing to celery queue
-            res_set.add(hardware_pick.apply_async((context,), queue=q_name))
+            res_set.add(celery_enqueue.apply_async((context,), queue=q_name))
 
         if not job_list:
           if not res_set:
@@ -307,9 +312,11 @@ def tune(library, job_batch_size=1000):
       except KeyboardInterrupt:
         LOGGER.error('Keyboard interrupt caught, draining results queue')
         session.rollback()
+        stop_active_workers()
         results_gather(res_set, worker_type)
 
   results_gather(res_set, worker_type)
+  stop_active_workers()
   end = time.time()
   LOGGER.info("Took {:0>8}".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
 
