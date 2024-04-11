@@ -52,8 +52,13 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
+<<<<<<< HEAD
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.celery_app.celery_app import stop_active_workers
+=======
+from tuna.miopen.celery_tuning.celery_tasks import hardware_pick
+from tuna.celery_app.celery_app import stop_active_workers, purge_queue
+>>>>>>> alex_celery4
 
 LOGGER: logging.Logger = setup_logger('tune')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -314,6 +319,7 @@ def tune(library, job_batch_size=1000):
         session.rollback()
         stop_active_workers()
         results_gather(res_set, worker_type)
+        purge_queue([q_name], LOGGER)
 
   results_gather(res_set, worker_type)
   stop_active_workers()
