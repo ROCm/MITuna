@@ -7,7 +7,7 @@ Welcome to MITuna
 ==================
 **Advanced Micro Devices, Inc's tuning library.**
 
-Sources and binaries can be found at `MITuna's GitHub site <https://github.com/ROCmSoftwarePlatform/MITuna>`_.
+Sources and binaries can be found at `MITuna's GitHub site <https://github.com/ROCm/MITuna>`_.
 
 .. toctree::
    :maxdepth: 8

@@ -52,7 +52,7 @@ setup(
                 "ready to integrate with external libaries.",
     long_description=readme,
     license='MIT',
-    url='https://github.com/ROCmSoftwarePlatform/MITuna.git',
+    url='https://github.com/ROCm/MITuna.git',
     install_requires=install_requires,
 
     # Use one of the below approach to define package and/or module names:
