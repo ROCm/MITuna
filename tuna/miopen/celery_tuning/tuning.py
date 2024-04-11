@@ -307,6 +307,7 @@ def tune(library, job_batch_size=1000):
       except KeyboardInterrupt:
         LOGGER.error('Keyboard interrupt caught, draining results queue')
         session.rollback()
+        stop_active_workers()
         purge_queue([q_name], LOGGER)
         results_gather(res_set, worker_type)
 
