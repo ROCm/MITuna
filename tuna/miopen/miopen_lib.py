@@ -79,7 +79,7 @@ class MIOpen(MITunaInterface):
             TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
             TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES,
             TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
-            TunaArgs.DOCKER_NAME
+            TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS
         ])
     parser.add_argument(
         '--find_mode',
@@ -628,6 +628,8 @@ class MIOpen(MITunaInterface):
       self.parse_args()
     if self.args.subcommand and "load_job" in self.args.subcommand:
       return False
+    if self.args.shutdown_workers:
+      return True
 
     tuning_steps = [
         "miopen_find_compile", "miopen_find_eval", "miopen_perf_compile",

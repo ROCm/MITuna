@@ -30,7 +30,8 @@ import subprocess
 from celery import Celery
 from celery.utils.log import get_task_logger
 
-TUNA_CELERY_BROKER = 'mituna_redis'
+#TUNA_CELERY_BROKER = 'mituna_redis'
+TUNA_CELERY_BROKER = 'localhost'
 TUNA_REDIS_PORT = '6379'
 
 if 'TUNA_CELERY_BROKER' in os.environ:
@@ -48,8 +49,10 @@ app.autodiscover_tasks()
 app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
 
 
-def stop_active_workers():
+def stop_active_workers(logger):
   """Shutdown active workers"""
+
+  logger.warning('Shutting down remote workers')
   if app.control.inspect().active() is not None:
     app.control.shutdown()
 

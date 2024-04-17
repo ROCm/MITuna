@@ -34,13 +34,14 @@ from tuna.utils.logger import setup_logger
 LOGGER: logging.Logger = setup_logger('celery')
 
 
-def launch_worker_per_node(q_name, machines, session_id):
+def launch_worker_per_node(q_name, machines, cmd, formatted=False):
   """Launch celery worker for compile"""
+  final_cmd = cmd
   for machine in machines:
-    cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_{machine.hostname}_sess_{session_id} -Q {q_name}".split(  #pylint: disable=line-too-long
-        ' ')
     try:
-      _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+      if formatted:
+        final_cmd = cmd.replace('HOSTNAME', machine.hostname)
+      _ = subprocess.Popen(final_cmd.split(' '))  #pylint: disable=consider-using-with
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
       return False
@@ -50,9 +51,10 @@ def launch_worker_per_node(q_name, machines, session_id):
   return True
 
 
-def launch_worker_per_gpu(q_name, machines, session_id):
+def launch_worker_per_gpu(q_name, machines, cmd, formatted=False):
   """Launch celery worker for eval"""
   curr_env = dict(os.environ.copy())
+  final_cmd = cmd
 
   for machine in machines:
     num_gpus = machine.get_avail_gpus()
@@ -62,9 +64,15 @@ def launch_worker_per_gpu(q_name, machines, session_id):
             'No available GPUs detected, unable to launch celery worker')
         return False
       for gpu_id in num_gpus:
-        cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_{machine.hostname}_sess_{session_id}_gpu_id{gpu_id} -Q {q_name}".split(' ')  #pylint: disable=line-too-long
+        if formatted:
+          try:
+            temp = cmd.replace('HOSTNAME', machine.hostname)
+            final_cmd = temp.replace('GPUID', str(gpu_id))
+          except Exception as exp:
+            LOGGER.warning(exp)
+            return False
         curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
-        _ = subprocess.Popen(cmd, env=curr_env)  #pylint: disable=consider-using-with
+        _ = subprocess.Popen(final_cmd.split(), env=curr_env)  #pylint: disable=consider-using-with
         LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
@@ -73,12 +81,17 @@ def launch_worker_per_gpu(q_name, machines, session_id):
   return True
 
 
-def launch_celery_worker(library, q_name, machines, worker_granularity):
+def launch_celery_worker(library,
+                         q_name,
+                         machines,
+                         worker_granularity,
+                         cmd,
+                         formatted=False):
   """Helper function to launch celery workers"""
   if worker_granularity == 'worker_per_node':
-    ret = launch_worker_per_node(q_name, machines, library.dbt.session_id)
+    ret = launch_worker_per_node(q_name, machines, cmd, formatted)
   elif worker_granularity == 'worker_per_gpu':
-    ret = launch_worker_per_gpu(q_name, machines, library.dbt.session_id)
+    ret = launch_worker_per_gpu(q_name, machines, cmd, formatted)
   else:
     raise ValueError('Operation does not support celery workers')
 

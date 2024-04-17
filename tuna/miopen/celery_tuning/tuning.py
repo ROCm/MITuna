@@ -33,6 +33,7 @@ import string
 from datetime import timedelta
 from multiprocessing import Queue as mpQueue, Process, Lock
 import queue
+import threading
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
 import kombu
@@ -217,21 +218,35 @@ def get_worker_granularity(library):
   return worker_granularity
 
 
-def prep_tuning(library):
-  """Prep env for tuning start"""
-  worker_type = get_worker_type(library.args)
-  machines = load_machines(library.args)
+def get_q_name(library):
+  """Compose queue name"""
+  worker_type = get_worker_type(library)
   q_name = None
   if worker_type == 'fin_build_worker':
     q_name = f"compile_q_session_{library.dbt.session_id}"
   else:
     q_name = f"eval_q_session_{library.dbt.session_id}"
 
+  return q_name
+
+
+def prep_tuning(library):
+  """Prep env for tuning start"""
+  worker_type = get_worker_type(library.args)
+  machines = load_machines(library.args)
+  q_name = get_q_name(library)
+  cmd = None
+  if worker_type == 'fin_build_worker':
+    cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{library.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
+  else:
+    cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{library.args.session_id}_gpu_id_GPUID -Q {q_name}"  #pylint: disable=line-too-long
+
   if not library.args.enqueue_only:
     try:
-      #stop_active_workers()
+      #stop_active_workers(LOGGER)
+      library.cancel_consumer(q_name)
       if not launch_celery_worker(library, q_name, machines,
-                                  get_worker_granularity(library)):
+                                  get_worker_granularity(library), cmd, True):
         raise ValueError('Could not launch celery worker')
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
@@ -257,6 +272,10 @@ def prep_tuning(library):
 def tune(library, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
+  if library.args.shutdown_workers:
+    stop_active_workers(library.logger)
+    return True
+
   try:
     worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
   except ValueError as verr:
@@ -269,6 +288,8 @@ def tune(library, job_batch_size=1000):
 
   res_set = ResultSet([])
   start = time.time()
+  worker_type = get_worker_type(library.args)
+  drain_process = results_gather_start(worker_type)
 
   with DbSession() as session:
     while True:
@@ -281,14 +302,9 @@ def tune(library, job_batch_size=1000):
 
         for i in range(0, len(job_list), job_batch_size):
           batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
-          if library.args.fin_steps:
-            entries = library.compose_work_objs_fin(session, batch_jobs,
-                                                    library.dbt)
-
-          entries = library.compose_work_objs_fin(session, job_list,
+          entries = library.compose_work_objs_fin(session, batch_jobs,
                                                   library.dbt)
           serialized_jobs = serialize_chunk(entries)
-
           #build context for each celery task
           for job, config in serialized_jobs:
             context = {
@@ -302,35 +318,50 @@ def tune(library, job_batch_size=1000):
             }
 
             #calling celery task, enqueuing to celery queue
-            res_set.add(celery_enqueue.apply_async((context,), queue=q_name))
+            res_set.add(
+                celery_enqueue.apply_async((context,),
+                                           queue=q_name,
+                                           reply_to='eval_q_session_153'))
 
         if not job_list:
           if not res_set:
+            results_gather_terminate(res_set, drain_process)
             return False
           LOGGER.info('All tasks added to queue')
+          j_end = time.time()
           break
       except KeyboardInterrupt:
         LOGGER.error('Keyboard interrupt caught, draining results queue')
         session.rollback()
-        stop_active_workers()
-        results_gather(res_set, worker_type)
+        #stop_active_workers(LOGGER)
+        library.cancel_consmer(q_name)
+        results_gather_terminate(res_set, drain_process)
         purge_queue([q_name], LOGGER)
 
-  results_gather(res_set, worker_type)
-  stop_active_workers()
+  #stop_active_workers(LOGGER)
+  library.cancel_consmer(q_name)
+  results_gather_terminate(res_set, drain_process)
   end = time.time()
-  LOGGER.info("Took {:0>8}".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
+  LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
+  LOGGER.info("{:0>8} of which was spent enqueuing jobs".format(  #pylint: disable=consider-using-f-string
+      str(timedelta(seconds=j_end - start))))
 
   return True
 
 
-def results_gather(res_set, worker_type):
+def results_gather_start(worker_type):
   """Start subproc to drain result queue and populate mysql DB"""
   LOGGER.info('Started drain process')
   #start draining result_queue in subprocess
-  drain_process = Process(target=drain_queue, args=[worker_type, DBT])
+  event = threading.Event()
+  drain_process = Process(target=drain_queue, args=[worker_type, DBT, event])
   drain_process.start()
 
+  return drain_process
+
+
+def results_gather_terminate(res_set, drain_process):
+  """Function to terminate the results gather subproc"""
   LOGGER.info('Gathering async results in callback function, blocking')
   #waiting on all results to come in
   _ = res_set.join(callback=result_callback)
@@ -343,48 +374,38 @@ def results_gather(res_set, worker_type):
   LOGGER.info('Done writing from result_queue to mySQL')
 
 
-def drain_queue(worker_type, dbt):
+def drain_queue(worker_type, dbt, event):
   """Drain results queue"""
-  interrupt = False
   LOGGER.info('Draining queue')
   sleep_time = 0
   wait_limit = 1800  #max wait time
-  seen_res = False
   with DbSession() as session:
     while True:
       try:
         fin_json, context = result_queue.get(True, 1)
-        #LOGGER.info('Parsing: %s', fin_json)
-        #LOGGER.info('Parsing context: %s', context)
+        LOGGER.info('Parsing: %s', fin_json)
+        LOGGER.info('Parsing context: %s', context)
         if fin_json is None and context is None:
           LOGGER.info('Reached end of results queue')
           break
         if worker_type == 'fin_build_worker':
           process_fin_builder_results(session, fin_json, context, dbt)
-          seen_res = True
-        else:
+        elif worker_type == 'fin_eval_worker':
           process_fin_evaluator_results(session, fin_json, context, dbt)
-          seen_res = True
-      except KeyboardInterrupt:
-        if result_queue.empty():
-          return True
-        interrupt = True
-        #continue
-      except queue.Empty as exc:
-        if interrupt:
-          #Note: reset job state for those in flight that have not reached the res_queue yet
-          return True
-        LOGGER.warning(exc)
+        else:
+          raise ValueError('Worker type not supported in tuning loop')
+        sleep_time = 0
+      except queue.Empty as exp:
+        LOGGER.info(exp)
         LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
-        if not seen_res:
-          wait_limit -= 2
-          if max(0, wait_limit) == 0:
-            LOGGER.info(
-                'Max wait limit of %s seconds has been reached, terminating...',
-                wait_limit)
-            return False
+        if sleep_time >= wait_limit:
+          LOGGER.info(
+              'Max wait limit of %s seconds has been reached, terminating...',
+              wait_limit)
+          return False
         sleep_time += 2
-        time.sleep(2)
-        seen_res = False
+        event.wait(timeout=2.0)
+        #time.sleep(2)
+        continue
 
   return True

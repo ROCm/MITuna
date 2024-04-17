@@ -30,6 +30,7 @@ from typing import Optional, Dict, Any, List
 from io import StringIO
 import logging
 import argparse
+from subprocess import Popen
 from paramiko.channel import ChannelFile
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
@@ -37,6 +38,7 @@ from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.celery_app.celery_app import stop_active_workers
 
 
 class MITunaInterface():
@@ -226,3 +228,21 @@ class MITunaInterface():
                session_id: int, claim_num: int):
     """Interface function to get jobs based on find_state"""
     raise NotImplementedError("Not implemented")
+
+  def shutdown_workers(self):
+    """Shutdown all active celery workers regardless of queue"""
+    return stop_active_workers(self.logger)
+
+  def cancel_consumer(self, queue):
+    """Cancel consumers for queue"""
+    try:
+      cmd = f"celery -A tuna.celery_app.celery_app control cancel_consumer {queue}".split(
+          ' ')
+      _ = Popen(cmd)  #pylint: disable=consider-using-with
+    except Exception as exp:  #pylint: disable=broad-exception-caught
+      self.logger.warning(exp)
+      return False
+
+    self.logger.info('Sucessfully cancelled consumer for queue: %s', queue)
+
+    return True
