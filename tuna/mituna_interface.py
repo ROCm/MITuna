@@ -242,6 +242,7 @@ class MITunaInterface():
     except Exception as exp:  #pylint: disable=broad-exception-caught
       self.logger.warning(
           'Error occurred trying to cancel consumer for queue: %s ', queue)
+      self.logger.warning(exp)
       return False
 
     self.logger.info('Sucessfully cancelled consumer for queue: %s', queue)
