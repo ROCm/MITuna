@@ -49,12 +49,12 @@ class TunaArgs(Enum):
   DOCKER_NAME: str = 'docker_name'
   SHUTDOWN_WORKERS: str = 'shutdown_workers'
 
+
 # pylint: disable=too-many-branches
-def setup_arg_parser(
-    desc: str,
-    arg_list: List[TunaArgs],
-    parser: argparse.Namespace = None,
-    with_yaml: bool = True) -> Optional[argparse.Namespace]:
+def setup_arg_parser(desc: str,
+                     arg_list: List[TunaArgs],
+                     parser: argparse.Namespace = None,
+                     with_yaml: bool = True) -> Optional[argparse.Namespace]:
   """ function to aggregate common command line args """
   parser = jsonargparse.ArgumentParser(description=desc)
 

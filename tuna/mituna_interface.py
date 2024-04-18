@@ -240,7 +240,8 @@ class MITunaInterface():
           ' ')
       _ = Popen(cmd)  #pylint: disable=consider-using-with
     except Exception as exp:  #pylint: disable=broad-exception-caught
-      self.logger.warning(exp)
+      self.logger.warning(
+          'Error occurred trying to cancel consumer for queue: %s ', queue)
       return False
 
     self.logger.info('Sucessfully cancelled consumer for queue: %s', queue)

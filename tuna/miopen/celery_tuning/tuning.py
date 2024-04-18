@@ -220,7 +220,7 @@ def get_worker_granularity(library):
 
 def get_q_name(library):
   """Compose queue name"""
-  worker_type = get_worker_type(library)
+  worker_type = get_worker_type(library.args)
   q_name = None
   if worker_type == 'fin_build_worker':
     q_name = f"compile_q_session_{library.dbt.session_id}"
@@ -243,8 +243,6 @@ def prep_tuning(library):
 
   if not library.args.enqueue_only:
     try:
-      #stop_active_workers(LOGGER)
-      library.cancel_consumer(q_name)
       if not launch_celery_worker(library, q_name, machines,
                                   get_worker_granularity(library), cmd, True):
         raise ValueError('Could not launch celery worker')
@@ -333,14 +331,12 @@ def tune(library, job_batch_size=1000):
       except KeyboardInterrupt:
         LOGGER.error('Keyboard interrupt caught, draining results queue')
         session.rollback()
-        #stop_active_workers(LOGGER)
-        library.cancel_consmer(q_name)
         results_gather_terminate(res_set, drain_process)
         purge_queue([q_name], LOGGER)
+        library.cancel_consumer(q_name)
 
-  #stop_active_workers(LOGGER)
-  library.cancel_consmer(q_name)
   results_gather_terminate(res_set, drain_process)
+  library.cancel_consumer(q_name)
   end = time.time()
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
   LOGGER.info("{:0>8} of which was spent enqueuing jobs".format(  #pylint: disable=consider-using-f-string
