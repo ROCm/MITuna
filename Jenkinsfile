@@ -91,13 +91,24 @@ pipeline {
                 }
             }
         }
-        stage("fin find compile"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps{
-            script {
-            utils.finFindCompile()
-            }
-            }
+        parallel{
+	    stage("fin find compile enqueue"){
+	    agent{ label utils.rocmnode("tunatest") }
+	    steps{
+	         script {
+	             utils.finFindCompileEnqueue()
+	          }
+	    }
+	    }
+	    stage("fin find compile execute"){
+	    agent{ label utils.rocmnode("tunatest") }
+	    steps{
+           sleep 10
+	         script {
+	             utils.finFindCompileExecute()
+	          }
+	    }
+	    }
         }
         stage("fin find eval"){
         agent{  label "gfx90a" }
