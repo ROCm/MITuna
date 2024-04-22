@@ -231,7 +231,7 @@ class MITunaInterface():
 
   def shutdown_workers(self):
     """Shutdown all active celery workers regardless of queue"""
-    return stop_active_workers(self.logger)
+    return stop_active_workers()
 
   def cancel_consumer(self, queue):
     """Cancel consumers for queue"""

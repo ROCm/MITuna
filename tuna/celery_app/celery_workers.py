@@ -31,30 +31,33 @@ import subprocess
 
 from tuna.utils.logger import setup_logger
 
-LOGGER: logging.Logger = setup_logger('celery')
+LOGGER: logging.Logger = setup_logger('celery_workers')
 
 
-def launch_worker_per_node(q_name, machines, cmd, formatted=False):
+def launch_worker_per_node(machines, cmd, formatted=False):
   """Launch celery worker for compile"""
   final_cmd = cmd
+  pid_list = []
   for machine in machines:
     try:
       if formatted:
         final_cmd = cmd.replace('HOSTNAME', machine.hostname)
-      _ = subprocess.Popen(final_cmd.split(' '))  #pylint: disable=consider-using-with
+      subp = subprocess.Popen(final_cmd.split(' '))  #pylint: disable=consider-using-with
+      pid_list.append(subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
       return False
 
     LOGGER.info('Successfully launched celery worker for compile')
 
-  return True
+  return pid_list
 
 
-def launch_worker_per_gpu(q_name, machines, cmd, formatted=False):
+def launch_worker_per_gpu(machines, cmd, formatted=False):
   """Launch celery worker for eval"""
   curr_env = dict(os.environ.copy())
   final_cmd = cmd
+  pid_list = []
 
   for machine in machines:
     num_gpus = machine.get_avail_gpus()
@@ -68,30 +71,26 @@ def launch_worker_per_gpu(q_name, machines, cmd, formatted=False):
           try:
             temp = cmd.replace('HOSTNAME', machine.hostname)
             final_cmd = temp.replace('GPUID', str(gpu_id))
-          except Exception as exp:
+          except Exception as exp:  #pylint: disable=broad-exception-caught
             LOGGER.warning(exp)
             return False
         curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
-        _ = subprocess.Popen(final_cmd.split(), env=curr_env)  #pylint: disable=consider-using-with
+        subp = subprocess.Popen(final_cmd.split(), env=curr_env)  #pylint: disable=consider-using-with
+        pid_list.append(subp)
         LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
     except Exception as exp:  #pylint: disable=broad-exception-caught
-      LOGGER.warning(exp)
+      LOGGER.info('Error ocurred: %s', exp)
       return False
 
-  return True
+  return pid_list
 
 
-def launch_celery_worker(library,
-                         q_name,
-                         machines,
-                         worker_granularity,
-                         cmd,
-                         formatted=False):
+def launch_celery_worker(machines, worker_granularity, cmd, formatted=False):
   """Helper function to launch celery workers"""
   if worker_granularity == 'worker_per_node':
-    ret = launch_worker_per_node(q_name, machines, cmd, formatted)
+    ret = launch_worker_per_node(machines, cmd, formatted)
   elif worker_granularity == 'worker_per_gpu':
-    ret = launch_worker_per_gpu(q_name, machines, cmd, formatted)
+    ret = launch_worker_per_gpu(machines, cmd, formatted)
   else:
     raise ValueError('Operation does not support celery workers')
 

@@ -99,9 +99,11 @@ def main() -> bool:
         LOGGER.info("Executing with yaml file: %s", yaml_file)
 
       if library.has_tunable_operation():
+        print('tunable operation')
         #celery tasks
         tune(library, job_batch_size=job_batch_size)
       else:
+        print('non tunable operation')
         #non-celery operations
         #returns a list of workers/processes it started
         worker_lst = library.run()

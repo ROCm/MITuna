@@ -33,6 +33,7 @@ from celery.utils.log import get_task_logger
 #TUNA_CELERY_BROKER = 'mituna_redis'
 TUNA_CELERY_BROKER = 'localhost'
 TUNA_REDIS_PORT = '6379'
+LOGGER = get_task_logger("celery_app")
 
 if 'TUNA_CELERY_BROKER' in os.environ:
   TUNA_CELERY_BROKER = os.environ['TUNA_CELERY_BROKER']
@@ -49,26 +50,26 @@ app.autodiscover_tasks()
 app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
 
 
-def stop_active_workers(logger):
+def stop_active_workers():
   """Shutdown active workers"""
 
-  logger.warning('Shutting down remote workers')
+  LOGGER.warning('Shutting down remote workers')
   if app.control.inspect().active() is not None:
     app.control.shutdown()
 
   return True
 
 
-def purge_queue(q_names, logger):
+def purge_queue(q_names):
   """Purge jobs in queue"""
   for q_name in q_names:
     try:
-      logger.info('Purging Q %s', q_name)
+      LOGGER.info('Purging Q %s', q_name)
       cmd = f"celery -A tuna.celery_app.celery_app purge -f -Q {q_name}".split(
           ' ')
-      _ = subprocess.Popen(cmd)
-    except Exception as ex:
-      logger.info(ex)
+      _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+    except Exception as ex:  #pylint: disable=broad-exception-caught
+      LOGGER.info(ex)
       return False
 
   return True

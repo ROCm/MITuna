@@ -56,7 +56,7 @@ from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.celery_app.celery_app import stop_active_workers, purge_queue
 
-LOGGER: logging.Logger = setup_logger('tune')
+LOGGER: logging.Logger = setup_logger('tuning')
 MAX_ERRORED_JOB_RETRIES = 3
 result_queue = mpQueue()
 result_queue_lock = Lock()
@@ -236,6 +236,7 @@ def prep_tuning(library):
   machines = load_machines(library.args)
   q_name = get_q_name(library)
   cmd = None
+  pid_list = []
   if worker_type == 'fin_build_worker':
     cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{library.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
   else:
@@ -243,8 +244,9 @@ def prep_tuning(library):
 
   if not library.args.enqueue_only:
     try:
-      if not launch_celery_worker(library, q_name, machines,
-                                  get_worker_granularity(library), cmd, True):
+      pid_list = launch_celery_worker(machines, get_worker_granularity(library),
+                                      cmd, True)
+      if not pid_list:
         raise ValueError('Could not launch celery worker')
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
@@ -263,7 +265,7 @@ def prep_tuning(library):
                               tuning=True)
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
-  return worker_type, kwargs, fdb_attr, q_name
+  return worker_type, kwargs, fdb_attr, q_name, pid_list
 
 
 #pylint: disable=too-many-locals
@@ -271,13 +273,14 @@ def tune(library, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
   if library.args.shutdown_workers:
-    stop_active_workers(library.logger)
+    stop_active_workers()
     return True
 
   try:
-    worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
+    worker_type, kwargs, fdb_attr, q_name, pid_list = prep_tuning(library)
   except ValueError as verr:
     LOGGER.error(verr)
+    print(verr)
     return False
 
   #if enqueue_only is False, we only launch the workers
@@ -332,11 +335,13 @@ def tune(library, job_batch_size=1000):
         LOGGER.error('Keyboard interrupt caught, draining results queue')
         session.rollback()
         results_gather_terminate(res_set, drain_process)
-        purge_queue([q_name], LOGGER)
+        purge_queue([q_name])
         library.cancel_consumer(q_name)
 
   results_gather_terminate(res_set, drain_process)
   library.cancel_consumer(q_name)
+  for proc in pid_list:
+    proc.terminate()
   end = time.time()
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
   LOGGER.info("{:0>8} of which was spent enqueuing jobs".format(  #pylint: disable=consider-using-f-string
