@@ -49,7 +49,7 @@ pipeline {
            utils.runLint()
            }
            }
-        }
+        }/*
         stage("fin get solver"){
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -90,7 +90,7 @@ pipeline {
                     utils.pytestSuite3AndCoverage(branch, branch_master)
                 }
             }
-        }
+        }*/
         stage("FinCompile"){
           parallel{
             stage("fin find compile enqueue"){

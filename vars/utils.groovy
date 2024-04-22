@@ -210,9 +210,16 @@ def finFindCompileEnqueue(){
         //def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
         //println "Count(*) conv_config table: ${num_cfg_nchw}"
         def num_cfg = runsql("SELECT count(*) from conv_config;")
+        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         println "Count(*) conv_config table: ${num_cfg}"
         sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "./tuna/go_fish.py miopen --shutdown_workers"
+        def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
+        sh "echo ${num_compiled_jobs} == ${num_jobs}"
+        if (num_compiled_jobsw != num_jobs){
+            error("Unable to compile find jobs using Fin")
+        }
     }
 }
 
@@ -249,14 +256,7 @@ def finFindCompileExecute(){
         def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg_nchw}"
         */
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
-        sh "./tuna/go_fish.py miopen --shutdown_workers"
-        def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "echo ${num_compiled_jobs} == ${num_jobs}"
-        if (num_compiled_jobsw != num_jobs){
-            error("Unable to compile find jobs using Fin")
-        }
     }
 }
 

@@ -121,7 +121,6 @@ def process_fin_evaluator_results(session, fin_json, context, dbt):
   orig_state = 'compiled'
 
   try:
-    set_job_state(session, job, dbt, 'evaluated')
     if fin_json:
       if 'miopen_find_eval_result' in fin_json:
         status = process_fdb_w_kernels(session,
@@ -165,7 +164,8 @@ def process_fin_evaluator_results(session, fin_json, context, dbt):
   except (OperationalError, IntegrityError) as err:
     LOGGER.warning('FinBuild: Unable to update Database %s', err)
     session.rollback()
-    failed_job = True
+    set_job_state(session, job, dbt, 'errored', result=result_str)
+    #failed_job = True
 
   return True
 
