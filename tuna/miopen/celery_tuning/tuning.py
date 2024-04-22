@@ -244,8 +244,10 @@ def prep_tuning(library):
 
   if not library.args.enqueue_only:
     try:
+      print('launch_celery_worker')
       pid_list = launch_celery_worker(machines, get_worker_granularity(library),
                                       cmd, True)
+      print('pid_list: %s', pid_list)
       if not pid_list:
         raise ValueError('Could not launch celery worker')
     except kombu.exceptions.OperationalError as k_err:
@@ -277,10 +279,11 @@ def tune(library, job_batch_size=1000):
     return True
 
   try:
+    print('prep_tuning')
     worker_type, kwargs, fdb_attr, q_name, pid_list = prep_tuning(library)
   except ValueError as verr:
     LOGGER.error(verr)
-    print(verr)
+    print('Err occured: %s', verr)
     return False
 
   #if enqueue_only is False, we only launch the workers
@@ -290,6 +293,7 @@ def tune(library, job_batch_size=1000):
   res_set = ResultSet([])
   start = time.time()
   worker_type = get_worker_type(library.args)
+  print('drain_process')
   drain_process = results_gather_start(worker_type)
 
   with DbSession() as session:
