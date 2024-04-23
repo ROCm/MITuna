@@ -104,7 +104,7 @@ pipeline {
             stage("fin find compile execute"){
             agent{ label utils.rocmnode("tunatest") }
               steps{
-                   sleep 10
+                   sleep 30
                    script {
                        utils.finFindCompileExecute()
                     }
