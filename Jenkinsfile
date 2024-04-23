@@ -49,7 +49,7 @@ pipeline {
            utils.runLint()
            }
            }
-        }/*
+        }
         stage("fin get solver"){
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -57,7 +57,7 @@ pipeline {
             utils.finSolvers()
             }
             } 
-        }
+        }/*
         stage("fin applicability"){
         //init_session called here
         agent{  label utils.rocmnode("tunatest") }
