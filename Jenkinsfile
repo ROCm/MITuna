@@ -57,7 +57,7 @@ pipeline {
             utils.finSolvers()
             }
             } 
-        }/*
+        }
         stage("fin applicability"){
         //init_session called here
         agent{  label utils.rocmnode("tunatest") }
@@ -66,7 +66,7 @@ pipeline {
             utils.finApplicability()
             }
             }
-        }
+        }/*
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
         steps{

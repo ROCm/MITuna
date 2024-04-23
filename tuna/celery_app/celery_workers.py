@@ -43,7 +43,11 @@ def launch_worker_per_node(machines, cmd, formatted=False):
     try:
       if formatted:
         final_cmd = cmd.replace('HOSTNAME', machine.hostname)
-      subp = subprocess.Popen(final_cmd.split(' '))  #pylint: disable=consider-using-with
+      subp = subprocess.Popen(
+          final_cmd.split(' '),  #pylint: disable=consider-using-with
+          stdout=subprocess.PIPE,
+          stderr=subprocess.PIPE,
+          shell=True)
       pid_list.append(subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
@@ -78,7 +82,12 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
             LOGGER.warning(exp)
             return False
         curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
-        subp = subprocess.Popen(final_cmd.split(), env=curr_env)  #pylint: disable=consider-using-with
+        subp = subprocess.Popen(
+            final_cmd.split(),  #pylint: disable=consider-using-with
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            env=curr_env)
         pid_list.append(subp)
         LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
     except Exception as exp:  #pylint: disable=broad-exception-caught
