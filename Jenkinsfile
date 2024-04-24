@@ -25,127 +25,18 @@ pipeline {
         docker_registry = "${DOCKER_REGISTRY}"
     } 
     stages {
-        stage("docker build") {
         agent{  label utils.rocmnode("tunatest") }
-        steps {
-            script {
-            utils.buildDockers()
-            }
-            }
-        }
-        stage("code Format") {
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-            script {  
-            utils.runFormat()
-            }
-            }
-        }
-
-        stage("pylint") {
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-           script {
-           utils.runLint()
-           }
-           }
-        }
-        stage("fin get solver"){
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-            script {
-            utils.finSolvers()
-            }
-            } 
-        }
-        stage("fin applicability"){
-        //init_session called here
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-            script{
-            utils.finApplicability()
-            }
-            }
-        }
-        stage("pytest1"){
-        agent{  label utils.rocmnode("tunatest") }
-        steps{
-            script{
-            utils.pytestSuite1()
-            }
-            }
-        }
-        stage("pytest2"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps{
-            script{
-            utils.pytestSuite2()
-            }
-            }
-        }
-        stage("pytest3 and Tests Coverage"){
-            agent { label utils.rocmnode("tunatest") }
+        stage("parallel") {
+          stage('P1'){
             steps {
-                script {
-                    utils.pytestSuite3AndCoverage(branch, branch_master)
                 }
-            }
-        }
-        stage("fin find compile"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps{
-            script {
-            utils.finFindCompile()
-            }
-            }
-        }
-        stage("fin find eval"){
-        agent{  label "gfx90a" }
-        steps {
-            script {
-            utils.finFindEval()
-            }
-            }
-        }
-        stage("load jobs"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps {
-            script {
-            utils.loadJobTest()
-            }
-            }
-        }
-        stage("perf compile"){
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-            script {
-            utils.perfCompile()
-            }
-            }
-        }
-        stage("perf eval gfx90a"){
-        agent{  label "gfx90a" }
-        steps{
-            script {
-            utils.perfEval()
-            }
-            }
-        }
-        stage("solver analytics test") {
-        agent{  label "tunatest" }
-        steps {
-          script {
-            utils.solverAnalyticsTest()
-            }
-            }
-        }
-        stage("cleanup"){
-        agent{  label utils.rocmnode("tunatest") }
-        steps {
-           script {
-           utils.cleanup()
-           }
-           }
-        }
+                echo 'test1'
+          }
+          stage('P2'){
+            steps {
+                }
+                echo 'test2'
+          }
+       }
     }
     }
