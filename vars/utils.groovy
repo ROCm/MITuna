@@ -236,6 +236,7 @@ def finFindCompileExecute(){
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
+        celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
         /*
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
@@ -256,7 +257,9 @@ def finFindCompileExecute(){
         def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg_nchw}"
         */
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+         sh  "celery -A tuna.celery_app.celery worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1}"
+        sh "cat ${celery_log}"
+        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
     }
 }
 

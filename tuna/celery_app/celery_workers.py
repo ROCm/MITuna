@@ -38,21 +38,15 @@ def launch_worker_per_node(machines, cmd, formatted=False):
   """Launch celery worker for compile"""
   final_cmd = cmd
   pid_list = []
-  print('machines: %s', machines)
   for machine in machines:
     try:
       if formatted:
         final_cmd = cmd.replace('HOSTNAME', machine.hostname)
-      subp = subprocess.Popen(
-          final_cmd.split(' '),  #pylint: disable=consider-using-with
-          stdout=subprocess.PIPE,
-          stderr=subprocess.PIPE,
-          shell=True)
+      subp = subprocess.Popen(  #pylint: disable=consider-using-with
+          final_cmd.split(' '))
       pid_list.append(subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
-      print('could not launch c worker per node: %s', exp)
-      print(final_cmd)
       return False
 
     LOGGER.info('Successfully launched celery worker for compile')
@@ -82,11 +76,8 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
             LOGGER.warning(exp)
             return False
         curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
-        subp = subprocess.Popen(
-            final_cmd.split(),  #pylint: disable=consider-using-with
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
+        subp = subprocess.Popen(  #pylint: disable=consider-using-with
+            final_cmd.split(),
             env=curr_env)
         pid_list.append(subp)
         LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
@@ -100,7 +91,6 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
 def launch_celery_worker(machines, worker_granularity, cmd, formatted=False):
   """Helper function to launch celery workers"""
   if worker_granularity == 'worker_per_node':
-    print('launch_celery_worker_per_node')
     ret = launch_worker_per_node(machines, cmd, formatted)
   elif worker_granularity == 'worker_per_gpu':
     ret = launch_worker_per_gpu(machines, cmd, formatted)
