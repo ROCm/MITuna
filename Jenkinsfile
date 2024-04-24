@@ -92,24 +92,19 @@ pipeline {
             }
         }*/
         stage("FinCompile"){
+          agent{ label utils.rocmnode("tunatest") }
           parallel{
-            stage("fin find compile enqueue"){
-            agent{ label utils.rocmnode("tunatest") }
               steps{
                    script {
                        utils.finFindCompileEnqueue()
                     }
               }
-            }
-            stage("fin find compile execute"){
-            agent{ label utils.rocmnode("tunatest") }
               steps{
                    sleep 30
                    script {
                        utils.finFindCompileExecute()
                     }
               }
-            }
           }
         }
         stage("fin find eval"){
