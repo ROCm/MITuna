@@ -52,7 +52,7 @@ def launch_worker_per_node(machines, cmd, formatted=False):
       while True:
         line = stdout.readline()
         LOGGER.info(line)
-        if line == '':
+        if 'Canceling queue' in line:
           break
       #print(stdout)
       print(stderr)
