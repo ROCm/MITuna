@@ -30,7 +30,7 @@ from typing import Optional, Dict, Any, List
 from io import StringIO
 import logging
 import argparse
-from subprocess import Popen
+import subprocess
 from paramiko.channel import ChannelFile
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
@@ -238,7 +238,18 @@ class MITunaInterface():
     try:
       cmd = f"celery -A tuna.celery_app.celery_app control cancel_consumer {queue}".split(
           ' ')
-      _ = Popen(cmd)  #pylint: disable=consider-using-with
+      _ = subprocess.Popen(  #pylint: disable=consider-using-with
+          cmd,
+          stdout=subprocess.PIPE,
+          stderr=subprocess.STDOUT,
+          shell=True,
+          universal_newlines=True)
+      #stdout, stderr = subp.stdout, subp.stderr
+      #while True:
+      #  line = stdout.readline()
+      #  LOGGER.info(line)
+      #  if not subp.poll():
+      #    break
     except Exception as exp:  #pylint: disable=broad-exception-caught
       self.logger.warning(
           'Error occurred trying to cancel consumer for queue: %s ', queue)

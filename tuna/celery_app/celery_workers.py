@@ -46,16 +46,16 @@ def launch_worker_per_node(machines, cmd, formatted=False):
           final_cmd.split(' '),
           stdout=subprocess.PIPE,
           stderr=subprocess.STDOUT,
-          shell=False,
+          shell=True,
           universal_newlines=True)
-      stdout, stderr = subp.stdout, subp.stderr
-      while True:
-        line = stdout.readline()
-        LOGGER.info(line)
-        if 'Canceling queue' in line:
-          break
+      #stdout, stderr = subp.stdout, subp.stderr
+      #while True:
+      #  line = stdout.readline()
+      #  LOGGER.info(line)
+      #  if not subp.poll():
+      #    break
       #print(stdout)
-      print(stderr)
+      #print(stderr)
       pid_list.append(subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
