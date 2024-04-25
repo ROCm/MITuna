@@ -216,7 +216,7 @@ def finFindCompileEnqueue(){
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only > enqueue_output.out 2>&1 &"
         //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
-        sh  "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1} "
+        sh  "celery -A tuna.celery_app.celery_app worker -l info -E --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1} "
         sh "cat enqueue_output.out"
         sh "cat ${celery_log}"
         sh "./tuna/go_fish.py miopen --shutdown_workers"
