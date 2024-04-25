@@ -248,6 +248,7 @@ def prep_tuning(library):
                                       cmd, True)
       if not pid_list:
         raise ValueError('Could not launch celery worker')
+      LOGGER.info('Launched supbproc pids: %s', pid_list)
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
       return False

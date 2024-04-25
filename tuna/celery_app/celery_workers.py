@@ -49,7 +49,12 @@ def launch_worker_per_node(machines, cmd, formatted=False):
           shell=False,
           universal_newlines=True)
       stdout, stderr = subp.stdout, subp.stderr
-      print(stdout)
+      while True:
+        line = stdout.readline()
+        LOGGER.info(line)
+        if line == '':
+          break
+      #print(stdout)
       print(stderr)
       pid_list.append(subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
