@@ -189,6 +189,7 @@ def finFindCompileEnqueue(){
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
+        celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         //def num_cfg = runsql("SELECT count(*) from conv_config;")
@@ -217,6 +218,7 @@ def finFindCompileEnqueue(){
         //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
         sh  "celery -A tuna.celery_app.celery worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1} "
         sh "cat enqueue_output.out"
+        sh "cat ${celery_log}"
         sh "./tuna/go_fish.py miopen --shutdown_workers"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
