@@ -44,10 +44,10 @@ def launch_worker_per_node(machines, cmd, formatted=False):
         final_cmd = cmd.replace('HOSTNAME', machine.hostname)
       subp = subprocess.Popen(  #pylint: disable=consider-using-with
           final_cmd.split(' '),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        shell=False,
-                        universal_newlines=True)
+          stdout=subprocess.PIPE,
+          stderr=subprocess.STDOUT,
+          shell=False,
+          universal_newlines=True)
       stdout, stderr = subp.stdout, subp.stderr
       print(stdout)
       print(stderr)
