@@ -48,7 +48,6 @@ def launch_worker_per_node(machines, cmd, formatted=False):
           stderr=subprocess.STDOUT,
           shell=True,
           universal_newlines=True)
-      subp.start()
       #stdout, stderr = subp.stdout, subp.stderr
       #while True:
       #  line = stdout.readline()
