@@ -91,7 +91,7 @@ pipeline {
                 }
             }
         }*/
-        stage("FinCompile"){
+        stage("fin find compile"){
             agent{ label utils.rocmnode("tunatest") }
             steps{
                  script {

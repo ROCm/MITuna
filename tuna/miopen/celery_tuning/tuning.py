@@ -341,7 +341,7 @@ def tune(library, job_batch_size=1000):
   results_gather_terminate(res_set, drain_process)
   library.cancel_consumer(q_name)
   for proc in pid_list:
-    proc.terminate()
+    proc.join()
   end = time.time()
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
   LOGGER.info("{:0>8} of which was spent enqueuing jobs".format(  #pylint: disable=consider-using-f-string

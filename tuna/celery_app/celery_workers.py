@@ -48,6 +48,7 @@ def launch_worker_per_node(machines, cmd, formatted=False):
           stderr=subprocess.STDOUT,
           shell=True,
           universal_newlines=True)
+      subp.start()
       #stdout, stderr = subp.stdout, subp.stderr
       #while True:
       #  line = stdout.readline()
@@ -56,7 +57,7 @@ def launch_worker_per_node(machines, cmd, formatted=False):
       #    break
       #print(stdout)
       #print(stderr)
-      pid_list.append(subp.pid)
+      pid_list.append(subp)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
       return False

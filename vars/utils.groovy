@@ -214,56 +214,16 @@ def finFindCompileEnqueue(){
         println "Count(*) conv_config table: ${num_cfg}"
         sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh  "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1} "
+        //sh  "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1} "
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
-        sh "cat ${celery_log}"
-        sh "./tuna/go_fish.py miopen --shutdown_workers"
-        def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "echo ${num_compiled_jobs} == ${num_jobs}"
-        if (num_compiled_jobsw != num_jobs){
-            error("Unable to compile find jobs using Fin")
-        }
-    }
-}
-
-def finFindCompileExecute(){
-    def tuna_docker = getDocker("HIPNOGPU")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
-        env.TUNA_DB_HOSTNAME = "${db_host}"
-        env.TUNA_DB_NAME="${db_name}"
-        env.TUNA_DB_USER_NAME="${db_user}"
-        env.TUNA_DB_PASSWORD="${db_password}"
-        env.PYTHONPATH=env.WORKSPACE
-        env.gateway_ip = "${gateway_ip}"
-        env.gateway_port = "${gateway_port}"
-        env.gateway_user = "${gateway_user}"
-        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        def sesh1 = runsql("select id from session order by id asc limit 1")
-        celery_log="${env.WORKSPACE}/tuna/celery_log.log"
-
-        /*
-        def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        //sh "cat ${celery_log}"
+        sh "./tuna/go_fish.py miopen --shutdown_workers"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
             error("Unable to compile find jobs using Fin")
         }
-
-        def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
-        def num_compiled_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
-        sh "echo ${num_compiled_jobs_nhwc} == ${num_jobs_nhwc}"
-        if (num_compiled_jobs_nhwc != num_jobs_nhwc){
-            error("Unable to compile find jobs using Fin")
-        }
-        def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
-        println "Count(*) conv_config table: ${num_cfg_nchw}"
-        */
-         sh  "celery -A tuna.celery_app.celery worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1}"
-        sh "cat ${celery_log}"
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
     }
 }
 
