@@ -42,12 +42,16 @@ def launch_worker_per_node(machines, cmd, formatted=False):
     try:
       if formatted:
         final_cmd = cmd.replace('HOSTNAME', machine.hostname)
+      '''
       subp = subprocess.Popen(  #pylint: disable=consider-using-with
           final_cmd.split(' '),
           stdout=subprocess.PIPE,
           stderr=subprocess.STDOUT,
           shell=True,
           universal_newlines=True)
+      '''
+      ret_code = subprocess.run(final_cmd.split(' '))
+      print('ret_code: %s', ret_code)
       #stdout, stderr = subp.stdout, subp.stderr
       #while True:
       #  line = stdout.readline()
