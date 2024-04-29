@@ -182,7 +182,6 @@ class MITunaInterface():
     #adding non-serializable obj when not running through celery
     if not tuning:
       f_vals["machine"] = machine
-      f_vals["barred"] = Value('i', 0)
       f_vals["bar_lock"] = Lock()
       #multiprocess queue for jobs, shared on machine
       f_vals["job_queue"] = mpQueue()
@@ -216,7 +215,6 @@ class MITunaInterface():
       kwargs["job_queue"] = f_vals["job_queue"]
       kwargs["job_queue_lock"] = f_vals["job_queue_lock"]
       kwargs["num_procs"] = f_vals["num_procs"]
-      kwargs["barred"] = f_vals["barred"]
       kwargs["bar_lock"] = f_vals["bar_lock"]
       kwargs["end_jobs"] = f_vals["end_jobs"]
       kwargs["job_queue"] = f_vals["job_queue"]

@@ -266,7 +266,7 @@ def prep_tuning(library):
                               tuning=True)
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
-  return worker_type, kwargs, fdb_attr, q_name, pid_list
+  return worker_type, kwargs, fdb_attr, q_name
 
 
 #pylint: disable=too-many-locals
@@ -278,7 +278,7 @@ def tune(library, job_batch_size=1000):
     return True
 
   try:
-    worker_type, kwargs, fdb_attr, q_name, pid_list = prep_tuning(library)
+    worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
   except ValueError as verr:
     LOGGER.error(verr)
     return False
@@ -340,8 +340,6 @@ def tune(library, job_batch_size=1000):
 
   results_gather_terminate(res_set, drain_process)
   library.cancel_consumer(q_name)
-  for proc in pid_list:
-    proc.join()
   end = time.time()
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
   LOGGER.info("{:0>8} of which was spent enqueuing jobs".format(  #pylint: disable=consider-using-f-string
