@@ -453,7 +453,7 @@ class WorkerInterface(Process):
           usage = 0
         if usage > 90:
           self.logger.warning('Used space overflow detected')
-          return False
+          return False  #type: ignore
         # the step member is defined in the derived class
         ret = self.step()
         self.logger.info("proc %s step %s", self.gpu_id, ret)
