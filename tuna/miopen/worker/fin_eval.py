@@ -297,6 +297,22 @@ class FinEvaluator(FinClass):
         return False
     return True
 
+  def check_env(self) -> bool:
+    """Interface function to check the miopen env version vs presumed miopen version"""
+    if super().check_env():
+      if self.dbt.session.arch != self.machine.arch:
+        raise ValueError(
+            f'session arch {self.dbt.session.arch} does not match machine arch\
+            {self.machine.arch}')
+      if self.dbt.session.num_cu != self.machine.num_cu:
+        raise ValueError(
+            f'session num_cu {self.dbt.session.num_cu} does not match machine num_cu\
+            {self.machine.num_cu}')
+    else:
+      return False
+
+    return True
+
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
