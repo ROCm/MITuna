@@ -298,7 +298,7 @@ class FinEvaluator(FinClass):
     return True
 
   def check_env(self) -> bool:
-    """Interface function to check the miopen env version vs presumed miopen version"""
+    """Check the GPU on the machine matches the GPU specified in session table"""
     if super().check_env():
       if self.dbt.session.arch != self.machine.arch:
         raise ValueError(
