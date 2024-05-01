@@ -777,6 +777,11 @@ def getBuildArgs(){
   if(base_image != '')
   {
     build_args = build_args + " --build-arg BASEIMAGE=${base_image}"
+    ci_str = "rocm/miopen:ci_"
+    if(ci_str != base_image.substring(0, ci_str.length()))
+    {
+      build_args = build_args + " --build-arg BUILD_MIOPEN_DEPS=1"
+    }
   }
   sh "echo ${build_args}"
 
