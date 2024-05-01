@@ -302,7 +302,10 @@ class FinEvaluator(FinClass):
     if super().check_env():
       if self.dbt.session.arch != self.machine.arch or \
               self.dbt.session.num_cu != self.machine.num_cu:
-        self.logger.error('Session arch/num_cu does not match env arch/num_cu')
+        self.logger.error(
+            'Session arch/num_cu (%s/%s) does not match env arch/num_cu (%s/%s)',
+            self.dbt.session.arch, self.dbt.session.num_cu, self.machine.arch,
+            self.machine.num_cu)
         return False
     else:
       return False
