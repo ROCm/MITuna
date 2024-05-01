@@ -300,14 +300,10 @@ class FinEvaluator(FinClass):
   def check_env(self) -> bool:
     """Check the GPU on the machine matches the GPU specified in session table"""
     if super().check_env():
-      if self.dbt.session.arch != self.machine.arch:
-        raise ValueError(
-            f'session arch {self.dbt.session.arch} does not match machine arch\
-            {self.machine.arch}')
-      if self.dbt.session.num_cu != self.machine.num_cu:
-        raise ValueError(
-            f'session num_cu {self.dbt.session.num_cu} does not match machine num_cu\
-            {self.machine.num_cu}')
+      if self.dbt.session.arch != self.machine.arch or \
+              self.dbt.session.num_cu != self.machine.num_cu:
+        self.logger.error('Session arch/num_cu does not match env arch/num_cu')
+        return False
     else:
       return False
 
