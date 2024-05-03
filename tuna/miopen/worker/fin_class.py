@@ -343,10 +343,8 @@ class FinClass(WorkerInterface):
       rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
               f" where session={self.session_id};"
 
-    self.logger.info("Start applic zeroing")
     session.execute(rm_old)
     session.commit()
-    self.logger.info("Finished applic zeroing")
 
   def query_cfgs(self, label=None):
     """query all configs from table, optionally limit by label"""
@@ -376,9 +374,6 @@ class FinClass(WorkerInterface):
           r_dict['direction'] = row.get_direction()
         master_cfg_list.append(r_dict)
 
-      with DbSession() as session:
-        self.__rm_old_app(session, rows)
-
       block_size = len_rows // num_blk  #size of the config block
       extra = len_rows % num_blk  #leftover configs, don't divide evenly
       self.logger.info("cfg workdiv: num_blocks: %s, block_size: %s, extra: %s",
@@ -400,7 +395,7 @@ class FinClass(WorkerInterface):
           self.logger.info("cfg workdiv: start %s, end %s", start, end)
           self.job_queue.put(master_cfg_list[start:end])
     try:
-      self.all_configs = self.job_queue.get(True, 180)
+      self.all_configs = self.job_queue.get(True, 300)
     except queue.Empty:
       self.logger.warning('No jobs found for process %s...', idx)
       self.all_configs = []
@@ -494,14 +489,13 @@ class FinClass(WorkerInterface):
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
         cfg_id = elem["input"]["config_tuna_id"]
-        # pylint: disable=comparison-with-callable
-        app_query = session.query(self.dbt.solver_app)\
-          .filter(self.dbt.solver_app.session == self.session_id)\
-          .filter(self.dbt.solver_app.config == cfg_id)
-        # pylint: enable=comparison-with-callable
 
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s", cfg_id)
+
+        rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
+                 f" where session={self.session_id} and config={cfg_id} and applicable=1;"
+        inserts.append(rm_old)
 
         app_slv_ids = []
         for solver in elem["applicable_solvers"]:
@@ -513,26 +507,16 @@ class FinClass(WorkerInterface):
             self.logger.info("Please run 'go_fish.py --update_solver' first")
 
         for solver_id in app_slv_ids:
-          obj = app_query.filter(
-              self.dbt.solver_app.solver == solver_id).first()  # pylint: disable=W0143
-          if obj:
-            obj.applicable = 1
-          else:
-            inserts.append((cfg_id, solver_id))
+          ins_str = f"replace into {self.dbt.solver_app.__tablename__} (applicable, config, solver, session)"\
+                    f" values (1, {cfg_id}, {solver_id}, {self.session_id});"
+          inserts.append(ins_str)
 
-    #commit updates
-    session.commit()
-
-    #bulk inserts
     with self.job_queue_lock:
-      self.logger.info('Commit bulk inserts, please wait')
-      for cfg_id, solver_id in inserts:
-        new_entry = self.dbt.solver_app(solver=solver_id,
-                                        config=cfg_id,
-                                        session=self.session_id,
-                                        applicable=1)
-        session.add(new_entry)
+      self.logger.info('Commit bulk inserts (%s), please wait', len(inserts))
+      for sql_str in inserts:
+        session.execute(sql_str)
       session.commit()
+      self.logger.info('End bulk inserts')
 
     return True
 
