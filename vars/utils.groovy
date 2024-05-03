@@ -1,5 +1,4 @@
 import groovy.transform.Field
-//import com.cloudbees.groovy.cps.NonCPS
 
 @Field String job_lim = "-A miopenConvolutionAlgoGEMM "
 
@@ -193,24 +192,12 @@ def finFindCompileEnqueue(){
         celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        //def num_cfg = runsql("SELECT count(*) from conv_config;")
-        //println "Count(*) conv_config table: ${num_cfg}"
         runsql("delete from conv_job;")
         runsql("alter table conv_job AUTO_INCREMENT=1;")
-        //sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        //def num_cfg_nhwc = runsql("SELECT count(*) from conv_config;")
-        //println "Count(*) conv_config table: ${num_cfg_nhwc}"
-        //runsql("delete from conv_job;")
-        //runsql("alter table conv_job AUTO_INCREMENT=1;")
-        //sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1} --enqueue_only"
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        //def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
-        //println "Count(*) conv_config table: ${num_cfg_nchw}"
         def num_cfg = runsql("SELECT count(*) from conv_config;")
         println "Count(*) conv_config table: ${num_cfg}"
         sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
@@ -218,12 +205,7 @@ def finFindCompileEnqueue(){
         def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only  > enqueue_output.out 2>&1 &"
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
-        //sh "cat ${celery_log}"
-        //sh "cat enqueue_output.out"
         sh "kill -9 ${pid}"
-        //sh "./tuna/go_fish.py miopen --shutdown_workers"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
@@ -253,20 +235,9 @@ def finFindEval(){
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
         num_gpus = num_gpus as Integer
         sh "echo ${num_gpus}"
-        //def range=num_gpus-1
-        //def iter=0..range
-        //sh "echo ${iter}"
-        //for(int i in iter){
-        //for(int i = 0; i < iter.size(); i++) { 
-        //  sh "echo iter[i]"
-        //  sh "echo ${iter[i]}"
         def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
-        //pids.add(pid)
-        //}
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
-        //for(elem in pids){
         sh "kill -9 ${proc_id}"
-        //}
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
@@ -278,37 +249,7 @@ def finFindEval(){
         archiveArtifacts  "${fdb_file}"
         def kdb_file = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts "${kdb_file}"
-        //for(int i = 0; i < 3; i++) { 
-        //  sh "echo ${iter[i]}"
-        //  sh "echo iter[i]"
-        //}
 
-
-        //def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
-        //def fdb_file_nhwc = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
-        //def num_evaluated_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'evaluated';").toInteger()
-        //sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
-        //if (num_evaluated_jobs_nhwc != num_jobs_nhwc){
-        //    error("Unable to evaluate find jobs using Fin")
-        //}
-
-        //archiveArtifacts  "${fdb_file_nhwc}"
-        //def kdb_file_nhwc = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1} --filename kdb_nhwc", returnStdout: true)
-        //archiveArtifacts "${kdb_file_nhwc}"
-
-        //def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
-        //sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
-        //def fdb_file_nchw = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
-        //def num_evaluated_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'evaluated';").toInteger()
-        //sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
-        //if (num_evaluated_jobs_nchw != num_jobs_nchw){
-        //    error("Unable to evaluate find jobs using Fin")
-        //}
-
-        //archiveArtifacts  "${fdb_file_nchw}"
-        //def kdb_file_nchw = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
-        //archiveArtifacts "${kdb_file_nchw}"
     }
 }
 
@@ -422,6 +363,7 @@ def perfCompile() {
         sh "echo ${pid}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
+        sh "cat ${celery_log}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
         {
@@ -452,6 +394,7 @@ def perfEval() {
         sh "echo ${pid}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
+        sh "cat ${celery_log}"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
         def errored_jobs = runsql("SELECT count(*) from conv_job where reason = 'alexnet_${branch_id}' and state = 'errored';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
@@ -462,9 +405,9 @@ def perfEval() {
             error("Unable to eval all conv jobs")
         }
 
-        def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
-        def next_gold_v = last_gold_v.toInteger() + 1
-        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
+        //def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
+        //def next_gold_v = last_gold_v.toInteger() + 1
+        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v 2 --base_golden_v 1"
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())
