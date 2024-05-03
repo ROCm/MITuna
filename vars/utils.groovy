@@ -253,22 +253,19 @@ def finFindEval(){
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
         num_gpus = num_gpus as Integer
         sh "echo ${num_gpus}"
-        def range=num_gpus-1
-        def gpus=0..range
+        //def range=num_gpus-1
+        //def iter=0..range
         //sh "echo ${iter}"
         //for(int i in iter){
         //for(int i = 0; i < iter.size(); i++) { 
         //  sh "echo iter[i]"
         //  sh "echo ${iter[i]}"
-        //gpus.each{
-        def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
-        //  pids.add(pid)
-        //}
+        def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
         //pids.add(pid)
         //}
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         //for(elem in pids){
-          //sh "kill -9 ${elem}"
+        sh "kill -9 ${proc_id}"
         //}
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
@@ -451,7 +448,7 @@ def perfEval() {
         celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
-        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval -Q eval_q_session_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
