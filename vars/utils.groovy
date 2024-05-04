@@ -353,23 +353,34 @@ def perfCompile() {
         def sesh1 = runsql("select id from session order by id asc limit 1")
         celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
-        sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        sh "./tuna/go_fish.py miopen load_job -t conv_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
-        // Get the number of jobs
-        def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
         def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_compile -Q compile_q_session_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
+
+        sh "./tuna/go_fish.py miopen import_configs -t alexnet_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
+        sh "./tuna/go_fish.py miopen load_job -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim} --enqueue_only"
+        // Get the number of jobs
+        def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
         sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
-        sh "kill -9 ${pid}"
-        sh "cat ${celery_log}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
         {
-            error("Unable to compile any jobs")
+            error("Unable to compile any jobs for alexnet")
         }
 
+        sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
+        sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
+        sh "./tuna/go_fish.py miopen load_job -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
+        // Get the number of jobs
+        def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh "kill -9 ${pid}"
+        sh "cat ${celery_log}"
+        def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'conv_${branch_id}_v2';")
+        if(compiled_conv_jobs.toInteger() == 0)
+        {
+            error("Unable to compile any conv jobs")
+        }
+        echo "${compiled_conv_jobs}"
     }
 }
 
@@ -389,25 +400,36 @@ def perfEval() {
         def sesh1 = runsql("select id from session order by id asc limit 1")
         celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
-        def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval -Q eval_q_session_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
+
+        def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
-        def errored_jobs = runsql("SELECT count(*) from conv_job where reason = 'alexnet_${branch_id}' and state = 'errored';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
         {
-            echo "#compiled jobs: ${compiled_jobs}"
-            echo "#evaluated jobs: ${eval_jobs}"
-            echo "#errored jobs: ${errored_jobs}"
+            error("Unable to eval all jobs for alexnet")
+        }
+
+        def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh "kill -9 ${pid}"
+        sh "cat ${celery_log}"
+        def eval_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'evaluated';")
+        def errored_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'errored';")
+        if(eval_conv_jobs.toInteger() != compiled_conv_jobs.toInteger())
+        {
+            echo "#compiled jobs: ${compiled_conv_jobs}"
+            echo "#evaluated jobs: ${eval_conv_jobs}"
+            echo "#errored jobs: ${errored_conv_jobs}"
             error("Unable to eval all conv jobs")
         }
 
-        //def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
-        //def next_gold_v = last_gold_v.toInteger() + 1
-        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v 2 --base_golden_v 1"
+        def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
+        def next_gold_v = last_gold_v.toInteger() + 1
+        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())
