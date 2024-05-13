@@ -297,6 +297,21 @@ class FinEvaluator(FinClass):
         return False
     return True
 
+  def check_env(self) -> bool:
+    """Check the GPU on the machine matches the GPU specified in session table"""
+    if super().check_env():
+      if self.dbt.session.arch != self.machine.arch or \
+              self.dbt.session.num_cu != self.machine.num_cu:
+        self.logger.error(
+            'Session arch/num_cu (%s/%s) does not match env arch/num_cu (%s/%s)',
+            self.dbt.session.arch, self.dbt.session.num_cu, self.machine.arch,
+            self.machine.num_cu)
+        return False
+    else:
+      return False
+
+    return True
+
   def step(self):
     """Function that defined the evaluator specific functionality which implies picking up jobs
     to benchmark and updating DB with evaluator specific state"""
