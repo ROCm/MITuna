@@ -26,17 +26,12 @@ pipeline {
     } 
     stages {
         agent{  label utils.rocmnode("tunatest") }
-        stage("parallel") {
           stage('P1'){
             steps {
-                }
-                echo 'test1'
+              script {
+                utils.testLoop()
+              }
           }
-          stage('P2'){
-            steps {
-                }
-                echo 'test2'
-          }
-       }
     }
     }
+}

@@ -176,6 +176,36 @@ def finApplicability(){
     }
 }
 
+def testLoop(){
+    def tuna_docker = getDocker("HIPNOGPU")
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.PYTHONPATH=env.WORKSPACE
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+
+        def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
+
+        num_gpus = num_gpus as Integer
+        sh "echo ${num_gpus}"
+        (0..3).each{
+          sh "echo test1"
+        }
+        (0..${num_gpus}).each{
+          //def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+          //echo "${proc_id}"
+          //sh "kill -9 ${proc_id}"
+          sh "echo test"
+        }
+
+    }
+}
+
 def finFindCompile(){
     def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
