@@ -25,6 +25,14 @@ pipeline {
         docker_registry = "${DOCKER_REGISTRY}"
     } 
     stages {
+        stage("docker build") {
+        agent{  label utils.rocmnode("tunatest") }
+        steps {
+            script {
+            utils.buildDockers()
+            }
+            }
+        }
         stage("TEST LOOP") {
         agent{  label utils.rocmnode("tunatest") }
             steps {
