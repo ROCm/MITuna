@@ -428,9 +428,9 @@ def perfEval() {
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
 
-        def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
-        def next_gold_v = last_gold_v.toInteger() + 1
-        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
+        //def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
+        //def next_gold_v = last_gold_v.toInteger() + 1
+        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v 1"
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())
