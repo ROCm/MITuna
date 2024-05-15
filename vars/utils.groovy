@@ -193,7 +193,8 @@ def testLoop(){
 
         num_gpus = num_gpus as Integer
         sh "echo ${num_gpus}"
-        (0..3).each{
+        //(0..3).flatten().each{
+        (0..3).toList().each{
           sh "echo test1"
         }
         (0..${num_gpus}).each{
