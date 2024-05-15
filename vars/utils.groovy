@@ -191,8 +191,11 @@ def testLoop(){
 
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
 
-        num_gpus = num_gpus as Integer
-        sh "echo ${num_gpus}"
+        def num_gpus2 = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true)
+        sh "echo  num gpus2 :${num_gpus2}"
+
+        //num_gpus = num_gpus as Integer
+        sh "echo  num gpus:${num_gpus}"
         //(0..3).flatten().each{
         sh "echo Loop1 no var"
         (0..2).toList().each{
