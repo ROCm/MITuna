@@ -188,6 +188,7 @@ def testLoop(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
         sh "echo $arch"
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
