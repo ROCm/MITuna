@@ -194,14 +194,22 @@ def testLoop(){
         num_gpus = num_gpus as Integer
         sh "echo ${num_gpus}"
         //(0..3).flatten().each{
-        (0..3).toList().each{
+        sh "echo Loop1 no var"
+        (0..2).toList().each{
           sh "echo test1"
         }
-        (0..${num_gpus}).each{
+        sh "echo Loop2 with var"
+        (0..num_gpus).toList().each{
           //def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
           //echo "${proc_id}"
           //sh "kill -9 ${proc_id}"
-          sh "echo test"
+          sh "echo test2"
+        }
+        (0..num_gpus-1).toList().each{
+          //def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+          //echo "${proc_id}"
+          //sh "kill -9 ${proc_id}"
+          sh "echo test3"
         }
 
     }
