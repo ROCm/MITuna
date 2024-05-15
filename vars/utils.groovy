@@ -189,20 +189,20 @@ def testLoop(){
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
+        sh "echo $arch"
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
+        sh "echo ${arch}:sramecc+:xnack"
 
-        def num_gpus2 = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true)
-        sh "echo  num gpus2 :${num_gpus2}"
 
         num_gpus = num_gpus as Integer
-        sh "echo  num gpus:${num_gpus}"
+        sh "echo  num gpus: ${num_gpus}"
         //(0..3).flatten().each{
-        sh "echo Loop1 no var"
-        (0..2).toList().each{
+        /*(0..2).toList().each{
           sh "echo test1"
-        }
+        }*/
         num_gpus = 3
-        def gpu_list = (1..${num_gpus}).toList()
+        def gpu_list = (1..num_gpus).toList()
+        sh "echo ${gpu_list}"
         gpu_list.each{
           //def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
           //echo "${proc_id}"
