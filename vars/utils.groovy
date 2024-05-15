@@ -177,8 +177,8 @@ def finApplicability(){
 }
 
 def testLoop(){
-    def tuna_docker = getDocker("HIPNOGPU")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
+    def tuna_docker = getDocker("HIP")
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
@@ -202,11 +202,17 @@ def testLoop(){
         }*/
         def gpu_list = (1..num_gpus).toList()
         sh "echo ${gpu_list}"
+        def pid_list = []
         gpu_list.each{
-          //def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
-          //echo "${proc_id}"
+          def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+          sh "echo ${proc_id}"
           //sh "kill -9 ${proc_id}"
-          sh "echo test2"
+          pid_list.add(proc_id)
+        }
+        sh "echo ${pid_list}"
+        pid_list.each{
+          sh "echo $it"
+          sh "kill -9 ${it}"
         }
 
     }
