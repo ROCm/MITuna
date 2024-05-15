@@ -204,17 +204,21 @@ def testLoop(){
         def gpu_list = (1..num_gpus).toList()
         sh "echo ${gpu_list}"
         def pid_list = []
+        def sesh1 = 1
+        def counter = 1
         gpu_list.each{
-          def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+        def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_${counter} -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
           sh "echo ${proc_id}"
           //sh "kill -9 ${proc_id}"
           pid_list.add(proc_id)
+          counter = counter+1
         }
         sh "echo ${pid_list}"
         pid_list.each{
           sh "echo $it"
           sh "kill -9 ${it}"
         }
+        counter++
 
     }
 }
