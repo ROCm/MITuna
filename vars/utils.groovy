@@ -200,7 +200,6 @@ def testLoop(){
         /*(0..2).toList().each{
           sh "echo test1"
         }*/
-        num_gpus = 3
         def gpu_list = (1..num_gpus).toList()
         sh "echo ${gpu_list}"
         gpu_list.each{
