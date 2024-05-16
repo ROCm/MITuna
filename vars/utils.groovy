@@ -236,7 +236,7 @@ def finFindEval(){
         num_gpus = num_gpus as Integer
         sh "echo #GPUs: ${num_gpus}"
         def gpu_list = (1..num_gpus).toList()
-        sh "gpu list: ${gpu_list}"
+        sh "echo ${gpu_list}"
         def counter = 1
         def pid_list = []
 
