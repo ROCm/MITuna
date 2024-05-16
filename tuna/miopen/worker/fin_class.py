@@ -486,6 +486,8 @@ class FinClass(WorkerInterface):
                              json_in: List[Dict]) -> bool:
     """write applicability to sql"""
     inserts = []
+    app_values = []
+    app_cfgs = []
     for elem in json_in:
       if "applicable_solvers" in elem.keys():
         cfg_id = elem["input"]["config_tuna_id"]
@@ -493,26 +495,26 @@ class FinClass(WorkerInterface):
         if not elem["applicable_solvers"]:
           self.logger.warning("No applicable solvers for %s", cfg_id)
 
-        rm_old = f"update {self.dbt.solver_app.__tablename__} set applicable=0"\
-                 f" where session={self.session_id} and config={cfg_id} and applicable=1;"
-        inserts.append(rm_old)
+        app_cfgs.append(f"{cfg_id}")
 
-        app_slv_ids = []
         for solver in elem["applicable_solvers"]:
           try:
             solver_id = self.solver_id_map[solver]
-            app_slv_ids.append(solver_id)
+            vals = f"({self.session_id}, {cfg_id}, {solver_id}, 1)"
+            app_values.append(vals)
           except KeyError:
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
 
-        for solver_id in app_slv_ids:
-          ins_str = f"replace into {self.dbt.solver_app.__tablename__} (applicable, config, solver, session)"\
-                    f" values (1, {cfg_id}, {solver_id}, {self.session_id});"
-          inserts.append(ins_str)
+
+    cleanup = f"delete from {self.dbt.solver_app.__tablename__} where session={self.session_id} and config in (" + ", ".join(app_cfgs) + ");"
+    ins_str = f"insert ignore into {self.dbt.solver_app.__tablename__} (session, config, solver, applicable)"\
+               " values " + ", ".join(app_values) + ";"
+    inserts.append(cleanup)
+    inserts.append(ins_str)
 
     with self.job_queue_lock:
-      self.logger.info('Commit bulk inserts (%s), please wait', len(inserts))
+      self.logger.info('Commit bulk configs (%s), entries (%s), please wait', len(app_cfgs), len(app_values))
       for sql_str in inserts:
         session.execute(sql_str)
       session.commit()
