@@ -234,10 +234,24 @@ def finFindEval(){
 
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
         num_gpus = num_gpus as Integer
-        sh "echo ${num_gpus}"
-        def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_1 -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+        sh "echo #GPUs: ${num_gpus}"
+        def gpu_list = (1..num_gpus).toList()
+        sh "gpu list: ${gpu_list}"
+        def counter = 1
+        def pid_list = []
+
+        gpu_list.each{
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n celery_worker_eval_${counter} -Q eval_q_session_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+            pid_list.add(proc_id)
+            counter++
+        }
+
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
-        sh "kill -9 ${proc_id}"
+        //killing off celery workers by pid
+        pid_list.each{
+          sh "kill -9 ${it}"
+        }
+
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
