@@ -18,6 +18,7 @@ FROM $USEIMAGE as dtuna-ver-0
 #args before from are wiped
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
+ARG BUILD_MIOPEN_DEPS=
 
 # Add rocm repository
 RUN apt-get update && apt-get install -y wget gnupg
@@ -113,7 +114,7 @@ ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=/opt/rocm
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
-RUN . /env; if [ -z $NO_ROCM_INST ]; then\
+RUN . /env; if [ -z $NO_ROCM_INST ] || [ -n $BUILD_MIOPEN_DEPS ]; then\
         pip install cget; \
         CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $PREFIX; \
     fi
