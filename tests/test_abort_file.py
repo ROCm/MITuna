@@ -101,7 +101,6 @@ def test_abort():
         'machine': m,
         'gpu_id': gpu_idx,
         'num_procs': num_gpus,
-        'barred': v,
         'bar_lock': Lock(),
         'envmt': ["MIOPEN_LOG_LEVEL=7"],
         'reset_interval': False,

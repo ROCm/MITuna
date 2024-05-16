@@ -187,7 +187,6 @@ def test_worker():
       'machine': machine,
       'gpu_id': 0,
       'num_procs': num_gpus,
-      'barred': v,
       'bar_lock': Lock(),
       'envmt': ["MIOPEN_LOG_LEVEL=7"],
       'reset_interval': False,

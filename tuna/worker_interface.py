@@ -41,7 +41,7 @@ import random
 import string
 from io import StringIO
 from time import sleep
-from typing import List, Tuple, Union, Set, Callable, Optional, Any, Dict
+from typing import List, Tuple, Union, Set, Optional, Any, Dict
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
 
@@ -72,10 +72,9 @@ class WorkerInterface(Process):
     super().__init__()
 
     allowed_keys: Set[str] = set([
-        'machine', 'gpu_id', 'num_procs', 'barred', 'bar_lock', 'envmt',
-        'reset_interval', 'job_queue', 'job_queue_lock', 'result_queue',
-        'result_queue_lock', 'label', 'fetch_state', 'end_jobs', 'session_id',
-        'job', 'config'
+        'machine', 'gpu_id', 'num_procs', 'bar_lock', 'envmt', 'reset_interval',
+        'job_queue', 'job_queue_lock', 'result_queue', 'result_queue_lock',
+        'label', 'fetch_state', 'end_jobs', 'session_id', 'job', 'config'
     ])
 
     self.reset_interval: bool = None
@@ -84,7 +83,6 @@ class WorkerInterface(Process):
     #multiprocess vars
     self.gpu_id: int = None
     self.num_procs = None
-    self.barred = None
     self.bar_lock = Lock()
     self.job_queue = None
     self.job_queue_lock = Lock()
@@ -408,49 +406,6 @@ class WorkerInterface(Process):
       )
     return True
 
-  def set_barrier(self, funct: Callable, with_timeout: bool) -> bool:
-    """Setting time barrier for Process to define execution timeout"""
-    if self.barred.value == 0:
-      # this is the first proc to reach the barrier
-      with self.bar_lock:
-        self.barred.value += 1
-      self.logger.info('Waiting for other instances to pause')
-      wait_cnt: int = 0
-      timeout: bool = False
-      while self.barred.value < self.num_procs.value:
-        sleep(10)
-        if with_timeout and self.barred.value == 1:
-          wait_cnt += 1
-          timeout = True
-          if wait_cnt > 180:
-            break
-      if timeout:
-        self.logger.warning(
-            'Timed out waiting for hung process, proceeding ... ')
-      else:
-        self.logger.info('Finished waiting for instances to pause')
-      funct()
-      with self.bar_lock:
-        self.barred.value = 0
-      return True
-
-    return False
-
-  def check_wait_barrier(self) -> bool:
-    """Checking time barrier"""
-    self.logger.info('Checking barrier')
-    if self.barred.value != 0:
-      self.logger.info('Blocked procs found')
-      self.logger.info('Current barrier count: %s', self.barred.value)
-      with self.bar_lock:
-        self.barred.value += 1
-      self.logger.warning('Waiting for processes to finish')
-      while self.barred.value != 0:
-        sleep(60)
-      self.logger.warning('Finished waiting for processes')
-      return True
-    return False
-
   def reset_job_state(self) -> None:
     """Helper function to reset job state during signal interrupt"""
     #also filter pending states eg compiled_pend
@@ -486,11 +441,8 @@ class WorkerInterface(Process):
       self.cnx = self.machine.connect(chk_abort_file)
 
       while True:
-        #self.check_wait_barrier()
 
         if chk_abort_file(self.machine.id, self.logger, self.machine.arch):
-          #with self.bar_lock:
-          #  self.num_procs.value -= 1
           return None  #type: ignore
 
         # re-establish node connection
@@ -499,13 +451,9 @@ class WorkerInterface(Process):
           usage = self.machine.getusedspace()
         except (socket.timeout, socket.error):
           usage = 0
-        if not usage:
-          self.set_barrier(self.reset_machine, True)
-          continue
         if usage > 90:
           self.logger.warning('Used space overflow detected')
-          self.set_barrier(lambda: (), True)
-          continue
+          return False  #type: ignore
         # the step member is defined in the derived class
         ret = self.step()
         self.logger.info("proc %s step %s", self.gpu_id, ret)

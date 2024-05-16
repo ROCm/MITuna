@@ -49,7 +49,6 @@ def test_set_all_configs():
       'machine': DummyMachine(False),
       'gpu_id': 0,
       'num_procs': num_gpus,
-      'barred': v,
       'bar_lock': Lock(),
       'envmt': ["MIOPEN_LOG_LEVEL=7"],
       'reset_interval': False,

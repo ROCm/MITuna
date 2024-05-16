@@ -244,12 +244,11 @@ def prep_tuning(library):
 
   if not library.args.enqueue_only:
     try:
-      print('launch_celery_worker')
       pid_list = launch_celery_worker(machines, get_worker_granularity(library),
                                       cmd, True)
-      print('pid_list: %s', pid_list)
       if not pid_list:
         raise ValueError('Could not launch celery worker')
+      LOGGER.info('Launched supbproc pids: %s', pid_list)
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
       return False
@@ -267,7 +266,7 @@ def prep_tuning(library):
                               tuning=True)
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
-  return worker_type, kwargs, fdb_attr, q_name, pid_list
+  return worker_type, kwargs, fdb_attr, q_name
 
 
 #pylint: disable=too-many-locals
@@ -279,11 +278,9 @@ def tune(library, job_batch_size=1000):
     return True
 
   try:
-    print('prep_tuning')
-    worker_type, kwargs, fdb_attr, q_name, pid_list = prep_tuning(library)
+    worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
   except ValueError as verr:
     LOGGER.error(verr)
-    print('Err occured: %s', verr)
     return False
 
   #if enqueue_only is False, we only launch the workers
@@ -293,7 +290,6 @@ def tune(library, job_batch_size=1000):
   res_set = ResultSet([])
   start = time.time()
   worker_type = get_worker_type(library.args)
-  print('drain_process')
   drain_process = results_gather_start(worker_type)
 
   with DbSession() as session:
@@ -344,8 +340,6 @@ def tune(library, job_batch_size=1000):
 
   results_gather_terminate(res_set, drain_process)
   library.cancel_consumer(q_name)
-  for proc in pid_list:
-    proc.terminate()
   end = time.time()
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
   LOGGER.info("{:0>8} of which was spent enqueuing jobs".format(  #pylint: disable=consider-using-f-string
