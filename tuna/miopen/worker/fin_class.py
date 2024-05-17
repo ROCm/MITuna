@@ -506,15 +506,16 @@ class FinClass(WorkerInterface):
             self.logger.warning('Solver %s not found in solver table', solver)
             self.logger.info("Please run 'go_fish.py --update_solver' first")
 
-
-    cleanup = f"delete from {self.dbt.solver_app.__tablename__} where session={self.session_id} and config in (" + ", ".join(app_cfgs) + ");"
+    cleanup = f"delete from {self.dbt.solver_app.__tablename__} where session={self.session_id} and config in (" + ", ".join(
+        app_cfgs) + ");"
     ins_str = f"insert ignore into {self.dbt.solver_app.__tablename__} (session, config, solver, applicable)"\
                " values " + ", ".join(app_values) + ";"
     inserts.append(cleanup)
     inserts.append(ins_str)
 
     with self.job_queue_lock:
-      self.logger.info('Commit bulk configs (%s), entries (%s), please wait', len(app_cfgs), len(app_values))
+      self.logger.info('Commit bulk configs (%s), entries (%s), please wait',
+                       len(app_cfgs), len(app_values))
       for sql_str in inserts:
         session.execute(sql_str)
       session.commit()

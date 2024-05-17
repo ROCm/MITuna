@@ -80,7 +80,7 @@ class DriverConvolution(MIOpenDriver):
     self.trans_output_pad_h: int = 0
     self.trans_output_pad_w: int = 0
     self.trans_output_pad_d: int = 0
-    self.out_layout: str = None #use config_set_defaults to pull from 2D/3D defaults
+    self.out_layout: str = None  #use config_set_defaults to pull from 2D/3D defaults
     self.in_layout: str = None
     self.fil_layout: str = None
     self.in_d: int = 1
