@@ -724,11 +724,14 @@ def getSessionVals(session_id)
 {
   String res = runsql("select arch, num_cu, rocm_v, miopen_v, docker from session where id=${session_id};")
 
-  def arch = res.split("[ \t]+")[0]
-  def num_cu = res.split("[ \t]+")[1]
-  def rocm_v = res.split("[ \t]+")[2]
-  def miopen_v = res.split("[ \t]+")[3]
-  def base_image = res.split("[ \t]+")[4]
+  res_arr = res.split("[ \t]+")
+  def arch = res_arr[0]
+  def num_cu = res_arr[1]
+  def rocm_v = res_arr[2]
+  def miopen_v = res_arr[3]
+  def base_image = ""
+  if(res_arr.size() > 4)
+    base_image = res_arr[4]
   echo "$arch $num_cu $rocm_v $miopen_v $base_image"
 
   def gfx_target = "${arch}_${num_cu}"
@@ -774,6 +777,11 @@ def getBuildArgs(){
   if(base_image != '')
   {
     build_args = build_args + " --build-arg BASEIMAGE=${base_image}"
+    ci_str = "rocm/miopen:ci_"
+    if(ci_str != base_image.substring(0, ci_str.length()))
+    {
+      build_args = build_args + " --build-arg BUILD_MIOPEN_DEPS=1"
+    }
   }
   sh "echo ${build_args}"
 
@@ -781,10 +789,10 @@ def getBuildArgs(){
 }
 
 def applicUpdate(){
+  (build_args, partition) = getBuildArgs()
+  def tuna_docker_name = getDockerName("${backend}")
   docker.withRegistry('', "$DOCKER_CRED"){
-    def tuna_docker_name = getDockerName("${backend}")
     def tuna_docker
-    (build_args, _) = getBuildArgs()
 
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
     tuna_docker.push()
@@ -800,7 +808,7 @@ def applicUpdate(){
 
   if(params.UPDATE_SOLVERS)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
+    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_solvers'"
     def num_solvers = runsql("SELECT count(*) from solver;")
     println "Number of solvers: ${num_solvers}"
     if (num_solvers.toInteger() == 0){
@@ -809,7 +817,7 @@ def applicUpdate(){
   }
   if(params.UPDATE_APPLICABILITY)
   {
-    sh "srun --no-kill -p build-only -N 1 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
+    sh "srun --no-kill -p ${partition} -N 1 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --update_applicability --session_id ${params.session_id} ${use_tag}'"
     def num_sapp = runsql("SELECT count(*) from conv_solver_applicability where session=${params.session_id};")
     println "Session ${params.session_id} applicability: ${num_sapp}"
     if (num_sapp.toInteger() == 0){
@@ -821,10 +829,10 @@ def applicUpdate(){
 
 def compile()
 {
+  (build_args, _) = getBuildArgs()
   def tuna_docker_name = getDockerName("${backend}")
   docker.withRegistry('', "$DOCKER_CRED"){
     def tuna_docker
-    (build_args, _) = getBuildArgs()
 
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
 
@@ -874,17 +882,17 @@ def compile()
   }
 
   // Run the jobs on the cluster
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
 
 def evaluate(params)
 {
+  (build_args, partition) = getBuildArgs()
   def tuna_docker_name = getDockerName("${backend}")
+
   docker.withRegistry('', "$DOCKER_CRED"){
     def tuna_docker
-    (build_args, partition) = getBuildArgs()
-
     tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
     tuna_docker.push()
   }
@@ -918,7 +926,7 @@ def evaluate(params)
     eval_cmd += ' --dynamic_solvers_only'
   }
 
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | sudo docker login -u ${env.CREDS_USR} --password-stdin && sudo docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
+  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
 }
 
 def doxygen() {
