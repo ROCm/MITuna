@@ -30,9 +30,7 @@ Script for adding jobs to the MySQL database
 import logging
 import argparse
 import warnings
-from typing import Dict
 
-from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
 
 from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
@@ -144,6 +142,8 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
              logger: logging.Logger):
   """ Add jobs based on solver or defer to all jobs function if no solver
       query specified"""
+  inserts = []
+  job_values = []
   counts = 0
   with DbSession() as session:
     cfg_query = config_query(args, session, dbt)
@@ -160,50 +160,22 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
       where session={args.session_id} and fin_step='{fin_step_str}'"
 
     logger.info(query)
-    ret = session.execute(query)
-    pre_ex: Dict[str, Dict[str, bool]] = {}
-    for config, solver in ret:
-      if config not in pre_ex:
-        pre_ex[config] = {}
-      pre_ex[config][solver] = True
 
-    do_commit = False
-    while True:
-      for config, solver in res:
-        try:
-          job = dbt.job_table()
-          job.config = config
-          job.solver = solver
-          job.state = 'new'
-          job.valid = 1
-          job.reason = args.label
-          job.fin_step = args.fin_steps
-          job.session = args.session_id
+    for config, solver in res:
+      vals = f"({config}, {solver}, 'new', 1, args.label, args.fin_steps, args.session_id)"
+      job_values.append(vals)
 
-          if job.config in pre_ex:
-            if job.solver in pre_ex[job.config]:
-              logger.warning("Job exists (skip): %s : %s", job.config,
-                             job.solver)
-              continue
+    insert_str = f"insert ignore into {dbt.conv_job.__tablename__}"\
+                  " (config, solver, state, valid, label, fin_steps, session_id)"\
+                  " values  " + ", ".join(job_values) + ";"
+    inserts.append(insert_str)
 
-          session.add(job)
-          if do_commit:
-            session.commit()
-          counts += 1
-        except IntegrityError as err:
-          session.rollback()
-          logger.warning('Integrity Error: %s', err)
-      if not do_commit:
-        try:
-          session.commit()
-        except IntegrityError as err:
-          session.rollback()
-          counts = 0
-          do_commit = True
-          logger.warning(
-              'Quick update failed, rolling back to add one by one : %s', err)
-          continue
-      break
+    for sql_str in inserts:
+      session.execute(sql_str)
+    session.commit()
+    logger.info('End bulk inserts')
+
+    #TODO Alex: query DB for recently inserted jobs to report count #pylint: disable=fixme
 
   return counts
 
