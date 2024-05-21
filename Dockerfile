@@ -114,7 +114,7 @@ ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=/opt/rocm
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
-RUN . /env; if [ -z $NO_ROCM_INST ] || [ -n $BUILD_MIOPEN_DEPS ]; then\
+RUN . /env; if [ -z $NO_ROCM_INST ] || ! [ -z $BUILD_MIOPEN_DEPS ]; then\
         pip install cget; \
         CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $PREFIX; \
     fi
