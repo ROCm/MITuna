@@ -284,11 +284,16 @@ def tune(library, job_batch_size=1000):
     LOGGER.error(verr)
     return False
 
-  #if enqueue_only is False, we only launch the workers
-  if not library.args.enqueue_only:
+  try:
+    #if enqueue_only is False, we only launch the workers
+    if not library.args.enqueue_only:
+      for subp in subp_list:
+        subp.wait()
+      return True
+  except KeyboardInterrupt:
     for subp in subp_list:
-      subp.wait()
-    return True
+      subp.kill()
+    return False
 
   res_set = ResultSet([])
   start = time.time()
