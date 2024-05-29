@@ -58,7 +58,7 @@ def launch_worker_per_node(machines, cmd, formatted=False):
       #    break
       #print(stdout)
       #print(stderr)
-      pid_list.append(subp)
+      pid_list.append(subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
       return False
@@ -93,8 +93,8 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
         subp = subprocess.Popen(  #pylint: disable=consider-using-with
             final_cmd.split(),
             env=curr_env)
-        pid_list.append(subp)
-        LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
+        pid_list.append(subp.pid)
+        LOGGER.info("Successfully launched celery worker #%s for eval, pid %s", gpu_id, subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.info('Error ocurred: %s', exp)
       return False

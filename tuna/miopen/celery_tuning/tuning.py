@@ -54,7 +54,7 @@ from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.celery_app.celery_app import stop_active_workers, purge_queue
+from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker, purge_queue
 
 LOGGER: logging.Logger = setup_logger('tuning')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -235,6 +235,7 @@ def prep_tuning(library):
   worker_type = get_worker_type(library.args)
   machines = load_machines(library.args)
   q_name = get_q_name(library)
+  purge_queue([q_name])
   cmd = None
   pid_list = []
   if worker_type == 'fin_build_worker':
@@ -248,7 +249,7 @@ def prep_tuning(library):
                                       cmd, True)
       if not pid_list:
         raise ValueError('Could not launch celery worker')
-      LOGGER.info('Launched supbproc pids: %s', pid_list)
+      #LOGGER.info('Launched supbproc pids: (%s)', ', '.join([str(pid) for pid in pid_list]))
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
       return False
