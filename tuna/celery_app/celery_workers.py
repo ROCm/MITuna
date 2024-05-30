@@ -37,7 +37,7 @@ LOGGER: logging.Logger = setup_logger('celery_workers')
 def launch_worker_per_node(machines, cmd, formatted=False):
   """Launch celery worker for compile"""
   final_cmd = cmd
-  pid_list = []
+  subp_list = []
   for machine in machines:
     try:
       if formatted:
@@ -58,21 +58,21 @@ def launch_worker_per_node(machines, cmd, formatted=False):
       #    break
       #print(stdout)
       #print(stderr)
-      pid_list.append(subp)
+      subp_list.append(subp)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
       return False
 
     LOGGER.info('Successfully launched celery worker for compile')
 
-  return pid_list
+  return subp_list
 
 
 def launch_worker_per_gpu(machines, cmd, formatted=False):
   """Launch celery worker for eval"""
   curr_env = dict(os.environ.copy())
   final_cmd = cmd
-  pid_list = []
+  subp_list = []
 
   for machine in machines:
     num_gpus = machine.get_avail_gpus()
@@ -93,13 +93,13 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
         subp = subprocess.Popen(  #pylint: disable=consider-using-with
             final_cmd.split(),
             env=curr_env)
-        pid_list.append(subp)
-        LOGGER.info("Successfully launched celery worker #%s for eval", gpu_id)
+        subp_list.append(subp)
+        LOGGER.info("Successfully launched celery worker #%s for eval, pid %s", gpu_id, subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.info('Error ocurred: %s', exp)
       return False
 
-  return pid_list
+  return subp_list
 
 
 def launch_celery_worker(machines, worker_granularity, cmd, formatted=False):

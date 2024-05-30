@@ -59,6 +59,12 @@ def stop_active_workers():
 
   return True
 
+def stop_named_worker(hostname):
+  """Shutdown a specific worker"""
+  LOGGER.warning('Shutting down remote worker: %s', hostname)
+  app.control.shutdown(destination=[hostname])
+
+  return True
 
 def purge_queue(q_names):
   """Purge jobs in queue"""

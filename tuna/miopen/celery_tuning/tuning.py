@@ -54,7 +54,7 @@ from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.celery_app.celery_app import stop_active_workers, purge_queue  #, app
+from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker, purge_queue
 
 LOGGER: logging.Logger = setup_logger('tuning')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -227,8 +227,9 @@ def prep_tuning(library):
   worker_type = get_worker_type(library.args)
   machines = load_machines(library.args)
   q_name = get_q_name(library)
+  purge_queue([q_name])
   cmd = None
-  pid_list = []
+  subp_list = []
   if worker_type == 'fin_build_worker':
     cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{library.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
   else:
@@ -236,11 +237,11 @@ def prep_tuning(library):
 
   if not library.args.enqueue_only:
     try:
-      pid_list = launch_celery_worker(machines, get_worker_granularity(library),
+      subp_list = launch_celery_worker(machines, get_worker_granularity(library),
                                       cmd, True)
-      if not pid_list:
+      if not subp_list:
         raise ValueError('Could not launch celery worker')
-      LOGGER.info('Launched supbproc pids: %s', pid_list)
+      #LOGGER.info('Launched supbproc pids: (%s)', ', '.join([str(subp.pid) for subp in subp_list]))
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
       return False
@@ -258,7 +259,7 @@ def prep_tuning(library):
                               tuning=True)
   kwargs = library.get_kwargs(0, f_vals, tuning=True)
 
-  return worker_type, kwargs, fdb_attr, q_name
+  return worker_type, kwargs, fdb_attr, q_name, subp_list
 
 
 #pylint: disable=too-many-locals
@@ -272,15 +273,22 @@ def tune(library, job_batch_size=1000):
 
   try:
     LOGGER.info('Launching celery workers')
-    worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
+    worker_type, kwargs, fdb_attr, q_name, subp_list = prep_tuning(library)
     LOGGER.info('Done launching celery workers')
   except ValueError as verr:
     LOGGER.error(verr)
     return False
 
-  #if enqueue_only is False, we only launch the workers
-  if not library.args.enqueue_only:
-    return True
+  try:
+    #if enqueue_only is False, we only launch the workers
+    if not library.args.enqueue_only:
+      for subp in subp_list:
+        subp.wait()
+      return True
+  except KeyboardInterrupt:
+    for subp in subp_list:
+      subp.kill()
+    return False
 
   res_set = ResultSet([])
   start = time.time()
