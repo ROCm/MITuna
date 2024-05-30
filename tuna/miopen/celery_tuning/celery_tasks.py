@@ -46,7 +46,7 @@ def prep_worker(context):
 @app.task(trail=True, reply_to='eval_q_session_153')
 def celery_enqueue(context):
   """Defines a celery task"""
-  logger.info("Enqueueing gfx908-120")
+  logger.info("Enqueueing task %s", context['job'])
   worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
   return ret, context

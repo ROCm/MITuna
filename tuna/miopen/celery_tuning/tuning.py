@@ -38,7 +38,7 @@ from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
 import kombu
 
-from celery.result import ResultSet
+from celery.result import ResultSet  #, AsyncResult
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk, SimpleDict
@@ -54,20 +54,12 @@ from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.celery_app.celery_app import stop_active_workers, purge_queue
+from tuna.celery_app.celery_app import stop_active_workers, purge_queue  #, app
 
 LOGGER: logging.Logger = setup_logger('tuning')
 MAX_ERRORED_JOB_RETRIES = 3
 result_queue = mpQueue()
 result_queue_lock = Lock()
-
-
-def result_callback(task_id, value):
-  """Function callback for celery async jobs to store resutls"""
-  LOGGER.info('task id %s : done', task_id)
-  LOGGER.info('fin_json : %s', value[0])
-  LOGGER.info('context : %s', value[1])
-  result_queue.put([value[0], value[1]])
 
 
 def process_fin_builder_results(session, fin_json, context, dbt):
@@ -274,11 +266,14 @@ def tune(library, job_batch_size=1000):
   """tuning loop to spin out celery tasks"""
 
   if library.args.shutdown_workers:
+    LOGGER.info('Shutting down all celery workers')
     stop_active_workers()
     return True
 
   try:
+    LOGGER.info('Launching celery workers')
     worker_type, kwargs, fdb_attr, q_name = prep_tuning(library)
+    LOGGER.info('Done launching celery workers')
   except ValueError as verr:
     LOGGER.error(verr)
     return False
@@ -322,7 +317,7 @@ def tune(library, job_batch_size=1000):
             res_set.add(
                 celery_enqueue.apply_async((context,),
                                            queue=q_name,
-                                           reply_to='eval_q_session_153'))
+                                           reply_to=q_name))
 
         if not job_list:
           if not res_set:
@@ -359,6 +354,18 @@ def results_gather_start(worker_type):
   return drain_process
 
 
+def result_callback(task_id, value):
+  """Function callback for celery async jobs to store results"""
+  LOGGER.info('task id %s : done', task_id)
+  LOGGER.info('fin_json : %s', value[0])
+  LOGGER.info('context : %s', value[1])
+  #result, v = app.AsyncResult(task_id).get()
+  #LOGGER.info('v: %s', v)
+  #LOGGER.info('results: %s', result)
+
+  result_queue.put([value[0], value[1]])
+
+
 def results_gather_terminate(res_set, drain_process):
   """Function to terminate the results gather subproc"""
   LOGGER.info('Gathering async results in callback function, blocking')
@@ -381,6 +388,7 @@ def drain_queue(worker_type, dbt, event):
   with DbSession() as session:
     while True:
       try:
+        LOGGER.warning('Waiting on get')
         fin_json, context = result_queue.get(True, 1)
         LOGGER.info('Parsing: %s', fin_json)
         LOGGER.info('Parsing context: %s', context)
