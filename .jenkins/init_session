@@ -19,7 +19,7 @@ def initSession(){
   }
   if(params.arch != '')
   {
-    build_args = build_args + " --build_arg ARCH_TARGET=${params.arch}"
+    build_args = build_args + " --build-arg ARCH_TARGET=${params.arch}"
   }
   sh "echo ${build_args}"
 
