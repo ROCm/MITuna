@@ -446,7 +446,8 @@ class MIOpen(MITunaInterface):
                find_state: List[str],
                set_state: str,
                session_id: int,
-               claim_num: int = None):
+               claim_num: int = None,
+               no_update=False):
     """Interface function to get jobs based on session and find_state"""
     #job_rows: List[SimpleDict]
     ids: list
@@ -458,6 +459,9 @@ class MIOpen(MITunaInterface):
 
     if not self.check_jobs_found(job_list, find_state, session_id):
       return []
+
+    if no_update:
+      return job_list
 
     ids = [row.id for row in job_list]
     self.logger.info("%s jobs %s", find_state, ids)

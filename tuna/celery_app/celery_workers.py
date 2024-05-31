@@ -94,7 +94,8 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
             final_cmd.split(),
             env=curr_env)
         subp_list.append(subp)
-        LOGGER.info("Successfully launched celery worker #%s for eval, pid %s", gpu_id, subp.pid)
+        LOGGER.info("Successfully launched celery worker #%s for eval, pid %s",
+                    gpu_id, subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.info('Error ocurred: %s', exp)
       return False

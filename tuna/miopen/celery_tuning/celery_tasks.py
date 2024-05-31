@@ -49,4 +49,4 @@ def celery_enqueue(context):
   logger.info("Enqueueing task %s", context['job'])
   worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
-  return ret, context
+  return {"ret": ret, "context": context}

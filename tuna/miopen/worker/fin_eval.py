@@ -198,7 +198,6 @@ class FinEvaluator(FinClass):
       return False
     return True
 
-
   def check_env(self) -> bool:
     """Check the GPU on the machine matches the GPU specified in session table"""
     if super().check_env():

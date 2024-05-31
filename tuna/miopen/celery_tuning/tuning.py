@@ -25,20 +25,21 @@
 #
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
+import os
 import logging
 import time
 import copy
 import random
 import string
+import asyncio
 from datetime import timedelta
-from multiprocessing import Queue as mpQueue, Process, Lock
+from multiprocessing import Queue as mpQueue, Process, Lock, Value
 import queue
-import threading
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
 import kombu
-
-from celery.result import ResultSet  #, AsyncResult
+import aioredis
+import json
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk, SimpleDict
@@ -54,7 +55,7 @@ from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker, purge_queue
+from tuna.celery_app.celery_app import stop_active_workers, purge_queue, app, TUNA_CELERY_BROKER, TUNA_REDIS_PORT
 
 LOGGER: logging.Logger = setup_logger('tuning')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -290,102 +291,75 @@ def tune(library, job_batch_size=1000):
       subp.kill()
     return False
 
-  res_set = ResultSet([])
+  #res_set = ResultSet([])
   start = time.time()
   worker_type = get_worker_type(library.args)
-  drain_process = results_gather_start(worker_type)
-
+  
+  db_name = os.environ['TUNA_DB_NAME']
+  prefix = f"d_{db_name}_sess_{library.args.session_id}"
+  app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": prefix})
   with DbSession() as session:
-    while True:
-      try:
-        job_list = []
-        #get all the jobs from mySQL
-        job_list = library.get_jobs(session, library.fetch_state,
-                                    library.set_state, library.args.session_id,
-                                    job_batch_size)
+    job_list = library.get_jobs(session, library.fetch_state,
+                                library.set_state, library.args.session_id, no_update=True)
+  job_counter = Value('i', len(job_list))
+  LOGGER.info('Job counter: %s', job_counter.value)
 
-        for i in range(0, len(job_list), job_batch_size):
-          batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
-          entries = library.compose_work_objs_fin(session, batch_jobs,
-                                                  library.dbt)
-          serialized_jobs = serialize_chunk(entries)
-          #build context for each celery task
-          for job, config in serialized_jobs:
-            context = {
-                'job': job,
-                'config': config,
-                'worker_type': worker_type,
-                'arch': library.dbt.session.arch,
-                'num_cu': library.dbt.session.num_cu,
-                'kwargs': kwargs,
-                'fdb_attr': fdb_attr
-            }
 
-            #calling celery task, enqueuing to celery queue
-            res_set.add(
-                celery_enqueue.apply_async((context,),
-                                           queue=q_name,
-                                           reply_to=q_name))
+  try:
+    enqueue_proc = Process(target=enqueue_jobs, args=[library, job_batch_size, worker_type, kwargs, fdb_attr, q_name])
+    #Start enqueue proc
+    enqueue_proc.start()
+    #start async consume thread, blocking
+    asyncio.run(consume(job_counter, worker_type, DBT))
+    enqueue_proc.join()
 
-        if not job_list:
-          if not res_set:
-            results_gather_terminate(res_set, drain_process)
-            return False
-          LOGGER.info('All tasks added to queue')
-          j_end = time.time()
-          break
-      except KeyboardInterrupt:
-        LOGGER.error('Keyboard interrupt caught, draining results queue')
-        session.rollback()
-        results_gather_terminate(res_set, drain_process)
-        purge_queue([q_name])
-        library.cancel_consumer(q_name)
+  except KeyboardInterrupt:
+    LOGGER.error('Keyboard interrupt caught, draining results queue')
+    purge_queue([q_name])
+    library.cancel_consumer(q_name)
 
-  results_gather_terminate(res_set, drain_process)
   library.cancel_consumer(q_name)
   end = time.time()
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
-  LOGGER.info("{:0>8} of which was spent enqueuing jobs".format(  #pylint: disable=consider-using-f-string
-      str(timedelta(seconds=j_end - start))))
 
   return True
 
 
-def results_gather_start(worker_type):
-  """Start subproc to drain result queue and populate mysql DB"""
-  LOGGER.info('Started drain process')
-  #start draining result_queue in subprocess
-  event = threading.Event()
-  drain_process = Process(target=drain_queue, args=[worker_type, DBT, event])
-  drain_process.start()
+def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr, q_name):
+  """Enqueue celery jobs"""
+  with DbSession() as session:
+    while True:
+      job_list = []
+      #get all the jobs from mySQL
+      job_list = library.get_jobs(session, library.fetch_state,
+                                  library.set_state, library.args.session_id,
+                                  job_batch_size)
 
-  return drain_process
+      for i in range(0, len(job_list), job_batch_size):
+        batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
+        entries = library.compose_work_objs_fin(session, batch_jobs,
+                                                library.dbt)
+        serialized_jobs = serialize_chunk(entries)
+        #build context for each celery task
+        for job, config in serialized_jobs:
+          context = {
+              'job': job,
+              'config': config,
+              'worker_type': worker_type,
+              'arch': library.dbt.session.arch,
+              'num_cu': library.dbt.session.num_cu,
+              'kwargs': kwargs,
+              'fdb_attr': fdb_attr
+          }
 
+          #calling celery task, enqueuing to celery queue
+          celery_enqueue.apply_async((context,),
+                                     queue=q_name,
+                                     reply_to=q_name)
 
-def result_callback(task_id, value):
-  """Function callback for celery async jobs to store results"""
-  LOGGER.info('task id %s : done', task_id)
-  LOGGER.info('fin_json : %s', value[0])
-  LOGGER.info('context : %s', value[1])
-  #result, v = app.AsyncResult(task_id).get()
-  #LOGGER.info('v: %s', v)
-  #LOGGER.info('results: %s', result)
-
-  result_queue.put([value[0], value[1]])
-
-
-def results_gather_terminate(res_set, drain_process):
-  """Function to terminate the results gather subproc"""
-  LOGGER.info('Gathering async results in callback function, blocking')
-  #waiting on all results to come in
-  _ = res_set.join(callback=result_callback)
-
-  #terminate result_queue drain process with special queue token (NONE,NONE)
-  LOGGER.info('Adding terminatig token to result_queue')
-  result_queue.put([None, None])
-
-  drain_process.join()
-  LOGGER.info('Done writing from result_queue to mySQL')
+      if not job_list:
+        LOGGER.info('All tasks added to queue')
+        break
 
 
 def drain_queue(worker_type, dbt, event):
@@ -424,3 +398,51 @@ def drain_queue(worker_type, dbt, event):
         continue
 
   return True
+
+async def consume(job_counter, worker_type, dbt):
+  """Retrieve celery results from redis db"""
+  redis = await aioredis.from_url(
+      f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
+  LOGGER.info('Connected to redis')
+  while job_counter.value > 0:
+    cursor = "0"
+    keys = []
+    while cursor != 0:
+      cursor, results = await redis.scan(cursor, match='*'
+                                        )  # update with the celery pattern
+      keys.extend(results)
+    LOGGER.info('Found results')
+    for key in keys:
+      LOGGER.info(type(key))
+      try:
+        data = await redis.get(key)
+        if data:
+          await result_callback(key.decode('utf-8'), data.decode('utf-8'), worker_type, dbt)
+          await redis.delete(key)
+          job_counter.value - 1
+      except aioredis.exceptions.ResponseError as red_err:
+        LOGGER.error(red_err)
+        LOGGER.info(key.decode('utf-8'))
+
+    LOGGER.info('Processed results')
+    await asyncio.sleep(1)
+  LOGGER.info('Job counter reached 0')
+  await redis.close()
+
+async def result_callback(key, data, worker_type, dbt):
+  """Function callback for celery async jobs to store results"""
+  data = json.loads(data)
+  LOGGER.info(data)
+
+  with DbSession() as session:
+    fin_json = data['result']['ret']
+    context = data['result']['context']
+    LOGGER.info('Parsing: %s', fin_json)
+    LOGGER.info('Parsing context: %s', context)
+    if worker_type == 'fin_build_worker':
+      process_fin_builder_results(session, fin_json, context, dbt)
+    elif worker_type == 'fin_eval_worker':
+      process_fin_evaluator_results(session, fin_json, context, dbt)
+    else:
+      raise ValueError('Unsupported worker_type')
+

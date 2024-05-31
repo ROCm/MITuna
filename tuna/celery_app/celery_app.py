@@ -40,14 +40,17 @@ if 'TUNA_CELERY_BROKER' in os.environ:
 if 'TUNA_REDIS_PORT' in os.environ:
   TUNA_REDIS_PORT = os.environ['TUNA_REDIS_PORT']
 
-app = Celery('celery_app',
-             broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}//",
-             result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/",
-             include=['tuna.miopen.celery_tuning.celery_tasks'])
+app = Celery(
+    'celery_app',
+    broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/14",
+    result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15",
+    include=['tuna.miopen.celery_tuning.celery_tasks'])
 
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
 app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
+#prefix = "d_tuna_net2_sess_15"
+#app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": prefix})
 
 
 def stop_active_workers():
@@ -59,12 +62,14 @@ def stop_active_workers():
 
   return True
 
+
 def stop_named_worker(hostname):
   """Shutdown a specific worker"""
   LOGGER.warning('Shutting down remote worker: %s', hostname)
   app.control.shutdown(destination=[hostname])
 
   return True
+
 
 def purge_queue(q_names):
   """Purge jobs in queue"""

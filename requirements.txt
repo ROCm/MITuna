@@ -1,6 +1,8 @@
+aioredis==2.0.1
 alembic==1.8.1
 asn1crypto==0.24.0
 astroid==2.15.4
+asyncio==3.4.3
 attrs==19.3.0
 backcall==0.1.0
 bcrypt==3.2
