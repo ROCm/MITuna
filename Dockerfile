@@ -21,7 +21,7 @@ ARG OSDB_BKC_VERSION=
 ARG BUILD_MIOPEN_DEPS=
 
 RUN test -d /opt/rocm*; \
-    if [ -z $? ] ; then \
+    if [ $? -eq 0 ] ; then \
         test -d /opt/rocm; \
         if [ $? ] ; then \
             ln -s /opt/rocm* /opt/rocm; \
