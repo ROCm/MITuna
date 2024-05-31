@@ -20,6 +20,14 @@ ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
 ARG BUILD_MIOPEN_DEPS=
 
+RUN test -d /opt/rocm* \
+    if [ -z $? ] ; then \
+        test -d /opt/rocm; \
+        if [ $? ] ; then \
+            ln -s /opt/rocm* /opt/rocm; \
+        fi \
+    fi
+
 # Add rocm repository
 RUN apt-get update && apt-get install -y wget gnupg
 RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
@@ -29,9 +37,14 @@ RUN echo "" > /env; \
        sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
        cat  /etc/apt/sources.list.d/rocm.list;\
     elif ! [ -z $ROCMVERSION ]; then \
-       echo "Using Release VERSION: $ROCMVERSION";\
-       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
-       cat  /etc/apt/sources.list.d/rocm.list;\
+       if [$(cat /opt/rocm/.info/version) -ne $ROCMVERSION]; then \
+           echo "Using Release VERSION: $ROCMVERSION";\
+           sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
+           cat  /etc/apt/sources.list.d/rocm.list;\
+       else \
+           echo "ROCm version present: $ROCMVERSION";\
+           echo "export NO_ROCM_INST=1" >> /env; \
+       fi \
     else \
        echo "export NO_ROCM_INST=1" >> /env; \
     fi
