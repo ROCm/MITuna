@@ -32,14 +32,15 @@ import copy
 import random
 import string
 import asyncio
+import threading
 from datetime import timedelta
-from multiprocessing import Queue as mpQueue, Process, Lock, Value
+from multiprocessing import Queue as mpQueue, Process, Value
 import queue
+import json
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
 import kombu
 import aioredis
-import json
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk, SimpleDict
@@ -55,12 +56,13 @@ from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.celery_app.celery_app import stop_active_workers, purge_queue, app, TUNA_CELERY_BROKER, TUNA_REDIS_PORT
+from tuna.celery_app.celery_app import stop_active_workers, purge_queue, app
+from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT
 
 LOGGER: logging.Logger = setup_logger('tuning')
 MAX_ERRORED_JOB_RETRIES = 3
 result_queue = mpQueue()
-result_queue_lock = Lock()
+job_counter_lock = threading.Lock()
 
 
 def process_fin_builder_results(session, fin_json, context, dbt):
@@ -238,8 +240,9 @@ def prep_tuning(library):
 
   if not library.args.enqueue_only:
     try:
-      subp_list = launch_celery_worker(machines, get_worker_granularity(library),
-                                      cmd, True)
+      subp_list = launch_celery_worker(machines,
+                                       get_worker_granularity(library), cmd,
+                                       True)
       if not subp_list:
         raise ValueError('Could not launch celery worker')
       #LOGGER.info('Launched supbproc pids: (%s)', ', '.join([str(subp.pid) for subp in subp_list]))
@@ -294,26 +297,34 @@ def tune(library, job_batch_size=1000):
   #res_set = ResultSet([])
   start = time.time()
   worker_type = get_worker_type(library.args)
-  
+
   db_name = os.environ['TUNA_DB_NAME']
   prefix = f"d_{db_name}_sess_{library.args.session_id}"
-  app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": prefix})
+  app.conf.get('result_backend_transport_options',
+               {}).update({"global_keyprefix": prefix})
   with DbSession() as session:
-    job_list = library.get_jobs(session, library.fetch_state,
-                                library.set_state, library.args.session_id, no_update=True)
+    job_list = library.get_jobs(session,
+                                library.fetch_state,
+                                library.set_state,
+                                library.args.session_id,
+                                no_update=True)
   job_counter = Value('i', len(job_list))
   LOGGER.info('Job counter: %s', job_counter.value)
-
+  if job_counter.value == 0:
+    LOGGER.info('No new jobs found')
+    return False
 
   try:
-    enqueue_proc = Process(target=enqueue_jobs, args=[library, job_batch_size, worker_type, kwargs, fdb_attr, q_name])
+    enqueue_proc = Process(
+        target=enqueue_jobs,
+        args=[library, job_batch_size, worker_type, kwargs, fdb_attr, q_name])
     #Start enqueue proc
     enqueue_proc.start()
     #start async consume thread, blocking
     asyncio.run(consume(job_counter, worker_type, DBT))
     enqueue_proc.join()
 
-  except KeyboardInterrupt:
+  except (KeyboardInterrupt, Exception):  #pylint: disable=broad-exception-caught
     LOGGER.error('Keyboard interrupt caught, draining results queue')
     purge_queue([q_name])
     library.cancel_consumer(q_name)
@@ -325,7 +336,8 @@ def tune(library, job_batch_size=1000):
   return True
 
 
-def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr, q_name):
+def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr,
+                 q_name):
   """Enqueue celery jobs"""
   with DbSession() as session:
     while True:
@@ -353,9 +365,7 @@ def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr, q_name)
           }
 
           #calling celery task, enqueuing to celery queue
-          celery_enqueue.apply_async((context,),
-                                     queue=q_name,
-                                     reply_to=q_name)
+          celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
 
       if not job_list:
         LOGGER.info('All tasks added to queue')
@@ -399,6 +409,7 @@ def drain_queue(worker_type, dbt, event):
 
   return True
 
+
 async def consume(job_counter, worker_type, dbt):
   """Retrieve celery results from redis db"""
   redis = await aioredis.from_url(
@@ -413,13 +424,13 @@ async def consume(job_counter, worker_type, dbt):
       keys.extend(results)
     LOGGER.info('Found results')
     for key in keys:
-      LOGGER.info(type(key))
       try:
         data = await redis.get(key)
         if data:
-          await result_callback(key.decode('utf-8'), data.decode('utf-8'), worker_type, dbt)
+          await result_callback(data.decode('utf-8'), worker_type, dbt)
           await redis.delete(key)
-          job_counter.value - 1
+          with job_counter_lock:
+            job_counter.value = job_counter.value - 1
       except aioredis.exceptions.ResponseError as red_err:
         LOGGER.error(red_err)
         LOGGER.info(key.decode('utf-8'))
@@ -429,7 +440,8 @@ async def consume(job_counter, worker_type, dbt):
   LOGGER.info('Job counter reached 0')
   await redis.close()
 
-async def result_callback(key, data, worker_type, dbt):
+
+async def result_callback(data, worker_type, dbt):
   """Function callback for celery async jobs to store results"""
   data = json.loads(data)
   LOGGER.info(data)
@@ -445,4 +457,3 @@ async def result_callback(key, data, worker_type, dbt):
       process_fin_evaluator_results(session, fin_json, context, dbt)
     else:
       raise ValueError('Unsupported worker_type')
-
