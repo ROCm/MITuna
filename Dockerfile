@@ -20,7 +20,7 @@ ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
 ARG BUILD_MIOPEN_DEPS=
 
-RUN test -d /opt/rocm* \
+RUN test -d /opt/rocm*; \
     if [ -z $? ] ; then \
         test -d /opt/rocm; \
         if [ $? ] ; then \
