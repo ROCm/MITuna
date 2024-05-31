@@ -18,7 +18,6 @@ FROM $USEIMAGE as dtuna-ver-0
 #args before from are wiped
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
-ARG BUILD_MIOPEN_DEPS=
 
 RUN test -d /opt/rocm*; \
     if [ $? -eq 0 ] ; then \
@@ -130,8 +129,13 @@ ARG PREFIX=/opt/rocm
 ARG MIOPEN_DEPS=/opt/rocm
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
+ARG BUILD_MIOPEN_DEPS=
+ARG ARCH_TARGET=
 RUN . /env; if [ -z $NO_ROCM_INST ] || ! [ -z $BUILD_MIOPEN_DEPS ]; then\
         pip install cget; \
+        if ! [-z $ARCH_TARGET]; then \
+            sed -i "s#\(composable_kernel.*\)#\1 -DGPU_TARGETS='$ARCH_TARGET'#" requirements.txt \
+        fi; \
         CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $PREFIX; \
     fi
 
