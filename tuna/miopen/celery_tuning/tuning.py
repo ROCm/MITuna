@@ -35,7 +35,6 @@ import asyncio
 import threading
 from datetime import timedelta
 from multiprocessing import Queue as mpQueue, Process, Value
-import queue
 import json
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from sqlalchemy.inspection import inspect
@@ -328,12 +327,45 @@ def tune(library, job_batch_size=1000):
     LOGGER.error('Keyboard interrupt caught, draining results queue')
     purge_queue([q_name])
     library.cancel_consumer(q_name)
+    reset_job_state(library.args.session_id, worker_type, DBT)
 
   library.cancel_consumer(q_name)
   end = time.time()
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
 
   return True
+
+
+def reset_job_state(sess_id, worker_type, dbt):
+  """Resetting job state for jobs in flight"""
+  temp_obj = SimpleDict()
+  temp_obj.id = sess_id  #pylint: disable=invalid-name
+  attribs = ['state']
+  temp_obj.state = 1
+  state = None
+
+  LOGGER.info('Resetting job state in DB for in flight jobs')
+
+  if worker_type == 'fin_build_worker':
+    state = 'compile_start'
+  elif worker_type == 'fin_eval_worker':
+    state = 'eval_start'
+
+  query = gen_update_query(temp_obj,
+                           attribs,
+                           dbt.job_table.__tablename__,
+                           state=state)
+  with DbSession() as session:
+
+    def callback() -> bool:
+      session.execute(query)
+      session.commit()
+      return True
+
+    assert session_retry(session, callback, lambda x: x(), LOGGER)
+    return True
+
+  return False
 
 
 def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr,
@@ -372,44 +404,6 @@ def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr,
         break
 
 
-def drain_queue(worker_type, dbt, event):
-  """Drain results queue"""
-  LOGGER.info('Draining queue')
-  sleep_time = 0
-  wait_limit = 1800  #max wait time
-  with DbSession() as session:
-    while True:
-      try:
-        LOGGER.warning('Waiting on get')
-        fin_json, context = result_queue.get(True, 1)
-        LOGGER.info('Parsing: %s', fin_json)
-        LOGGER.info('Parsing context: %s', context)
-        if fin_json is None and context is None:
-          LOGGER.info('Reached end of results queue')
-          break
-        if worker_type == 'fin_build_worker':
-          process_fin_builder_results(session, fin_json, context, dbt)
-        elif worker_type == 'fin_eval_worker':
-          process_fin_evaluator_results(session, fin_json, context, dbt)
-        else:
-          raise ValueError('Worker type not supported in tuning loop')
-        sleep_time = 0
-      except queue.Empty as exp:
-        LOGGER.info(exp)
-        LOGGER.info('Sleeping for 2 sec, waiting on results from celery')
-        if sleep_time >= wait_limit:
-          LOGGER.info(
-              'Max wait limit of %s seconds has been reached, terminating...',
-              wait_limit)
-          return False
-        sleep_time += 2
-        event.wait(timeout=2.0)
-        #time.sleep(2)
-        continue
-
-  return True
-
-
 async def consume(job_counter, worker_type, dbt):
   """Retrieve celery results from redis db"""
   redis = await aioredis.from_url(
@@ -422,12 +416,12 @@ async def consume(job_counter, worker_type, dbt):
       cursor, results = await redis.scan(cursor, match='*'
                                         )  # update with the celery pattern
       keys.extend(results)
-    LOGGER.info('Found results')
+    LOGGER.info('Found %s results', len(results))
     for key in keys:
       try:
         data = await redis.get(key)
         if data:
-          await result_callback(data.decode('utf-8'), worker_type, dbt)
+          await parse_result(data.decode('utf-8'), worker_type, dbt)
           await redis.delete(key)
           with job_counter_lock:
             job_counter.value = job_counter.value - 1
@@ -441,7 +435,7 @@ async def consume(job_counter, worker_type, dbt):
   await redis.close()
 
 
-async def result_callback(data, worker_type, dbt):
+async def parse_result(data, worker_type, dbt):
   """Function callback for celery async jobs to store results"""
   data = json.loads(data)
   LOGGER.info(data)

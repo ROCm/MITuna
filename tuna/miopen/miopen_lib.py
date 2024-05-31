@@ -454,6 +454,7 @@ class MIOpen(MITunaInterface):
     row: SimpleDict
     job_attr: List[str] = self.get_job_attr()
 
+    self.logger.info('Fetching DB rows...')
     job_list = self.get_job_objs(session, find_state, self.args.label, self.dbt,
                                  job_attr, claim_num, self.args.fin_steps)
 
@@ -465,6 +466,7 @@ class MIOpen(MITunaInterface):
 
     ids = [row.id for row in job_list]
     self.logger.info("%s jobs %s", find_state, ids)
+    self.logger.info('Updating job state to %s', set_state)
     for job in job_list:
       job.state = set_state
       query: str = gen_update_query(job, ['state'],
