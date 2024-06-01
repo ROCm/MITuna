@@ -126,7 +126,7 @@ ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
-ARG MIOPEN_DEPS=/opt/rocm
+ARG MIOPEN_DEPS=$MIOPEN_DIR/deps
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
 ARG BUILD_MIOPEN_DEPS=
@@ -180,7 +180,7 @@ RUN make install
 
 #SET MIOPEN ENVIRONMENT VARIABLES
 ENV MIOPEN_LOG_LEVEL=6
-ENV PATH=$PREFIX/miopen/bin:$PREFIX/bin:$PATH
+ENV PATH=$PREFIX/miopen/bin:$PREFIX/bin:$MIOPEN_DEPS/bin:$PATH
 ENV LD_LIBRARY_PATH=/opt/rocm/lib:$LD_LIRBARY_PATH
 RUN ulimit -c unlimited
 # Should be over-ridden by the CI/launcher to point to new db
