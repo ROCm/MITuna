@@ -134,7 +134,7 @@ ARG ARCH_TARGET=
 RUN . /env; if [ -z $NO_ROCM_INST ] || ! [ -z $BUILD_MIOPEN_DEPS ]; then\
         pip install cget; \
         if ! [ -z $ARCH_TARGET ]; then \
-            sed -i "s#\(composable_kernel.*\)#\1 -DGPU_TARGETS='$ARCH_TARGET'#" requirements.txt; \
+            sed -i "s#\(composable_kernel.*\)#\1 -DGPU_TARGETS=\"$ARCH_TARGET\"#" requirements.txt; \
         fi; \
         CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $PREFIX; \
     fi
