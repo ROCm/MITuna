@@ -48,9 +48,8 @@ app = Celery(
 
 app.conf.update(result_expires=3600,)
 app.autodiscover_tasks()
-app.conf.result_backend_transport_options = {'retry_policy': {'timeout': 5.0}}
-#prefix = "d_tuna_net2_sess_15"
-#app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": prefix})
+#app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": "test"})
+#prefix = "test"
 
 
 def stop_active_workers():

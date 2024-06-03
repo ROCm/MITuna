@@ -300,8 +300,8 @@ def tune(library, job_batch_size=1000):
 
   db_name = os.environ['TUNA_DB_NAME']
   prefix = f"d_{db_name}_sess_{library.args.session_id}"
-  app.conf.get('result_backend_transport_options',
-               {}).update({"global_keyprefix": prefix})
+  #app.conf.get('result_backend_transport_options',
+  #             {}).update({"global_keyprefix": prefix})
   with DbSession() as session:
     job_list = library.get_jobs(session,
                                 library.fetch_state,
