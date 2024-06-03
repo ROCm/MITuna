@@ -309,19 +309,25 @@ def tune(library, job_batch_size=1000):
                                 no_update=True)
   job_counter = Value('i', len(job_list))
   LOGGER.info('Job counter: %s', job_counter.value)
-  if job_counter.value == 0:
-    LOGGER.info('No new jobs found')
-    return False
-
   try:
-    enqueue_proc = Process(
-        target=enqueue_jobs,
-        args=[library, job_batch_size, worker_type, kwargs, fdb_attr, q_name])
-    #Start enqueue proc
-    enqueue_proc.start()
+    if job_counter.value == 0:
+      LOGGER.info('No new jobs found')
+      #return False
+    else:
+
+      enqueue_proc = Process(
+          target=enqueue_jobs,
+          args=[library, job_batch_size, worker_type, kwargs, fdb_attr, q_name])
+      #Start enqueue proc
+      enqueue_proc.start()
+
     #start async consume thread, blocking
+    LOGGER.info('Starting consume thread')
     asyncio.run(consume(job_counter, worker_type, DBT))
-    enqueue_proc.join()
+    LOGGER.info('Closed consume thread')
+
+    if enqueue_proc:
+      enqueue_proc.join()
 
   except (KeyboardInterrupt, Exception):  #pylint: disable=broad-exception-caught
     LOGGER.error('Keyboard interrupt caught, draining results queue')
@@ -339,22 +345,19 @@ def tune(library, job_batch_size=1000):
 def reset_job_state(sess_id, worker_type, dbt):
   """Resetting job state for jobs in flight"""
   temp_obj = SimpleDict()
-  temp_obj.id = sess_id  #pylint: disable=invalid-name
+  temp_obj.session_id = sess_id  #pylint: disable=invalid-name
   attribs = ['state']
   temp_obj.state = 1
-  state = None
 
   LOGGER.info('Resetting job state in DB for in flight jobs')
 
   if worker_type == 'fin_build_worker':
-    state = 'compile_start'
+    state = 16
   elif worker_type == 'fin_eval_worker':
-    state = 'eval_start'
+    state = 12
 
-  query = gen_update_query(temp_obj,
-                           attribs,
-                           dbt.job_table.__tablename__,
-                           state=state)
+  query = gen_update_query(temp_obj, attribs, dbt.job_table.__tablename__,
+                           [('session', sess_id), ('state', state)])
   with DbSession() as session:
 
     def callback() -> bool:
@@ -363,6 +366,7 @@ def reset_job_state(sess_id, worker_type, dbt):
       return True
 
     assert session_retry(session, callback, lambda x: x(), LOGGER)
+    LOGGER.info('Sucessfully reset job state')
     return True
 
   return False
