@@ -51,6 +51,7 @@ app.autodiscover_tasks()
 #app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": "test"})
 #prefix = "test"
 
+
 def stop_active_workers():
   """Shutdown active workers"""
 
