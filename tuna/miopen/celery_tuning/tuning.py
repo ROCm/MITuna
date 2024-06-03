@@ -229,7 +229,6 @@ def prep_tuning(library):
   worker_type = get_worker_type(library.args)
   machines = load_machines(library.args)
   q_name = get_q_name(library)
-  purge_queue([q_name])
   cmd = None
   subp_list = []
   if worker_type == 'fin_build_worker':
@@ -248,6 +247,8 @@ def prep_tuning(library):
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
       return False
+  else:
+    purge_queue([q_name])
 
   global DBT  #pylint: disable=global-variable-undefined
   DBT = MIOpenDBTables(session_id=library.args.session_id,
