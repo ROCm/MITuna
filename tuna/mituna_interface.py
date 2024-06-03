@@ -242,13 +242,15 @@ class MITunaInterface():
           shell=True,
           universal_newlines=True)
 
+      #filter the workers by session id
+      sess_str = "sess_" + queue.split('_')[-1] + "_"
       stdout, _ = subp.stdout, subp.stderr
       while True:
         line = stdout.readline()
         if not line:
           break
         #stop workers that were feeding from this queue
-        if "->" in line:
+        if "->" in line and sess_str in line:
           hostname = line.split('->')[1].split()[0].split(':')[0]
           stop_named_worker(hostname)
 
