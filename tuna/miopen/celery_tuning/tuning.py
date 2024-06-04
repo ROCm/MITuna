@@ -55,7 +55,7 @@ from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.celery_app.celery_app import stop_active_workers, purge_queue, app
+from tuna.celery_app.celery_app import stop_active_workers, purge_queue
 from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT
 
 LOGGER: logging.Logger = setup_logger('tuning')
@@ -299,11 +299,9 @@ def tune(library, job_batch_size=1000):
   start = time.time()
   worker_type = get_worker_type(library.args)
 
-  #db_name = os.environ['TUNA_DB_NAME']
-  #prefix = f"d_{db_name}_sess_{library.args.session_id}"
+  db_name = os.environ['TUNA_DB_NAME']
+  prefix = f"d_{db_name}_sess_{library.args.session_id}"
   prefix = "test"
-  app.conf.get('result_backend_transport_options',
-               {}).update({"global_keyprefix": prefix})
   with DbSession() as session:
     job_list = library.get_jobs(session,
                                 library.fetch_state,
@@ -312,6 +310,7 @@ def tune(library, job_batch_size=1000):
                                 no_update=True)
   job_counter = Value('i', len(job_list))
   LOGGER.info('Job counter: %s', job_counter.value)
+  enqueue_proc = None
   try:
     if job_counter.value == 0:
       LOGGER.info('No new jobs found')
@@ -324,7 +323,6 @@ def tune(library, job_batch_size=1000):
       #Start enqueue proc
       enqueue_proc.start()
 
-    LOGGER.warning(app._conf)
     #start async consume thread, blocking
     LOGGER.info('Starting consume thread')
     asyncio.run(consume(job_counter, worker_type, DBT, prefix))
@@ -333,8 +331,8 @@ def tune(library, job_batch_size=1000):
     if enqueue_proc:
       enqueue_proc.join()
 
-  except (KeyboardInterrupt, Exception):  #pylint: disable=broad-exception-caught
-    LOGGER.error('Keyboard interrupt caught, draining results queue')
+  except (KeyboardInterrupt, Exception) as exp:  #pylint: disable=broad-exception-caught
+    LOGGER.error('Error ocurred %s', exp)
     purge_queue([q_name])
     library.cancel_consumer(q_name)
     reset_job_state(library.args.session_id, worker_type, DBT)
@@ -418,11 +416,15 @@ async def consume(job_counter, worker_type, dbt, prefix):
   redis = await aioredis.from_url(
       f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
   LOGGER.info('Connected to redis')
+  #if job_counter is 0, let it poll for results once to clean out any leftover results
+  if job_counter.value == 0:
+    job_counter.value = 1
+
   while job_counter.value > 0:
     cursor = "0"
     keys = []
     while cursor != 0:
-      cursor, results = await redis.scan(cursor, match=prefix
+      cursor, results = await redis.scan(cursor, match=f"{prefix}*"
                                         )  # update with the celery pattern
       keys.extend(results)
     LOGGER.info('Found %s results', len(results))

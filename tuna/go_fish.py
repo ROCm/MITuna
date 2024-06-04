@@ -39,6 +39,7 @@ from tuna.example.example_lib import Example
 from tuna.yaml_parser import parse_yaml
 from tuna.parse_args import clean_args
 from tuna.miopen.celery_tuning.tuning import tune
+from tuna.celery_app.celery_app import update_celery_app_configs
 
 # Setup logging
 LOGGER: logging.Logger = setup_logger('go_fish')
@@ -99,6 +100,7 @@ def main() -> bool:
         LOGGER.info("Executing with yaml file: %s", yaml_file)
 
       if library.has_tunable_operation():
+        update_celery_app_configs(library.args.session_id)
         #celery tasks
         tune(library, job_batch_size=job_batch_size)
       else:
