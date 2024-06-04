@@ -215,11 +215,12 @@ def get_worker_granularity(library):
 def get_q_name(library):
   """Compose queue name"""
   worker_type = get_worker_type(library.args)
+  db_name = os.environ['TUNA_DB_NAME']
   q_name = None
   if worker_type == 'fin_build_worker':
-    q_name = f"compile_q_session_{library.dbt.session_id}"
+    q_name = f"compile_q_{db_name}_sess_{library.dbt.session_id}"
   else:
-    q_name = f"eval_q_session_{library.dbt.session_id}"
+    q_name = f"eval_q_{db_name}_sess_{library.dbt.session_id}"
 
   return q_name
 
@@ -298,8 +299,9 @@ def tune(library, job_batch_size=1000):
   start = time.time()
   worker_type = get_worker_type(library.args)
 
-  db_name = os.environ['TUNA_DB_NAME']
-  prefix = f"d_{db_name}_sess_{library.args.session_id}"
+  #db_name = os.environ['TUNA_DB_NAME']
+  #prefix = f"d_{db_name}_sess_{library.args.session_id}"
+  prefix = "test"
   app.conf.get('result_backend_transport_options',
                {}).update({"global_keyprefix": prefix})
   with DbSession() as session:
