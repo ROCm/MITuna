@@ -300,8 +300,8 @@ def tune(library, job_batch_size=1000):
 
   db_name = os.environ['TUNA_DB_NAME']
   prefix = f"d_{db_name}_sess_{library.args.session_id}"
-  #app.conf.get('result_backend_transport_options',
-  #             {}).update({"global_keyprefix": prefix})
+  app.conf.get('result_backend_transport_options',
+               {}).update({"global_keyprefix": prefix})
   with DbSession() as session:
     job_list = library.get_jobs(session,
                                 library.fetch_state,
@@ -322,9 +322,10 @@ def tune(library, job_batch_size=1000):
       #Start enqueue proc
       enqueue_proc.start()
 
+    LOGGER.warning(app._conf)
     #start async consume thread, blocking
     LOGGER.info('Starting consume thread')
-    asyncio.run(consume(job_counter, worker_type, DBT))
+    asyncio.run(consume(job_counter, worker_type, DBT, prefix))
     LOGGER.info('Closed consume thread')
 
     if enqueue_proc:
@@ -409,8 +410,9 @@ def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr,
         break
 
 
-async def consume(job_counter, worker_type, dbt):
+async def consume(job_counter, worker_type, dbt, prefix):
   """Retrieve celery results from redis db"""
+
   redis = await aioredis.from_url(
       f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
   LOGGER.info('Connected to redis')
@@ -418,7 +420,7 @@ async def consume(job_counter, worker_type, dbt):
     cursor = "0"
     keys = []
     while cursor != 0:
-      cursor, results = await redis.scan(cursor, match='*'
+      cursor, results = await redis.scan(cursor, match=prefix
                                         )  # update with the celery pattern
       keys.extend(results)
     LOGGER.info('Found %s results', len(results))

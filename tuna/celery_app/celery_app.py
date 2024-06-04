@@ -46,10 +46,7 @@ app = Celery(
     result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15",
     include=['tuna.miopen.celery_tuning.celery_tasks'])
 
-app.conf.update(result_expires=3600,)
-app.autodiscover_tasks()
-#app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": "test"})
-#prefix = "test"
+#app.conf.get('result_backend_transport_options', {}).update({"global_keyprefix": test})
 
 
 def stop_active_workers():
