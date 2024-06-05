@@ -36,12 +36,11 @@ from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 from tuna.miopen.db.solver import get_solver_ids
-from tuna.utils.utility import check_qts
-from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT
-from tuna.miopen.utils.metadata import BN_DEFAULTS
+from tuna.utils.utility import check_qts, SimpleDict
+from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT, BN_DEFAULTS
 from tuna.miopen.utils.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.utils.metadata import NUM_SQL_RETRIES
-from tuna.utils.utility import SimpleDict
+from tuna.utils.db_utility import gen_update_query
 
 LOGGER = setup_logger('helper')
 
@@ -213,3 +212,67 @@ def prep_kwargs(kwargs, args):
   kwargs["result_queue_lock"] = Lock()
 
   return kwargs
+
+
+def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
+  """Update job state for builder/evaluator job_set_attr: List[str]"""
+
+  LOGGER.info('Setting job id %s state to %s', job.id, state)
+  job_set_attr = ['state', 'gpu_id']
+  job.state = state
+  if result:
+    job_set_attr.append('result')
+    job.result = result
+  if increment_retries:
+    job_set_attr.append('retries')
+    job.retries += 1
+
+  #pylint: disable=duplicate-code
+  if '_start' in state:
+    job_set_attr.append('cache_loc')
+    cache: str = '~/.cache/miopen_'
+    blurr: str = ''.join(
+        random.choice(string.ascii_lowercase) for i in range(10))
+    cache_loc: str = cache + blurr
+    job.cache_loc = cache_loc
+  #pylint: enable=duplicate-code
+
+  query: str = gen_update_query(job, job_set_attr, dbt.job_table.__tablename__)
+
+  def callback() -> bool:
+    session.execute(query)
+    session.commit()
+    return True
+
+  assert session_retry(session, callback, lambda x: x(), LOGGER)
+  return True
+
+
+def reset_job_state(sess_id, worker_type, dbt):
+  """Resetting job state for jobs in flight"""
+  temp_obj = SimpleDict()
+  temp_obj.session_id = sess_id  #pylint: disable=invalid-name
+  attribs = ['state']
+  temp_obj.state = 1
+
+  LOGGER.info('Resetting job state in DB for in flight jobs')
+
+  if worker_type == 'fin_build_worker':
+    state = 16
+  elif worker_type == 'fin_eval_worker':
+    state = 12
+
+  query = gen_update_query(temp_obj, attribs, dbt.job_table.__tablename__,
+                           [('session', sess_id), ('state', state)])
+  with DbSession() as session:
+
+    def callback() -> bool:
+      session.execute(query)
+      session.commit()
+      return True
+
+    assert session_retry(session, callback, lambda x: x(), LOGGER)
+    LOGGER.info('Sucessfully reset job state')
+    return True
+
+  return False

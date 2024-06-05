@@ -29,8 +29,6 @@ import os
 import logging
 import time
 import copy
-import random
-import string
 import asyncio
 import threading
 from datetime import timedelta
@@ -43,13 +41,12 @@ import aioredis
 
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import serialize_chunk, SimpleDict
-from tuna.utils.db_utility import session_retry
-from tuna.utils.db_utility import gen_update_query
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table, get_worker_type
+from tuna.miopen.utils.helper import set_job_state, reset_job_state
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
@@ -57,6 +54,7 @@ from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.celery_app.celery_app import stop_active_workers, purge_queue
 from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT
+from tuna.celery_app.utility import get_q_name
 
 LOGGER: logging.Logger = setup_logger('tuning')
 MAX_ERRORED_JOB_RETRIES = 3
@@ -159,43 +157,7 @@ def process_fin_evaluator_results(session, fin_json, context, dbt):
     LOGGER.warning('FinBuild: Unable to update Database %s', err)
     session.rollback()
     set_job_state(session, job, dbt, 'errored', result=result_str)
-    #failed_job = True
 
-  return True
-
-
-def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
-  """Interface function to update job state for builder/evaluator
-  job_set_attr: List[str]"""
-
-  LOGGER.info('Setting job id %s state to %s', job.id, state)
-  job_set_attr = ['state', 'gpu_id']
-  job.state = state
-  if result:
-    job_set_attr.append('result')
-    job.result = result
-  if increment_retries:
-    job_set_attr.append('retries')
-    job.retries += 1
-
-  #pylint: disable=duplicate-code
-  if '_start' in state:
-    job_set_attr.append('cache_loc')
-    cache: str = '~/.cache/miopen_'
-    blurr: str = ''.join(
-        random.choice(string.ascii_lowercase) for i in range(10))
-    cache_loc: str = cache + blurr
-    job.cache_loc = cache_loc
-  #pylint: enable=duplicate-code
-
-  query: str = gen_update_query(job, job_set_attr, dbt.job_table.__tablename__)
-
-  def callback() -> bool:
-    session.execute(query)
-    session.commit()
-    return True
-
-  assert session_retry(session, callback, lambda x: x(), LOGGER)
   return True
 
 
@@ -212,29 +174,18 @@ def get_worker_granularity(library):
   return worker_granularity
 
 
-def get_q_name(library):
-  """Compose queue name"""
-  worker_type = get_worker_type(library.args)
-  db_name = os.environ['TUNA_DB_NAME']
-  q_name = None
-  if worker_type == 'fin_build_worker':
-    q_name = f"compile_q_{db_name}_sess_{library.dbt.session_id}"
-  else:
-    q_name = f"eval_q_{db_name}_sess_{library.dbt.session_id}"
-
-  return q_name
-
-
 def prep_tuning(library):
   """Prep env for tuning start"""
   worker_type = get_worker_type(library.args)
   machines = load_machines(library.args)
-  q_name = get_q_name(library)
   cmd = None
   subp_list = []
+  q_name = None
   if worker_type == 'fin_build_worker':
+    q_name = get_q_name(library, compile=True)
     cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{library.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
   else:
+    q_name = get_q_name(library, eval=True)
     cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{library.args.session_id}_gpu_id_GPUID -Q {q_name}"  #pylint: disable=line-too-long
 
   if not library.args.enqueue_only:
@@ -244,7 +195,6 @@ def prep_tuning(library):
                                        True)
       if not subp_list:
         raise ValueError('Could not launch celery worker')
-      #LOGGER.info('Launched supbproc pids: (%s)', ', '.join([str(subp.pid) for subp in subp_list]))
     except kombu.exceptions.OperationalError as k_err:
       LOGGER.error('Redis error ocurred: %s', k_err)
       return False
@@ -285,7 +235,7 @@ def tune(library, job_batch_size=1000):
     return False
 
   try:
-    #if enqueue_only is False, we only launch the workers
+    #if enqueue_only is False, we launch the celery workers
     if not library.args.enqueue_only:
       for subp in subp_list:
         subp.wait()
@@ -295,7 +245,6 @@ def tune(library, job_batch_size=1000):
       subp.kill()
     return False
 
-  #res_set = ResultSet([])
   start = time.time()
   worker_type = get_worker_type(library.args)
 
@@ -314,7 +263,6 @@ def tune(library, job_batch_size=1000):
   try:
     if job_counter.value == 0:
       LOGGER.info('No new jobs found')
-      #return False
     else:
 
       enqueue_proc = Process(
@@ -342,36 +290,6 @@ def tune(library, job_batch_size=1000):
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
 
   return True
-
-
-def reset_job_state(sess_id, worker_type, dbt):
-  """Resetting job state for jobs in flight"""
-  temp_obj = SimpleDict()
-  temp_obj.session_id = sess_id  #pylint: disable=invalid-name
-  attribs = ['state']
-  temp_obj.state = 1
-
-  LOGGER.info('Resetting job state in DB for in flight jobs')
-
-  if worker_type == 'fin_build_worker':
-    state = 16
-  elif worker_type == 'fin_eval_worker':
-    state = 12
-
-  query = gen_update_query(temp_obj, attribs, dbt.job_table.__tablename__,
-                           [('session', sess_id), ('state', state)])
-  with DbSession() as session:
-
-    def callback() -> bool:
-      session.execute(query)
-      session.commit()
-      return True
-
-    assert session_retry(session, callback, lambda x: x(), LOGGER)
-    LOGGER.info('Sucessfully reset job state')
-    return True
-
-  return False
 
 
 def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr,

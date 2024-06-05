@@ -48,16 +48,6 @@ def launch_worker_per_node(machines, cmd, formatted=False):
           stderr=subprocess.STDOUT,
           shell=False,
           universal_newlines=True)
-      #ret_code = subprocess.run(final_cmd.split(' '))
-      #print('ret_code: %s', ret_code)
-      #stdout, stderr = subp.stdout, subp.stderr
-      #while True:
-      #  line = stdout.readline()
-      #  LOGGER.info(line)
-      #  if not subp.poll():
-      #    break
-      #print(stdout)
-      #print(stderr)
       subp_list.append(subp)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
