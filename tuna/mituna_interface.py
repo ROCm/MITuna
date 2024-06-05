@@ -31,6 +31,9 @@ from io import StringIO
 import logging
 import argparse
 import subprocess
+import threading
+import asyncio
+import aioredis
 from paramiko.channel import ChannelFile
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
@@ -39,6 +42,9 @@ from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
+from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT
+
+job_counter_lock = threading.Lock()
 
 
 class MITunaInterface():
@@ -277,7 +283,7 @@ class MITunaInterface():
         job_list = self.get_jobs(
             session,
             self.fetch_state,
-            self.set_state, #pylint: disable=no-member
+            self.set_state,  #pylint: disable=no-member
             self.args.session_id,  #pylint: disable=no-member
             job_batch_size)
 
@@ -295,4 +301,43 @@ class MITunaInterface():
 
   def get_context_list(self, session, batch_jobs):
     """Get a list of context items to be used for celery task"""
+    raise NotImplementedError("Not implemented")
+
+  async def consume(self, job_counter, prefix):
+    """Retrieve celery results from redis db"""
+
+    redis = await aioredis.from_url(
+        f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
+    self.logger.info('Connected to redis')
+    #if job_counter is 0, let it poll for results once to clean out any leftover results
+    if job_counter.value == 0:
+      job_counter.value = 1
+
+    while job_counter.value > 0:
+      cursor = "0"
+      keys = []
+      while cursor != 0:
+        cursor, results = await redis.scan(cursor, match=f"{prefix}*"
+                                          )  # update with the celery pattern
+        keys.extend(results)
+      self.logger.info('Found %s results', len(results))
+      for key in keys:
+        try:
+          data = await redis.get(key)
+          if data:
+            await self.parse_result(data.decode('utf-8'))
+            await redis.delete(key)
+            with job_counter_lock:
+              job_counter.value = job_counter.value - 1
+        except aioredis.exceptions.ResponseError as red_err:
+          self.logger.error(red_err)
+          self.logger.info(key.decode('utf-8'))
+
+      self.logger.info('Processed results')
+      await asyncio.sleep(1)
+    self.logger.info('Job counter reached 0')
+    await redis.close()
+
+  async def parse_result(self, data):
+    """Function callback for celery async jobs to store results"""
     raise NotImplementedError("Not implemented")

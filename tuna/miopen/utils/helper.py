@@ -246,33 +246,3 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
 
   assert session_retry(session, callback, lambda x: x(), LOGGER)
   return True
-
-
-def reset_job_state(sess_id, worker_type, dbt):
-  """Resetting job state for jobs in flight"""
-  temp_obj = SimpleDict()
-  temp_obj.session_id = sess_id  #pylint: disable=invalid-name
-  attribs = ['state']
-  temp_obj.state = 1
-
-  LOGGER.info('Resetting job state in DB for in flight jobs')
-
-  if worker_type == 'fin_build_worker':
-    state = 16
-  elif worker_type == 'fin_eval_worker':
-    state = 12
-
-  query = gen_update_query(temp_obj, attribs, dbt.job_table.__tablename__,
-                           [('session', sess_id), ('state', state)])
-  with DbSession() as session:
-
-    def callback() -> bool:
-      session.execute(query)
-      session.commit()
-      return True
-
-    assert session_retry(session, callback, lambda x: x(), LOGGER)
-    LOGGER.info('Sucessfully reset job state')
-    return True
-
-  return False

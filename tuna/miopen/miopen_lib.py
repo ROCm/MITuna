@@ -27,11 +27,14 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
+import copy
+import json
 from typing import List, Tuple, Any
 from functools import lru_cache
 
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import NoInspectionAvailable
+from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
@@ -40,7 +43,7 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict, serialize_chunk
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
-from tuna.utils.db_utility import gen_update_query
+from tuna.utils.db_utility import gen_update_query, session_retry
 from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
@@ -60,6 +63,13 @@ from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.machine import Machine
 from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
+from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
+from tuna.miopen.utils.json_to_sql import clean_cache_table
+from tuna.miopen.utils.helper import set_job_state
+from tuna.miopen.worker.fin_utils import get_fin_result
+from tuna.miopen.db.solver import get_solver_ids
+
+MAX_ERRORED_JOB_RETRIES = 3
 
 
 class MIOpen(MITunaInterface):
@@ -678,3 +688,168 @@ class MIOpen(MITunaInterface):
   def celery_enqueue_call(self, context, q_name):
     """Enqueue job (context) for queue:q_name"""
     return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
+
+  async def parse_result(self, data):
+    """Function callback for celery async jobs to store results"""
+    data = json.loads(data)
+    self.logger.info(data)
+
+    with DbSession() as session:
+      fin_json = data['result']['ret']
+      context = data['result']['context']
+      self.logger.info('Parsing: %s', fin_json)
+      self.logger.info('Parsing context: %s', context)
+      if self.worker_type == 'fin_build_worker':
+        self.process_fin_builder_results(session, fin_json, context)
+      elif self.worker_type == 'fin_eval_worker':
+        self.process_fin_evaluator_results(session, fin_json, context)
+      else:
+        raise ValueError('Unsupported worker_type')
+
+  def process_fin_builder_results(self, session, fin_json, context):
+    """Process result from fin_build worker"""
+    self.logger.info('Processing fin_builder result')
+    job = SimpleDict(**context['job'])
+    pending = []
+    solver_id_map = get_solver_ids()
+
+    failed_job = False
+    result_str = ''
+    status = None
+    try:
+      if fin_json:
+        if 'miopen_find_compile_result' in fin_json:
+          status = process_fdb_w_kernels(session, fin_json,
+                                         copy.deepcopy(context), self.dbt,
+                                         context['fdb_attr'], pending)
+
+        elif 'miopen_perf_compile_result' in fin_json:
+          status = process_pdb_compile(session, fin_json, job, self.dbt,
+                                       solver_id_map)
+
+        success, result_str = get_fin_result(status)
+        failed_job = not success
+
+    except (OperationalError, IntegrityError) as err:
+      self.logger.warning('FinBuild: Unable to update Database %s', err)
+      session.rollback()
+      failed_job = True
+    except DataError as err:
+      self.logger.warning(
+          'FinBuild: Invalid data, likely large workspace. DB Error: %s', err)
+      session.rollback()
+      failed_job = True
+
+    if failed_job:
+      set_job_state(session, job, self.dbt, 'errored', False, result=result_str)
+    else:
+      set_job_state(session,
+                    job,
+                    self.dbt,
+                    'compiled',
+                    False,
+                    result=result_str)
+
+    return True
+
+  def process_fin_evaluator_results(self, session, fin_json, context):
+    """Process fin_json result"""
+    self.logger.info('Processing fin_eval result')
+    job = SimpleDict(**context['job'])
+    failed_job = True
+    result_str = ''
+    pending = []
+    orig_state = 'compiled'
+
+    try:
+      if fin_json:
+        if 'miopen_find_eval_result' in fin_json:
+          status = process_fdb_w_kernels(session,
+                                         fin_json,
+                                         copy.deepcopy(context),
+                                         self.dbt,
+                                         context['fdb_attr'],
+                                         pending,
+                                         result_str='miopen_find_eval_result',
+                                         check_str='evaluated')
+        elif 'miopen_perf_eval_result' in fin_json:
+          status = process_fdb_w_kernels(session,
+                                         fin_json,
+                                         copy.deepcopy(context),
+                                         self.dbt,
+                                         context['fdb_attr'],
+                                         pending,
+                                         result_str='miopen_perf_eval_result',
+                                         check_str='evaluated')
+
+        success, result_str = get_fin_result(status)
+        failed_job = not success
+
+      if failed_job:
+        if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):  #pylint: disable=no-member
+          self.logger.warning('max job retries exhausted, setting to errored')
+          set_job_state(session, job, self.dbt, 'errored', result=result_str)
+        else:
+          self.logger.warning('resetting job state to %s, incrementing retries',
+                              orig_state)
+          set_job_state(session,
+                        job,
+                        self.dbt,
+                        orig_state,
+                        increment_retries=True,
+                        result=result_str)
+      else:
+        self.logger.info("\n\n Setting job state to evaluated")
+        set_job_state(session, job, self.dbt, 'evaluated', result=result_str)
+        clean_cache_table(self.dbt, job)
+    except (OperationalError, IntegrityError) as err:
+      self.logger.warning('FinBuild: Unable to update Database %s', err)
+      session.rollback()
+      set_job_state(session, job, self.dbt, 'errored', result=result_str)
+
+    return True
+
+  def get_worker_granularity(self):
+    """Check how many celery workers we need"""
+    worker_granularity = None
+    if 'miopen_find_compile' in self.args.fin_steps \
+    or 'miopen_perf_compile' in self.args.fin_steps:
+      worker_granularity = 'worker_per_node'
+    elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
+      worker_granularity = 'worker_per_gpu'
+
+    return worker_granularity
+
+  def reset_job_state_on_ctrl_c(self):
+    """Resetting job state for jobs in flight"""
+    temp_obj = SimpleDict()
+    temp_obj.session_id = self.args.session_id  #pylint: disable=invalid-name
+    attribs = ['state']
+    temp_obj.state = 1
+
+    self.logger.info('Resetting job state in DB for in flight jobs')
+
+    if self.worker_type == 'fin_build_worker':
+      state = 16
+    elif self.worker_type == 'fin_eval_worker':
+      state = 12
+
+    query = gen_update_query(temp_obj, attribs,
+                             self.dbt.job_table.__tablename__,
+                             [('session', self.args.session_id),
+                              ('state', state)])
+    with DbSession() as session:
+
+      #pylint: disable=duplicate-code
+      def callback() -> bool:
+        session.execute(query)
+        session.commit()
+        return True
+
+      #pylint: enable=duplicate-code
+
+      assert session_retry(session, callback, lambda x: x(), self.logger)
+      self.logger.info('Sucessfully reset job state')
+      return True
+
+    return False
