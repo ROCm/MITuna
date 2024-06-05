@@ -35,13 +35,11 @@ from datetime import timedelta
 from multiprocessing import Queue as mpQueue, Process, Value
 import json
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
-from sqlalchemy.inspection import inspect
 import kombu
 import aioredis
 
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import serialize_chunk, SimpleDict
-from tuna.machine import Machine
+from tuna.utils.utility import SimpleDict
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.miopen_utility import load_machines
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
@@ -51,7 +49,6 @@ from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.celery_app.celery_workers import launch_celery_worker
-from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.celery_app.celery_app import stop_active_workers, purge_queue
 from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT
 from tuna.celery_app.utility import get_q_name
@@ -205,16 +202,7 @@ def prep_tuning(library):
   DBT = MIOpenDBTables(session_id=library.args.session_id,
                        config_type=library.args.config_type)
 
-  fdb_attr = [column.name for column in inspect(DBT.find_db_table).c]
-  fdb_attr.remove("insert_ts")
-  fdb_attr.remove("update_ts")
-
-  f_vals = library.get_f_vals(Machine(local_machine=True),
-                              range(0),
-                              tuning=True)
-  kwargs = library.get_kwargs(0, f_vals, tuning=True)
-
-  return worker_type, kwargs, fdb_attr, q_name, subp_list
+  return worker_type, q_name, subp_list
 
 
 #pylint: disable=too-many-locals
@@ -228,7 +216,7 @@ def tune(library, job_batch_size=1000):
 
   try:
     LOGGER.info('Launching celery workers')
-    worker_type, kwargs, fdb_attr, q_name, subp_list = prep_tuning(library)
+    worker_type, q_name, subp_list = prep_tuning(library)
     LOGGER.info('Done launching celery workers')
   except ValueError as verr:
     LOGGER.error(verr)
@@ -265,9 +253,8 @@ def tune(library, job_batch_size=1000):
       LOGGER.info('No new jobs found')
     else:
 
-      enqueue_proc = Process(
-          target=enqueue_jobs,
-          args=[library, job_batch_size, worker_type, kwargs, fdb_attr, q_name])
+      enqueue_proc = Process(target=library.enqueue_jobs,
+                             args=[job_batch_size, q_name])
       #Start enqueue proc
       enqueue_proc.start()
 
@@ -290,42 +277,6 @@ def tune(library, job_batch_size=1000):
   LOGGER.info("Took {:0>8} to tune".format(str(timedelta(seconds=end - start))))  #pylint: disable=consider-using-f-string
 
   return True
-
-
-def enqueue_jobs(library, job_batch_size, worker_type, kwargs, fdb_attr,
-                 q_name):
-  """Enqueue celery jobs"""
-  with DbSession() as session:
-    while True:
-      job_list = []
-      #get all the jobs from mySQL
-      job_list = library.get_jobs(session, library.fetch_state,
-                                  library.set_state, library.args.session_id,
-                                  job_batch_size)
-
-      for i in range(0, len(job_list), job_batch_size):
-        batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
-        entries = library.compose_work_objs_fin(session, batch_jobs,
-                                                library.dbt)
-        serialized_jobs = serialize_chunk(entries)
-        #build context for each celery task
-        for job, config in serialized_jobs:
-          context = {
-              'job': job,
-              'config': config,
-              'worker_type': worker_type,
-              'arch': library.dbt.session.arch,
-              'num_cu': library.dbt.session.num_cu,
-              'kwargs': kwargs,
-              'fdb_attr': fdb_attr
-          }
-
-          #calling celery task, enqueuing to celery queue
-          celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
-
-      if not job_list:
-        LOGGER.info('All tasks added to queue')
-        break
 
 
 async def consume(job_counter, worker_type, dbt, prefix):

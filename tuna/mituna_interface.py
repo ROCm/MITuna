@@ -263,3 +263,36 @@ class MITunaInterface():
     self.logger.info('Sucessfully cancelled consumer for queue: %s', queue)
 
     return True
+
+  def celery_enqueue_call(self, context, q_name):
+    """Wrapper function for celery enqueue func"""
+    raise NotImplementedError('Not implemented')
+
+  def enqueue_jobs(self, job_batch_size, q_name):
+    """Enqueue celery jobs"""
+    with DbSession() as session:
+      while True:
+        job_list = []
+        #get all the jobs from mySQL
+        job_list = self.get_jobs(
+            session,
+            self.fetch_state,
+            self.set_state, #pylint: disable=no-member
+            self.args.session_id,  #pylint: disable=no-member
+            job_batch_size)
+
+        for i in range(0, len(job_list), job_batch_size):
+          batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
+          context_list = self.get_context_list(session, batch_jobs)
+          for context in context_list:
+            #calling celery task, enqueuing to celery queue
+            #celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
+            self.celery_enqueue_call(context, q_name)
+
+        if not job_list:
+          self.logger.info('All tasks added to queue')
+          break
+
+  def get_context_list(self, session, batch_jobs):
+    """Get a list of context items to be used for celery task"""
+    raise NotImplementedError("Not implemented")

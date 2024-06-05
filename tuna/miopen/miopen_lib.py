@@ -28,6 +28,7 @@
 
 import sys
 from typing import List, Tuple, Any
+from functools import lru_cache
 
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import NoInspectionAvailable
@@ -37,7 +38,7 @@ from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
-from tuna.utils.utility import SimpleDict
+from tuna.utils.utility import SimpleDict, serialize_chunk
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
 from tuna.utils.db_utility import gen_update_query
 from tuna.miopen.db.get_db_tables import get_miopen_tables
@@ -51,14 +52,14 @@ from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
 from tuna.miopen.subcmd.export_db import run_export_db
 from tuna.miopen.subcmd.update_golden import run_update_golden
-from tuna.miopen.parse_miopen_args import get_import_cfg_parser
-from tuna.miopen.parse_miopen_args import get_load_job_parser
-from tuna.miopen.parse_miopen_args import get_export_db_parser
-from tuna.miopen.parse_miopen_args import get_update_golden_parser
+from tuna.miopen.parse_miopen_args import get_import_cfg_parser, get_load_job_parser
+from tuna.miopen.parse_miopen_args import get_export_db_parser, get_update_golden_parser
 from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
+from tuna.machine import Machine
+from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 
 
 class MIOpen(MITunaInterface):
@@ -643,3 +644,37 @@ class MIOpen(MITunaInterface):
     ]
     return self.args.fin_steps and any(
         s in self.args.fin_steps for s in tuning_steps)
+
+  @lru_cache(1)
+  def get_context_items(self):
+    """Helper function to get items for celery job context"""
+    f_vals = self.get_f_vals(Machine(local_machine=True), range(0), tuning=True)
+    kwargs = self.get_kwargs(0, f_vals, tuning=True)
+    fdb_attr = [column.name for column in inspect(self.dbt.find_db_table).c]
+    fdb_attr.remove("insert_ts")
+    fdb_attr.remove("update_ts")
+    return kwargs, fdb_attr
+
+  def get_context_list(self, session, batch_jobs):
+    """Return list of jobs (context) for celery queue"""
+
+    kwargs, fdb_attr = self.get_context_items()
+    context_list = []
+    entries = self.compose_work_objs_fin(session, batch_jobs, self.dbt)
+    serialized_jobs = serialize_chunk(entries)
+    #build context for each celery task
+    for job, config in serialized_jobs:
+      context = {
+          'job': job,
+          'config': config,
+          'worker_type': self.worker_type,
+          'arch': self.dbt.session.arch,
+          'num_cu': self.dbt.session.num_cu,
+          'kwargs': kwargs,
+          'fdb_attr': fdb_attr
+      }
+      context_list.append(context)
+
+  def celery_enqueue_call(self, context, q_name):
+    """Enqueue job (context) for queue:q_name"""
+    return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)

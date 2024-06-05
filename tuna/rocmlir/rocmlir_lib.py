@@ -217,3 +217,11 @@ class RocMLIR(MITunaInterface):
     self.logger.info('Placeholder')
 
     return True
+
+  def get_context_list(self, session, batch_jobs):
+    """Get a list of context items to be used for celery task"""
+    raise NotImplementedError("Not implemented in rocmlir")
+
+  def celery_enqueue_call(self, context, q_name):
+    """Wrapper function for celery enqueue func"""
+    raise NotImplementedError('Not implemented')
