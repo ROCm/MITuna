@@ -33,7 +33,7 @@ from multiprocessing import Value
 from typing import Dict, Any, List, Optional
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
-from tuna.utils.miopen_utility import load_machines
+from tuna.utils.machine_utility import load_machines
 from tuna.machine import Machine
 
 from tuna.libraries import Library
@@ -211,8 +211,13 @@ class RocMLIR(MITunaInterface):
 
     return kwargs
 
-  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
-               session_id: int, claim_num: int):
+  def get_jobs(self,
+               session: DbSession,
+               find_state: List[str],
+               set_state: str,
+               session_id: int,
+               claim_num: int = None,
+               no_update: bool = False):
     """Get jobs based on find_state"""
     self.logger.info('Placeholder')
 

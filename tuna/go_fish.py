@@ -38,7 +38,7 @@ from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example
 from tuna.yaml_parser import parse_yaml
 from tuna.parse_args import clean_args
-from tuna.miopen.celery_tuning.tuning import tune
+from tuna.mituna_interface import tune
 from tuna.celery_app.celery_app import update_celery_app_configs
 
 # Setup logging

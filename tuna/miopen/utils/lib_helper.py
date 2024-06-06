@@ -28,22 +28,16 @@
 
 from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.miopen.worker.fin_eval import FinEvaluator
-#from tuna.miopen.worker.fin_class import FinClass
 from tuna.worker_interface import WorkerInterface
 
 
-def get_worker(kwargs, worker_type):
+def get_worker(kwargs, operation):
   """Return worker based on worker_type"""
 
   worker = WorkerInterface(**kwargs)
-  #if worker_type == "fin_class_worker":
-  #  kwargs['fin_steps'] = 'applicability'
-  #  worker = FinClass(**kwargs)
-  if worker_type == "fin_build_worker":
-    #kwargs['fetch_state'] = 'new'
+  if operation.compile:
     worker = FinBuilder(**kwargs)
-  elif worker_type == "fin_eval_worker":
-    #kwargs['fetch_state'] = ['new', 'compiled']
+  elif operation.eval:
     worker = FinEvaluator(**kwargs)
 
   return worker

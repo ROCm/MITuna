@@ -93,13 +93,13 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
   return subp_list
 
 
-def launch_celery_worker(machines, worker_granularity, cmd, formatted=False):
+def launch_celery_worker(machines, operation, cmd, formatted=False):
   """Helper function to launch celery workers"""
-  if worker_granularity == 'worker_per_node':
+  if operation.compile:
     ret = launch_worker_per_node(machines, cmd, formatted)
-  elif worker_granularity == 'worker_per_gpu':
+  elif operation.eval:
     ret = launch_worker_per_gpu(machines, cmd, formatted)
   else:
-    raise ValueError('Operation does not support celery workers')
+    raise ValueError('Operation does not support launching celery workers')
 
   return ret

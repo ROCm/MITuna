@@ -42,6 +42,7 @@ from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict, serialize_chunk
+from tuna.utils.machine_utility import load_machines
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
 from tuna.utils.db_utility import gen_update_query, session_retry
 from tuna.miopen.db.get_db_tables import get_miopen_tables
@@ -49,7 +50,6 @@ from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.session import Session
-from tuna.utils.miopen_utility import load_machines
 from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
@@ -243,7 +243,7 @@ class MIOpen(MITunaInterface):
 
     self.dbt = MIOpenDBTables(session_id=self.args.session_id,
                               config_type=self.args.config_type)
-    self.update_worker_type()
+    self.update_operation()
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
@@ -458,7 +458,7 @@ class MIOpen(MITunaInterface):
                set_state: str,
                session_id: int,
                claim_num: int = None,
-               no_update=False):
+               no_update: bool = False):
     """Interface function to get jobs based on session and find_state"""
     #job_rows: List[SimpleDict]
     ids: list
@@ -621,22 +621,21 @@ class MIOpen(MITunaInterface):
 
     return job_tables
 
-  def update_worker_type(self):
+  def update_operation(self):
     """Update the workers type that this library needs"""
     if self.args.fin_steps:
       if 'miopen_find_compile' in self.args.fin_steps \
       or 'miopen_perf_compile' in self.args.fin_steps:
         self.fetch_state.add('new')
         self.set_state = 'compile_start'
-        self.worker_type = "fin_build_worker"
+        self.operation.compile = True
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
         self.fetch_state.add('new')
         self.fetch_state.add('compiled')
         self.set_state = 'eval_start'
-        self.worker_type = "fin_eval_worker"
+        self.operation.eval = True
 
     if self.args.update_applicability:
-      self.worker_type = "fin_class_worker"
       self.fetch_state.add("new")
 
   def has_tunable_operation(self):
@@ -677,7 +676,7 @@ class MIOpen(MITunaInterface):
       context = {
           'job': job,
           'config': config,
-          'worker_type': self.worker_type,
+          'operation': self.operation,
           'arch': self.dbt.session.arch,
           'num_cu': self.dbt.session.num_cu,
           'kwargs': kwargs,
@@ -699,12 +698,12 @@ class MIOpen(MITunaInterface):
       context = data['result']['context']
       self.logger.info('Parsing: %s', fin_json)
       self.logger.info('Parsing context: %s', context)
-      if self.worker_type == 'fin_build_worker':
+      if self.operation.compile:
         self.process_fin_builder_results(session, fin_json, context)
-      elif self.worker_type == 'fin_eval_worker':
+      elif self.operation.eval:
         self.process_fin_evaluator_results(session, fin_json, context)
       else:
-        raise ValueError('Unsupported worker_type')
+        raise ValueError('Unsupported tuning operation')
 
   def process_fin_builder_results(self, session, fin_json, context):
     """Process result from fin_build worker"""
@@ -809,17 +808,6 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def get_worker_granularity(self):
-    """Check how many celery workers we need"""
-    worker_granularity = None
-    if 'miopen_find_compile' in self.args.fin_steps \
-    or 'miopen_perf_compile' in self.args.fin_steps:
-      worker_granularity = 'worker_per_node'
-    elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
-      worker_granularity = 'worker_per_gpu'
-
-    return worker_granularity
-
   def reset_job_state_on_ctrl_c(self):
     """Resetting job state for jobs in flight"""
     temp_obj = SimpleDict()
@@ -829,9 +817,9 @@ class MIOpen(MITunaInterface):
 
     self.logger.info('Resetting job state in DB for in flight jobs')
 
-    if self.worker_type == 'fin_build_worker':
+    if self.operation.compile:
       state = 16
-    elif self.worker_type == 'fin_eval_worker':
+    elif self.operation.eval:
       state = 12
 
     query = gen_update_query(temp_obj, attribs,

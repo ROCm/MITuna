@@ -25,7 +25,7 @@
 #
 ###############################################################################
 """Module that encapsulates different liraries supported by Tuna"""
-from enum import Enum
+from enum import Enum, IntEnum
 
 
 #pylint: disable=too-few-public-methods
@@ -38,3 +38,9 @@ class Library(Enum):
 
   def __str__(self) -> str:
     return self.value
+
+
+class Operation(IntEnum):
+  """Enumerate supported tuning operations"""
+  COMPILE: int = 0
+  EVAL: int = 0

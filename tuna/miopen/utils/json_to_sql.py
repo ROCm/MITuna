@@ -343,16 +343,3 @@ def update_fdb_eval_entry(session, solver_id_map, config, dbt, fdb_obj,
     return False
 
   return True
-
-
-def get_worker_type(args):
-  """Get worker_type from args"""
-  worker_type = None
-  if args.fin_steps:
-    if 'miopen_find_compile' in args.fin_steps \
-    or 'miopen_perf_compile' in args.fin_steps:
-      worker_type = "fin_build_worker"
-    elif 'miopen_find_eval' in args.fin_steps or 'miopen_perf_eval' in args.fin_steps:
-      worker_type = "fin_eval_worker"
-
-  return worker_type

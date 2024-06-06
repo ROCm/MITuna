@@ -25,24 +25,31 @@
 #
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
-from multiprocessing import Value, Lock, Queue as mpQueue
+import os
+from multiprocessing import Value, Lock, Queue as mpQueue, Process
 from typing import Optional, Dict, Any, List
 from io import StringIO
 import logging
 import argparse
 import subprocess
+import time
 import threading
 import asyncio
+from datetime import timedelta
 import aioredis
+import kombu
 from paramiko.channel import ChannelFile
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
-from tuna.libraries import Library
+from tuna.libraries import Library, Operation
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
+from tuna.utils.machine_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
-from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT
+from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT, purge_queue
+from tuna.celery_app.utility import get_q_name
+from tuna.celery_app.celery_workers import launch_celery_worker
 
 job_counter_lock = threading.Lock()
 
@@ -53,16 +60,16 @@ class MITunaInterface():
 
   def __init__(self, library=Library.MIOPEN) -> None:
 
-    self.library: Library = library
+    self.self: Library = self
 
-    self.logger: logging.Logger = setup_logger(logger_name=self.library.value,
+    self.logger: logging.Logger = setup_logger(logger_name=library.value,
                                                add_streamhandler=True)
     self.args: argparse.Namespace
 
-    self.worker_type: str = WorkerInterface.name
     self.fetch_state: set = set()
     self.max_job_retries = 10
     self.dbt = None
+    self.operation = Operation()
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -135,7 +142,7 @@ class MITunaInterface():
     return True
 
   def add_tables(self) -> bool:
-    """Add library specific tables"""
+    """Add self specific tables"""
     return self.add_tables()
 
   def get_num_procs(self, machine: Machine) -> List:
@@ -228,8 +235,13 @@ class MITunaInterface():
 
     return kwargs
 
-  def get_jobs(self, session: DbSession, find_state: List[str], set_state: str,
-               session_id: int, claim_num: int):
+  def get_jobs(self,
+               session: DbSession,
+               find_state: List[str],
+               set_state: str,
+               session_id: int,
+               claim_num: int = None,
+               no_update=False):
     """Interface function to get jobs based on find_state"""
     raise NotImplementedError("Not implemented")
 
@@ -340,4 +352,108 @@ class MITunaInterface():
 
   async def parse_result(self, data):
     """Function callback for celery async jobs to store results"""
+    raise NotImplementedError("Not implemented")
+
+  def prep_tuning(self):
+    """Prep env for tuning start"""
+    machines = load_machines(self.args)
+    cmd = None
+    subp_list = []
+    q_name = None
+    if self.operation.compile:
+      q_name = get_q_name(self, compile=True)
+      cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{self.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
+    else:
+      q_name = get_q_name(self, eval=True)
+      cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{self.args.session_id}_gpu_id_GPUID -Q {q_name}"  #pylint: disable=line-too-long
+
+    if not self.args.enqueue_only:
+      try:
+        subp_list = launch_celery_worker(machines, self.operation, cmd, True)
+        if not subp_list:
+          raise ValueError('Could not launch celery worker')
+      except kombu.exceptions.OperationalError as k_err:
+        self.logger.error('Redis error ocurred: %s', k_err)
+        return False
+    else:
+      purge_queue([q_name])
+
+    return q_name, subp_list
+
+  #pylint: disable=too-many-locals
+  def tune(self, job_batch_size=1000):
+    """tuning loop to spin out celery tasks"""
+
+    if self.args.shutdown_workers:
+      self.logger.info('Shutting down all celery workers')
+      stop_active_workers()
+      return True
+
+    try:
+      self.logger.info('Launching celery workers')
+      q_name, subp_list = self.prep_tuning()
+      self.logger.info('Done launching celery workers')
+    except ValueError as verr:
+      self.logger.error(verr)
+      return False
+
+    try:
+      #if enqueue_only is False, we launch the celery workers
+      if not self.args.enqueue_only:
+        for subp in subp_list:
+          subp.wait()
+        return True
+    except KeyboardInterrupt:
+      for subp in subp_list:
+        subp.kill()
+      return False
+
+    start = time.time()
+
+    db_name = os.environ['TUNA_DB_NAME']
+    prefix = f"d_{db_name}_sess_{self.args.session_id}"
+    prefix = "test"
+    with DbSession() as session:
+      job_list = self.get_jobs(
+          session,
+          self.fetch_state,
+          self.set_state,  #pylint: disable=no-member
+          self.args.session_id,
+          no_update=True)
+    job_counter = Value('i', len(job_list))
+    self.logger.info('Job counter: %s', job_counter.value)
+    enqueue_proc = None
+    try:
+      if job_counter.value == 0:
+        self.logger.info('No new jobs found')
+      else:
+
+        enqueue_proc = Process(target=self.enqueue_jobs,
+                               args=[job_batch_size, q_name])
+        #Start enqueue proc
+        enqueue_proc.start()
+
+      #start async consume thread, blocking
+      self.logger.info('Starting consume thread')
+      asyncio.run(self.consume(job_counter, prefix))
+      self.logger.info('Closed consume thread')
+
+      if enqueue_proc:
+        enqueue_proc.join()
+
+    except (KeyboardInterrupt, Exception) as exp:  #pylint: disable=broad-exception-caught
+      self.logger.error('Error ocurred %s', exp)
+      purge_queue([q_name])
+      self.cancel_consumer(q_name)
+      self.reset_job_state_on_ctrl_c()
+
+    self.cancel_consumer(q_name)
+    end = time.time()
+    self.logger.info("Took {:0>8} to tune".format(  #pylint: disable=consider-using-f-string
+        str(timedelta(seconds=end - start))))
+
+    return True
+
+  def reset_job_state_on_ctrl_c(self):
+    """Reset job state for jobs in flight"""
     raise NotImplementedError("Not implemented")

@@ -37,7 +37,7 @@ logger = get_task_logger(__name__)
 
 def prep_worker(context):
   """Creating tuna worker object based on context"""
-  args = [context['job'], context['config'], context['worker_type']]
+  args = [context['job'], context['config'], context['operation']]
   kwargs = prep_kwargs(context['kwargs'], args)
   worker = get_worker(kwargs, args[2])
   return worker
