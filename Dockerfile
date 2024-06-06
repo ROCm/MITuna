@@ -6,7 +6,7 @@ ARG OSDB_BKC_VERSION=
 ARG HASVER=${ROCMVERSION:+$ROCMVERSION}
 ARG HASVER=${HASVER:-$OSDB_BKC_VERSION}
 
-ARG BASEIMAGE=rocm/miopen:ci_c1ca2a
+ARG BASEIMAGE=rocm/miopen:ci_5fec03
 ARG UBUNTU=ubuntu:20.04
 
 #use UBUNTU with rocm version set
