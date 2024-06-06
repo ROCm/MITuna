@@ -18,7 +18,14 @@ FROM $USEIMAGE as dtuna-ver-0
 #args before from are wiped
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
-ARG BUILD_MIOPEN_DEPS=
+
+RUN test -d /opt/rocm*; \
+    if [ $? -eq 0 ] ; then \
+        test -d /opt/rocm; \
+        if [ $? ] ; then \
+            ln -s /opt/rocm* /opt/rocm; \
+        fi \
+    fi
 
 # Add rocm repository
 RUN apt-get update && apt-get install -y wget gnupg
@@ -26,12 +33,20 @@ RUN wget -qO - http://repo.radeon.com/rocm/rocm.gpg.key | apt-key add -
 RUN echo "" > /env; \
     if ! [ -z $OSDB_BKC_VERSION ]; then \
        echo "Using BKC VERSION: $OSDB_BKC_VERSION";\
-       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
-       cat  /etc/apt/sources.list.d/rocm.list;\
+       if [$(cat /opt/rocm/.info/version) -ne $OSDB_BKC_VERSION]; then \
+           sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-dkms-no-npi-hipclang ${OSDB_BKC_VERSION} > /etc/apt/sources.list.d/rocm.list" ;\
+           cat  /etc/apt/sources.list.d/rocm.list;\
+       else \
+           echo "export NO_ROCM_INST=1" >> /env; \
+       fi \
     elif ! [ -z $ROCMVERSION ]; then \
        echo "Using Release VERSION: $ROCMVERSION";\
-       sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
-       cat  /etc/apt/sources.list.d/rocm.list;\
+       if [$(cat /opt/rocm/.info/version) -ne $ROCMVERSION]; then \
+           sh -c "echo deb [arch=amd64 trusted=yes] http://compute-artifactory.amd.com/artifactory/list/rocm-osdb-20.04-deb/ compute-rocm-rel-${ROCMVERSION} > /etc/apt/sources.list.d/rocm.list" ;\
+           cat  /etc/apt/sources.list.d/rocm.list;\
+       else \
+           echo "export NO_ROCM_INST=1" >> /env; \
+       fi \
     else \
        echo "export NO_ROCM_INST=1" >> /env; \
     fi
@@ -111,12 +126,18 @@ ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
-ARG MIOPEN_DEPS=/opt/rocm
+ARG MIOPEN_DEPS=$MIOPEN_DIR/deps
 
 # Install dependencies # included in rocm/miopen:ci_xxxxxx
+ARG BUILD_MIOPEN_DEPS=
+ARG ARCH_TARGET=
 RUN . /env; if [ -z $NO_ROCM_INST ] || ! [ -z $BUILD_MIOPEN_DEPS ]; then\
         pip install cget; \
-        CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $PREFIX; \
+        if ! [ -z $ARCH_TARGET ]; then \
+            sed -i "s#\(composable_kernel.*\)#\1 -DGPU_TARGETS=\"$ARCH_TARGET\"#" requirements.txt; \
+        fi; \
+        CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $MIOPEN_DEPS; \
+        git checkout requirements.txt; \
     fi
 
 ARG TUNA_USER=miopenpdb
@@ -126,7 +147,8 @@ WORKDIR $MIOPEN_DIR/build
 ARG MIOPEN_CACHE_DIR=/tmp/${TUNA_USER}/cache
 ARG MIOPEN_USER_DB_PATH=/tmp/$TUNA_USER/config/miopen
 ARG MIOPEN_USE_MLIR=ON
-ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS}"
+# build kdb objects with offline clang compiler, disable comgr + hiprtc (which would make target id specific code objects)
+ARG MIOPEN_CMAKE_ARGS="-DMIOPEN_USE_COMGR=Off -DMIOPEN_USE_HIPRTC=Off -DMIOPEN_USE_MLIR=${MIOPEN_USE_MLIR} -DMIOPEN_INSTALL_CXX_HEADERS=On -DMIOPEN_CACHE_DIR=${MIOPEN_CACHE_DIR} -DMIOPEN_USER_DB_PATH=${MIOPEN_USER_DB_PATH} -DMIOPEN_BACKEND=${BACKEND} -DCMAKE_PREFIX_PATH=${MIOPEN_DEPS}"
 
 RUN echo "MIOPEN: Selected $BACKEND backend."
 RUN if [ $BACKEND = "OpenCL" ]; then \
@@ -159,7 +181,7 @@ RUN make install
 
 #SET MIOPEN ENVIRONMENT VARIABLES
 ENV MIOPEN_LOG_LEVEL=6
-ENV PATH=$PREFIX/miopen/bin:$PREFIX/bin:$PATH
+ENV PATH=$PREFIX/miopen/bin:$PREFIX/bin:$MIOPEN_DEPS/bin:$PATH
 ENV LD_LIBRARY_PATH=/opt/rocm/lib:$LD_LIRBARY_PATH
 RUN ulimit -c unlimited
 # Should be over-ridden by the CI/launcher to point to new db
