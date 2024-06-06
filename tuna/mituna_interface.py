@@ -361,10 +361,10 @@ class MITunaInterface():
     subp_list = []
     q_name = None
     if self.operation.compile:
-      q_name = get_q_name(self, compile=True)
+      q_name = get_q_name(self, op_compile=True)
       cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{self.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
     else:
-      q_name = get_q_name(self, eval=True)
+      q_name = get_q_name(self, op_eval=True)
       cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{self.args.session_id}_gpu_id_GPUID -Q {q_name}"  #pylint: disable=line-too-long
 
     if not self.args.enqueue_only:

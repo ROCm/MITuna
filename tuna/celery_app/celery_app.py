@@ -48,6 +48,7 @@ app = Celery(
 
 
 def update_celery_app_configs(sess_id):
+  """Update Celery app configurations"""
 
   db_name = os.environ['TUNA_DB_NAME']
   prefix = f"d_{db_name}_sess_{sess_id}"

@@ -25,17 +25,21 @@
 #
 ###############################################################################
 """Utility module for Celery helper functions"""
+import os
+from tuna.utils.logger import setup_logger
 
 LOGGER = setup_logger('celery_utility')
 
 
-def get_q_name(library, compile=False, eval=False):
+def get_q_name(library, op_compile=False, op_eval=False):
   """Compose queue name"""
   db_name = os.environ['TUNA_DB_NAME']
   q_name = None
-  if compile:
+  if op_compile:
     q_name = f"compile_q_{db_name}_sess_{library.dbt.session_id}"
-  else:
+  elif op_eval:
     q_name = f"eval_q_{db_name}_sess_{library.dbt.session_id}"
+  else:
+    q_name = f"unknown_op_{db_name}_sess_{library.dbt.session_id}"
 
   return q_name
