@@ -50,7 +50,6 @@ from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.session import Session
-from tuna.libraries import Library
 from tuna.miopen.subcmd.import_configs import run_import_configs
 from tuna.miopen.subcmd.load_job import run_load_job
 from tuna.miopen.subcmd.export_db import run_export_db
@@ -68,6 +67,7 @@ from tuna.miopen.utils.json_to_sql import clean_cache_table
 from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
+from tuna.libraries import Library, Operation
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -385,6 +385,7 @@ class MIOpen(MITunaInterface):
     res = None
     if self.args is None:
       self.parse_args()
+
     if self.args.add_tables:
       self.add_tables()
       return None
@@ -628,12 +629,12 @@ class MIOpen(MITunaInterface):
       or 'miopen_perf_compile' in self.args.fin_steps:
         self.fetch_state.add('new')
         self.set_state = 'compile_start'
-        self.operation.compile = True
+        self.operation = Operation.COMPILE
       elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
         self.fetch_state.add('new')
         self.fetch_state.add('compiled')
         self.set_state = 'eval_start'
-        self.operation.eval = True
+        self.operation = Operation.EVAL
 
     if self.args.update_applicability:
       self.fetch_state.add("new")
@@ -684,6 +685,8 @@ class MIOpen(MITunaInterface):
       }
       context_list.append(context)
 
+    return context_list
+
   def celery_enqueue_call(self, context, q_name):
     """Enqueue job (context) for queue:q_name"""
     return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
@@ -698,9 +701,9 @@ class MIOpen(MITunaInterface):
       context = data['result']['context']
       self.logger.info('Parsing: %s', fin_json)
       self.logger.info('Parsing context: %s', context)
-      if self.operation.compile:
+      if self.operation == Operation.COMPILE:
         self.process_fin_builder_results(session, fin_json, context)
-      elif self.operation.eval:
+      elif self.operation == Operation.EVAL:
         self.process_fin_evaluator_results(session, fin_json, context)
       else:
         raise ValueError('Unsupported tuning operation')
@@ -817,9 +820,9 @@ class MIOpen(MITunaInterface):
 
     self.logger.info('Resetting job state in DB for in flight jobs')
 
-    if self.operation.compile:
+    if self.operation == Operation.COMPILE:
       state = 16
-    elif self.operation.eval:
+    elif self.operation == Operation.EVAL:
       state = 12
 
     query = gen_update_query(temp_obj, attribs,

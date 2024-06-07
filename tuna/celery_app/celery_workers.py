@@ -95,7 +95,7 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
 
 def launch_celery_worker(machines, operation, cmd, formatted=False):
   """Helper function to launch celery workers"""
-  if operation.compile:
+  if operation.COMPILE:
     ret = launch_worker_per_node(machines, cmd, formatted)
   elif operation.eval:
     ret = launch_worker_per_gpu(machines, cmd, formatted)

@@ -41,7 +41,7 @@ import kombu
 from paramiko.channel import ChannelFile
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
-from tuna.libraries import Library, Operation
+from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 from tuna.utils.machine_utility import load_machines
@@ -69,7 +69,7 @@ class MITunaInterface():
     self.fetch_state: set = set()
     self.max_job_retries = 10
     self.dbt = None
-    self.operation = Operation()
+    self.operation = None
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -360,7 +360,7 @@ class MITunaInterface():
     cmd = None
     subp_list = []
     q_name = None
-    if self.operation.compile:
+    if self.operation.COMPILE:
       q_name = get_q_name(self, op_compile=True)
       cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{self.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
     else:
