@@ -412,7 +412,6 @@ class MITunaInterface():
 
     db_name = os.environ['TUNA_DB_NAME']
     prefix = f"d_{db_name}_sess_{self.args.session_id}"
-    prefix = "test"
     with DbSession() as session:
       job_list = self.get_jobs(
           session,
