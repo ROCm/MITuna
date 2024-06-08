@@ -33,7 +33,7 @@ import random
 import functools
 import logging
 import traceback
-from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random
+from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random, TryAgain
 
 from sqlalchemy.inspection import inspect
 
@@ -145,6 +145,9 @@ class RocMLIRWorker(WorkerInterface):
               msg = f"Error code {retcode}, output {quoted_output}"
               self.logger.info(msg)
               self.set_job_state('error', result=msg)
+            elif len(cmd_output) == 0:
+              self.logger.info("Empty command result, retrying.")
+              raise TryAgain
             else:
               # https://stackoverflow.com/questions/49902843/avoid-parameter-binding-when-executing-query-with-sqlalchemy
               string = cmd_output.replace(':', r'\:')
