@@ -51,6 +51,7 @@ from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT, purg
 from tuna.celery_app.utility import get_q_name
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.celery_app.celery_app import app
+from tuna.libraries import Operation
 
 job_counter_lock = threading.Lock()
 
