@@ -35,9 +35,9 @@ def get_worker(kwargs, operation):
   """Return worker based on worker_type"""
 
   worker = WorkerInterface(**kwargs)
-  if operation.COMPILE:
+  if operation == "compile":
     worker = FinBuilder(**kwargs)
-  elif operation.EVAL:
+  elif operation == "eval":
     worker = FinEvaluator(**kwargs)
 
   return worker

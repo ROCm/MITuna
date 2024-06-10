@@ -50,6 +50,7 @@ from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
 from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT, purge_queue
 from tuna.celery_app.utility import get_q_name
 from tuna.celery_app.celery_workers import launch_celery_worker
+from tuna.celery_app.celery_app import app
 
 job_counter_lock = threading.Lock()
 
@@ -369,6 +370,7 @@ class MITunaInterface():
 
     if not self.args.enqueue_only:
       try:
+        logger.warning(app.conf)
         subp_list = launch_celery_worker(machines, self.operation, cmd, True)
         if not subp_list:
           raise ValueError('Could not launch celery worker')
