@@ -319,6 +319,8 @@ class MITunaInterface():
   async def consume(self, job_counter, prefix):
     """Retrieve celery results from redis db"""
 
+    self.logger.info('Prefix: %s', prefix)
+
     redis = await aioredis.from_url(
         f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
     self.logger.info('Connected to redis')
@@ -361,7 +363,7 @@ class MITunaInterface():
     cmd = None
     subp_list = []
     q_name = None
-    if self.operation.COMPILE:
+    if self.operation == Operation.COMPILE:
       q_name = get_q_name(self, op_compile=True)
       cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{self.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
     else:
@@ -371,7 +373,9 @@ class MITunaInterface():
     if not self.args.enqueue_only:
       try:
         logger.warning(app.conf)
+        self.logger.info('Launching celery workers')
         subp_list = launch_celery_worker(machines, self.operation, cmd, True)
+        self.logger.info('Done launching celery workers')
         if not subp_list:
           raise ValueError('Could not launch celery worker')
       except kombu.exceptions.OperationalError as k_err:
@@ -394,7 +398,6 @@ class MITunaInterface():
     try:
       self.logger.info('Launching celery workers')
       q_name, subp_list = self.prep_tuning()
-      self.logger.info('Done launching celery workers')
     except ValueError as verr:
       self.logger.error(verr)
       return False
@@ -436,9 +439,8 @@ class MITunaInterface():
 
       #start async consume thread, blocking
       self.logger.info('Starting consume thread')
+      print('PREFIX: %s', prefix)
       asyncio.run(self.consume(job_counter, prefix))
-      self.logger.info('Closed consume thread')
-
       if enqueue_proc:
         enqueue_proc.join()
 

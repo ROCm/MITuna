@@ -90,7 +90,6 @@ def main() -> bool:
   if 'TUNA_CELERY_JOB_BATCH_SIZE' in os.environ:
     job_batch_size = int(os.environ['TUNA_CELERY_JOB_BATCH_SIZE'])
 
-  #worker_lst: list
   try:
     for yaml_file in yaml_files:
       args['yaml_file'] = yaml_file
@@ -99,8 +98,8 @@ def main() -> bool:
         LOGGER.info("Executing with yaml file: %s", yaml_file)
 
       if library.has_tunable_operation():
+        #Celery operations
         update_celery_app_configs(library.args.session_id)
-        #celery tasks
         library.tune(job_batch_size=job_batch_size)
       else:
         #non-celery operations
