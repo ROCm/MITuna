@@ -68,6 +68,7 @@ from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.libraries import Library, Operation
+from tuna.celery_app.celery_app import app
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -689,6 +690,7 @@ class MIOpen(MITunaInterface):
 
   def celery_enqueue_call(self, context, q_name):
     """Enqueue job (context) for queue:q_name"""
+    self.logger.warning(app.conf)
     return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
 
   async def parse_result(self, data):

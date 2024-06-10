@@ -372,7 +372,7 @@ class MITunaInterface():
 
     if not self.args.enqueue_only:
       try:
-        logger.warning(app.conf)
+        self.logger.warning(app.conf)
         self.logger.info('Launching celery workers')
         subp_list = launch_celery_worker(machines, self.operation, cmd, True)
         self.logger.info('Done launching celery workers')
