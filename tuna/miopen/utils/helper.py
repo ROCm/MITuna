@@ -28,6 +28,7 @@
 
 from multiprocessing import Lock, Queue as mpQueue
 import random
+import string
 from time import sleep
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Query
@@ -40,7 +41,7 @@ from tuna.utils.utility import check_qts, SimpleDict
 from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT, BN_DEFAULTS
 from tuna.miopen.utils.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.utils.metadata import NUM_SQL_RETRIES
-from tuna.utils.db_utility import gen_update_query
+from tuna.utils.db_utility import gen_update_query, session_retry
 
 LOGGER = setup_logger('helper')
 
