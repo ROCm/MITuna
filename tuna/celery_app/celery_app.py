@@ -87,7 +87,3 @@ def purge_queue(q_names):
       return False
 
   return True
-
-
-if __name__ == '__main__':
-  app.start()
