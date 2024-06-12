@@ -204,17 +204,6 @@ def get_db_id(db_elems, config_table):
   return cid
 
 
-def prep_kwargs(kwargs, args):
-  """Populate kwargs with serialized job, config and machine"""
-  kwargs["job"] = SimpleDict(**args[0])
-  kwargs["config"] = SimpleDict(**args[1])
-  #kwargs["machine"] = Machine(local_machine=True)
-  kwargs["result_queue"] = mpQueue()
-  kwargs["result_queue_lock"] = Lock()
-
-  return kwargs
-
-
 def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
   """Update job state for builder/evaluator job_set_attr: List[str]"""
 

@@ -27,13 +27,27 @@
 ###############################################################################
 """Module to register MIOpen celery tasks"""
 import copy
+from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
+from tuna.celery_app.celery_app import app, update_celery_app_configs
+from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
-from tuna.miopen.utils.helper import prep_kwargs
-from tuna.celery_app.celery_app import app
+from tuna.utils.utility import SimpleDict
 
 logger = get_task_logger(__name__)
 
+@celeryd_after_setup.connect
+def capture_worker_name(sender, instance, **kwargs):
+    app.worker_name = '{0}'.format(sender)
+
+cached_machine = Machine(local_machine=True)
+def prep_kwargs(kwargs, args):
+  """Populate kwargs with serialized job, config and machine"""
+  kwargs["job"] = SimpleDict(**args[0])
+  kwargs["config"] = SimpleDict(**args[1])
+  kwargs["machine"] = cached_machine
+
+  return kwargs
 
 def prep_worker(context):
   """Creating tuna worker object based on context"""
@@ -46,7 +60,13 @@ def prep_worker(context):
 @app.task(trail=True)
 def celery_enqueue(context):
   """Defines a celery task"""
-  logger.info("Enqueueing task %s", context['job'])
+  kwargs = context['kwargs']
+  update_celery_app_configs(kwargs['session_id'])
+
+  gpu_id = int( (app.worker_name).split('gpu_id_')[1] )
+  kwargs['gpu_id'] = gpu_id
+
+  logger.info("Enqueueing on gpu %s: job %s", gpu_id, context['job'])
   worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
   return {"ret": ret, "context": context}

@@ -80,7 +80,6 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
           except Exception as exp:  #pylint: disable=broad-exception-caught
             LOGGER.warning(exp)
             return False
-        curr_env['HIP_VISIBLE_DEVICES'] = str(gpu_id)
         subp = subprocess.Popen(  #pylint: disable=consider-using-with
             final_cmd.split(),
             env=curr_env)
