@@ -43,7 +43,7 @@ def prep_worker(context):
   return worker
 
 
-@app.task(trail=True, reply_to='eval_q_session_153')
+@app.task(trail=True)
 def celery_enqueue(context):
   """Defines a celery task"""
   logger.info("Enqueueing task %s", context['job'])

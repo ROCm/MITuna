@@ -107,10 +107,44 @@ class WorkerInterface(Process):
     #initialize tables
     self.set_db_tables()
 
-    self.hostname: str = self.machine.hostname
     self.claim_num: int = 1
     self.last_reset: datetime = datetime.now()
 
+    if not self.machine:
+      self.prep_machine()
+
+    #self.hostname: str = self.machine.hostname
+    #dir_name: str = os.path.join(TUNA_LOG_DIR,
+    #                             type(self).__name__,
+    #                             f"{self.hostname}_{self.machine.port}p")
+    #try:
+    #  if not os.path.exists(dir_name):
+    #    os.makedirs(dir_name)
+    #except FileExistsError:
+    #  pass
+
+    #logger_name: str = os.path.join(dir_name, str(self.gpu_id))
+    #self.logger = set_usr_logger(logger_name)
+
+    connect_db()
+    self.cnx = None
+
+    #try:
+    #  self.job_attr: List[str] = [
+    #      column.name for column in inspect(self.dbt.job_table).c
+    #  ]
+    #  self.job_attr.remove("insert_ts")
+    #  self.job_attr.remove("update_ts")
+    #except NoInspectionAvailable as error:
+    #  self.logger.warning("Ignoring error for init_session: %s", error)
+
+    #call machine.connect and machine.set_logger in run (inside the subprocess)
+    #also set cnx here in case WorkerInterface exec_command etc called directly
+    #self.cnx: Connection = self.machine.connect(chk_abort_file)
+
+  def prep_machine(self):
+    """Establish machine and connection"""
+    self.hostname: str = self.machine.hostname
     dir_name: str = os.path.join(TUNA_LOG_DIR,
                                  type(self).__name__,
                                  f"{self.hostname}_{self.machine.port}p")
@@ -119,11 +153,9 @@ class WorkerInterface(Process):
         os.makedirs(dir_name)
     except FileExistsError:
       pass
-
     logger_name: str = os.path.join(dir_name, str(self.gpu_id))
     self.logger = set_usr_logger(logger_name)
-
-    connect_db()
+    self.cnx: Connection = self.machine.connect(chk_abort_file)
 
     try:
       self.job_attr: List[str] = [
@@ -134,9 +166,7 @@ class WorkerInterface(Process):
     except NoInspectionAvailable as error:
       self.logger.warning("Ignoring error for init_session: %s", error)
 
-    #call machine.connect and machine.set_logger in run (inside the subprocess)
-    #also set cnx here in case WorkerInterface exec_command etc called directly
-    self.cnx: Connection = self.machine.connect(chk_abort_file)
+    return True
 
   def step(self) -> Optional[Dict[Any, Any]]:  #type: ignore[override]
     """Regular run loop operation, to be overloaded in class specialization """
@@ -433,6 +463,11 @@ class WorkerInterface(Process):
     Main run function of WorkerInterface Process
     #type: ignore[override] - parent class returns None type.
     """
+
+    if not self.machine:
+      self.machine = Machine(local_machine=True)
+      self.prep_machine()
+      #self.machine = Machine(local_machine=True)
 
     ret = None
     self.machine.set_logger(self.logger)

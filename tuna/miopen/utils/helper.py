@@ -208,7 +208,7 @@ def prep_kwargs(kwargs, args):
   """Populate kwargs with serialized job, config and machine"""
   kwargs["job"] = SimpleDict(**args[0])
   kwargs["config"] = SimpleDict(**args[1])
-  kwargs["machine"] = Machine(local_machine=True)
+  #kwargs["machine"] = Machine(local_machine=True)
   kwargs["result_queue"] = mpQueue()
   kwargs["result_queue_lock"] = Lock()
 
