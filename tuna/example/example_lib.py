@@ -186,6 +186,6 @@ class Example(MITunaInterface):
     """Get a list of context items to be used for celery task"""
     raise NotImplementedError("Not implemented in example_lib")
 
-  def celery_enqueue_call(self, context, q_name):
+  def celery_enqueue_call(self, context, q_name, task_id=False):
     """Wrapper function for celery enqueue func"""
     raise NotImplementedError('Not implemented')

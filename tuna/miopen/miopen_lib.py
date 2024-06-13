@@ -32,6 +32,7 @@ import json
 from typing import List, Tuple, Any
 from functools import lru_cache
 
+from kombu.utils.uuid import uuid
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
@@ -687,9 +688,15 @@ class MIOpen(MITunaInterface):
 
     return context_list
 
-  def celery_enqueue_call(self, context, q_name):
+  def celery_enqueue_call(self, context, q_name, task_id=False):
     """Enqueue job (context) for queue:q_name"""
-    return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
+
+    prefix = f"d_{self.db_name}_sess_{context['kwargs']['session_id']}"
+    return celery_enqueue.apply_async((context,),
+                                      task_id=('-').join([prefix,
+                                                          uuid()]),
+                                      queue=q_name,
+                                      reply_to=q_name)
 
   async def parse_result(self, data):
     """Function callback for celery async jobs to store results"""

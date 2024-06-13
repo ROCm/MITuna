@@ -73,8 +73,8 @@ class WorkerInterface(Process):
 
     allowed_keys: Set[str] = set([
         'machine', 'gpu_id', 'num_procs', 'bar_lock', 'envmt', 'reset_interval',
-        'job_queue', 'job_queue_lock',
-        'label', 'fetch_state', 'end_jobs', 'session_id', 'job', 'config'
+        'job_queue', 'job_queue_lock', 'label', 'fetch_state', 'end_jobs',
+        'session_id', 'job', 'config'
     ])
 
     self.reset_interval: bool = None

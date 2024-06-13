@@ -50,13 +50,12 @@ from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
 from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT, purge_queue
 from tuna.celery_app.utility import get_q_name
 from tuna.celery_app.celery_workers import launch_celery_worker
-from tuna.celery_app.celery_app import app
 from tuna.libraries import Operation
 
 job_counter_lock = threading.Lock()
 
 
-class MITunaInterface():
+class MITunaInterface():  #pylint:disable=too-many-instance-attributes
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
@@ -72,6 +71,7 @@ class MITunaInterface():
     self.max_job_retries = 10
     self.dbt = None
     self.operation = None
+    self.db_name = os.environ['TUNA_DB_NAME']
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -284,7 +284,7 @@ class MITunaInterface():
 
     return True
 
-  def celery_enqueue_call(self, context, q_name):
+  def celery_enqueue_call(self, context, q_name, task_id=False):
     """Wrapper function for celery enqueue func"""
     raise NotImplementedError('Not implemented')
 
@@ -306,8 +306,7 @@ class MITunaInterface():
           context_list = self.get_context_list(session, batch_jobs)
           for context in context_list:
             #calling celery task, enqueuing to celery queue
-            #celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
-            self.celery_enqueue_call(context, q_name)
+            self.celery_enqueue_call(context, q_name=q_name)
 
         if not job_list:
           self.logger.info('All tasks added to queue')
@@ -320,8 +319,6 @@ class MITunaInterface():
   async def consume(self, job_counter, prefix):
     """Retrieve celery results from redis db"""
 
-    self.logger.info('Prefix: %s', prefix)
-
     redis = await aioredis.from_url(
         f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
     self.logger.info('Connected to redis')
@@ -333,7 +330,7 @@ class MITunaInterface():
       cursor = "0"
       keys = []
       while cursor != 0:
-        cursor, results = await redis.scan(cursor, match=f"{prefix}*"
+        cursor, results = await redis.scan(cursor, match=f"*{prefix}*"
                                           )  # update with the celery pattern
         keys.extend(results)
       self.logger.info('Found %s results', len(results))
@@ -373,7 +370,6 @@ class MITunaInterface():
 
     if not self.args.enqueue_only:
       try:
-        self.logger.warning(app.conf)
         self.logger.info('Launching celery workers for queue %s', q_name)
         subp_list = launch_celery_worker(machines, self.operation, cmd, True)
         self.logger.info('Done launching celery workers')
@@ -416,8 +412,7 @@ class MITunaInterface():
 
     start = time.time()
 
-    db_name = os.environ['TUNA_DB_NAME']
-    prefix = f"d_{db_name}_sess_{self.args.session_id}"
+    prefix = f"d_{self.db_name}_sess_{self.args.session_id}"
     with DbSession() as session:
       job_list = self.get_jobs(
           session,

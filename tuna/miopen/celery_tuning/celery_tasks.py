@@ -36,11 +36,16 @@ from tuna.utils.utility import SimpleDict
 
 logger = get_task_logger(__name__)
 
+
 @celeryd_after_setup.connect
-def capture_worker_name(sender, instance, **kwargs):
-    app.worker_name = '{0}'.format(sender)
+def capture_worker_name(sender, **kwargs): #pylint: disable=unused-argument
+  """Capture worker name"""
+  app.worker_name = sender
+
 
 cached_machine = Machine(local_machine=True)
+
+
 def prep_kwargs(kwargs, args):
   """Populate kwargs with serialized job, config and machine"""
   kwargs["job"] = SimpleDict(**args[0])
@@ -48,6 +53,7 @@ def prep_kwargs(kwargs, args):
   kwargs["machine"] = cached_machine
 
   return kwargs
+
 
 def prep_worker(context):
   """Creating tuna worker object based on context"""
@@ -63,7 +69,7 @@ def celery_enqueue(context):
   kwargs = context['kwargs']
   update_celery_app_configs(kwargs['session_id'])
 
-  gpu_id = int( (app.worker_name).split('gpu_id_')[1] )
+  gpu_id = int((app.worker_name).split('gpu_id_')[1])
   kwargs['gpu_id'] = gpu_id
 
   logger.info("Enqueueing on gpu %s: job %s", gpu_id, context['job'])
