@@ -368,6 +368,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes
       q_name = get_q_name(self, op_eval=True)
       cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{self.args.session_id}_gpu_id_GPUID -Q {q_name}"  #pylint: disable=line-too-long
 
+    self.logger.info('celery Q name: %s', q_name)
     if not self.args.enqueue_only:
       try:
         self.logger.info('Launching celery workers for queue %s', q_name)
