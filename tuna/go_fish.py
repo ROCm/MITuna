@@ -38,7 +38,6 @@ from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example
 from tuna.yaml_parser import parse_yaml
 from tuna.parse_args import clean_args
-from tuna.celery_app.celery_app import update_celery_app_configs
 
 # Setup logging
 LOGGER: logging.Logger = setup_logger('go_fish')
@@ -99,7 +98,6 @@ def main() -> bool:
 
       if library.has_tunable_operation():
         #Celery operations
-        update_celery_app_configs(library.args.session_id)
         library.tune(job_batch_size=job_batch_size)
       else:
         #non-celery operations

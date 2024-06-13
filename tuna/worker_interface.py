@@ -92,7 +92,6 @@ class WorkerInterface(Process):
     self.fetch_state = set()
     self.label: str = None
     self.session_id: int = None
-    self.worker_type = "generic_worker"
     self.job: SimpleDict = None
     self.config: dict = None
 

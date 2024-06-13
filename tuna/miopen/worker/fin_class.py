@@ -83,7 +83,6 @@ class FinClass(WorkerInterface):
     self.multiproc = False
     self.first_pass = True
     self.dynamic_solvers_only = False
-    self.worker_type = "fin_class_worker"
     self.solver_id_map = get_solver_ids()
 
     self.__dict__.update(

@@ -44,7 +44,6 @@ class FinEvaluator(FinClass):
     super().__init__(**kwargs)
     if self.gpu_id != -1:
       self.envmt.append(f"HIP_VISIBLE_DEVICES={self.gpu_id}")
-    self.worker_type = "fin_eval_worker"
 
   def check_gpu(self):
     """Function to check gpu heartbeat"""

@@ -57,6 +57,7 @@ from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 #from tuna.miopen.utils.json_to_sql import process_fdb_eval
 from tuna.miopen.celery_tuning.tuning import set_job_state
+from tuna.miopen.libraries import Operation
 
 solver_id_map = get_solver_ids()
 
@@ -175,7 +176,7 @@ def test_fin_evaluator():
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.fetch_state.add('compiled')
-  miopen.worker_type = 'fin_eval_worker'
+  miopen.operation = Operation.EVAL
   miopen.set_state = 'eval_start'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
@@ -198,13 +199,12 @@ def test_fin_evaluator():
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
-  worker_kwargs = prep_kwargs(kwargs,
-                              [job_dict, config_dict, miopen.worker_type])
+  worker_kwargs = prep_kwargs(kwargs, [job_dict, config_dict, miopen.operation])
   assert (worker_kwargs['config'])
   assert (worker_kwargs['job'])
   assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])
-  fin_eval = get_worker(worker_kwargs, miopen.worker_type)
-  assert (fin_eval.worker_type == 'fin_eval_worker')
+  fin_eval = get_worker(worker_kwargs, miopen.operation)
+  assert (fin_eval.operation == Operation.EVAL)
   fin_eval.set_job_state('evaluating')
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\

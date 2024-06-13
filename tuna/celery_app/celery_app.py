@@ -45,15 +45,8 @@ app = Celery(
     broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/14",
     result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15",
     include=['tuna.miopen.celery_tuning.celery_tasks'])
-
-
-def update_celery_app_configs(sess_id):
-  """Update Celery app configurations"""
-
-  db_name = os.environ['TUNA_DB_NAME']
-  prefix = f"d_{db_name}_sess_{sess_id}"
-  app.conf.get('result_backend_transport_options',
-               {}).update({"global_keyprefix": prefix})
+#app.conf.get('result_backend_transport_options',
+#             {}).update({"global_keyprefix": prefix})
 
 
 def stop_active_workers():

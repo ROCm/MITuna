@@ -29,7 +29,7 @@
 import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
-from tuna.celery_app.celery_app import app, update_celery_app_configs
+from tuna.celery_app.celery_app import app
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
@@ -38,7 +38,7 @@ logger = get_task_logger(__name__)
 
 
 @celeryd_after_setup.connect
-def capture_worker_name(sender, **kwargs): #pylint: disable=unused-argument
+def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-argument
   """Capture worker name"""
   app.worker_name = sender
 
@@ -67,7 +67,6 @@ def prep_worker(context):
 def celery_enqueue(context):
   """Defines a celery task"""
   kwargs = context['kwargs']
-  update_celery_app_configs(kwargs['session_id'])
 
   gpu_id = int((app.worker_name).split('gpu_id_')[1])
   kwargs['gpu_id'] = gpu_id
