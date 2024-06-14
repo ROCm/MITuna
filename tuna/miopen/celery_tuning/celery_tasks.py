@@ -44,8 +44,6 @@ def capture_worker_name(sender, **kwargs): #pylint: disable=unused-argument
 
 
 cached_machine = Machine(local_machine=True)
-
-
 def prep_kwargs(kwargs, args):
   """Populate kwargs with serialized job, config and machine"""
   kwargs["job"] = SimpleDict(**args[0])
@@ -55,11 +53,19 @@ def prep_kwargs(kwargs, args):
   return kwargs
 
 
+cached_worker = {}
 def prep_worker(context):
   """Creating tuna worker object based on context"""
-  args = [context['job'], context['config'], context['operation']]
-  kwargs = prep_kwargs(context['kwargs'], args)
-  worker = get_worker(kwargs, args[2])
+  op = context['operation']
+  if op in cached_worker:
+    worker = cached_worker[op]
+    worker.job = SimpleDict(**context['job'])
+    worker.config = SimpleDict(**context['config'])
+  else:
+    args = [context['job'], context['config'], context['operation']]
+    kwargs = prep_kwargs(context['kwargs'], args)
+    worker = get_worker(kwargs, args[2])
+    cached_worker[op] = worker
   return worker
 
 
