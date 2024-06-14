@@ -55,7 +55,7 @@ from tuna.libraries import Operation
 job_counter_lock = threading.Lock()
 
 
-class MITunaInterface():  #pylint:disable=too-many-instance-attributes
+class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-public-methods
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
@@ -338,7 +338,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes
         try:
           data = await redis.get(key)
           if data:
-            await self.parse_result(data.decode('utf-8'))
+            _ = await self.parse_result(data.decode('utf-8'))
             await redis.delete(key)
             with job_counter_lock:
               job_counter.value = job_counter.value - 1
@@ -435,11 +435,15 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes
         enqueue_proc.start()
 
       #start async consume thread, blocking
-      self.logger.info('Starting consume thread')
       print('PREFIX: %s', prefix)
-      asyncio.run(self.consume(job_counter, prefix))
+      #asyncio.run(self.consume(job_counter, prefix))
+      consume_proc = Process(target=self.async_wrap,
+                             args=(self.consume, job_counter, prefix))
+      self.logger.info('Starting consume thread')
+      consume_proc.start()
       if enqueue_proc:
         enqueue_proc.join()
+      consume_proc.join()
 
     except (KeyboardInterrupt, Exception) as exp:  #pylint: disable=broad-exception-caught
       self.logger.error('Error ocurred %s', exp)
@@ -453,6 +457,14 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes
         str(timedelta(seconds=end - start))))
 
     return True
+
+  async def consume_callback(self, async_func, *args):
+    """Wrapper function to await on async function"""
+    await async_func(*args)
+
+  def async_wrap(self, async_func, *args):
+    """Run async function"""
+    asyncio.run(self.consume_callback(async_func, *args))
 
   def reset_job_state_on_ctrl_c(self):
     """Reset job state for jobs in flight"""

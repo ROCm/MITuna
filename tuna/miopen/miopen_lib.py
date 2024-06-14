@@ -704,8 +704,13 @@ class MIOpen(MITunaInterface):
     self.logger.info(data)
 
     with DbSession() as session:
-      fin_json = data['result']['ret']
-      context = data['result']['context']
+      try:
+        fin_json = data['result']['ret']
+        context = data['result']['context']
+      except KeyError as kerr:
+        self.logger.error(kerr)
+        return False
+
       self.logger.info('Parsing: %s', fin_json)
       self.logger.info('Parsing context: %s', context)
       if self.operation == Operation.COMPILE:
@@ -714,6 +719,8 @@ class MIOpen(MITunaInterface):
         self.process_fin_evaluator_results(session, fin_json, context)
       else:
         raise ValueError('Unsupported tuning operation')
+
+      return True
 
   def process_fin_builder_results(self, session, fin_json, context):
     """Process result from fin_build worker"""

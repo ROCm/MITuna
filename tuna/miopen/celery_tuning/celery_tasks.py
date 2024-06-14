@@ -26,6 +26,7 @@
 #
 ###############################################################################
 """Module to register MIOpen celery tasks"""
+import os
 import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
@@ -66,12 +67,15 @@ def prep_worker(context):
 @app.task(trail=True)
 def celery_enqueue(context):
   """Defines a celery task"""
-  kwargs = context['kwargs']
+  #kwargs = context['kwargs']
+  print(os.environ)
 
-  gpu_id = int((app.worker_name).split('gpu_id_')[1])
-  kwargs['gpu_id'] = gpu_id
+  logger.info(app.worker_name)
+  #print('worker_name: %s', app.worker_name)
+  #print(app.worker_name.split('gpu_id_'))
+  #gpu_id = int((app.worker_name).split('gpu_id_')[1])
 
-  logger.info("Enqueueing on gpu %s: job %s", gpu_id, context['job'])
+  #logger.info("Enqueueing on gpu %s: job %s", gpu_id, context['job'])
   worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
   return {"ret": ret, "context": context}
