@@ -370,7 +370,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     if not self.args.enqueue_only:
       try:
         self.logger.info('Launching celery workers for queue %s', q_name)
-        subp_list = launch_celery_worker(self.operation, cmd, True)
+        subp_list = launch_celery_worker(self.operation, cmd, self.args.copy(),
+                                         True)
         self.logger.info('Done launching celery workers')
         if not subp_list:
           raise CustomError('Could not launch celery worker')
@@ -460,7 +461,10 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def async_wrap(self, async_func, *args):
     """Run async function"""
-    asyncio.run(self.consume_callback(async_func, *args))
+    try:
+      asyncio.run(self.consume_callback(async_func, *args))
+    except KeyboardInterrupt:
+      self.logger.warning('Keyboard interrupt caught, terminating')
 
   def reset_job_state_on_ctrl_c(self):
     """Reset job state for jobs in flight"""
