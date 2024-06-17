@@ -18,6 +18,11 @@ of interest (to the MIOpen team), received from customers, as well as various be
 introduction of 'find database' for immediate mode, Tuna is also responsible for generating Find
 database as well as the upcoming precompiled kernels package.
 
+Tuna uses [Celery](https://docs.celeryq.dev/en/stable/getting-started/introduction.html)
+as a scheduler and offloads job scheduling. The backend and broker for Celery are both implemented
+through Redis. Tuning jobs are enqueued in a Redis queue then launched and executed through one or
+more Celery workers depending on the operation - compile or eval.
+
 When do we tune
 ---------------
 
@@ -134,8 +139,18 @@ Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, a
 
 Once prerequisites are set, tuning can begin. To compile the jobs,
 supply the session id along with the compile fin_step matching the one in the job table.
+This step is launched in 2 different terminals: the job enqueue terminal and the job execution
+terminal.
 
 [Use backend=HIPNOGPU docker]
+To enqueue the jobs run the following on any node:
+```
+./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile --enqueue_only
+--session_id    - tuning session id
+--fin_steps     - execute this operation
+--enqueue_only  - enqueue the jobs to the redis queue
+```
+To launch the jobs through Celery workers on the compile node run:
 ```
 ./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile
 --session_id    - tuning session id
@@ -145,13 +160,16 @@ supply the session id along with the compile fin_step matching the one in the jo
 **Evaluation Step (7)**
 
 Once compilation has been started, evaluation can also be launched.
-This command is similar to the previous.
+This command is similar to the previous. It is also comprised of 2 steps, the job enqueue process
+and the job execution process that launched Celery workers on the evaluation node.
 
 [Use backend=HIP docker]
+To enqueue the jobs run the following on any node:
 ```
-./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_eval
+./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_eval --enqueue_only
 --session_id    - tuning session id
 --fin_steps     - execute this operation
+--enqueue_only  - enqueue the jobs to the redis queue
 ```
 
 **Database Export (8)**

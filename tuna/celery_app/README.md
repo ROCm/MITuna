@@ -24,7 +24,7 @@ sudo -E docker-compose up --build
 ```
 This will launch a redis docker with the latest image and a custom docker for the celery worker.
 The celery docker will display information about the celery setup such as the broker and result 
-backend. These can be customized in `tuna/celery_app/celery.py`
+backend. These can be customized in `tuna/celery_app/celery_app.py`
 
 Launch the celery docker container:
 ```
@@ -56,5 +56,6 @@ export TUNA_DB_NAME=test_db
 export TUNA_ROCM_VERSION=osdb-12969
 export TUNA_DB_HOSTNAME=10.XXX.XX.XX
 export TUNA_DB_USER_PASSWORD=myrootpwd
-`
+export TUNA_CELERY_JOB_BATCH_SIZE=10 (optional)
+export TUNA_CELERY_BROKER=localhost
 ```
