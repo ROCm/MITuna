@@ -26,6 +26,7 @@
 ###############################################################################
 """Custom errors module"""
 
+
 class CustomError(Exception):
   """Custom exception class"""
 
