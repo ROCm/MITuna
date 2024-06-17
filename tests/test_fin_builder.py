@@ -54,6 +54,7 @@ from tuna.miopen.utils.helper import prep_kwargs
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.miopen.celery_tuning.tuning import process_fin_builder_results
+from tuna.libraries import Operation
 
 
 def add_cfgs():
@@ -123,8 +124,8 @@ def test_fin_builder():
   miopen.args.fin_steps = ["miopen_find_compile"]
   miopen.args.label = 'tuna_pytest_fin_builder'
   miopen.fetch_state.add('new')
+  miopen.operation = Operation.COMPILE
   miopen.set_state = 'compile_start'
-  miopen.worker_type = 'fin_build_worker'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
                               config_type=ConfigType.convolution)
   jobs = None
@@ -147,16 +148,16 @@ def test_fin_builder():
     context = {
         'job': job_dict,
         'config': config_dict,
-        'worker_type': miopen.worker_type,
+        'operation': miopen.operation,
         'arch': miopen.dbt.session.arch,
         'num_cu': miopen.dbt.session.num_cu,
         'kwargs': kwargs,
         'fdb_attr': fdb_attr
     }
     worker_kwargs = prep_kwargs(copy.deepcopy(context),
-                                [job_dict, config_dict, miopen.worker_type])
+                                [job_dict, config_dict, miopen.operation])
 
-    worker = get_worker(worker_kwargs, miopen.worker_type)
+    worker = get_worker(worker_kwargs, miopen.operation)
     worker.dbt = miopen.dbt
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()

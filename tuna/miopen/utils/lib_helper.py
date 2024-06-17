@@ -29,15 +29,16 @@
 from tuna.miopen.worker.fin_builder import FinBuilder
 from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.worker_interface import WorkerInterface
+from tuna.libraries import Operation
 
 
 def get_worker(kwargs, operation):
-  """Return worker based on worker_type"""
+  """Return worker based on operation type"""
 
   worker = WorkerInterface(**kwargs)
-  if operation == "compile":
+  if operation == Operation.COMPILE:
     worker = FinBuilder(**kwargs)
-  elif operation == "eval":
+  elif operation == Operation.EVAL:
     worker = FinEvaluator(**kwargs)
 
   return worker
