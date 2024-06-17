@@ -31,6 +31,7 @@ import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
 from tuna.celery_app.celery_app import app
+from tuna.libraries import Operation
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
@@ -73,15 +74,16 @@ def prep_worker(context):
 @app.task(trail=True)
 def celery_enqueue(context):
   """Defines a celery task"""
-  #kwargs = context['kwargs']
-  print(os.environ)
+  kwargs = context['kwargs']
+  op = context['operation']
 
-  logger.info(app.worker_name)
-  #print('worker_name: %s', app.worker_name)
-  #print(app.worker_name.split('gpu_id_'))
-  #gpu_id = int((app.worker_name).split('gpu_id_')[1])
+  if op == Operation.EVAL:
+    gpu_id = int((app.worker_name).split('gpu_id_')[1])
+    kwargs['gpu_id'] = gpu_id
+    logger.info("Enqueueing worker %s: gpu(%s), job %s", app.worker_name, gpu_id, context['job'])
+  else:
+    logger.info("Enqueueing worker %s: job %s", app.worker_name, context['job'])
 
-  #logger.info("Enqueueing on gpu %s: job %s", gpu_id, context['job'])
   worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
   return {"ret": ret, "context": context}
