@@ -94,7 +94,7 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
   return subp_list
 
 
-def launch_celery_worker(machines, operation, cmd, args, formatted=False):
+def launch_celery_worker(operation, cmd, args, formatted=False):
   """Helper function to launch celery workers"""
   machines = load_machines(args)
   if operation == Operation.COMPILE:
