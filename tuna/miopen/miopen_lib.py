@@ -69,6 +69,7 @@ from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.worker.fin_utils import get_fin_result
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.libraries import Library, Operation
+from tuna.custom_errors import CustomError
 
 MAX_ERRORED_JOB_RETRIES = 3
 
@@ -216,7 +217,7 @@ class MIOpen(MITunaInterface):
 
     if self.args.list_solvers:
       print_solvers()
-      raise ValueError('Printing solvers...')
+      raise CustomError('Printing solvers...')
 
     if self.args.fin_steps and self.args.subcommand != 'load_job':
       self.check_fin_args(parser)
@@ -325,7 +326,7 @@ class MIOpen(MITunaInterface):
 
   def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
-    """! Helper function to compose worker_list
+    """! Helper funcrtion to compose worker_list
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
@@ -718,13 +719,12 @@ class MIOpen(MITunaInterface):
       elif self.operation == Operation.EVAL:
         self.process_fin_evaluator_results(session, fin_json, context)
       else:
-        raise ValueError('Unsupported tuning operation')
+        raise CustomError('Unsupported tuning operation')
 
       return True
 
   def process_fin_builder_results(self, session, fin_json, context):
     """Process result from fin_build worker"""
-    self.logger.info('Processing fin_builder result')
     job = SimpleDict(**context['job'])
     pending = []
     solver_id_map = get_solver_ids()
@@ -770,7 +770,6 @@ class MIOpen(MITunaInterface):
 
   def process_fin_evaluator_results(self, session, fin_json, context):
     """Process fin_json result"""
-    self.logger.info('Processing fin_eval result')
     job = SimpleDict(**context['job'])
     failed_job = True
     result_str = ''

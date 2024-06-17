@@ -31,6 +31,7 @@ import subprocess
 
 from tuna.utils.logger import setup_logger
 from tuna.libraries import Operation
+from tuna.utils.machine_utility import load_machines
 
 LOGGER: logging.Logger = setup_logger('celery_workers')
 
@@ -95,6 +96,7 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
 
 def launch_celery_worker(machines, operation, cmd, formatted=False):
   """Helper function to launch celery workers"""
+  machines = load_machines(self.args)
   if operation == Operation.COMPILE:
     ret = launch_worker_per_node(machines, cmd, formatted)
   elif operation == Operation.EVAL:

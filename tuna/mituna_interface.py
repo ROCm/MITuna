@@ -44,13 +44,13 @@ from tuna.machine import Machine
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
-from tuna.utils.machine_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
 from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT, purge_queue
 from tuna.celery_app.utility import get_q_name
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.libraries import Operation
+from tuna.custom_errors import CustomError
 
 job_counter_lock = threading.Lock()
 
@@ -346,7 +346,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
           self.logger.error(red_err)
           self.logger.info(key.decode('utf-8'))
 
-      self.logger.info('Processed results')
       await asyncio.sleep(1)
     self.logger.info('Job counter reached 0')
     await redis.close()
@@ -357,7 +356,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def prep_tuning(self):
     """Prep env for tuning start"""
-    machines = load_machines(self.args)
     cmd = None
     subp_list = []
     q_name = None
@@ -372,10 +370,10 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     if not self.args.enqueue_only:
       try:
         self.logger.info('Launching celery workers for queue %s', q_name)
-        subp_list = launch_celery_worker(machines, self.operation, cmd, True)
+        subp_list = launch_celery_worker(self.operation, cmd, True)
         self.logger.info('Done launching celery workers')
         if not subp_list:
-          raise ValueError('Could not launch celery worker')
+          raise CustomError('Could not launch celery worker')
       except kombu.exceptions.OperationalError as k_err:
         self.logger.error('Redis error ocurred: %s', k_err)
         return False
@@ -396,7 +394,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     try:
       self.logger.info('Launching celery workers')
       q_name, subp_list = self.prep_tuning()
-    except ValueError as verr:
+    except CustomError as verr:
       self.logger.error(verr)
       return False
 
@@ -435,8 +433,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
         enqueue_proc.start()
 
       #start async consume thread, blocking
-      print('PREFIX: %s', prefix)
-      #asyncio.run(self.consume(job_counter, prefix))
       consume_proc = Process(target=self.async_wrap,
                              args=(self.consume, job_counter, prefix))
       self.logger.info('Starting consume thread')

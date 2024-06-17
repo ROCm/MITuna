@@ -26,7 +26,6 @@
 #
 ###############################################################################
 """Module to register MIOpen celery tasks"""
-import os
 import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
@@ -46,6 +45,8 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
 
 
 cached_machine = Machine(local_machine=True)
+
+
 def prep_kwargs(kwargs, args):
   """Populate kwargs with serialized job, config and machine"""
   kwargs["job"] = SimpleDict(**args[0])
@@ -56,18 +57,20 @@ def prep_kwargs(kwargs, args):
 
 
 cached_worker = {}
+
+
 def prep_worker(context):
   """Creating tuna worker object based on context"""
-  op = context['operation']
-  if op in cached_worker:
-    worker = cached_worker[op]
+  operation = context['operation']
+  if operation in cached_worker:
+    worker = cached_worker[operation]
     worker.job = SimpleDict(**context['job'])
     worker.config = SimpleDict(**context['config'])
   else:
     args = [context['job'], context['config'], context['operation']]
     kwargs = prep_kwargs(context['kwargs'], args)
     worker = get_worker(kwargs, args[2])
-    cached_worker[op] = worker
+    cached_worker[operation] = worker
   return worker
 
 
@@ -75,12 +78,13 @@ def prep_worker(context):
 def celery_enqueue(context):
   """Defines a celery task"""
   kwargs = context['kwargs']
-  op = context['operation']
+  operation = context['operation']
 
-  if op == Operation.EVAL:
+  if operation == Operation.EVAL:
     gpu_id = int((app.worker_name).split('gpu_id_')[1])
     kwargs['gpu_id'] = gpu_id
-    logger.info("Enqueueing worker %s: gpu(%s), job %s", app.worker_name, gpu_id, context['job'])
+    logger.info("Enqueueing worker %s: gpu(%s), job %s", app.worker_name,
+                gpu_id, context['job'])
   else:
     logger.info("Enqueueing worker %s: job %s", app.worker_name, context['job'])
 
