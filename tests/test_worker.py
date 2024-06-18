@@ -35,7 +35,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.utils.miopen_utility import load_machines
+from tuna.utils.machine_utility import load_machines
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.machine import Machine
 from tuna.sql import DbCursor

@@ -50,7 +50,7 @@ from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.utils.miopen_utility import load_machines
 from tuna.machine import Machine
-from tuna.miopen.utils.helper import prep_kwargs
+from tuna.miopen.celery_tuning.celery_tasks import prep_kwargs
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import serialize_job_config_row, SimpleDict
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
@@ -199,7 +199,8 @@ def test_fin_evaluator():
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
-  worker_kwargs = prep_kwargs(kwargs, [job_dict, config_dict, miopen.operation])
+  worker_kwargs = prep_kwargs(context['kwargs'],
+                              [context['job'], context['config'], context['operation']])
   assert (worker_kwargs['config'])
   assert (worker_kwargs['job'])
   assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])

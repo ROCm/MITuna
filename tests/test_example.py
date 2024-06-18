@@ -34,7 +34,7 @@ this_path = os.path.dirname(__file__)
 
 from tuna.example.example_lib import Example
 from utils import ExampleArgs
-from tuna.utils.miopen_utility import load_machines
+from tuna.utils.machine_utility import load_machines
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.example.session import SessionExample
 from tuna.example.example_tables import Job

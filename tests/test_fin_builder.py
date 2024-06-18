@@ -36,7 +36,7 @@ this_path = os.path.dirname(__file__)
 from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.miopen_utility import load_machines
+from tuna.utils.machine_utility import load_machines
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.utils.db_utility import connect_db
@@ -50,10 +50,9 @@ from tuna.miopen.db.solver import get_solver_ids
 from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.utils.utility import serialize_job_config_row
-from tuna.miopen.utils.helper import prep_kwargs
+from tuna.miopen.celery_tuning.celery_tasks import prep_kwargs
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
-from tuna.miopen.celery_tuning.tuning import process_fin_builder_results
 from tuna.libraries import Operation
 
 
@@ -154,8 +153,8 @@ def test_fin_builder():
         'kwargs': kwargs,
         'fdb_attr': fdb_attr
     }
-    worker_kwargs = prep_kwargs(copy.deepcopy(context),
-                                [job_dict, config_dict, miopen.operation])
+    worker_kwargs = prep_kwargs(context['kwargs'],
+                                [context['job'], context['config'], context['operation']])
 
     worker = get_worker(worker_kwargs, miopen.operation)
     worker.dbt = miopen.dbt
@@ -165,7 +164,7 @@ def test_fin_builder():
 
   with DbSession() as session:
     for fin_json, context in res_set:
-      process_fin_builder_results(session, fin_json, context, miopen.dbt)
+      miopen.process_fin_builder_results(session, fin_json, context)
 
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
