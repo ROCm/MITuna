@@ -26,7 +26,6 @@
 ###############################################################################
 """Utility module for helper functions"""
 
-from multiprocessing import Lock, Queue as mpQueue
 import random
 import string
 from time import sleep
@@ -37,7 +36,7 @@ from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 from tuna.miopen.db.solver import get_solver_ids
-from tuna.utils.utility import check_qts, SimpleDict
+from tuna.utils.utility import check_qts
 from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT, BN_DEFAULTS
 from tuna.miopen.utils.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.utils.metadata import NUM_SQL_RETRIES

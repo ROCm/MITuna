@@ -370,8 +370,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     if not self.args.enqueue_only:
       try:
         self.logger.info('Launching celery workers for queue %s', q_name)
-        subp_list = launch_celery_worker(self.operation, cmd, self.args,
-                                         True)
+        subp_list = launch_celery_worker(self.operation, cmd, self.args, True)
         self.logger.info('Done launching celery workers')
         if not subp_list:
           raise CustomError('Could not launch celery worker')
