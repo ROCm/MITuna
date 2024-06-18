@@ -52,9 +52,9 @@ def getDockerName(backend)
 
 def buildDockers(){
     docker.withRegistry('', "$DOCKER_CRED"){
-        def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU --no-cache .")
+        def tuna_docker_hipnogpu = docker.build(getDockerName("HIPNOGPU"), " --build-arg BACKEND=HIPNOGPU .")
         tuna_docker_hipnogpu.push()
-        def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP --no-cache .")
+        def tuna_docker_hip = docker.build(getDockerName("HIP"), " --build-arg BACKEND=HIP .")
         tuna_docker_hip.push()
     }
 }
