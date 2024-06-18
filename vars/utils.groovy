@@ -202,7 +202,7 @@ def finFindCompileEnqueue(){
         println "Count(*) conv_config table: ${num_cfg}"
         sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
@@ -241,7 +241,8 @@ def finFindEval(){
         def pid_list = []
 
         gpu_list.each{
-            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log}_${counter} -n tuna_${db_host}_sess_${sesh1}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
+            sh "cat ${celery_log}_${counter}"
             pid_list.add(proc_id)
             counter++
         }
@@ -417,7 +418,7 @@ def perfEval() {
         celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
-        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q eval_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         //sh "kill -9 ${pid}"
