@@ -199,8 +199,9 @@ def test_fin_evaluator():
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
-  worker_kwargs = prep_kwargs(context['kwargs'],
-                              [context['job'], context['config'], context['operation']])
+  worker_kwargs = prep_kwargs(
+      context['kwargs'],
+      [context['job'], context['config'], context['operation']])
   assert (worker_kwargs['config'])
   assert (worker_kwargs['job'])
   assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])

@@ -153,8 +153,9 @@ def test_fin_builder():
         'kwargs': kwargs,
         'fdb_attr': fdb_attr
     }
-    worker_kwargs = prep_kwargs(context['kwargs'],
-                                [context['job'], context['config'], context['operation']])
+    worker_kwargs = prep_kwargs(
+        context['kwargs'],
+        [context['job'], context['config'], context['operation']])
 
     worker = get_worker(worker_kwargs, miopen.operation)
     worker.dbt = miopen.dbt
