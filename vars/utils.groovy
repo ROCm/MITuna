@@ -202,13 +202,13 @@ def finFindCompileEnqueue(){
         println "Count(*) conv_config table: ${num_cfg}"
         sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q compile_q_${db_name}_sess_${sesh1} --detach"
-        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q compile_q_${db_name}_sess_${sesh1} --detach & echo \$!", returnStdout: true).trim()
-        sh "echo ${pid}"
-        sh "cat ${celery_log}"
+        //sh "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q compile_q_${db_name}_sess_${sesh1} --detach"
+        //def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${db_host}_sess_${sesh1} -Q compile_q_${db_name}_sess_${sesh1} --detach & echo \$!", returnStdout: true).trim()
+        def tuna_pid = sh(script: "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}")
+        //sh "cat ${celery_log}"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
-        sh "kill -9 ${pid}"
-        sh "cat ${celery_log}"
+        //sh "kill -9 ${pid}"
+        //sh "cat ${celery_log}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
