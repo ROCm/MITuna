@@ -264,7 +264,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
           universal_newlines=True)
 
       #filter the workers by session id
-      sess_str = "sess_" + queue.split('_')[-1] + "_"
+      sess_str = "sess_" + queue.split('_')[-1]
       stdout, _ = subp.stdout, subp.stderr
       while True:
         line = stdout.readline()
