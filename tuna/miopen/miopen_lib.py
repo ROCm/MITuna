@@ -84,7 +84,6 @@ class MIOpen(MITunaInterface):
     super().__init__(library=Library.MIOPEN)
     self.args = None
     self.set_state = None
-    self.prefix = None
 
   def parse_args(self):
     # pylint: disable=too-many-statements

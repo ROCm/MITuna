@@ -72,7 +72,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     self.dbt = None
     self.operation = None
     self.db_name = os.environ['TUNA_DB_NAME']
-    self.redis_key_prefix = None
+    self.prefix = None
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -419,7 +419,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     start = time.time()
 
-    prefix = f"d_{self.db_name}_sess_{self.args.session_id}"
     with DbSession() as session:
       job_list = self.get_jobs(
           session,
@@ -442,7 +441,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
       #start async consume thread, blocking
       consume_proc = Process(target=self.async_wrap,
-                             args=(self.consume, job_counter, prefix))
+                             args=(self.consume, job_counter, self.prefix))
       self.logger.info('Starting consume thread')
       consume_proc.start()
       if enqueue_proc:
