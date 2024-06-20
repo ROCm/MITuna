@@ -72,6 +72,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     self.dbt = None
     self.operation = None
     self.db_name = os.environ['TUNA_DB_NAME']
+    self.redis_key_prefix = None
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -330,8 +331,15 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       cursor = "0"
       keys = []
       while cursor != 0:
-        cursor, results = await redis.scan(cursor, match=f"*{prefix}*"
-                                          )  # update with the celery pattern
+        if prefix:
+          #a prefix is necessary when the need to different results in redis based on operation
+          #withough a prefix the redis key defaults to: "celery-task-meta-<unique kombu hash>"
+          #with a prefix the key will look like: "celery-task-meta-<prefix>-<unique kombu hash>"
+          #the prefix can be applied when filtering the redis keys as bellow
+          cursor, results = await redis.scan(cursor, match=f"*{prefix}*")
+        else:
+          #no prefix, match any key
+          cursor, results = await redis.scan(cursor, match="*")
         keys.extend(results)
       self.logger.info('Found %s results', len(results))
       for key in keys:

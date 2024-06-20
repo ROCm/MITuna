@@ -49,6 +49,7 @@ from tuna.utils.db_utility import gen_update_query, session_retry
 from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
+from tuna.miopen.metadata import MIOPEN_CELERY_STEPS
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.session import Session
 from tuna.miopen.subcmd.import_configs import run_import_configs
@@ -83,6 +84,7 @@ class MIOpen(MITunaInterface):
     super().__init__(library=Library.MIOPEN)
     self.args = None
     self.set_state = None
+    self.prefix = None
 
   def parse_args(self):
     # pylint: disable=too-many-statements
@@ -246,6 +248,11 @@ class MIOpen(MITunaInterface):
     self.dbt = MIOpenDBTables(session_id=self.args.session_id,
                               config_type=self.args.config_type)
     self.update_operation()
+    self.set_prefix()
+
+  def set_prefix(self):
+    """Set redis key prefix"""
+    self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{self.args.fin_steps}"
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
@@ -650,12 +657,8 @@ class MIOpen(MITunaInterface):
     if self.args.shutdown_workers:
       return True
 
-    tuning_steps = [
-        "miopen_find_compile", "miopen_find_eval", "miopen_perf_compile",
-        "miopen_perf_eval"
-    ]
     return self.args.fin_steps and any(
-        s in self.args.fin_steps for s in tuning_steps)
+        s in self.args.fin_steps for s in MIOPEN_CELERY_STEPS)
 
   @lru_cache(1)
   def get_context_items(self):
@@ -692,9 +695,8 @@ class MIOpen(MITunaInterface):
   def celery_enqueue_call(self, context, q_name, task_id=False):
     """Enqueue job (context) for queue:q_name"""
 
-    prefix = f"d_{self.db_name}_sess_{context['kwargs']['session_id']}"
     return celery_enqueue.apply_async((context,),
-                                      task_id=('-').join([prefix,
+                                      task_id=('-').join([self.prefix,
                                                           uuid()]),
                                       queue=q_name,
                                       reply_to=q_name)
