@@ -317,12 +317,42 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """Get a list of context items to be used for celery task"""
     raise NotImplementedError("Not implemented")
 
+  async def cleanup_redis_results(self, prefix):
+    """Remove stale redis results by key"""
+    redis = await aioredis.from_url(
+        f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
+
+    keys = []
+    cursor = "0"
+    if prefix:
+      #a prefix is necessary when the need to different results in redis based on operation
+      #withough a prefix the redis key defaults to: "celery-task-meta-<unique kombu hash>"
+      #with a prefix the key will look like: "celery-task-meta-<prefix>-<unique kombu hash>"
+      #the prefix can be applied when filtering the redis keys as bellow
+      cursor, results = await redis.scan(cursor, match=f"*{prefix}*")
+    else:
+      #no prefix, match any key
+      cursor, results = await redis.scan(cursor, match="*")
+    keys.extend(results)
+    self.logger.info('Found %s old results', len(results))
+    for key in keys:
+      try:
+        redis.delete(key)
+      except aioredis.exceptions.ResponseError as red_err:
+        self.logger.error(red_err)
+        self.logger.info(key.decode('utf-8'))
+        continue
+
+    self.logger.info('Done removing old redis results for prefix: %s', prefix)
+
+    return True
+
   async def consume(self, job_counter, prefix):
     """Retrieve celery results from redis db"""
 
     redis = await aioredis.from_url(
         f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
-    self.logger.info('Connected to redis')
+
     #if job_counter is 0, let it poll for results once to clean out any leftover results
     if job_counter.value == 0:
       job_counter.value = 1
@@ -400,7 +430,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       return True
 
     try:
-      self.logger.info('Launching celery workers')
       q_name, subp_list = self.prep_tuning()
     except CustomError as verr:
       self.logger.error(verr)
@@ -439,6 +468,12 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
         #Start enqueue proc
         enqueue_proc.start()
 
+      #cleanup old results
+      cleanup_proc = Process(target=self.async_wrap,
+                             args=(self.cleanup_redis_results, self.prefix))
+      cleanup_proc.start()
+      cleanup_proc.join()
+
       #start async consume thread, blocking
       consume_proc = Process(target=self.async_wrap,
                              args=(self.consume, job_counter, self.prefix))
@@ -461,14 +496,14 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     return True
 
-  async def consume_callback(self, async_func, *args):
+  async def async_callback(self, async_func, *args):
     """Wrapper function to await on async function"""
     await async_func(*args)
 
   def async_wrap(self, async_func, *args):
     """Run async function"""
     try:
-      asyncio.run(self.consume_callback(async_func, *args))
+      asyncio.run(self.async_callback(async_func, *args))
     except KeyboardInterrupt:
       self.logger.warning('Keyboard interrupt caught, terminating')
 
