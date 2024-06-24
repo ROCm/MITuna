@@ -251,7 +251,7 @@ class MIOpen(MITunaInterface):
 
   def set_prefix(self):
     """Set redis key prefix"""
-    self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{self.args.fin_steps}"
+    self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{('-').join(self.args.fin_steps)}"
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
