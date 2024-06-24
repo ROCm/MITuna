@@ -31,6 +31,7 @@ import copy
 import json
 from typing import List, Tuple, Any
 from functools import lru_cache
+from collections.abc import Iterable
 
 from kombu.utils.uuid import uuid
 from sqlalchemy.inspection import inspect
@@ -247,11 +248,16 @@ class MIOpen(MITunaInterface):
     self.dbt = MIOpenDBTables(session_id=self.args.session_id,
                               config_type=self.args.config_type)
     self.update_operation()
-    self.set_prefix()
+    if self.args.fin_steps:
+      self.set_prefix()
 
   def set_prefix(self):
     """Set redis key prefix"""
-    self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{('-').join(self.args.fin_steps)}"
+    if isinstance(self.args.fin_steps, Iterable):
+      self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
+                      "{('-').join(self.args.fin_steps)}"
+    else:
+      self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{self.args.fin_steps[0]}"
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
