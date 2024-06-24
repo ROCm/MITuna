@@ -353,10 +353,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     redis = await aioredis.from_url(
         f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
 
-    #if job_counter is 0, let it poll for results once to clean out any leftover results
-    if job_counter.value == 0:
-      job_counter.value = 1
-
     while job_counter.value > 0:
       cursor = "0"
       keys = []
