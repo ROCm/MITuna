@@ -45,11 +45,7 @@ def launch_worker_per_node(machines, cmd, formatted=False):
       if formatted:
         final_cmd = cmd.replace('HOSTNAME', machine.hostname)
       subp = subprocess.Popen(  #pylint: disable=consider-using-with
-          final_cmd.split(' '),
-          stdout=subprocess.PIPE,
-          stderr=subprocess.STDOUT,
-          shell=False,
-          universal_newlines=True)
+          final_cmd.split(' '))
       subp_list.append(subp)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.warning(exp)
