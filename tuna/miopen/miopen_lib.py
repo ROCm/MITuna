@@ -255,10 +255,12 @@ class MIOpen(MITunaInterface):
   def set_prefix(self):
     """Set redis key prefix"""
     if isinstance(self.args.fin_steps, Iterable):
+      steps_str = ('-').join(self.args.fin_steps)
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
-                      "{('-').join(self.args.fin_steps)}"
+                      "{steps_str}"
     else:
-      self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{self.args.fin_steps[0]}"
+      steps_str = self.args.fin_steps[0]
+      self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{steps_str}"
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
