@@ -257,7 +257,7 @@ class MIOpen(MITunaInterface):
     if isinstance(self.args.fin_steps, Iterable):
       steps_str = ('-').join(self.args.fin_steps)
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
-                      "{steps_str}"
+                    f"{steps_str}"
     else:
       steps_str = self.args.fin_steps[0]
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{steps_str}"
