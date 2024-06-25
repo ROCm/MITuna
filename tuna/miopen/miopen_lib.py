@@ -64,7 +64,7 @@ from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.machine import Machine
-from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
+#from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table
 from tuna.miopen.utils.helper import set_job_state
@@ -74,6 +74,7 @@ from tuna.libraries import Library, Operation
 from tuna.custom_errors import CustomError
 
 MAX_ERRORED_JOB_RETRIES = 3
+Q_NAME = None
 
 
 class MIOpen(MITunaInterface):
@@ -699,6 +700,12 @@ class MIOpen(MITunaInterface):
 
   def celery_enqueue_call(self, context, q_name, task_id=False):
     """Enqueue job (context) for queue:q_name"""
+
+    #hacky way to get the Q_NAME to the task decorator for interpreter to decorate the
+    #function with correct q_name arg
+    #if import is moved to top it will result in circular imports
+    Q_NAME = q_name  #pylint: disable=import-outside-toplevel,unused-variable,invalid-name,redefined-outer-name
+    from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue  #pylint: disable=import-outside-toplevel
 
     return celery_enqueue.apply_async((context,),
                                       task_id=('-').join([self.prefix,

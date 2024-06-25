@@ -269,10 +269,12 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       while True:
         line = stdout.readline()
         if not line:
+          print('Reached end of stdout')
           break
         #stop workers that were feeding from this queue
         if "->" in line and sess_str in line:
           hostname = line.split('->')[1].split()[0].split(':')[0]
+          print('HOSTNAME')
           stop_named_worker(hostname)
 
     except Exception as exp:  #pylint: disable=broad-exception-caught
@@ -456,13 +458,13 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     enqueue_proc = None
     try:
       if job_counter.value == 0:
-        self.logger.info('No new jobs found')
-      else:
+        self.logger.warning('No new jobs found')
+        return False
 
-        enqueue_proc = Process(target=self.enqueue_jobs,
-                               args=[job_batch_size, q_name])
-        #Start enqueue proc
-        enqueue_proc.start()
+      enqueue_proc = Process(target=self.enqueue_jobs,
+                             args=[job_batch_size, q_name])
+      #Start enqueue proc
+      enqueue_proc.start()
 
       #cleanup old results
       cleanup_proc = Process(target=self.async_wrap,
