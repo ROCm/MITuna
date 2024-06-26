@@ -188,6 +188,8 @@ def finFindCompileEnqueue(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.BROKER_TRANSPORT="redis://${db_host}:6379/14"
+        env.CELERY_RESULT_BACKEND="redis://${db_host}:6379/15"
         def sesh1 = runsql("select id from session order by id asc limit 1")
         celery_log="${env.WORKSPACE}/tuna/celery_log.log"
 
