@@ -176,7 +176,7 @@ def finApplicability(){
     }
 }
 
-def finFindCompile(){
+def finFindCompileEnqueue(){
     def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
