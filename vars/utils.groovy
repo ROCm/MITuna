@@ -206,8 +206,11 @@ def finFindCompileEnqueue(){
         sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         //def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        sh "printenv"
         sh "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1}"
         sh "cat ${celery_log}"
+        env.CELERY_BROKER="redis://${db_host}"
+        sh "printenv"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
 
         //sh "kill -9 ${pid}"
