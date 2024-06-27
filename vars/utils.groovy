@@ -256,6 +256,7 @@ def finFindEval(){
         def pid_list = []
 
         sh "printenv"
+        sh "celery -A tuna.celery_app.celery_app report"
         gpu_list.each{
             def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log}_${counter} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
             sh "cat ${celery_log}_${counter}"
@@ -263,7 +264,9 @@ def finFindEval(){
             counter++
         }
 
+        env.CELERY_BROKER="redis://${db_host}:6379/"
         sh "printenv"
+        sh "celery -A tuna.celery_app.celery_app report"
         sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         //killing off celery workers by pid
         pid_list.each{
