@@ -206,7 +206,6 @@ def finFindCompileEnqueue(){
         println "Count(*) conv_config table: ${num_cfg}"
 
         sh "printenv"
-        sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         //sh "printenv"
@@ -256,7 +255,6 @@ def finFindEval(){
         def pid_list = []
 
         sh "printenv"
-        sh "celery -A tuna.celery_app.celery_app report"
         gpu_list.each{
             def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log}_${counter} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 & echo \$!", returnStdout: true).trim()
             sh "cat ${celery_log}_${counter}"
@@ -264,12 +262,10 @@ def finFindEval(){
             counter++
         }
 
-        env.CELERY_BROKER="redis://${db_host}:6379/"
-        sh "printenv"
-        sh "celery -A tuna.celery_app.celery_app report"
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         //killing off celery workers by pid
         pid_list.each{
+          sh "${it}"
           sh "kill -9 ${it}"
         }
 
@@ -397,7 +393,7 @@ def perfCompile() {
         sh "./tuna/go_fish.py miopen load_job -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
@@ -414,7 +410,7 @@ def perfCompile() {
         sh "./tuna/go_fish.py miopen load_job -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid2}"
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'conv_${branch_id}_v2';")
         if(compiled_conv_jobs.toInteger() == 0)
@@ -447,7 +443,7 @@ def perfEval() {
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id} -Q eval_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
         {
@@ -455,7 +451,7 @@ def perfEval() {
         }
 
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh ".export CELERY_BROKER=\"redis://${db_host}:6379/\" && /tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
         def eval_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'evaluated';")
         def errored_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'errored';")
         if(eval_conv_jobs.toInteger() != compiled_conv_jobs.toInteger())
