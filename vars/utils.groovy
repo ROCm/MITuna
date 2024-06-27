@@ -255,8 +255,9 @@ def finFindEval(){
         def pid_list = []
 
         sh "printenv"
+        // &=046
         gpu_list.each{
-            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log}_${counter} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\&1 1>/dev/null & echo $!", returnStdout: true).trim()
+            def proc_id = sh(script: 'celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log}_${counter} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!', returnStdout: true).trim()
             sh "cat ${celery_log}_${counter}"
             sh "cat ${proc_id}"
             pid_list.add(${proc_id})
