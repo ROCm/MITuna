@@ -213,9 +213,9 @@ def finFindCompileEnqueue(){
         //sh "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1}"
         sh "cat ${celery_log}"
 
-        env.CELERY_BROKER="redis://${db_host}:6379/"
+        //env.CELERY_BROKER="redis://${db_host}:6379/"
         sh "printenv"
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
 
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
