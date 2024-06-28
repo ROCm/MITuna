@@ -246,9 +246,9 @@ def finFindEval(){
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
         num_gpus = num_gpus as Integer
         sh "echo #GPUs: ${num_gpus}"
-        def gpu_list = (1..num_gpus).toList()
+        def gpu_list = (0..(num_gpus-1)).toList()
         sh "echo ${gpu_list}"
-        def counter = 1
+        def counter = 0
         def pid_list = []
 
         sh "printenv"
@@ -439,9 +439,9 @@ def perfEval() {
         def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
         num_gpus = num_gpus as Integer
         sh "echo #GPUs: ${num_gpus}"
-        def gpu_list = (1..num_gpus).toList()
+        def gpu_list = (1..(num_gpus-1)).toList()
         sh "echo ${gpu_list}"
-        def counter = 1
+        def counter = 0
         def pid_list = []
 
         sh "printenv"
