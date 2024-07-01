@@ -66,7 +66,7 @@ pipeline {
             utils.finApplicability()
             }
             }
-        }/*
+        }
         stage("pytest1"){
         agent{  label utils.rocmnode("tunatest") }
         steps{
@@ -106,7 +106,7 @@ pipeline {
             utils.finFindEval()
             }
             }
-        }*/
+        }
         stage("load jobs"){
         agent{ label utils.rocmnode("tunatest") }
         steps {

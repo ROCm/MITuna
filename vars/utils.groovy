@@ -466,8 +466,6 @@ def perfEval() {
         sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
 
 
-        sh "whoami"
-        sh "/etc/passwd"
         pid_list.each{
           sh "sudo kill -9 ${it}"
         }
