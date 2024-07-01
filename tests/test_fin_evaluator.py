@@ -194,7 +194,6 @@ def test_fin_evaluator():
   e = Value('i', 0)
   kwargs['num_procs'] = num_gpus
   kwargs['avail_gpus'] = 1
-0, f_vals, tuning=True)
   fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
@@ -221,7 +220,7 @@ def test_fin_evaluator():
   with DbSession() as session:
     for fin_json, context in res_set:
       miopen.process_fin_evaluator_results(session, fin_json, context)
-    
+
   assert (kwargs['fin_steps'] == ['miopen_find_eval'])
 
   job_config = job_config_rows[0]
@@ -233,8 +232,6 @@ def test_fin_evaluator():
   assert (worker_kwargs['job'])
   assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])
   fin_eval = get_worker(worker_kwargs, miopen.operation)
-
-
 
   assert (fin_eval.operation == Operation.EVAL)
   fin_eval.set_job_state('evaluating')
@@ -266,7 +263,6 @@ def test_fin_evaluator():
                                          .filter(dbt.job_table.session==dbt.session_id)\
                                          .update({dbt.job_table.state: 'evaluated'})
     session.commit()
-
 
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
