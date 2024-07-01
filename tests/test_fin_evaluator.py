@@ -48,7 +48,7 @@ from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
-from tuna.utils.miopen_utility import load_machines
+from tuna.utils.machine_utility import load_machines
 from tuna.machine import Machine
 from tuna.miopen.celery_tuning.celery_tasks import prep_kwargs
 from tuna.miopen.utils.lib_helper import get_worker
@@ -56,7 +56,7 @@ from tuna.utils.utility import serialize_job_config_row, SimpleDict
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 #from tuna.miopen.utils.json_to_sql import process_fdb_eval
-from tuna.miopen.celery_tuning.tuning import set_job_state
+from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.libraries import Operation
 
 solver_id_map = get_solver_ids()
@@ -189,13 +189,40 @@ def test_fin_evaluator():
 
   f_vals = miopen.get_f_vals(machine, range(0))
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
-  assert (kwargs['fin_steps'] == ['miopen_find_eval'])
-
   num_gpus = Value('i', 1)
   v = Value('i', 0)
   e = Value('i', 0)
   kwargs['num_procs'] = num_gpus
   kwargs['avail_gpus'] = 1
+0, f_vals, tuning=True)
+  fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
+  fdb_attr.remove("insert_ts")
+  fdb_attr.remove("update_ts")
+
+  res_set = []
+  for elem in job_config_rows:
+    job_dict, config_dict = serialize_job_config_row(elem)
+    context = {
+        'job': job_dict,
+        'config': config_dict,
+        'operation': miopen.operation,
+        'arch': miopen.dbt.session.arch,
+        'num_cu': miopen.dbt.session.num_cu,
+        'kwargs': kwargs,
+        'fdb_attr': fdb_attr
+    }
+
+    worker = prep_worker(copy.deepcopy(context))
+    worker.dbt = miopen.dbt
+    worker.fin_steps = miopen.args.fin_steps
+    fin_json = worker.run()
+    res_set.append((fin_json, context))
+
+  with DbSession() as session:
+    for fin_json, context in res_set:
+      miopen.process_fin_evaluator_results(session, fin_json, context)
+    
+  assert (kwargs['fin_steps'] == ['miopen_find_eval'])
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
@@ -206,6 +233,9 @@ def test_fin_evaluator():
   assert (worker_kwargs['job'])
   assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])
   fin_eval = get_worker(worker_kwargs, miopen.operation)
+
+
+
   assert (fin_eval.operation == Operation.EVAL)
   fin_eval.set_job_state('evaluating')
   with DbSession() as session:
@@ -237,25 +267,16 @@ def test_fin_evaluator():
                                          .update({dbt.job_table.state: 'evaluated'})
     session.commit()
 
-  #test get_job false branch
 
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
   assert len(fin_json) == 1
   fin_json = fin_json[0]
-  #job = get_db_obj_by_id(job_dict['id'], miopen.dbt.job_table)
-  #config = get_db_obj_by_id(config_dict['id'], miopen.dbt.config_table)
   job = SimpleDict(**job_dict)
   config = SimpleDict(**config_dict)
   fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
-
-  #status = process_fdb_eval(fin_json, solver_id_map, config, miopen.dbt,
-  #                          miopen.dbt.session_id, fdb_attr, job)
-  #for obj in status:
-  #  print(obj)
-  #  assert (obj['success'] == True)
 
   #test FinEvaluator close_job
   with DbSession() as session:
