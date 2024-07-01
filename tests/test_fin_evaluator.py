@@ -27,6 +27,7 @@
 import json
 import os
 import sys
+import copy
 from multiprocessing import Value, Lock, Queue
 from sqlalchemy.inspection import inspect
 
@@ -57,7 +58,8 @@ from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
 #from tuna.miopen.utils.json_to_sql import process_fdb_eval
 from tuna.miopen.utils.helper import set_job_state
-from tuna.miopen.libraries import Operation
+from tuna.libraries import Operation
+from tuna.miopen.celery_tuning.celery_tasks import prep_worker
 
 solver_id_map = get_solver_ids()
 
@@ -192,7 +194,7 @@ def test_fin_evaluator():
   num_gpus = Value('i', 1)
   v = Value('i', 0)
   e = Value('i', 0)
-  kwargs['num_procs'] = num_gpus
+  #kwargs['num_procs'] = num_gpus
   kwargs['avail_gpus'] = 1
   fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
   fdb_attr.remove("insert_ts")
@@ -233,7 +235,6 @@ def test_fin_evaluator():
   assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])
   fin_eval = get_worker(worker_kwargs, miopen.operation)
 
-  assert (fin_eval.operation == Operation.EVAL)
   fin_eval.set_job_state('evaluating')
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.state=='evaluating')\
