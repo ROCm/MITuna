@@ -17,6 +17,10 @@ def initSession(){
   {
     build_args = build_args + " --build-arg BASEIMAGE=${params.base_image}"
   }
+  if(params.arch != '')
+  {
+    build_args = build_args + " --build-arg ARCH_TARGET=${params.arch}"
+  }
   sh "echo ${build_args}"
 
   tuna_docker = docker.build("${tuna_docker_name}", "${build_args} ." )
