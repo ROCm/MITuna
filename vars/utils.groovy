@@ -581,7 +581,7 @@ def pytestSuite3() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
+        //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
 
         sshagent (credentials: ['bastion-ssh-key']) {
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
