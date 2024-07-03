@@ -91,6 +91,7 @@ pipeline {
             }
             }
         }
+        /*
         stage("Coverage"){
             agent { label utils.rocmnode("tunatest") }
             steps {
@@ -98,7 +99,7 @@ pipeline {
             utils.Coverage(branch, branch_master)
             }
             }
-        }
+        }*/
         stage("fin find compile"){
             agent{ label utils.rocmnode("tunatest") }
             steps{
