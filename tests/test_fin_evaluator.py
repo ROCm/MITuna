@@ -152,9 +152,7 @@ def test_fin_evaluator():
   args = GoFishArgs()
   machine_lst = load_machines(args)
   miopen.args.update_applicability = True
-  #args.update_applicability = True
-  #args.label = 'tuna_pytest_fin_eval'
-  #args.session_id = miopen.args.session_id
+
   worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
@@ -166,51 +164,15 @@ def test_fin_evaluator():
   args.fin_steps = ['miopen_find_eval']
   args.session_id = miopen.args.session_id
 
-  #connect_db()
-  #if args.tag:
-  #  try:
-  #    tag_name_test(args.tag, dbt)
-  #  except ValueError as terr:
-  #    print(terr)
 
   logger = setup_logger('test_fin_evaluator')
   num_jobs = add_jobs(args, dbt, logger)
   assert num_jobs > 0
   print('num_jobs: %s', num_jobs)
 
-  #set all applicable
-  '''
-  with DbSession() as session:
-    configs = session.query(dbt.config_tags_table.config).filter(
-        dbt.config_tags_table.tag == 'tuna_pytest_fin_eval').all()
-    configs = [x[0] for x in configs]
-    for solver in solver_id_map.values():
-      for config in configs:
-        slv_app_entry = dbt.solver_app()
-        slv_app_entry.config = config
-        slv_app_entry.solver = solver
-        slv_app_entry.session = dbt.session_id
-        slv_app_entry.applicable = True
-        session.add(slv_app_entry)
-    session.commit()
-  '''
-
-  #load jobs
-  #miopen.args.label = 'tuna_pytest_fin_eval'
-  #num_jobs = add_fin_find_eval_job(miopen.args.session_id, dbt)
-
-  with DbSession() as session:
-    job_query = session.query(
-        dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)\
-                      .filter(dbt.job_table.reason == args.label)
-    job_query.update({dbt.job_table.state: 'compiled'})
-    session.commit()
-
-    add_fake_fdb_entries(job_query, dbt, job_query.first().id)
-
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
-  miopen.fetch_state.add('compiled')
+  miopen.fetch_state.add('new')
   miopen.operation = Operation.EVAL
   miopen.set_state = 'eval_start'
   miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
@@ -219,6 +181,7 @@ def test_fin_evaluator():
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
                            miopen.args.session_id)
   entries = [job for job in jobs]
+  print('num entries: %s', entries)
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
   assert (job_config_rows)
   print('job_config_rows:%s', job_config_rows)
