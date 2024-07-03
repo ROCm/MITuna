@@ -163,7 +163,7 @@ def test_fin_evaluator():
   args.label = 'tuna_pytest_fin_eval'
   args.tag = 'tuna_pytest_fin_eval'
   args.fin_steps = ['miopen_find_eval']
-  args.session_id = miopen.args.session_id 
+  args.session_id = miopen.args.session_id
 
   #connect_db()
   #if args.tag:
@@ -268,7 +268,6 @@ def test_fin_evaluator():
                                          .filter(dbt.job_table.state=='compiled').count()
     assert (count == num_jobs)
 
-
   assert (kwargs['fin_steps'] == ['miopen_find_eval'])
 
   job_config = job_config_rows[0]
@@ -286,7 +285,6 @@ def test_fin_evaluator():
   # test get_fin_input
   file_name = fin_eval.get_fin_input()
   assert (file_name)
-
 
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
