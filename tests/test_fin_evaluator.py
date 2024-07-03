@@ -138,6 +138,7 @@ def test_fin_evaluator():
   machine = machine_lst[0]
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.args.session_id = add_test_session(label='tuna_pytest_fin_eval')
+  print('miopen sess_id: %s', miopen.args.session_id)
 
   #update solvers
   kwargs = get_worker_args(miopen.args, machine, miopen)
@@ -155,8 +156,8 @@ def test_fin_evaluator():
   #args.label = 'tuna_pytest_fin_eval'
   #args.session_id = miopen.args.session_id
   worker_lst = miopen.compose_worker_list(machine_lst)
-  #for worker in worker_lst:
-  #  worker.join()
+  for worker in worker_lst:
+    worker.join()
 
   #load jobs
   args = LdJobArgs
@@ -174,8 +175,8 @@ def test_fin_evaluator():
 
   logger = setup_logger('test_fin_evaluator')
   num_jobs = add_jobs(args, dbt, logger)
-  #assert num_jobs > 0
-  print(num_jobs)
+  assert num_jobs > 0
+  print('num_jobs: %s', num_jobs)
 
   #set all applicable
   '''
@@ -200,11 +201,12 @@ def test_fin_evaluator():
 
   with DbSession() as session:
     job_query = session.query(
-        dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)
+        dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)\
+                      .filter(dbt.job_table.reason == args.label)
     job_query.update({dbt.job_table.state: 'compiled'})
     session.commit()
 
-    #add_fake_fdb_entries(job_query, dbt, job_query.first().id)
+    add_fake_fdb_entries(job_query, dbt, job_query.first().id)
 
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
@@ -218,7 +220,8 @@ def test_fin_evaluator():
                            miopen.args.session_id)
   entries = [job for job in jobs]
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
-  print(job_config_rows)
+  assert (job_config_rows)
+  print('job_config_rows:%s', job_config_rows)
 
   #assert (len(job_config_rows) == 80)
 
