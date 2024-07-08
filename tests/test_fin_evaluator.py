@@ -164,7 +164,6 @@ def test_fin_evaluator():
   args.fin_steps = ['miopen_find_eval']
   args.session_id = miopen.args.session_id
 
-
   logger = setup_logger('test_fin_evaluator')
   num_jobs = add_jobs(args, dbt, logger)
   assert num_jobs > 0
