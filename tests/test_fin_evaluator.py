@@ -230,7 +230,7 @@ def test_fin_evaluator():
     #ommiting valid Fin/MIOpen errors
     num_jobs = (num_jobs - valid_fin_err)
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
-                                         .filter(dbt.job_table.state=='compiled').count()
+                                         .filter(dbt.job_table.state=='evaluated').count()
     assert (count == num_jobs)
 
   assert (kwargs['fin_steps'] == ['miopen_find_eval'])
