@@ -262,6 +262,8 @@ class MIOpen(MITunaInterface):
       steps_str = self.args.fin_steps[0]
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{steps_str}"
 
+    self.logger.info('redis prefix: %s', self.prefix)
+
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
     if self.args.subcommand is not None:
