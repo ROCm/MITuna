@@ -268,7 +268,6 @@ def finFindEval(){
           try{
             sh "kill -9 ${it}"
           } catch (Exception err) {
-            //currentBuild.result = 'SUCCESS'
             sh "echo ${err}"
           }
         }
@@ -474,7 +473,11 @@ def perfEval() {
 
 
         pid_list.each{
-          sh "kill -9 ${it}"
+          try{
+            sh "kill -9 ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
         }
 
         def eval_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'evaluated';")
