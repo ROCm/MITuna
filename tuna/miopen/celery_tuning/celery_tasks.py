@@ -34,6 +34,7 @@ from tuna.libraries import Operation
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
+from tuna.miopen.miopen_lib import Q_NAME
 
 logger = get_task_logger(__name__)
 
@@ -74,7 +75,7 @@ def prep_worker(context):
   return worker
 
 
-@app.task(trail=True)
+@app.task(trail=True, reply_to=Q_NAME)
 def celery_enqueue(context):
   """Defines a celery task"""
   kwargs = context['kwargs']

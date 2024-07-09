@@ -17,6 +17,8 @@ omit =
       tuna/utils/dupe_resolve.py
       tuna/build_driver_cmd.py
       tuna/solver_res.py   
+      tuna/celery_app/celery_app.py
+      tuna/miopen/celery_tuning/celery_tasks.py
       
 [report]
 exclude_lines =

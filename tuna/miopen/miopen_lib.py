@@ -31,6 +31,7 @@ import copy
 import json
 from typing import List, Tuple, Any
 from functools import lru_cache
+from collections.abc import Iterable
 
 from kombu.utils.uuid import uuid
 from sqlalchemy.inspection import inspect
@@ -63,7 +64,7 @@ from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.machine import Machine
-from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
+#from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table
 from tuna.miopen.utils.helper import set_job_state
@@ -73,6 +74,7 @@ from tuna.libraries import Library, Operation
 from tuna.custom_errors import CustomError
 
 MAX_ERRORED_JOB_RETRIES = 3
+Q_NAME = None
 
 
 class MIOpen(MITunaInterface):
@@ -247,11 +249,20 @@ class MIOpen(MITunaInterface):
     self.dbt = MIOpenDBTables(session_id=self.args.session_id,
                               config_type=self.args.config_type)
     self.update_operation()
-    self.set_prefix()
+    if self.args.fin_steps:
+      self.set_prefix()
 
   def set_prefix(self):
     """Set redis key prefix"""
-    self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{('-').join(self.args.fin_steps)}"
+    if isinstance(self.args.fin_steps, Iterable):
+      steps_str = ('-').join(self.args.fin_steps)
+      self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
+                    f"{steps_str}"
+    else:
+      steps_str = self.args.fin_steps[0]
+      self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{steps_str}"
+
+    self.logger.info('redis prefix: %s', self.prefix)
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
@@ -693,6 +704,12 @@ class MIOpen(MITunaInterface):
 
   def celery_enqueue_call(self, context, q_name, task_id=False):
     """Enqueue job (context) for queue:q_name"""
+
+    #hacky way to get the Q_NAME to the task decorator for interpreter to decorate the
+    #function with correct q_name arg
+    #if import is moved to top it will result in circular imports
+    Q_NAME = q_name  #pylint: disable=import-outside-toplevel,unused-variable,invalid-name,redefined-outer-name
+    from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue  #pylint: disable=import-outside-toplevel
 
     return celery_enqueue.apply_async((context,),
                                       task_id=('-').join([self.prefix,

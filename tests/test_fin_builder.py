@@ -54,6 +54,7 @@ from tuna.miopen.celery_tuning.celery_tasks import prep_kwargs
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.libraries import Operation
+from tuna.miopen.celery_tuning.celery_tasks import prep_worker
 
 
 def add_cfgs():
@@ -108,15 +109,15 @@ def test_fin_builder():
 
   #get applicability
   dbt = add_cfgs()
-  #miopen.args.update_applicability = True
-  #worker_lst = miopen.compose_worker_list(machine_lst)
-  #for worker in worker_lst:
-  #  worker.join()
+  miopen.args.update_applicability = True
+  worker_lst = miopen.compose_worker_list(machine_lst)
+  for worker in worker_lst:
+    worker.join()
 
   #load jobs
   miopen.args.label = 'tuna_pytest_fin_builder'
   num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
-  #assert (num_jobs)
+  assert (num_jobs)
 
   #compile
   miopen.args.update_applicability = False
@@ -153,11 +154,8 @@ def test_fin_builder():
         'kwargs': kwargs,
         'fdb_attr': fdb_attr
     }
-    worker_kwargs = prep_kwargs(
-        context['kwargs'],
-        [context['job'], context['config'], context['operation']])
 
-    worker = get_worker(worker_kwargs, miopen.operation)
+    worker = prep_worker(copy.deepcopy(context))
     worker.dbt = miopen.dbt
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()
