@@ -265,7 +265,7 @@ def finFindEval(){
         sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         //killing off celery workers by pid
         pid_list.each{
-          sh "sudo kill -9 ${it}"
+          sh "kill -9 ${it}"
         }
 
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
@@ -469,7 +469,7 @@ def perfEval() {
 
 
         pid_list.each{
-          sh "sudo kill -9 ${it}"
+          sh "kill -9 ${it}"
         }
 
         def eval_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'evaluated';")
