@@ -56,6 +56,7 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.libraries import Operation
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
+from tuna.miopen.worker.fin_utils import get_fin_result
 
 
 def add_cfgs():
@@ -120,7 +121,7 @@ def test_fin_builder():
   num_jobs = add_fin_find_compile_job(miopen.args.session_id, dbt)
   assert (num_jobs)
 
-  #compile
+  #testing process_pdb_compile in process_fin_builder_results
   miopen.args.update_applicability = False
   miopen.args.fin_steps = ["miopen_find_compile"]
   miopen.args.label = 'tuna_pytest_fin_builder'
@@ -209,3 +210,50 @@ def test_fin_builder():
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='new').count()
     assert count == num_jobs
+
+  #testing process_pdb_compile in process_fin_builder_results
+  with DbSession() as session:
+    job_query = session.query(
+        dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)\
+                             .filter(dbt.job_table.reason=='tuna_pytest_fin_builder')
+    job_query.update({dbt.job_table.fin_step: 'miopen_perf_compile'})
+  miopen.args.fin_steps = "miopen_perf_compile"
+
+  with DbSession() as session:
+    jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
+                           miopen.args.session_id)
+  entries = [job for job in jobs]
+  job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
+  assert (job_config_rows)
+
+  f_vals = miopen.get_f_vals(Machine(local_machine=True), range(0))
+  kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
+  fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
+  fdb_attr.remove("insert_ts")
+  fdb_attr.remove("update_ts")
+
+  res_set = []
+  for elem in job_config_rows:
+    job_dict, config_dict = serialize_job_config_row(elem)
+    context = {
+        'job': job_dict,
+        'config': config_dict,
+        'operation': miopen.operation,
+        'arch': miopen.dbt.session.arch,
+        'num_cu': miopen.dbt.session.num_cu,
+        'kwargs': kwargs,
+        'fdb_attr': fdb_attr
+    }
+
+    worker = prep_worker(copy.deepcopy(context))
+    worker.dbt = miopen.dbt
+    worker.fin_steps = miopen.args.fin_steps
+    fin_json = worker.run()
+    res_set.append((fin_json, context))
+
+  with DbSession() as session:
+    for fin_json, context in res_set:
+      miopen.process_fin_builder_results(session, fin_json, context)
+    count = session.query(dbt.find_db_table).filter(
+        dbt.find_db_table.session == miopen.args.session_id).count()
+    assert (count == num_jobs)
