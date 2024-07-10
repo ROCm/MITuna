@@ -189,8 +189,8 @@ def test_fin_builder():
 
   miopen.check_fin_args(parser)
   miopen.set_prefix()
-  assert (miopen.prefix == "d_test_db_sess_8_miopen_find_compile")
-  miopen.args.fin_steps = "miopen_find_compile,miopen_find_eval"
+  assert (miopen.prefix ==
+          f"d_test_db_sess_{miopen.args.session_id}_miopen_find_compile")
 
   miopen.update_operation()
   assert 'new' in miopen.fetch_state
