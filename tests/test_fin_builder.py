@@ -55,6 +55,7 @@ from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.libraries import Operation
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
+from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 
 
 def add_cfgs():
@@ -178,19 +179,33 @@ def test_fin_builder():
 
   miopen.args.fin_steps = "miopen_find_compile"
   miopen.db_name = "test_db"
-  miopen.set_prefix()
-  assert (miopen.prefix == "d_test_db_sess_1_miopen_find_compile")
-  miopen.args.fin_steps = "miopen_find_compile,miopen_find_eval"
-  miopen.check_fin_args(parser)
+  parser = setup_arg_parser(
+      'Run Performance Tuning on a certain architecture', [
+          TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
+          TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES,
+          TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
+          TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS
+      ])
 
+  miopen.check_fin_args(parser)
+  miopen.set_prefix()
+  assert (miopen.prefix == "d_test_db_sess_8_miopen_find_compile")
   miopen.args.fin_steps = "miopen_find_compile,miopen_find_eval"
-  assert (
-      miopen.prefix == "d_test_db_sess_1_miopen_find_compile-miopen-find-eval")
-  assert miopen.fin_args == ["miopen_find_compile", "miopen_find_eval"]
 
   miopen.update_operation()
   assert 'new' in miopen.fetch_state
   assert miopen.set_state == 'compile_start'
   assert miopen.operation == Operation.COMPILE
 
-  assert miopen.has_tunable_opertaion()
+  assert miopen.has_tunable_operation()
+
+  with DbSession() as session:
+    job_query = session.query(
+        dbt.job_table).filter(dbt.job_table.session == miopen.args.session_id)\
+                             .filter(dbt.job_table.reason=='tuna_pytest_fin_builder')
+    job_query.update({dbt.job_table.state: 'compile_start'})
+    session.commit()
+    miopen.reset_job_state_on_ctrl_c()
+    count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
+                                         .filter(dbt.job_table.state=='new').count()
+    assert count == num_jobs

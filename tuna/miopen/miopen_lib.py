@@ -254,7 +254,7 @@ class MIOpen(MITunaInterface):
   def set_prefix(self):
     """Set redis key prefix"""
     if isinstance(self.args.fin_steps, Iterable):
-      steps_str = ('-').join(self.args.fin_steps)
+      steps_str = ('-').join(x for x in self.args.fin_steps)
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
                     f"{steps_str}"
     else:

@@ -118,6 +118,8 @@ class GoFishArgs():
   blacklist = None
   init_session = True
   check_status = True
+  subcommand = None
+  shutdown_workers = None
 
 
 class ExampleArgs():
