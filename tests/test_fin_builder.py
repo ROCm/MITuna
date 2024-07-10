@@ -175,3 +175,22 @@ def test_fin_builder():
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='compiled').count()
     assert (count == num_jobs)
+
+  miopen.args.fin_steps = "miopen_find_compile"
+  miopen.db_name = "test_db"
+  miopen.set_prefix()
+  assert (miopen.prefix == "d_test_db_sess_1_miopen_find_compile")
+  miopen.args.fin_steps = "miopen_find_compile,miopen_find_eval"
+  miopen.check_fin_args(parser)
+
+  miopen.args.fin_steps = "miopen_find_compile,miopen_find_eval"
+  assert (
+      miopen.prefix == "d_test_db_sess_1_miopen_find_compile-miopen-find-eval")
+  assert miopen.fin_args == ["miopen_find_compile", "miopen_find_eval"]
+
+  miopen.update_operation()
+  assert 'new' in miopen.fetch_state
+  assert miopen.set_state == 'compile_start'
+  assert miopen.operation == Operation.COMPILE
+
+  assert miopen.has_tunable_opertaion()
