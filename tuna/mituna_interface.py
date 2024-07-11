@@ -269,12 +269,10 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       while True:
         line = stdout.readline()
         if not line:
-          print('Reached end of stdout')
           break
         #stop workers that were feeding from this queue
         if "->" in line and sess_str in line:
           hostname = line.split('->')[1].split()[0].split(':')[0]
-          print('HOSTNAME')
           stop_named_worker(hostname)
 
     except Exception as exp:  #pylint: disable=broad-exception-caught

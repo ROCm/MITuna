@@ -53,8 +53,13 @@ def stop_active_workers():
   """Shutdown active workers"""
 
   LOGGER.warning('Shutting down remote workers')
-  if app.control.inspect().active() is not None:
-    app.control.shutdown()
+  try:
+    if app.control.inspect().active() is not None:
+      app.control.shutdown()
+  except Exception as err:  #pylint: disable=broad-exception-caught
+    LOGGER.warning('Exception occured while trying to shutdown workers: %s',
+                   err)
+    return False
 
   return True
 
@@ -62,7 +67,12 @@ def stop_active_workers():
 def stop_named_worker(hostname):
   """Shutdown a specific worker"""
   LOGGER.warning('Shutting down remote worker: %s', hostname)
-  app.control.shutdown(destination=[hostname])
+  try:
+    app.control.shutdown(destination=[hostname])
+  except Exception as exp:  #pylint: disable=broad-exception-caught
+    LOGGER.warning('Exception occured while trying to shutdown workers: %s',
+                   exp)
+    return False
 
   return True
 
@@ -75,8 +85,8 @@ def purge_queue(q_names):
       cmd = f"celery -A tuna.celery_app.celery_app purge -f -Q {q_name}".split(
           ' ')
       _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
-    except Exception as ex:  #pylint: disable=broad-exception-caught
-      LOGGER.info(ex)
+    except Exception as exp:  #pylint: disable=broad-exception-caught
+      LOGGER.info(exp)
       return False
 
   return True
