@@ -32,14 +32,14 @@ from logstash_async.handler import LogstashFormatter
 from typing import Union
 from tuna.utils.metadata import TUNA_LOG_DIR
 
-LOGSTASH_HOST = os.getenv('TUNA_LOGSTASH_HOST', 'localhost')
-LOGSTASH_PORT = os.getenv('TUNA_LOGSTASH_PORT', 5000)
-LOGSTASH_PATH = os.getenv('TUNA_LOGSTASH_PATH', None)
+logstash_status = os.getenv('TUNA_LOGSTASH_STATUS', 'false').lower() == 'true'
+logstash_host = os.getenv('TUNA_LOGSTASH_HOST', 'localhost')
+logstash_port = os.getenv('TUNA_LOGSTASH_PORT', 5000)
+logstash_path = os.getenv('TUNA_LOGSTASH_PATH', None)
 
 def setup_logger(logger_name: str = 'Tuna',
                  add_streamhandler: bool = True,
-                 add_filehandler: bool = False,
-                 add_logstashhandler: bool = True) -> logging.Logger:
+                 add_filehandler: bool = False) -> logging.Logger:
     """std setup for tuna logger"""
     log_level: str = os.environ.get('TUNA_LOGLEVEL', 'INFO').upper()
     logging.basicConfig(level=log_level)
@@ -62,11 +62,11 @@ def setup_logger(logger_name: str = 'Tuna',
         stream_handler.setLevel(logging.INFO)
         logger.addHandler(stream_handler)
     
-    if add_logstashhandler:
+    if logstash_status:
         logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
-            host=LOGSTASH_HOST,
-            port=LOGSTASH_PORT,
-            database_path=LOGSTASH_PATH
+            host=logstash_host,
+            port=logstash_port,
+            database_path=logstash_path
         )
         logstash_formatter: LogstashFormatter = LogstashFormatter()
         logstash_handler.setFormatter(logstash_formatter)
@@ -93,9 +93,9 @@ def set_usr_logger(logger_name: str) -> logging.Logger:
     lgr.addHandler(stream_handler)
 
     logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
-        host=LOGSTASH_HOST,
-        port=LOGSTASH_PORT,
-        database_path=LOGSTASH_PATH
+        host=logstash_host,
+        port=logstash_port,
+        database_path=logstash_path
     )
     logstash_formatter: LogstashFormatter = LogstashFormatter()
     logstash_handler.setFormatter(logstash_formatter)
