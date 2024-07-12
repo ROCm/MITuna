@@ -8,4 +8,3 @@ LOGGER: logging.Logger = setup_logger('testing_tuna_loggers', add_logstashhandle
 
 LOGGER.info('Testing Tuna Logging')
 LOGGER.warning('Tuna is on fire')
-LOGGER.warning('Test')
