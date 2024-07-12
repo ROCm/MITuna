@@ -574,6 +574,7 @@ def pytestSuite2() {
            // test fin builder and test fin builder conv in sequence
            sh "python3 -m coverage run -a -m pytest tests/test_worker.py -s"
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_celery.py -s"
         }
         sh "coverage report -m"
     }
