@@ -57,7 +57,8 @@ def test_celery_workers():
   dbt = MIOpenDBTables(config_type=ConfigType.convolution)
   num_jobs = add_test_jobs(miopen, miopen.args.session_id, dbt,
                            miopen.args.label, miopen.args.label,
-                           ['miopen_perf_compile'], 'test_add_celery_compile_job',
+                           ['miopen_perf_compile'],
+                           'test_add_celery_compile_job',
                            'miopenConvolutionAlgoGEMM')
   assert (num_jobs)
 
