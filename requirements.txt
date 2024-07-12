@@ -60,6 +60,7 @@ yamllint==1.29.0
 yapf==0.40.2
 zipp==3.8.1
 coverage==7.0.5
+python-logstash-async==3.0.0
 mysql-connector-python
 prometheus_flask_exporter
 tenacity
