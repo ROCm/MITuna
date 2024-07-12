@@ -19,6 +19,8 @@ omit =
       tuna/solver_res.py   
       tuna/celery_app/celery_app.py
       tuna/miopen/celery_tuning/celery_tasks.py
+      tuna/grafana_dict.py
+      tuna/go_fish.py
       
 [report]
 exclude_lines =
