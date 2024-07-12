@@ -32,7 +32,7 @@ from logstash_async.handler import LogstashFormatter
 from typing import Union
 from tuna.utils.metadata import TUNA_LOG_DIR
 
-LOGSTASH_HOST = os.getenv('TUNA_LOGSTASH_HOST', 'ginger.amd.com')
+LOGSTASH_HOST = os.getenv('TUNA_LOGSTASH_HOST', 'localhost')
 LOGSTASH_PORT = os.getenv('TUNA_LOGSTASH_PORT', 5000)
 LOGSTASH_PATH = os.getenv('TUNA_LOGSTASH_PATH', None)
 
