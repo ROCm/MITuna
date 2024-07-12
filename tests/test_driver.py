@@ -33,7 +33,7 @@ from tuna.miopen.db.batch_norm_tables import BNConfig
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.utils.config_type import ConfigType
-from test_fin_builder import CfgImportArgs
+from utils import CfgImportArgs
 
 
 def test_driver():
