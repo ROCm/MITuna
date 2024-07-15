@@ -38,7 +38,6 @@ this_path = os.path.dirname(__file__)
 
 from dummy_machine import DummyMachine
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.miopen.worker.fin_eval import FinEvaluator
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.miopen.subcmd.import_configs import import_cfgs
@@ -167,7 +166,6 @@ def test_fin_evaluator():
   logger = setup_logger('test_fin_evaluator')
   num_jobs = add_jobs(args, dbt, logger)
   assert num_jobs > 0
-  print('num_jobs: %s', num_jobs)
 
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
@@ -180,10 +178,8 @@ def test_fin_evaluator():
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
                            miopen.args.session_id)
   entries = [job for job in jobs]
-  print('num entries: %s', entries)
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
   assert (job_config_rows)
-  print('job_config_rows:%s', job_config_rows)
 
   #assert (len(job_config_rows) == 80)
 
@@ -215,11 +211,11 @@ def test_fin_evaluator():
     worker.dbt = miopen.dbt
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()
-    print('fin_json: %s', fin_json)
     res_set.append((fin_json, context))
 
   with DbSession() as session:
     for fin_json, context in res_set:
+      #testing process_fin_evaluator results
       miopen.process_fin_evaluator_results(session, fin_json, context)
 
   with DbSession() as session:
@@ -237,6 +233,7 @@ def test_fin_evaluator():
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
+  #testing prep_kwargs
   worker_kwargs = prep_kwargs(
       context['kwargs'],
       [context['job'], context['config'], context['operation']])
@@ -245,6 +242,7 @@ def test_fin_evaluator():
   assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])
   fin_eval = get_worker(worker_kwargs, miopen.operation)
 
+  #testing check_gpu
   fin_eval.check_gpu()
 
   # test get_fin_input
