@@ -188,6 +188,10 @@ def test_celery_workers():
   assert (worker_kwargs['fin_steps'] == ['miopen_perf_compile'])
   miopen.operation = Operation.EVAL
   fin_eval = get_worker(worker_kwargs, miopen.operation)
+
+  #testing fin_job
+  fjob = fin_job(steps, True, job_config_rows[0][0], job_config_rows[0][1],
+                 miopen.dbt)
   #testing fin_pdb_input
   f_job = fin_eval.fin_pdb_input(fjob)
   assert f_job[0]['solvers'] == ['GemmBwd1x1_stride2']
@@ -196,6 +200,18 @@ def test_celery_workers():
       'perf_compiled': False,
       'kernel_objects': []
   }]
+
+  #testing fin_fdb_input
+  steps = ['alloc_buf', 'fill_buf', ['miopen_find_compile']]
+  f_job = fin_eval.fin_fdb_input(fjob)
+  assert f_job
+  assert f_job[0]['miopen_find_compile_result'] == [{
+      'solver_name': 'GemmBwd1x1_stride2',
+      'find_compiled': False,
+      'kernel_objects': []
+  }]
+
+  miopen.operation = Operation.COMPILE
 
   #testing compose_config_obj
   conf_obj = compose_config_obj(job_config_rows[0][1], ConfigType.convolution)
