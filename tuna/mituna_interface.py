@@ -76,7 +76,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def check_docker(self,
                    worker: WorkerInterface,
-                   dockername="miopentuna") -> None:
+                   dockername="miopentuna") -> bool:
     """! Checking for docker
       @param worker The worker interface instance
       @param dockername The name of the docker
