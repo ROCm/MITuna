@@ -89,18 +89,18 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       self.logger.warning(
           "docker not installed or failed to run with sudo .... ")
       return False
-    else:
-      out: StringIO = StringIO()
-      line: Optional[str] = None
-      _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
-      for line in out.readlines():
-        if line is not None:
-          if line.find(dockername) != -1:
-            self.logger.warning('%s docker image exists', dockername)
-            return True
-      if line is None:
-        self.logger.warning('%s docker image does not exist', dockername)
-        return False
+
+    out: StringIO = StringIO()
+    line: Optional[str] = None
+    _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
+    for line in out.readlines():
+      if line is not None:
+        if line.find(dockername) != -1:
+          self.logger.warning('%s docker image exists', dockername)
+          return True
+    if line is None:
+      self.logger.warning('%s docker image does not exist', dockername)
+      return False
 
     return False
 

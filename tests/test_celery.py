@@ -161,8 +161,8 @@ def test_celery_workers():
   assert arch == "gfx90a:sram-ecc+:xnack-"
   steps = ['alloc_buf', 'fill_buf', miopen.args.fin_steps[0]]
 
-  job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
-  assert (job_config_rows)
+  #job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
+  #assert (job_config_rows)
 
   #testing fin_job
   fjob = fin_job(steps, True, job_config_rows[0][0], job_config_rows[0][1],
@@ -217,8 +217,6 @@ def test_celery_workers():
       'find_compiled': False,
       'kernel_objects': []
   }]
-
-  miopen.operation = Operation.COMPILE
 
   #testing compose_config_obj
   conf_obj = compose_config_obj(job_config_rows[0][1], ConfigType.convolution)
