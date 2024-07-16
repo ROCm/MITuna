@@ -82,13 +82,13 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       @param dockername The name of the docker
     """
     out2: ChannelFile
-    self.logger.warning("docker not installed or requires sudo .... ")
     _, out2, _ = worker.exec_command("sudo docker info")
     while not out2.channel.exit_status_ready():
       self.logger.warning(out2.readline())
     if out2.channel.exit_status > 0:
       self.logger.warning(
           "docker not installed or failed to run with sudo .... ")
+      return False
     else:
       out: StringIO = StringIO()
       line: Optional[str] = None
@@ -97,9 +97,12 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
         if line is not None:
           if line.find(dockername) != -1:
             self.logger.warning('%s docker image exists', dockername)
-            break
+            return True
       if line is None:
         self.logger.warning('%s docker image does not exist', dockername)
+        return False
+
+    return False
 
   def check_status(self,
                    worker: WorkerInterface,
@@ -383,6 +386,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       await asyncio.sleep(1)
     self.logger.info('Job counter reached 0')
     await redis.close()
+
+    return True
 
   async def parse_result(self, data):
     """Function callback for celery async jobs to store results"""

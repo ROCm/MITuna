@@ -27,6 +27,7 @@ import os
 import sys
 import copy
 from time import sleep
+import aioredis
 from sqlalchemy.inspection import inspect
 from multiprocessing import Value, Lock, Queue
 
@@ -98,6 +99,7 @@ def test_celery_workers():
   subp_list = launch_worker_per_node([machine], cmd, True)
   sleep(2)
   assert subp_list
+  assert miopen.cancel_consumer(f"test_{db_name}")
   for subp in subp_list:
     print(subp.pid)
     subp.kill()
@@ -144,7 +146,12 @@ def test_celery_workers():
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
                            miopen.args.session_id)
     assert jobs
+    #testing get_context_list
+    context_list = miopen.get_context_list(session, [job for job in jobs])
+    assert context_list
+    assert len(context_list) == 4
   entries = [job for job in jobs]
+
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
   assert (job_config_rows)
 
@@ -226,6 +233,10 @@ def test_celery_workers():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
+  redis = aioredis.from_url(f"redis://localhost:6379/15")
+  print('Established redis connection')
+  counter = 1
+
   res_set = []
   for elem in job_config_rows:
     job_dict, config_dict = serialize_job_config_row(elem)
@@ -244,6 +255,12 @@ def test_celery_workers():
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()
     res_set.append((fin_json, context))
+    assert redis.set(f"celery-task-meta-{counter}", fin_json)
+    counter += 1
+
+  print('Consuming from redis')
+  assert miopen.consume(job_counter=counter, prefix=None)
+  redis.close()
 
   with DbSession() as session:
     for fin_json, context in res_set:
