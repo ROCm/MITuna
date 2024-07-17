@@ -24,19 +24,17 @@
 # SOFTWARE.
 #
 ###############################################################################
-import json
 import os
 import sys
-import copy
-
-sys.path.append("../tuna")
-sys.path.append("tuna")
 
 from tuna.mituna_interface import MITunaInterface
 from tuna.worker_interface import WorkerInterface
-from utils import GoFishArgs, add_test_session
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.utils.machine_utility import load_machines
+from utils import GoFishArgs, add_test_session
+
+sys.path.append("../tuna")
+sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
@@ -55,6 +53,6 @@ def test_mituna_interface():
   })
 
   try:
-    foo = mituna.check_docker(worker, 'DoesNotExist')
+    _ = mituna.check_docker(worker, 'DoesNotExist')
   except Exception as exp:
-    assert type(exp) == ValueError
+    assert isinstance(exp, ValueError)

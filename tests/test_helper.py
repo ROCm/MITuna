@@ -23,9 +23,6 @@
 # SOFTWARE.
 #
 ###############################################################################
-
-import os
-
 from tuna.lib_utils import get_library
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.example.example_lib import Example

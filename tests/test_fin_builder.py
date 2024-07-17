@@ -24,22 +24,19 @@
 #
 ###############################################################################
 
-import os
-import sys
 import copy
 from sqlalchemy.inspection import inspect
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables
-from utils import GoFishArgs
-from utils import add_test_session, add_test_jobs
 from tuna.miopen.miopen_lib import MIOpen
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.utils.utility import serialize_job_config_row
-from tuna.miopen.celery_tuning.celery_tasks import prep_kwargs
 from tuna.libraries import Operation
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
-from tuna.miopen.worker.fin_utils import get_fin_result
+from tuna.machine import Machine
+from utils import GoFishArgs
+from utils import add_test_session, add_test_jobs
 
 
 def test_fin_builder():
@@ -55,9 +52,7 @@ def test_fin_builder():
                            ['miopen_find_compile', 'miopen_find_eval'],
                            'test_add_fin_find_compile_job',
                            'miopenConvolutionAlgoGEMM')
-  #assert (num_jobs)
-  num_jobs = 3
-  return
+  assert (num_jobs)
 
   #testing process_fdb_compile in process_fin_builder_results
   miopen.args.update_applicability = False
@@ -71,9 +66,9 @@ def test_fin_builder():
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
                            miopen.args.session_id)
-  entries = [job for job in jobs]
+  entries = list(jobs)
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
-  assert (job_config_rows)
+  assert job_config_rows
 
   f_vals = miopen.get_f_vals(Machine(local_machine=True), range(0))
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
@@ -113,4 +108,4 @@ def test_fin_builder():
     num_jobs = (num_jobs - valid_fin_err)
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='compiled').count()
-    assert (count == num_jobs)
+    assert count == num_jobs

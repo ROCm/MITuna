@@ -24,32 +24,26 @@
 #
 ###############################################################################
 import os
-import sys
 import copy
 from time import sleep
 import aioredis
 from sqlalchemy.inspection import inspect
-from multiprocessing import Value, Lock, Queue
 
+from utils import GoFishArgs, add_test_jobs, add_test_session
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.utils.machine_utility import load_machines
 from tuna.miopen.db.tables import MIOpenDBTables
-from utils import CfgImportArgs, LdJobArgs, GoFishArgs, add_test_jobs, add_test_session
 from tuna.miopen.miopen_lib import MIOpen
-from tuna.utils.logger import setup_logger
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.utils.utility import serialize_job_config_row, arch2targetid
 from tuna.miopen.celery_tuning.celery_tasks import prep_kwargs
 from tuna.machine import Machine
 from tuna.libraries import Operation
-from tuna.celery_app.celery_workers import launch_celery_worker, launch_worker_per_node
+from tuna.celery_app.celery_workers import launch_worker_per_node
 from tuna.celery_app.utility import get_q_name
-from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
+from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
-from tuna.celery_app.celery_app import app, purge_queue
 from tuna.miopen.worker.fin_utils import compose_config_obj, fin_job
-from tuna.miopen.worker.fin_eval import FinEvaluator
-from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
 from tuna.miopen.utils.lib_helper import get_worker
 
 
@@ -66,7 +60,7 @@ def test_celery_workers():
                            ['miopen_perf_compile'],
                            'test_add_celery_compile_job',
                            'miopenConvolutionAlgoGEMM')
-  assert (num_jobs)
+  assert num_jobs
 
   machine_lst = load_machines(miopen.args)
   machine = machine_lst[0]
@@ -153,16 +147,13 @@ def test_celery_workers():
   entries = [job for job in jobs]
 
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
-  assert (job_config_rows)
+  assert job_config_rows
 
   job_dct, config_dct = serialize_job_config_row(job_config_rows[0])
   #testing arch2targetid
   arch = arch2targetid(miopen.dbt.session.arch)
   assert arch == "gfx90a:sram-ecc+:xnack-"
   steps = ['alloc_buf', 'fill_buf', miopen.args.fin_steps[0]]
-
-  #job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
-  #assert (job_config_rows)
 
   #testing fin_job
   fjob = fin_job(steps, True, job_config_rows[0][0], job_config_rows[0][1],
@@ -190,9 +181,9 @@ def test_celery_workers():
   worker_kwargs = prep_kwargs(
       context['kwargs'],
       [context['job'], context['config'], context['operation']])
-  assert (worker_kwargs['config'])
-  assert (worker_kwargs['job'])
-  assert (worker_kwargs['fin_steps'] == ['miopen_perf_compile'])
+  assert worker_kwargs['config']
+  assert worker_kwargs['job']
+  assert worker_kwargs['fin_steps'] == ['miopen_perf_compile']
   miopen.operation = Operation.EVAL
   fin_eval = get_worker(worker_kwargs, miopen.operation)
 
@@ -231,7 +222,7 @@ def test_celery_workers():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  redis = aioredis.from_url(f"redis://localhost:6379/15")
+  redis = aioredis.from_url("redis://localhost:6379/15")
   print('Established redis connection')
   counter = 1
 
@@ -266,7 +257,7 @@ def test_celery_workers():
       miopen.process_fin_builder_results(session, fin_json, context)
     count = session.query(dbt.find_db_table).filter(
         dbt.find_db_table.session == miopen.args.session_id).count()
-    #assert (count == num_jobs)
+    assert count == num_jobs
 
   with DbSession() as session:
     job_query = session.query(

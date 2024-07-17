@@ -28,15 +28,10 @@ import json
 import os
 import sys
 import copy
-from multiprocessing import Value, Lock, Queue
 from sqlalchemy.inspection import inspect
 
-sys.path.append("../tuna")
-sys.path.append("tuna")
-
-this_path = os.path.dirname(__file__)
-
-from dummy_machine import DummyMachine
+from utils import CfgImportArgs, LdJobArgs, GoFishArgs
+from utils import get_worker_args, add_test_session
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.miopen_lib import MIOpen
@@ -49,16 +44,16 @@ from tuna.miopen.db.solver import get_solver_ids
 from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.utils.machine_utility import load_machines
-from tuna.machine import Machine
 from tuna.miopen.celery_tuning.celery_tasks import prep_kwargs
 from tuna.miopen.utils.lib_helper import get_worker
-from tuna.utils.utility import serialize_job_config_row, SimpleDict
-from utils import CfgImportArgs, LdJobArgs, GoFishArgs
-from utils import get_worker_args, add_test_session
-#from tuna.miopen.utils.json_to_sql import process_fdb_eval
-from tuna.miopen.utils.helper import set_job_state
+from tuna.utils.utility import serialize_job_config_row
 from tuna.libraries import Operation
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
+
+sys.path.append("../tuna")
+sys.path.append("tuna")
+
+this_path = os.path.dirname(__file__)
 
 solver_id_map = get_solver_ids()
 
@@ -142,7 +137,7 @@ def test_fin_evaluator():
   #update solvers
   kwargs = get_worker_args(miopen.args, machine, miopen)
   fin_worker = FinClass(**kwargs)
-  assert (fin_worker.get_solvers())
+  assert fin_worker.get_solvers()
 
   add_cfgs()
   dbt = MIOpenDBTables(config_type=ConfigType.convolution,
@@ -177,18 +172,12 @@ def test_fin_evaluator():
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
                            miopen.args.session_id)
-  entries = [job for job in jobs]
+  entries = list(jobs)
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
-  assert (job_config_rows)
-
-  #assert (len(job_config_rows) == 80)
+  assert job_config_rows
 
   f_vals = miopen.get_f_vals(machine, range(0))
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
-  num_gpus = Value('i', 1)
-  v = Value('i', 0)
-  e = Value('i', 0)
-  #kwargs['num_procs'] = num_gpus
   kwargs['avail_gpus'] = 1
   fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
   fdb_attr.remove("insert_ts")
@@ -224,12 +213,12 @@ def test_fin_evaluator():
                                          .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
                                          .count()
     #ommiting valid Fin/MIOpen errors
-    num_jobs = (num_jobs - valid_fin_err)
+    num_jobs = num_jobs - valid_fin_err
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='evaluated').count()
-    assert (count == num_jobs)
+    assert count == num_jobs
 
-  assert (kwargs['fin_steps'] == ['miopen_find_eval'])
+  assert kwargs['fin_steps'] == ['miopen_find_eval']
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
@@ -237,9 +226,9 @@ def test_fin_evaluator():
   worker_kwargs = prep_kwargs(
       context['kwargs'],
       [context['job'], context['config'], context['operation']])
-  assert (worker_kwargs['config'])
-  assert (worker_kwargs['job'])
-  assert (worker_kwargs['fin_steps'] == ['miopen_find_eval'])
+  assert worker_kwargs['config']
+  assert worker_kwargs['job']
+  assert worker_kwargs['fin_steps'] == ['miopen_find_eval']
   fin_eval = get_worker(worker_kwargs, miopen.operation)
 
   #testing check_gpu
@@ -247,7 +236,7 @@ def test_fin_evaluator():
 
   # test get_fin_input
   file_name = fin_eval.get_fin_input()
-  assert (file_name)
+  assert file_name
 
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
