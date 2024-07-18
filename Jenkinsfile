@@ -33,7 +33,6 @@ pipeline {
             }
             }
         }
-        /*
         stage("code Format") {
         agent{  label utils.rocmnode("tunatest") }
         steps {
@@ -51,7 +50,6 @@ pipeline {
            }
            }
         }
-        */
         stage("fin get solver"){
         agent{  label utils.rocmnode("tunatest") }
         steps {
