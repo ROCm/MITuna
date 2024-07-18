@@ -27,14 +27,14 @@
 """logger file"""
 import logging
 import os
+from typing import Union
 from logstash_async.handler import AsynchronousLogstashHandler
 from logstash_async.handler import LogstashFormatter
-from typing import Union
 from tuna.utils.metadata import TUNA_LOG_DIR
 
 logstash_status = os.getenv('TUNA_LOGSTASH_STATUS', 'false').lower() == 'true'
 logstash_host = os.getenv('TUNA_LOGSTASH_HOST', 'localhost')
-logstash_port = os.getenv('TUNA_LOGSTASH_PORT', 5000)
+logstash_port = os.getenv('TUNA_LOGSTASH_PORT', "5000")
 logstash_path = os.getenv('TUNA_LOGSTASH_PATH', None)
 
 
