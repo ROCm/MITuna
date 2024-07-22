@@ -21,6 +21,7 @@ omit =
       tuna/miopen/celery_tuning/celery_tasks.py
       tuna/grafana_dict.py
       tuna/go_fish.py
+      tuna/example/*.py
       
 [report]
 exclude_lines =
