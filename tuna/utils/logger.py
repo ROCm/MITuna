@@ -32,73 +32,80 @@ from logstash_async.handler import AsynchronousLogstashHandler
 from logstash_async.handler import LogstashFormatter
 from tuna.utils.metadata import TUNA_LOG_DIR
 
-logstash_status = os.getenv('TUNA_LOGSTASH_STATUS', 'false').lower() == 'true'
-logstash_host = os.getenv('TUNA_LOGSTASH_HOST', 'localhost')
-logstash_port = int(os.getenv('TUNA_LOGSTASH_PORT', "5000"))
-logstash_path = os.getenv('TUNA_LOGSTASH_PATH', None)
-
+def get_logstash_config():
+    """
+    retrieve env vars for logstash
+    """
+    logstash_status = os.getenv('TUNA_LOGSTASH_STATUS', 'false').lower() == 'true'
+    logstash_host = os.getenv('TUNA_LOGSTASH_HOST', 'localhost')
+    logstash_port = int(os.getenv('TUNA_LOGSTASH_PORT', "5000"))
+    logstash_path = os.getenv('TUNA_LOGSTASH_PATH', None)
+    return logstash_status, logstash_host, logstash_port, logstash_path
 
 def setup_logger(logger_name: str = 'Tuna',
                  add_streamhandler: bool = True,
                  add_filehandler: bool = False) -> logging.Logger:
-  """std setup for tuna logger"""
-  log_level: str = os.environ.get('TUNA_LOGLEVEL', 'INFO').upper()
-  logging.basicConfig(level=log_level)
-  logger: Union[logging.Logger,
-                logging.RootLogger] = logging.getLogger(logger_name)
-  log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
-  formatter: logging.Formatter = logging.Formatter(
-      '%(asctime)s - %(name)s - %(levelname)s -  [%(filename)s:%(lineno)d] - %(message)s'
-  )
-  logger.propagate = False
+    """std setup for tuna logger"""
+    log_level: str = os.environ.get('TUNA_LOGLEVEL', 'INFO').upper()
+    logging.basicConfig(level=log_level)
+    logger: Union[logging.Logger, logging.RootLogger] = logging.getLogger(logger_name)
+    log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
+    formatter: logging.Formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s -  [%(filename)s:%(lineno)d] - %(message)s'
+    )
+    logger.propagate = False
 
-  if add_filehandler:
-    file_handler: logging.FileHandler = logging.FileHandler(log_file, mode='a')
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
-    logger.addHandler(file_handler)
+    if add_filehandler:
+        file_handler: logging.FileHandler = logging.FileHandler(log_file, mode='a')
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
+        logger.addHandler(file_handler)
 
-  if add_streamhandler:
-    stream_handler: logging.StreamHandler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    stream_handler.setLevel(logging.INFO)
-    logger.addHandler(stream_handler)
+    if add_streamhandler:
+        stream_handler: logging.StreamHandler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        stream_handler.setLevel(logging.INFO)
+        logger.addHandler(stream_handler)
 
-  if logstash_status:
-    logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
-        host=logstash_host, port=logstash_port, database_path=logstash_path)
-    logstash_formatter: LogstashFormatter = LogstashFormatter()
-    logstash_handler.setFormatter(logstash_formatter)
-    logstash_handler.setLevel(logging.INFO)
-    logger.addHandler(logstash_handler)
+    logstash_status, logstash_host, logstash_port, logstash_path = get_logstash_config()
 
-  logger.setLevel(log_level.upper() if log_level else logging.DEBUG)
-  return logger
+    if logstash_status:
+        logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
+            host=logstash_host, port=logstash_port, database_path=logstash_path)
+        logstash_formatter: LogstashFormatter = LogstashFormatter()
+        logstash_handler.setFormatter(logstash_formatter)
+        logstash_handler.setLevel(logging.INFO)
+        logger.addHandler(logstash_handler)
 
+    logger.setLevel(log_level.upper() if log_level else logging.DEBUG)
+    return logger
 
 def set_usr_logger(logger_name: str) -> logging.Logger:
-  """utility function to create worker interface logger object"""
-  log_level: str = os.environ.get('TUNA_WORKER_INTERFACE_LOGLEVEL', "INFO")
-  lgr: Union[logging.Logger,
-             logging.RootLogger] = logging.getLogger(logger_name)
-  log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
-  fmt: logging.Formatter = logging.Formatter(
-      '%(lineno)d - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
-  file_handler: logging.FileHandler = logging.FileHandler(log_file, mode='a')
-  file_handler.setFormatter(fmt)
-  file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
-  stream_handler: logging.StreamHandler = logging.StreamHandler()
-  stream_handler.setFormatter(fmt)
-  stream_handler.setLevel(logging.INFO)
-  lgr.addHandler(file_handler)
-  lgr.addHandler(stream_handler)
+    """utility function to create worker interface logger object"""
+    log_level: str = os.environ.get('TUNA_WORKER_INTERFACE_LOGLEVEL', "INFO")
+    lgr: Union[logging.Logger, logging.RootLogger] = logging.getLogger(logger_name)
+    log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
+    fmt: logging.Formatter = logging.Formatter(
+        '%(lineno)d - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler: logging.FileHandler = logging.FileHandler(log_file, mode='a')
+    file_handler.setFormatter(fmt)
+    file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
+    stream_handler: logging.StreamHandler = logging.StreamHandler()
+    stream_handler.setFormatter(fmt)
+    stream_handler.setLevel(logging.INFO)
+    lgr.addHandler(file_handler)
+    lgr.addHandler(stream_handler)
 
-  logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
-      host=logstash_host, port=logstash_port, database_path=logstash_path)
-  logstash_formatter: LogstashFormatter = LogstashFormatter()
-  logstash_handler.setFormatter(logstash_formatter)
-  logstash_handler.setLevel(logging.INFO)
-  lgr.addHandler(logstash_handler)
+    logstash_status, logstash_host, logstash_port, logstash_path = get_logstash_config()
 
-  lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
-  return lgr
+    if logstash_status:
+        logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
+            host=logstash_host, port=logstash_port, database_path=logstash_path)
+        logstash_formatter: LogstashFormatter = LogstashFormatter()
+        logstash_handler.setFormatter(logstash_formatter)
+        logstash_handler.setLevel(logging.INFO)
+        lgr.addHandler(logstash_handler)
+
+    lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
+    return lgr
+
