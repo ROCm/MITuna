@@ -459,6 +459,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     try:
       if job_counter.value == 0:
         self.logger.warning('No new jobs found')
+        self.cancel_consumer(q_name)
         return False
 
       enqueue_proc = Process(target=self.enqueue_jobs,
