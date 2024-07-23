@@ -65,7 +65,7 @@ export TUNA_CELERY_BROKER=localhost
 celery. MITuna provides a docker compose in the root directory *docker-compose-flower.yaml*.
 To launch:
 ```
-docker compose up --build
+docker compose up -f docker-compose-flower.yaml --build
 ```
 
 Note:
