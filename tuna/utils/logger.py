@@ -34,14 +34,24 @@ from tuna.utils.metadata import TUNA_LOG_DIR
 
 
 def get_logstash_config():
-  """
-    retrieve env vars for logstash
-    """
+  """retrieve env vars for logstash"""
   logstash_status = os.getenv('TUNA_LOGSTASH_STATUS', 'false').lower() == 'true'
   logstash_host = os.getenv('TUNA_LOGSTASH_HOST', 'localhost')
   logstash_port = int(os.getenv('TUNA_LOGSTASH_PORT', "5000"))
   logstash_path = os.getenv('TUNA_LOGSTASH_PATH', None)
   return logstash_status, logstash_host, logstash_port, logstash_path
+
+
+def add_logstash_handler(logger: logging.Logger, host: str, port: int,
+                         path: str):
+  """add logstash handker for logs streams"""
+  logstash_handler = AsynchronousLogstashHandler(host=host,
+                                                 port=port,
+                                                 database_path=path)
+  logstash_formatter = LogstashFormatter()
+  logstash_handler.setFormatter(logstash_formatter)
+  logstash_handler.setLevel(logging.INFO)
+  logger.addHandler(logstash_handler)
 
 
 def setup_logger(logger_name: str = 'Tuna',
@@ -74,12 +84,11 @@ def setup_logger(logger_name: str = 'Tuna',
   )
 
   if logstash_status:
-    logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
-        host=logstash_host, port=logstash_port, database_path=logstash_path)
-    logstash_formatter: LogstashFormatter = LogstashFormatter()
-    logstash_handler.setFormatter(logstash_formatter)
-    logstash_handler.setLevel(logging.INFO)
-    logger.addHandler(logstash_handler)
+    add_logstash_handler(logger, logstash_host, logstash_port, logstash_path)
+    logger.info(
+        f"Logstash is enabled. Sending logs to {logstash_host}:{logstash_port}")
+  else:
+    logger.info("Logstash is disabled. Not sending logs to Logstash.")
 
   logger.setLevel(log_level.upper() if log_level else logging.DEBUG)
   return logger
@@ -92,7 +101,7 @@ def set_usr_logger(logger_name: str) -> logging.Logger:
              logging.RootLogger] = logging.getLogger(logger_name)
   log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
   fmt: logging.Formatter = logging.Formatter(
-      '%(lineno)d - %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+      '%(lineno)d - %(asctime)s - %(name)s - %(levellevel)s - %(message)s')
   file_handler: logging.FileHandler = logging.FileHandler(log_file, mode='a')
   file_handler.setFormatter(fmt)
   file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
@@ -106,12 +115,11 @@ def set_usr_logger(logger_name: str) -> logging.Logger:
   )
 
   if logstash_status:
-    logstash_handler: AsynchronousLogstashHandler = AsynchronousLogstashHandler(
-        host=logstash_host, port=logstash_port, database_path=logstash_path)
-    logstash_formatter: LogstashFormatter = LogstashFormatter()
-    logstash_handler.setFormatter(logstash_formatter)
-    logstash_handler.setLevel(logging.INFO)
-    lgr.addHandler(logstash_handler)
+    add_logstash_handler(lgr, logstash_host, logstash_port, logstash_path)
+    lgr.info(
+        f"Logstash is enabled. Sending logs to {logstash_host}:{logstash_port}")
+  else:
+    lgr.info("Logstash is disabled. Not sending logs to Logstash.")
 
   lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
   return lgr
