@@ -87,8 +87,6 @@ def setup_logger(logger_name: str = 'Tuna',
     add_logstash_handler(logger, logstash_host, logstash_port, logstash_path)
     logger.info("Logstash is enabled. Sending logs to %s:%d", logstash_host,
                 logstash_port)
-  else:
-    logger.info("Logstash is disabled. Not sending logs to Logstash.")
 
   logger.setLevel(log_level.upper() if log_level else logging.DEBUG)
   return logger
@@ -118,8 +116,6 @@ def set_usr_logger(logger_name: str) -> logging.Logger:
     add_logstash_handler(lgr, logstash_host, logstash_port, logstash_path)
     lgr.info("Logstash is enabled. Sending logs to %s:%d", logstash_host,
              logstash_port)
-  else:
-    lgr.info("Logstash is disabled. Not sending logs to Logstash.")
 
   lgr.setLevel(log_level.upper() if log_level else logging.DEBUG)
   return lgr
