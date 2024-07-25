@@ -487,6 +487,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       purge_queue([q_name])
       self.cancel_consumer(q_name)
       self.reset_job_state_on_ctrl_c()
+      with job_counter_lock:
+        job_counter.value = 0
 
     self.cancel_consumer(q_name)
     end = time.time()
