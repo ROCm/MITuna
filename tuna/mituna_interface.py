@@ -477,6 +477,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
       #check for new jobs
       while consume_proc.is_alive():
+        enqueue_proc = Process(target=self.enqueue_jobs,
+                               args=[job_counter, job_batch_size, q_name])
         enqueue_proc.start()
         enqueue_proc.join()
         time.sleep(10)
