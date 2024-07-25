@@ -28,7 +28,7 @@ pipeline {
       CREDS = credentials("$DOCKER_CRED")
   }
   parameters {
-    string(name: 'branch_name', defaultValue: 'compile_pipe_gold', description: '')
+    string(name: 'branch_name', defaultValue: 'compile_pipe_celery', description: '')
     choice(name: 'use_mlir', choices: ['On', 'Off'], description: 'Build MIOpen with MLIR enabled')
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
     string(name: 'session_id', defaultValue: '', description: 'session id for compile')
