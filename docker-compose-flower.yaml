@@ -26,6 +26,6 @@ services:
         - TUNA_DB_USER_PASSWORD=${db_password}
         - BROKER_URL=redis://localhost:6378/14
         - TUNA_REDIS_PORT=6378
-    command: "celery -A tuna.celery_app.celery_app flower --debug"
+    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True"
     network_mode: "host"
 
