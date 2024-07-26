@@ -153,9 +153,16 @@ class FinEvaluator(FinClass):
           compile_entry = find_compile_res[solvers.index(slv_name)]
           compile_entry['find_compiled'] = True
 
-          blobs = session.query(self.dbt.kernel_cache).filter(
-              self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
-          res = session_retry(session, blobs.all, lambda x: x(), self.logger)
+
+          kern_attr = ['kernel_blob', 'kernel_args', 'kernel_name', 'kernel_hash', 'uncompressed_size']
+          kern_cond = f"where valid=1 and kernel_group = {fdb_rec.kernel_group}"
+          res = gen_select_objs(session, kern_attr,
+                                    self.dbt.kernel_cache.__tablename__,
+                                    kern_cond)
+
+          #blobs = session.query(self.dbt.kernel_cache).filter(
+          #    self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
+          #res = session_retry(session, blobs.all, lambda x: x(), self.logger)
           for obj in res:
             compile_entry['kernel_objects'].append({
                 'blob': obj.kernel_blob.decode('utf-8'),
