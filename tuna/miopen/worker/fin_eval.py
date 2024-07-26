@@ -33,6 +33,7 @@ from typing import List, Dict
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.worker.fin_utils import fin_job
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.utils.db_utility import gen_select_objs
 from tuna.utils.db_utility import session_retry
 
 
