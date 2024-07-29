@@ -115,6 +115,19 @@ To create the database run the following script:
 The installation and setup are now complete. To start a tuning cycle, please follow the steps
 documented in [TuningCycle](https://github.com/ROCm/MITuna/blob/develop/doc/src/TuningCycle.md)
 
+Logs Storing and Analysis
+---------------
+For use cases requiring logs to be stored, searched and analyzed, Tuna integrates with Logstash and Elastic Search. 
+
+This can be done through exporting the logstash destination details to enable the logs storing service. 
+
+```
+export TUNA_LOGSTASH_STATUS=true // this will turn logstash exporting on
+export TUNA_LOGSTASH_HOST= <Your logstash host destination>
+export TUNA_LOGSTASH_PORT= <Your logstash host port>
+
+```
+
 Code formatting
 ---------------
 
