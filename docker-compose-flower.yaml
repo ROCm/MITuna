@@ -26,6 +26,8 @@ services:
         - TUNA_DB_USER_PASSWORD=${db_password}
         - BROKER_URL=redis://localhost:6378/14
         - TUNA_REDIS_PORT=6378
-    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True"
+        #purge offline workers older than 1 day in seconds
+        #- FLOWER_PURGE_OFFLINE_WORKERS=86400
+    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True --purge_offline_workers=10800"
     network_mode: "host"
 
