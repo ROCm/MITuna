@@ -138,7 +138,6 @@ def test_fin_evaluator():
   machine = machine_lst[0]
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.args.session_id = add_test_session(label='tuna_pytest_fin_eval')
-  print('miopen sess_id: %s', miopen.args.session_id)
 
   #update solvers
   kwargs = get_worker_args(miopen.args, machine, miopen)
@@ -167,7 +166,6 @@ def test_fin_evaluator():
   logger = setup_logger('test_fin_evaluator')
   num_jobs = add_jobs(args, dbt, logger)
   assert num_jobs > 0
-  print('num_jobs: %s', num_jobs)
 
   miopen.args.fin_steps = ["miopen_find_eval"]
   miopen.args.label = 'tuna_pytest_fin_eval'
@@ -180,10 +178,8 @@ def test_fin_evaluator():
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
                            miopen.args.session_id)
   entries = [job for job in jobs]
-  print('num entries: %s', entries)
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
   assert (job_config_rows)
-  print('job_config_rows:%s', job_config_rows)
 
   #assert (len(job_config_rows) == 80)
 
@@ -215,7 +211,6 @@ def test_fin_evaluator():
     worker.dbt = miopen.dbt
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()
-    print('fin_json: %s', fin_json)
     res_set.append((fin_json, context))
 
   with DbSession() as session:

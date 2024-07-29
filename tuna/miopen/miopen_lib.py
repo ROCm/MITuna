@@ -343,7 +343,7 @@ class MIOpen(MITunaInterface):
 
   def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
-    """! Helper funcrtion to compose worker_list
+    """! Helper function to compose worker_list
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
