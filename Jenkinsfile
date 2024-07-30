@@ -106,7 +106,7 @@ pipeline {
                      utils.finFindCompileEnqueue()
                   }
             }
-        }*/
+        }
         stage("fin find compile"){
             agent{ label utils.rocmnode("tunatest") }
             steps{
