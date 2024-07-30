@@ -56,7 +56,6 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import serialize_job_config_row, SimpleDict
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from utils import get_worker_args, add_test_session
-#from tuna.miopen.utils.json_to_sql import process_fdb_eval
 from tuna.miopen.utils.helper import set_job_state
 from tuna.libraries import Operation
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
@@ -181,14 +180,11 @@ def test_fin_evaluator():
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)
   assert (job_config_rows)
 
-  #assert (len(job_config_rows) == 80)
-
   f_vals = miopen.get_f_vals(machine, range(0))
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
   num_gpus = Value('i', 1)
   v = Value('i', 0)
   e = Value('i', 0)
-  #kwargs['num_procs'] = num_gpus
   kwargs['avail_gpus'] = 1
   fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
   fdb_attr.remove("insert_ts")

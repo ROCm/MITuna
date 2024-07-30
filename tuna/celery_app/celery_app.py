@@ -30,7 +30,7 @@ import subprocess
 from celery import Celery
 from celery.utils.log import get_task_logger
 
-#TUNA_CELERY_BROKER = 'mituna_redis'
+#when dockerized: TUNA_CELERY_BROKER = 'mituna_redis'
 TUNA_CELERY_BROKER = 'localhost'
 TUNA_REDIS_PORT = '6379'
 LOGGER = get_task_logger("celery_app")
@@ -45,8 +45,6 @@ app = Celery(
     broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/14",
     result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15",
     include=['tuna.miopen.celery_tuning.celery_tasks'])
-#app.conf.get('result_backend_transport_options',
-#             {}).update({"global_keyprefix": prefix})
 
 
 def stop_active_workers():
