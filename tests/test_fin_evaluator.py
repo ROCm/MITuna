@@ -132,7 +132,6 @@ def test_fin_evaluator():
   machine = machine_lst[0]
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.args.session_id = add_test_session(label='tuna_pytest_fin_eval')
-  print('miopen sess_id: %s', miopen.args.session_id)
 
   #update solvers
   kwargs = get_worker_args(miopen.args, machine, miopen)

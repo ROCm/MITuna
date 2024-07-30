@@ -67,6 +67,7 @@ def prep_worker(context):
     worker = cached_worker[operation]
     worker.job = SimpleDict(**context['job'])
     worker.config = SimpleDict(**context['config'])
+    worker.gpu_id = context['kwargs']['gpu_id']
   else:
     args = [context['job'], context['config'], context['operation']]
     kwargs = prep_kwargs(context['kwargs'], args)
@@ -84,6 +85,7 @@ def celery_enqueue(context):
   if operation == Operation.EVAL:
     gpu_id = int((app.worker_name).split('gpu_id_')[1])
     kwargs['gpu_id'] = gpu_id
+    context['job']['gpu_id'] = gpu_id
     logger.info("Enqueueing worker %s: gpu(%s), job %s", app.worker_name,
                 gpu_id, context['job'])
   else:

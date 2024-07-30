@@ -342,7 +342,7 @@ class MIOpen(MITunaInterface):
 
   def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
-    """! Helper funcrtion to compose worker_list
+    """! Helper function to compose worker_list
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
@@ -719,7 +719,7 @@ class MIOpen(MITunaInterface):
   async def parse_result(self, data):
     """Function callback for celery async jobs to store results"""
     data = json.loads(data)
-    self.logger.info(data)
+    #self.logger.info(data)
 
     with DbSession() as session:
       try:
@@ -729,8 +729,8 @@ class MIOpen(MITunaInterface):
         self.logger.error(kerr)
         return False
 
-      self.logger.info('Parsing: %s', fin_json)
-      self.logger.info('Parsing context: %s', context)
+      #self.logger.info('Parsing: %s', fin_json)
+      #self.logger.info('Parsing context: %s', context)
       if self.operation == Operation.COMPILE:
         self.process_fin_builder_results(session, fin_json, context)
       elif self.operation == Operation.EVAL:

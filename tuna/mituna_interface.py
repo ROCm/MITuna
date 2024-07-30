@@ -292,7 +292,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """Wrapper function for celery enqueue func"""
     raise NotImplementedError('Not implemented')
 
-  def enqueue_jobs(self, job_batch_size, q_name):
+  def enqueue_jobs(self, job_counter, job_batch_size, q_name):
     """Enqueue celery jobs"""
     with DbSession() as session:
       while True:
@@ -305,6 +305,9 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
             self.args.session_id,  #pylint: disable=no-member
             job_batch_size)
 
+        with job_counter_lock:
+          job_counter.value = job_counter.value + len(job_list)
+
         for i in range(0, len(job_list), job_batch_size):
           batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
           context_list = self.get_context_list(session, batch_jobs)
@@ -312,6 +315,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
             #calling celery task, enqueuing to celery queue
             self.celery_enqueue_call(context, q_name=q_name)
 
+        self.logger.info('Job counter: %s', job_counter.value)
         if not job_list:
           self.logger.info('All tasks added to queue')
           break
@@ -449,23 +453,11 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     start = time.time()
 
-    with DbSession() as session:
-      job_list = self.get_jobs(
-          session,
-          self.fetch_state,
-          self.set_state,  #pylint: disable=no-member
-          self.args.session_id,
-          no_update=True)
-    job_counter = Value('i', len(job_list))
-    self.logger.info('Job counter: %s', job_counter.value)
-    enqueue_proc = None
+    #set job count to 1 until first job fetch is finished
+    job_counter = Value('i', 1)
     try:
-      if job_counter.value == 0:
-        self.logger.warning('No new jobs found')
-        return False
-
       enqueue_proc = Process(target=self.enqueue_jobs,
-                             args=[job_batch_size, q_name])
+                             args=[job_counter, job_batch_size, q_name])
       #Start enqueue proc
       enqueue_proc.start()
 
@@ -480,8 +472,20 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
                              args=(self.consume, job_counter, self.prefix))
       self.logger.info('Starting consume thread')
       consume_proc.start()
-      if enqueue_proc:
+
+      enqueue_proc.join()
+      #enqueue finished first fetch, remove hold on job_counter
+      with job_counter_lock:
+        job_counter.value = job_counter.value - 1
+
+      #check for new jobs
+      while consume_proc.is_alive():
+        enqueue_proc = Process(target=self.enqueue_jobs,
+                               args=[job_counter, job_batch_size, q_name])
+        enqueue_proc.start()
         enqueue_proc.join()
+        time.sleep(10)
+
       consume_proc.join()
 
     except (KeyboardInterrupt, Exception) as exp:  #pylint: disable=broad-exception-caught
@@ -489,6 +493,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       purge_queue([q_name])
       self.cancel_consumer(q_name)
       self.reset_job_state_on_ctrl_c()
+      with job_counter_lock:
+        job_counter.value = 0
 
     self.cancel_consumer(q_name)
     end = time.time()

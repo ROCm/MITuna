@@ -201,6 +201,7 @@ def __update_fdb_entry(session, solver, session_id, dbt, config, job, fdb_attr,
     if not fdb_entry.kernel_group is None:
       LOGGER.info('Invalidate kernel_group %s', fdb_entry.kernel_group)
       session.query(dbt.kernel_cache)\
+          .filter(dbt.kernel_cache.valid == 1)\
           .filter(dbt.kernel_cache.kernel_group ==
                                         fdb_entry.kernel_group)\
           .update({'valid': 0})

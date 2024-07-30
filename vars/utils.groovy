@@ -725,7 +725,10 @@ def getJobReason()
 
 def killContainer() {
   def tuna_docker_name = getDockerName("${backend}")
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
+  sh "docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker kill --signal=\"SIGINT\" _"
+  sh "docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker wait _"
+  sh "docker system prune -f"
+  //sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker system prune -f'"
 }
 
@@ -948,6 +951,7 @@ def compile()
   }
 
   // Run the jobs on the cluster
+  sh "docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id} --enqueue_only &"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
@@ -992,6 +996,7 @@ def evaluate(params)
     eval_cmd += ' --dynamic_solvers_only'
   }
 
+  sh "docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id} --enqueue_only &"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
 }
 
