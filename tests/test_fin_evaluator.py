@@ -177,6 +177,7 @@ def test_fin_evaluator():
 
   f_vals = miopen.get_f_vals(machine, range(0))
   kwargs = miopen.get_kwargs(0, f_vals, tuning=True)
+
   kwargs['avail_gpus'] = 1
   fdb_attr = [column.name for column in inspect(miopen.dbt.find_db_table).c]
   fdb_attr.remove("insert_ts")
