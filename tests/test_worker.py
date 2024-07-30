@@ -35,7 +35,7 @@ sys.path.append("tuna")
 
 this_path = os.path.dirname(__file__)
 
-from tuna.utils.miopen_utility import load_machines
+from tuna.utils.machine_utility import load_machines
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.machine import Machine
 from tuna.sql import DbCursor
@@ -187,7 +187,6 @@ def test_worker():
       'machine': machine,
       'gpu_id': 0,
       'num_procs': num_gpus,
-      'barred': v,
       'bar_lock': Lock(),
       'envmt': ["MIOPEN_LOG_LEVEL=7"],
       'reset_interval': False,

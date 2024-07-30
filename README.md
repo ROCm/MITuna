@@ -87,6 +87,8 @@ export TUNA_DB_USER_NAME=root
 export TUNA_DB_USER_PASSWORD=<password for root>
 export TUNA_DB_HOSTNAME=localhost
 export TUNA_DB_NAME=<database_name>
+export TUNA_CELERY_JOB_BATCH_SIZE=<integer>
+export TUNA_CELERY_BROKER=localhost
 export gateway_ip=<gateway_ip>
 export gateway_port=<gateway_port>
 export gateway_user=<gateway_user>
@@ -131,8 +133,8 @@ Code formatting
 
 MITuna used yapf for code formatting:
 ```
-yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tuna/
-yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tests/
+cd MITuna/
+yapf -i --style='{based_on_style: google, indent_width: 2}' --recursive tuna/ tests/ alembic/
 ```
 
 Static code analysis
@@ -141,5 +143,62 @@ Static code analysis
 In order for a PR to be accepted the following pylint command needs to result in 10/10 analysis:
 ```
 cd MITuna/tuna
-pylint -f parseable -d duplicate-code --max-args=8 --indent-string '  ' miopen/*.py example/*.py *.py
+pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py utils/*.py miopen/celery_tuning/* miopen/utils/*.py
+cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' '
+cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' '
+cd tuna && find miopen/worker/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' '
+cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' ' miopen/subcmd/import_configs.py
+cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' ' miopen/subcmd/import_db.py
+cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' ' miopen/subcmd/export_db.py
+cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' ' miopen/subcmd/merge_db.py
+cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string=' ' miopen/subcmd/update_golden.py
+mypy tuna/miopen/utils/config_type.py
+mypy tuna/connection.py --ignore-missing-imports
+mypy tuna/abort.py --ignore-missing-imports
+mypy tuna/miopen/utils/analyze_parse_db.py --ignore-missing-imports
+mypy tuna/miopen/scripts/build_driver_cmd.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/scripts/corrupt_configs.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/subcmd/import_configs.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/subcmd/load_job.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/subcmd/export_db.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/subcmd/update_golden.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/driver/convolution.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/flask_example.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/go_fish.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/worker/fin_eval.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/miopen/worker/fin_utils.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/utils/db_utility.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/grafana_dict.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/mituna_interface.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/libraries.py
+mypy tuna/lib_utils.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/machine_management_interface.py --ignore-missing-imports --follow-imports=skip
+yamllint tuna/miopen/yaml_files/*.yaml
+yamllint tuna/example/*.yaml
+mypy tuna/miopen/driver/base.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/machine.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/db/session_mixin.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/db/tuna_tables.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/parse_args.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/worker_interface.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/tables_interface.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/sql.py --ignore-missing-imports
+mypy tuna/example/example_lib.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/example/example_tables.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/dbBase/sql_alchemy.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/dbBase/base_class.py --ignore-missing-imports
+mypy tuna/example/session.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/example/tables.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/example/load_job.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/example/example_worker.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/rocmlir/import_configs.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/rocmlir/load_job.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/rocmlir/rocmlir_lib.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/rocmlir/rocmlir_tables.py --ignore-missing-imports --follow-imports=skip
+mypy tuna/rocmlir/rocmlir_worker.py --ignore-missing-imports --follow-imports=skip
 ```

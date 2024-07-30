@@ -38,3 +38,12 @@ class Library(Enum):
 
   def __str__(self) -> str:
     return self.value
+
+
+class Operation(str, Enum):
+  """Enumerate supported tuning operations"""
+  COMPILE: str = "compile"
+  EVAL: str = "eval"
+
+  def __str__(self) -> str:
+    return self.value

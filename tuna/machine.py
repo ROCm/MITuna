@@ -466,12 +466,16 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     logger: logging.Logger = self.get_logger()
     cnx = self.connect()
 
-    if gpu_id not in self.avail_gpus:
-      logger.info('GPU index %u out of bounds', gpu_id)
-      return False
-    logger.info('Checking GPU %u status', gpu_id)
-    _, stdout, _ = cnx.exec_command(
-        f'GPU_DEVICE_ORDINAL={gpu_id} {CLINFO} | grep gfx', timeout=30)
+    if self.avail_gpus is not None:
+      if gpu_id not in self.avail_gpus:
+        logger.info('GPU index %u out of bounds', gpu_id)
+        return False
+      logger.info('Checking GPU %u status', gpu_id)
+      _, stdout, _ = cnx.exec_command(
+          f'GPU_DEVICE_ORDINAL={gpu_id} {CLINFO} | grep gfx', timeout=30)
+    else:
+      logger.warning('No available gpus to check')
+
     if stdout is None:
       return False
     for line in stdout:

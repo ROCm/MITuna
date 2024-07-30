@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +23,6 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different configuration types supported by Tuna"""
-from enum import Enum
+#from .celery import app as celery_app
 
-
-#pylint: disable=too-few-public-methods
-class ConfigType(Enum):
-  """Enumerate supported configuration types"""
-  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  convolution: str = "convolution"
-  batch_norm: str = "batch_norm"
-
-  def __str__(self):
-    return self.value
-
-  def __json__(self):
-    return self.value
+#__all__ = ('celery_app',)

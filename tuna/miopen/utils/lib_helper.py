@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2023 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,21 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different configuration types supported by Tuna"""
-from enum import Enum
+"""Utility module for miopen library"""
+
+from tuna.miopen.worker.fin_builder import FinBuilder
+from tuna.miopen.worker.fin_eval import FinEvaluator
+from tuna.worker_interface import WorkerInterface
+from tuna.libraries import Operation
 
 
-#pylint: disable=too-few-public-methods
-class ConfigType(Enum):
-  """Enumerate supported configuration types"""
-  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  convolution: str = "convolution"
-  batch_norm: str = "batch_norm"
+def get_worker(kwargs, operation):
+  """Return worker based on operation type"""
 
-  def __str__(self):
-    return self.value
+  worker = WorkerInterface(**kwargs)
+  if operation == Operation.COMPILE:
+    worker = FinBuilder(**kwargs)
+  elif operation == Operation.EVAL:
+    worker = FinEvaluator(**kwargs)
 
-  def __json__(self):
-    return self.value
+  return worker

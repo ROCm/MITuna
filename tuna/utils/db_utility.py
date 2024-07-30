@@ -150,7 +150,7 @@ def get_attr_vals(obj, attr_list):
   return attr_vals
 
 
-def gen_update_query(obj, attribs, tablename):
+def gen_update_query(obj, attribs, tablename, where_clause_tuples_lst=None):
   """Create an update query string to table with tablename for an object (obj)
   for the attributes in attribs"""
   set_arr = []
@@ -159,8 +159,13 @@ def gen_update_query(obj, attribs, tablename):
     set_arr.append(f"{attr}={attr_vals[attr]}")
 
   set_str = ','.join(set_arr)
-  query = f"UPDATE {tablename} SET {set_str}"\
-          f" WHERE id={obj.id};"
+  if where_clause_tuples_lst:
+    where_clause = ' AND '.join(f"{x}={y}" for x, y in where_clause_tuples_lst)
+    query = f"UPDATE {tablename} SET {set_str}"\
+            f" WHERE {where_clause};"
+  else:
+    query = f"UPDATE {tablename} SET {set_str}"\
+            f" WHERE id={obj.id};"
   LOGGER.info('Query Update: %s', query)
   return query
 
@@ -183,11 +188,34 @@ def gen_insert_query(obj, attribs, tablename):
 
 def gen_select_objs(session, attribs, tablename, cond_str):
   """create a select query and generate name space objects for the results"""
+  ret = get_job_rows(session, attribs, tablename, cond_str)
+  entries = None
+
+  if ret:
+    entries = db_rows_to_obj(ret, attribs)
+
+  return entries
+
+
+def get_job_rows(session, attribs, tablename, cond_str):
+  """Get db rows"""
+  ret = None
   attr_str = ','.join(attribs)
   query = f"SELECT {attr_str} FROM {tablename}"\
           f" {cond_str};"
   LOGGER.info('Query Select: %s', query)
-  ret = session.execute(query)
+  try:
+    ret = session.execute(query)
+  except (Exception, KeyboardInterrupt) as ex:  #pylint: disable=broad-except
+    LOGGER.warning(ex)
+    ret = None
+    session.rollback()
+
+  return ret
+
+
+def db_rows_to_obj(ret, attribs):
+  """Compose SimpleDict list of db jobs"""
   entries = []
   for row in ret:
     #LOGGER.info('select_row: %s', row)

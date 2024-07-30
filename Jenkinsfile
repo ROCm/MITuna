@@ -83,20 +83,29 @@ pipeline {
             }
             }
         }
-        stage("pytest3 and Tests Coverage"){
-            agent { label utils.rocmnode("tunatest") }
+        stage("pytest3"){
+            agent{  label "gfx90a" }
             steps {
-                script {
-                    utils.pytestSuite3AndCoverage(branch, branch_master)
-                }
+            script {
+            utils.pytestSuite3()
+            }
             }
         }
-        stage("fin find compile"){
-        agent{ label utils.rocmnode("tunatest") }
-        steps{
+        /*
+        stage("Coverage"){
+            agent { label utils.rocmnode("tunatest") }
+            steps {
             script {
-            utils.finFindCompile()
+            utils.Coverage(branch, branch_master)
             }
+            }
+        }*/
+        stage("fin find compile"){
+            agent{ label utils.rocmnode("tunatest") }
+            steps{
+                 script {
+                     utils.finFindCompileEnqueue()
+                  }
             }
         }
         stage("fin find eval"){

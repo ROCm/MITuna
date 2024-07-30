@@ -47,8 +47,10 @@ class TunaArgs(Enum):
   LABEL: str = 'label'
   RESTART_MACHINE: str = 'restart_machine'
   DOCKER_NAME: str = 'docker_name'
+  SHUTDOWN_WORKERS: str = 'shutdown_workers'
 
 
+# pylint: disable=too-many-branches
 def setup_arg_parser(desc: str,
                      arg_list: List[TunaArgs],
                      parser: argparse.Namespace = None,
@@ -143,6 +145,11 @@ def setup_arg_parser(desc: str,
           type=str,
           default='',
           help='Select a docker to run on. (default miopentuna)')
+    if TunaArgs.SHUTDOWN_WORKERS in arg_list:
+      parser.add_argument('--shutdown_workers',
+                          dest='shutdown_workers',
+                          action='store_true',
+                          help='Shutdown all active celery workers')
 
   return parser
 

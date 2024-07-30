@@ -27,6 +27,7 @@
 """Utility module for helper functions"""
 
 import random
+import string
 from time import sleep
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Query
@@ -36,10 +37,10 @@ from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
 from tuna.miopen.db.solver import get_solver_ids
 from tuna.utils.utility import check_qts
-from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT
-from tuna.miopen.utils.metadata import BN_DEFAULTS
+from tuna.miopen.utils.metadata import MYSQL_LOCK_WAIT_TIMEOUT, BN_DEFAULTS
 from tuna.miopen.utils.metadata import FUSION_DEFAULTS, CONV_2D_DEFAULTS, CONV_3D_DEFAULTS
 from tuna.utils.metadata import NUM_SQL_RETRIES
+from tuna.utils.db_utility import gen_update_query, session_retry
 
 LOGGER = setup_logger('helper')
 
@@ -200,3 +201,37 @@ def get_db_id(db_elems, config_table):
     if res:
       cid = res[0][0]
   return cid
+
+
+def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
+  """Update job state for builder/evaluator job_set_attr: List[str]"""
+
+  LOGGER.info('Setting job id %s state to %s', job.id, state)
+  job_set_attr = ['state', 'gpu_id']
+  job.state = state
+  if result:
+    job_set_attr.append('result')
+    job.result = result
+  if increment_retries:
+    job_set_attr.append('retries')
+    job.retries += 1
+
+  #pylint: disable=duplicate-code
+  if '_start' in state:
+    job_set_attr.append('cache_loc')
+    cache: str = '~/.cache/miopen_'
+    blurr: str = ''.join(
+        random.choice(string.ascii_lowercase) for i in range(10))
+    cache_loc: str = cache + blurr
+    job.cache_loc = cache_loc
+  #pylint: enable=duplicate-code
+
+  query: str = gen_update_query(job, job_set_attr, dbt.job_table.__tablename__)
+
+  def callback() -> bool:
+    session.execute(query)
+    session.commit()
+    return True
+
+  assert session_retry(session, callback, lambda x: x(), LOGGER)
+  return True

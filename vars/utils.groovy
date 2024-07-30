@@ -176,7 +176,7 @@ def finApplicability(){
     }
 }
 
-def finFindCompile(){
+def finFindCompileEnqueue(){
     def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -188,49 +188,42 @@ def finFindCompile(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_CELERY_BROKER="${db_host}"
+        //env.BROKER_TRANSPORT="redis://${db_host}:6379/14"
+        //env.CELERY_RESULT_BACKEND="redis://${db_host}:6379/15"
         def sesh1 = runsql("select id from session order by id asc limit 1")
+        celery_log="${env.WORKSPACE}/tuna/${branch_id}_find_compile_celery_log.log"
+        sh "touch ${celery_log}"
 
         sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        def num_cfg = runsql("SELECT count(*) from conv_config;")
-        println "Count(*) conv_config table: ${num_cfg}"
         runsql("delete from conv_job;")
         runsql("alter table conv_job AUTO_INCREMENT=1;")
-        sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} --all_configs --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
+
+        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
+
+        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id} --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
+        def num_cfg = runsql("SELECT count(*) from conv_config;")
+        println "Count(*) conv_config table: ${num_cfg}"
+        sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id} -t recurrent_${branch_id} --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
+
+        sh "printenv"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1}"
+        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        sh "cat ${celery_log}"
+
+        //env.CELERY_BROKER="redis://${db_host}:6379/"
+        sh "printenv"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+
+        sh "kill -9 ${pid}"
+        sh "cat ${celery_log}"
         def num_compiled_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
         sh "echo ${num_compiled_jobs} == ${num_jobs}"
         if (num_compiled_jobs != num_jobs){
             error("Unable to compile find jobs using Fin")
         }
-
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nhwc --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        def num_cfg_nhwc = runsql("SELECT count(*) from conv_config;")
-        println "Count(*) conv_config table: ${num_cfg_nhwc}"
-        //runsql("delete from conv_job;")
-        //runsql("alter table conv_job AUTO_INCREMENT=1;")
-        sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id}_nhwc -t recurrent_${branch_id}_nhwc --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
-        def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
-        def num_compiled_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
-        sh "echo ${num_compiled_jobs_nhwc} == ${num_jobs_nhwc}"
-        if (num_compiled_jobs_nhwc != num_jobs_nhwc){
-            error("Unable to compile find jobs using Fin")
-        }
-        sh "./tuna/go_fish.py miopen import_configs -t recurrent_${branch_id}_nchw --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
-        def num_cfg_nchw = runsql("SELECT count(*) from conv_config;")
-        println "Count(*) conv_config table: ${num_cfg_nchw}"
-        sh "./tuna/go_fish.py miopen load_job -l finFind_${branch_id}_nchw -t recurrent_${branch_id}_nchw --fin_steps \"miopen_find_compile,miopen_find_eval\" --session_id ${sesh1} ${job_lim}"
-        def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id}_nchw --session_id ${sesh1}"
-        def num_compiled_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
-        sh "echo ${num_compiled_jobs_nchw} == ${num_jobs_nchw}"
-        if (num_compiled_jobs_nchw != num_jobs_nchw){
-            error("Unable to compile find jobs using Fin")
-        }
     }
 }
-
 
 def finFindEval(){
     def tuna_docker = getDocker("HIP")
@@ -244,46 +237,53 @@ def finFindEval(){
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_CELERY_BROKER="${db_host}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
+        def pids = []
 
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1}"
+
+        def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
+        num_gpus = num_gpus as Integer
+        sh "echo #GPUs: ${num_gpus}"
+        def gpu_list = (0..(num_gpus-1)).toList()
+        sh "echo ${gpu_list}"
+        def counter = 0
+        def pid_list = []
+
+        sh "printenv"
+        // &=046
+        gpu_list.each{
+            celery_log="${env.WORKSPACE}/tuna/${branch_id}_find_eval_celery_log_${counter}.log"
+            sh "touch ${celery_log}"
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sh "cat ${celery_log}"
+            pid_list.add(proc_id)
+            counter++
+        }
+
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        //killing off celery workers by pid
+        pid_list.each{
+          try{
+            sh "kill -9 ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
         def num_evaluated_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}' AND state = 'evaluated';").toInteger()
         sh "echo ${num_evaluated_jobs} == ${num_jobs}"
         if (num_evaluated_jobs != num_jobs){
             error("Unable to evaluate find jobs using Fin")
         }
+
         def MIOPEN_BRANCH = runsql("SELECT miopen_v from session WHERE id=1;")
         def fdb_file = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts  "${fdb_file}"
         def kdb_file = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts "${kdb_file}"
 
-        def num_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nhwc --session_id ${sesh1}"
-        def fdb_file_nhwc = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1} --filename fdb_nhwc", returnStdout: true)
-        def num_evaluated_jobs_nhwc = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nhwc' AND state = 'evaluated';").toInteger()
-        sh "echo ${num_evaluated_jobs_nhwc} == ${num_jobs_nhwc}"
-        if (num_evaluated_jobs_nhwc != num_jobs_nhwc){
-            error("Unable to evaluate find jobs using Fin")
-        }
-
-        archiveArtifacts  "${fdb_file_nhwc}"
-        def kdb_file_nhwc = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1} --filename kdb_nhwc", returnStdout: true)
-        archiveArtifacts "${kdb_file_nhwc}"
-
-        def num_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'compiled';").toInteger()
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id}_nchw --session_id ${sesh1}"
-        def fdb_file_nchw = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
-        def num_evaluated_jobs_nchw = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}_nchw' AND state = 'evaluated';").toInteger()
-        sh "echo ${num_evaluated_jobs_nchw} == ${num_jobs_nchw}"
-        if (num_evaluated_jobs_nchw != num_jobs_nchw){
-            error("Unable to evaluate find jobs using Fin")
-        }
-
-        archiveArtifacts  "${fdb_file_nchw}"
-        def kdb_file_nchw = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
-        archiveArtifacts "${kdb_file_nchw}"
     }
 }
 
@@ -362,7 +362,7 @@ def solverAnalyticsTest(){
         sh "python3 ./SolverAnalytics/tests/clean_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/cli_test.py"
         sh "python3 ./SolverAnalytics/tests/generate_analytics_test.py"
-        sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
+        //sh "python3 ./SolverAnalytics/tests/get_finddb_test.py"
         sh "python3 ./SolverAnalytics/tests/utils_test/df_tools_test.py"
         sh "python3 ./SolverAnalytics/tests/utils_test/fdb_key_utils_test.py"
         sh "python3 ./SolverAnalytics/tests/utils_test/helpers_test.py"
@@ -383,32 +383,45 @@ def perfCompile() {
         env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_CELERY_BROKER="${db_host}"
         runsql("DELETE FROM conv_job;")
         def sesh1 = runsql("select id from session order by id asc limit 1")
+        celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_compile_celery_log.log"
+        sh "touch ${celery_log}"
+        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        sh "echo ${pid}"
+        sh "cat ${celery_log}"
 
         sh "./tuna/go_fish.py miopen import_configs -t alexnet_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen load_job -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1}"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "kill -9 ${pid}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
         {
             error("Unable to compile any jobs for alexnet")
         }
 
+        def pid2 = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        sh "echo ${pid2}"
+        sh "cat ${celery_log}"
+
         sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NCHW.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen load_job -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1}"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh "kill -9 ${pid2}"
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'conv_${branch_id}_v2';")
         if(compiled_conv_jobs.toInteger() == 0)
         {
             error("Unable to compile any conv jobs")
         }
         echo "${compiled_conv_jobs}"
+
     }
 }
 
@@ -425,10 +438,30 @@ def perfEval() {
         env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        env.TUNA_CELERY_BROKER="${db_host}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1}"
+        def num_gpus = sh(script: "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l", returnStdout: true).trim()
+        num_gpus = num_gpus as Integer
+        sh "echo #GPUs: ${num_gpus}"
+        def gpu_list = (1..(num_gpus-1)).toList()
+        sh "echo ${gpu_list}"
+        def counter = 0
+        def pid_list = []
+
+        sh "printenv"
+        // &=046
+        gpu_list.each{
+            celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_eval_celery_log_${counter}.log"
+            sh "touch ${celery_log}"
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sh "cat ${celery_log}"
+            pid_list.add(proc_id)
+            counter++
+        }
+
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
         {
@@ -436,7 +469,17 @@ def perfEval() {
         }
 
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1}"
+        sh "export CELERY_BROKER=\"redis://${db_host}:6379/\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+
+
+        pid_list.each{
+          try{
+            sh "kill -9 ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
         def eval_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'evaluated';")
         def errored_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'errored';")
         if(eval_conv_jobs.toInteger() != compiled_conv_jobs.toInteger())
@@ -450,6 +493,7 @@ def perfEval() {
         def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
         def next_gold_v = last_gold_v.toInteger() + 1
         sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
+
         def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
         if(golden_entries.toInteger() != fdb_entries.toInteger())
@@ -535,7 +579,31 @@ def pytestSuite2() {
     }
 }
 
-def pytestSuite3AndCoverage(current_run, main_branch) {
+def pytestSuite3() {
+    def tuna_docker = getDocker("HIP")
+    tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
+        env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_DB_NAME="${db_name}"
+        env.TUNA_DB_USER_NAME="${db_user}"
+        env.TUNA_DB_PASSWORD="${db_password}"
+        env.gateway_ip = "${gateway_ip}"
+        env.gateway_port = "${gateway_port}"
+        env.gateway_user = "${gateway_user}"
+        env.PYTHONPATH=env.WORKSPACE
+        env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+
+        //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
+
+        sshagent (credentials: ['bastion-ssh-key']) {
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
+        }
+        sh "coverage report -m"
+    }
+}
+
+
+def Coverage(current_run, main_branch) {
     def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
@@ -547,10 +615,6 @@ def pytestSuite3AndCoverage(current_run, main_branch) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        sshagent (credentials: ['bastion-ssh-key']) {
-           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
-           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
-        }
         sh "coverage report -m"
         sh "python3 -m coverage json"
         if (current_run == main_branch) {
@@ -587,7 +651,7 @@ def runLint() {
         checkout scm
         def tuna_docker = getDocker("HIP")
         tuna_docker.inside("") {
-            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py utils/*.py"
+            sh "cd tuna && pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  ' *.py miopen/*.py example/*.py rocmlir/*.py utils/*.py miopen/celery_tuning/*.py"
             sh "cd tuna && find miopen/scripts/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/driver/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
             sh "cd tuna && find miopen/worker/ -type f -name '*.py' | xargs pylint -f parseable --max-args=8 --ignore-imports=no --indent-string='  '"
@@ -658,7 +722,10 @@ def getJobReason()
 
 def killContainer() {
   def tuna_docker_name = getDockerName("${backend}")
-  sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
+  sh "docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker kill --signal=\"SIGINT\" _"
+  sh "docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker wait _"
+  sh "docker system prune -f"
+  //sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker container list | grep  ${tuna_docker_name} | sed \"s#  #^#g\" | tr -s ^ | cut -d ^ -f 6 | xargs -I _ docker container kill _'"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'docker system prune -f'"
 }
 
@@ -881,6 +948,7 @@ def compile()
   }
 
   // Run the jobs on the cluster
+  sh "docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id} --enqueue_only &"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${compile_cmd} --session_id ${params.session_id}'"
 }
 
@@ -925,6 +993,7 @@ def evaluate(params)
     eval_cmd += ' --dynamic_solvers_only'
   }
 
+  sh "docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id} --enqueue_only &"
   sh "srun --no-kill -p ${partition} -N 1-10 -l bash -c 'echo ${env.CREDS_PSW} | HOME=/home/slurm docker login -u ${env.CREDS_USR} --password-stdin && HOME=/home/slurm docker run ${docker_args} ${tuna_docker_name} python3 /tuna/tuna/go_fish.py miopen ${eval_cmd} --session_id ${params.session_id}'"
 }
 

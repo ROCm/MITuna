@@ -78,7 +78,8 @@ def setup_logger(logger_name: str = 'Tuna',
     stream_handler: logging.StreamHandler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
     stream_handler.setLevel(logging.INFO)
-    logger.addHandler(stream_handler)
+    if not logger.hasHandlers():
+      logger.addHandler(stream_handler)
 
   logstash_status, logstash_host, logstash_port, logstash_path = get_logstash_config(
   )

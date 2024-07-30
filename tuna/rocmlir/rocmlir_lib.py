@@ -33,7 +33,7 @@ from multiprocessing import Value
 from typing import Dict, Any, List, Optional
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
-from tuna.utils.miopen_utility import load_machines
+from tuna.utils.machine_utility import load_machines
 from tuna.machine import Machine
 
 from tuna.libraries import Library
@@ -43,6 +43,7 @@ from tuna.rocmlir.rocmlir_worker import RocMLIRWorker
 from tuna.miopen.db.build_schema import recreate_triggers
 from tuna.rocmlir.triggers import get_timestamp_trigger
 from tuna.rocmlir.config_type import ConfigType
+from tuna.dbBase.sql_alchemy import DbSession
 
 
 class RocMLIR(MITunaInterface):
@@ -196,7 +197,10 @@ class RocMLIR(MITunaInterface):
     envmt: List[str] = []
     return envmt
 
-  def get_kwargs(self, gpu_idx: int, f_vals: Dict[str, Any]) -> Dict[str, Any]:
+  def get_kwargs(self,
+                 gpu_idx: int,
+                 f_vals: Dict[str, Any],
+                 tuning=False) -> Dict[str, Any]:
     # pylint: disable=duplicate-code
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
@@ -206,3 +210,23 @@ class RocMLIR(MITunaInterface):
     kwargs['config_type'] = self.args.config_type
 
     return kwargs
+
+  def get_jobs(self,
+               session: DbSession,
+               find_state: List[str],
+               set_state: str,
+               session_id: int,
+               claim_num: int = None,
+               no_update: bool = False):
+    """Get jobs based on find_state"""
+    self.logger.info('Placeholder')
+
+    return True
+
+  def get_context_list(self, session, batch_jobs):
+    """Get a list of context items to be used for celery task"""
+    raise NotImplementedError("Not implemented in rocmlir")
+
+  def celery_enqueue_call(self, context, q_name, task_id=False):
+    """Wrapper function for celery enqueue func"""
+    raise NotImplementedError('Not implemented')

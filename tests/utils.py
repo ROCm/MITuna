@@ -45,9 +45,9 @@ sqlite_config_cols = [
 
 sqlite_perf_db_cols = ["solver", "config", "arch", "num_cu", "params"]
 
-valid_arch_cu = [("gfx803", 36), ("gfx803", 64), ("gfx900", 56), ("gfx900", 64),
-                 ("gfx906", 60), ("gfx906", 64), ("gfx908", 120),
-                 ("gfx1030", 36)]
+#valid_arch_cu = [("gfx803", 36), ("gfx803", 64), ("gfx900", 56), ("gfx900", 64),
+#                 ("gfx906", 60), ("gfx906", 64), ("gfx908", 120),
+#                 ("gfx1030", 36)]
 
 
 def get_sqlite_table(cnx, table_name):
@@ -116,11 +116,13 @@ class GoFishArgs():
   solver_id = None
   find_mode = 1
   blacklist = None
+  init_session = True
+  check_status = True
 
 
 class ExampleArgs():
-  arch = 'gfx908'
-  num_cu = 120
+  arch = 'gfx90a'
+  num_cu = 104
   local_machine = True
   remote_machine = False
   session_id = None
@@ -140,7 +142,7 @@ def get_worker_args(args, machine, miopen):
   return kwargs
 
 
-def add_test_session(arch='gfx908', num_cu=120, label=None):
+def add_test_session(arch='gfx90a', num_cu=104, label=None):
   args = GoFishArgs()
   if label:
     args.label = label

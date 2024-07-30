@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,22 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different configuration types supported by Tuna"""
-from enum import Enum
+"""Utility module for Celery helper functions"""
+import os
+from tuna.utils.logger import setup_logger
+
+LOGGER = setup_logger('celery_utility')
 
 
-#pylint: disable=too-few-public-methods
-class ConfigType(Enum):
-  """Enumerate supported configuration types"""
-  # pylint: disable=invalid-name ; uppercasing would require modifying a lot of files
-  convolution: str = "convolution"
-  batch_norm: str = "batch_norm"
+def get_q_name(library, op_compile=False, op_eval=False):
+  """Compose queue name"""
+  db_name = os.environ['TUNA_DB_NAME']
+  q_name = None
+  if op_compile:
+    q_name = f"compile_q_{db_name}_sess_{library.dbt.session_id}"
+  elif op_eval:
+    q_name = f"eval_q_{db_name}_sess_{library.dbt.session_id}"
+  else:
+    q_name = f"unknown_op_{db_name}_sess_{library.dbt.session_id}"
 
-  def __str__(self):
-    return self.value
-
-  def __json__(self):
-    return self.value
+  return q_name

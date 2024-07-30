@@ -32,7 +32,7 @@ from tuna.machine import Machine
 from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import session_retry
 
-LOGGER = setup_logger('miopen_utility')
+LOGGER = setup_logger('machine_utility')
 
 
 def load_machines(args, logger=LOGGER):
