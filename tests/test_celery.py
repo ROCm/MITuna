@@ -26,6 +26,7 @@
 import os
 import copy
 from time import sleep
+from multiprocessing import Value
 import aioredis
 from sqlalchemy.inspection import inspect
 
@@ -269,7 +270,8 @@ def test_celery_workers():
 
   db_name = os.environ['TUNA_DB_NAME']
   #testing enqueue_jobs
-  miopen.enqueue_jobs(1, f"test_{db_name}")
+  job_counter = Value('i', 4)
+  miopen.enqueue_jobs(job_counter, 1, f"test_{db_name}")
   print('Done enqueue')
   with DbSession() as session:
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
