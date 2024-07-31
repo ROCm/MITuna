@@ -310,37 +310,3 @@ def clean_cache_table(dbt, job):
       LOGGER.warning('FinEval: Unable to clean %s / %s: %s',
                      dbt.fin_cache_table.__tablename__,
                      dbt.kernel_cache.__tablename__, err)
-
-
-def update_fdb_eval_entry(session, solver_id_map, config, dbt, fdb_obj,
-                          session_id, fdb_attr, job):
-  """update fdb with individual fin json entry"""
-  if fdb_obj['evaluated']:
-    obj, _ = get_fdb_entry(session, solver_id_map[fdb_obj['solver_name']],
-                           session_id, dbt, config, fdb_attr)
-    if not obj:
-      LOGGER.info(
-          'Unable to find fdb entry for config: %s, solver: %s, '\
-          'arch: %s, num_cu: %s, direction: %s',
-          config.id, solver_id_map[fdb_obj['solver_name']],
-          dbt.session.arch, dbt.session.num_cu, config.direction)
-      return False
-
-    fdb_entry = obj
-    fdb_entry.alg_lib = fdb_obj['algorithm']
-    fdb_entry.kernel_time = fdb_obj['time']
-    fdb_entry.workspace_sz = fdb_obj['workspace']
-    fdb_entry.session = dbt.session.id
-    fdb_entry.params = fdb_obj['params']
-
-    LOGGER.info('Updating find db(Eval) for job_id=%s', job.id)
-    query = gen_update_query(fdb_entry, fdb_attr,
-                             dbt.find_db_table.__tablename__)
-    session.execute(query)
-    session.commit()
-  else:
-    LOGGER.warning("Not evaluated: job(%s), solver(%s), %s", job.id,
-                   fdb_obj['solver_name'], fdb_obj['reason'])
-    return False
-
-  return True

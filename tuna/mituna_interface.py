@@ -76,30 +76,33 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def check_docker(self,
                    worker: WorkerInterface,
-                   dockername="miopentuna") -> None:
+                   dockername="miopentuna") -> bool:
     """! Checking for docker
       @param worker The worker interface instance
       @param dockername The name of the docker
     """
     out2: ChannelFile
-    self.logger.warning("docker not installed or requires sudo .... ")
     _, out2, _ = worker.exec_command("sudo docker info")
     while not out2.channel.exit_status_ready():
       self.logger.warning(out2.readline())
     if out2.channel.exit_status > 0:
       self.logger.warning(
           "docker not installed or failed to run with sudo .... ")
-    else:
-      out: StringIO = StringIO()
-      line: Optional[str] = None
-      _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
-      for line in out.readlines():
-        if line is not None:
-          if line.find(dockername) != -1:
-            self.logger.warning('%s docker image exists', dockername)
-            break
-      if line is None:
-        self.logger.warning('%s docker image does not exist', dockername)
+      return False
+
+    out: StringIO = StringIO()
+    line: Optional[str] = None
+    _, out, _ = worker.exec_command(f"sudo docker images | grep {dockername}")
+    for line in out.readlines():
+      if line is not None:
+        if line.find(dockername) != -1:
+          self.logger.warning('%s docker image exists', dockername)
+          return True
+    if line is None:
+      self.logger.warning('%s docker image does not exist', dockername)
+      return False
+
+    return False
 
   def check_status(self,
                    worker: WorkerInterface,
@@ -269,12 +272,10 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       while True:
         line = stdout.readline()
         if not line:
-          print('Reached end of stdout')
           break
         #stop workers that were feeding from this queue
         if "->" in line and sess_str in line:
           hostname = line.split('->')[1].split()[0].split(':')[0]
-          print('HOSTNAME')
           stop_named_worker(hostname)
 
     except Exception as exp:  #pylint: disable=broad-exception-caught
@@ -389,6 +390,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       await asyncio.sleep(1)
     self.logger.info('Job counter reached 0')
     await redis.close()
+
+    return True
 
   async def parse_result(self, data):
     """Function callback for celery async jobs to store results"""
