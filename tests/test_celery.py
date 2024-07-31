@@ -82,7 +82,6 @@ def test_celery_workers():
   _, subp_list = miopen.prep_tuning()
   assert subp_list
   for subp in subp_list:
-    print(subp.pid)
     subp.kill()
 
   miopen.args.enqueue_only = True
@@ -93,11 +92,16 @@ def test_celery_workers():
   cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{miopen.args.session_id} -Q test_{db_name}"  #pylint: disable=line-too-long
   #testing launch_worker_per_node
   subp_list = launch_worker_per_node([machine], cmd, True)
-  sleep(2)
+  #wait for workers to finish launch
+  sleep(5)
   assert subp_list
-  assert miopen.cancel_consumer(f"test_{db_name}")
+  assert miopen.cancel_consumer(q_name)
+  #wait for celery worker shutdown
+  sleep(5)
+
   for subp in subp_list:
     print(subp.pid)
+    assert subp.poll()
     subp.kill()
 
   miopen.args.fin_steps = "miopen_perf_compile"
