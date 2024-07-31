@@ -48,7 +48,6 @@ def connect_db():
   db_name = ENV_VARS['db_name']
   try:
     ENGINE.execute('Use {}'.format(db_name))
-    return
   except OperationalError:  # as err:
     LOGGER.warning('Database %s does not exist, attempting to create database',
                    db_name)

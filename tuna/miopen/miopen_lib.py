@@ -224,6 +224,7 @@ class MIOpen(MITunaInterface):
 
     if self.args.fin_steps and self.args.subcommand != 'load_job':
       self.check_fin_args(parser)
+      self.set_prefix()
 
     if self.args.find_mode is None and not (self.args.check_status or
                                             self.args.restart_machine or
@@ -249,13 +250,11 @@ class MIOpen(MITunaInterface):
     self.dbt = MIOpenDBTables(session_id=self.args.session_id,
                               config_type=self.args.config_type)
     self.update_operation()
-    if self.args.fin_steps:
-      self.set_prefix()
 
   def set_prefix(self):
     """Set redis key prefix"""
     if isinstance(self.args.fin_steps, Iterable):
-      steps_str = ('-').join(self.args.fin_steps)
+      steps_str = ('-').join(x for x in self.args.fin_steps)
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
                     f"{steps_str}"
     else:
@@ -343,7 +342,7 @@ class MIOpen(MITunaInterface):
 
   def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
-    """! Helper funcrtion to compose worker_list
+    """! Helper function to compose worker_list
       @param res DB query return item containg available machines
       @param args The command line arguments
     """
@@ -720,7 +719,7 @@ class MIOpen(MITunaInterface):
   async def parse_result(self, data):
     """Function callback for celery async jobs to store results"""
     data = json.loads(data)
-    self.logger.info(data)
+    #self.logger.info(data)
 
     with DbSession() as session:
       try:
@@ -730,8 +729,8 @@ class MIOpen(MITunaInterface):
         self.logger.error(kerr)
         return False
 
-      self.logger.info('Parsing: %s', fin_json)
-      self.logger.info('Parsing context: %s', context)
+      #self.logger.info('Parsing: %s', fin_json)
+      #self.logger.info('Parsing context: %s', context)
       if self.operation == Operation.COMPILE:
         self.process_fin_builder_results(session, fin_json, context)
       elif self.operation == Operation.EVAL:

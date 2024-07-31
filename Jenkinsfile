@@ -91,13 +91,20 @@ pipeline {
             }
             }
         }
-        /*
         stage("Coverage"){
             agent { label utils.rocmnode("tunatest") }
             steps {
             script {
             utils.Coverage(branch, branch_master)
             }
+            }
+        }
+        stage("fin find compile"){
+            agent{ label utils.rocmnode("tunatest") }
+            steps{
+                 script {
+                     utils.finFindCompileEnqueue()
+                  }
             }
         }*/
         stage("fin find compile"){

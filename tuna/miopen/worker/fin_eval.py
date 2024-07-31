@@ -154,6 +154,7 @@ class FinEvaluator(FinClass):
           compile_entry['find_compiled'] = True
 
           blobs = session.query(self.dbt.kernel_cache).filter(
+              self.dbt.kernel_cache.valid == 1,
               self.dbt.kernel_cache.kernel_group == fdb_rec.kernel_group)
           res = session_retry(session, blobs.all, lambda x: x(), self.logger)
           for obj in res:
