@@ -224,7 +224,6 @@ class MIOpen(MITunaInterface):
 
     if self.args.fin_steps and self.args.subcommand != 'load_job':
       self.check_fin_args(parser)
-      self.set_prefix()
 
     if self.args.find_mode is None and not (self.args.check_status or
                                             self.args.restart_machine or
@@ -250,11 +249,13 @@ class MIOpen(MITunaInterface):
     self.dbt = MIOpenDBTables(session_id=self.args.session_id,
                               config_type=self.args.config_type)
     self.update_operation()
+    if self.args.fin_steps:
+      self.set_prefix()
 
   def set_prefix(self):
     """Set redis key prefix"""
     if isinstance(self.args.fin_steps, Iterable):
-      steps_str = ('-').join(x for x in self.args.fin_steps)
+      steps_str = ('-').join(self.args.fin_steps)
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
                     f"{steps_str}"
     else:

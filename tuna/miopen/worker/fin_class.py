@@ -208,6 +208,27 @@ class FinClass(WorkerInterface):
 
     return ret
 
+  #pylint: disable=R0801
+  def check_jobs_found(self, job_rows, find_state, imply_end):
+    """check for end of jobs"""
+    if not job_rows:
+      # we are done
+      self.logger.warning('No %s jobs found, fin_step: %s, session %s',
+                          find_state, self.fin_steps, self.session_id)
+      if imply_end:
+        self.logger.warning("set end")
+        self.end_jobs.value = 1
+      return False
+    return True
+
+  #pylint: enable=R0801
+
+  def job_queue_pop(self):
+    """load job & config from top of job queue"""
+    self.job, self.config = self.job_queue.get(True, 1)
+    self.logger.info("Got job %s %s %s", self.job.id, self.job.state,
+                     self.job.reason)
+
   def __compose_fincmd(self):
     """Helper function to compose fin docker cmd"""
     if self.machine.local_machine:

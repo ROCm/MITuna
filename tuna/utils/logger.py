@@ -100,7 +100,7 @@ def set_usr_logger(logger_name: str) -> logging.Logger:
              logging.RootLogger] = logging.getLogger(logger_name)
   log_file: str = os.path.join(TUNA_LOG_DIR, logger_name + ".log")
   fmt: logging.Formatter = logging.Formatter(
-      '%(lineno)d - %(asctime)s - %(name)s - %(message)s')
+      '%(lineno)d - %(asctime)s - %(name)s - %(levellevel)s - %(message)s')
   file_handler: logging.FileHandler = logging.FileHandler(log_file, mode='a')
   file_handler.setFormatter(fmt)
   file_handler.setLevel(log_level.upper() if log_level else logging.INFO)
