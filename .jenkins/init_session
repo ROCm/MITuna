@@ -11,11 +11,15 @@ def initSession(){
   backend = "HIPNOGPU"
   def tuna_docker
   def tuna_docker_name = utils.getDockerName("HIPNOGPU")
-  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
+  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BUILD_MIOPEN_DEPS=${params.build_miopen_deps} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg DB_NAME=${params.db_name} --build-arg DB_USER_NAME=${db_user} --build-arg DB_USER_PASSWORD=${db_password} --build-arg DB_HOSTNAME=${db_host} --build-arg MIOPEN_USE_MLIR=${params.use_mlir}"
 
   if(params.base_image != '')
   {
-    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image} --build-arg ROCM_PRE=1"
+    build_args = build_args + " --build-arg BASEIMAGE=${params.base_image}"
+  }
+  if(params.arch != '')
+  {
+    build_args = build_args + " --build-arg ARCH_TARGET=${params.arch}"
   }
   sh "echo ${build_args}"
 
@@ -80,6 +84,7 @@ pipeline {
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
     string(name: 'rocm_version', defaultValue: '', description: 'Version of ROCm for base docker packages, exclusive with osdb_bkc_version')
     string(name: 'osdb_bkc_version', defaultValue: '', description: 'Build number for OSDB, exclusive with rocm_version')
+    string(name: 'build_miopen_deps', defaultValue: '', description: 'Build miopen dependencies: set to 1 to build dependencies, else leave blank')
     string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')

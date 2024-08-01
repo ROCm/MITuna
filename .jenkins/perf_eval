@@ -20,6 +20,7 @@ pipeline {
       backend = 'HIP'
       docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user} --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
       db_name = "${params.db_name}"
+      partition = ""
       branch_id = "${params.branch_name}_${BUILD_ID}"
       CREDS = credentials("$DOCKER_CRED")
   }
@@ -29,7 +30,7 @@ pipeline {
     booleanParam(name: 'dynamic_solvers_only', defaultValue: false, description: 'Only use dynamic solvers in tuning')
     string(name: 'session_id', defaultValue: '', description: 'session id for evaluation')
     choice(name: 'tuna_loglevel', choices: ['WARN', 'ERROR', 'INFO'], description: 'Log level for TUNA')
-    string(name: 'env', defaultValue: 'HIP_KERNEL_ARG=1', description: 'Additional environment variables for compilation.')
+    string(name: 'env', defaultValue: 'HIP_FORCE_DEV_KERNARG=1', description: 'Additional environment variables for compilation.')
     string(name: 'db_host', defaultValue: "${headnode}", description: 'Name of the machine hosting the database instance')
     string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
