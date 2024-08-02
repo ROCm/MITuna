@@ -326,9 +326,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   async def cleanup_redis_results(self, prefix):
     """Remove stale redis results by key"""
-    TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST = get_backend_env()
-    redis = await aioredis.from_url(
-        f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/15")
+    backend_port, backend_host = get_backend_env()
+    redis = await aioredis.from_url(f"redis://{backend_host}:{backend_port}/15")
 
     keys = []
     cursor = "0"
@@ -358,9 +357,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
   async def consume(self, job_counter, prefix):
     """Retrieve celery results from redis db"""
 
-    TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST = get_backend_env()
-    redis = await aioredis.from_url(
-        f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/15")
+    backend_port, backend_host = get_backend_env()
+    redis = await aioredis.from_url(f"redis://{backend_host}:{backend_port}/15")
 
     while job_counter.value > 0:
       cursor = "0"
