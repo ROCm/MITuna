@@ -42,6 +42,7 @@ from tuna.machine import Machine
 from tuna.libraries import Operation
 from tuna.celery_app.celery_workers import launch_worker_per_node
 from tuna.celery_app.utility import get_q_name
+from tuna.celery_app.celery_app import get_broker_env, get_backend_env
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
 from tuna.miopen.worker.fin_utils import compose_config_obj, fin_job
@@ -281,3 +282,15 @@ def test_celery_workers():
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='compile_start').count()
   assert count == 4
+
+
+TUNA_CELERY_BROKER_HOST, TUNA_CELERY_BROKER_PORT, TUNA_CELERY_BROKER_USER, TUNA_CELERY_BROKER_PWD = get_broker_env(
+)
+assert TUNA_CELERY_BROKER_HOST
+assert TUNA_CELERY_BROKER_PORT
+assert TUNA_CELERY_BROKER_USER
+assert TUNA_CELERY_BROKER_PWD
+
+TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST = get_backend_env()
+assert TUNA_CELERY_BACKEND_PORT
+assert TUNA_CELERY_BACKEND_HOST
