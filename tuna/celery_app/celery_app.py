@@ -30,61 +30,62 @@ import subprocess
 from celery import Celery
 from celery.utils.log import get_task_logger
 
-#when dockerized: TUNA_CELERY_BROKER = 'mituna_redis'
-TUNA_CELERY_BROKER = 'localhost'
-TUNA_REDIS_PORT = '6379'
-TUNA_BROKER_PORT = '5672'
-TUNA_BROKER_USER = None
-TUNA_BROKER_PWD = None
-TUNA_BROKER_PORT = None
-TUNA_V_HOST = None
 LOGGER = get_task_logger("celery_app")
 
-#redis
-#if 'TUNA_CELERY_BROKER' in os.environ:
-#  TUNA_CELERY_BROKER = os.environ['TUNA_CELERY_BROKER']
-#if 'TUNA_REDIS_PORT' in os.environ:
-#  TUNA_REDIS_PORT = os.environ['TUNA_REDIS_PORT']
 
-def check_broker_env():
-  """Check that env is set up for celery"""
-  req_env = [
-      'TUNA_BROKER_USER',
-      'TUNA_BROKER_PWD',
-      'TUNA_V_HOST',
-  ]
-  for env_var in req_env:
-    if env_var not in os.environ:
-      raise ValueError('%s must be specified in the environment', env_var)
-
-  return True
-
-def set_broker_env():
+def get_broker_env():
   """Set rabbitmq required env vars"""
 
-  if 'TUNA_CELERY_BROKER' in os.environ:
-    TUNA_CELERY_BROKER = os.environ['TUNA_CELERY_BROKER']
-  if 'TUNA_BROKER_USER' in os.environ:
-    TUNA_BROKER_USER = os.environ['TUNA_BROKER_USER']
-  if 'TUNA_BROKER_PWD' in os.environ:
-    TUNA_BROKER_PWD = os.environ['TUNA_BROKER_PWD']
-  if 'TUNA_BROKER_PORT' in os.environ:
-    TUNA_BROKER_PORT = os.environ['TUNA_BROKER_PORT']
-  if 'TUNA_V_HOST' in os.environ:
-    TUNA_V_HOST = os.environ['TUNA_V_HOST']
-  if 'TUNA_REDIS_PORT' in os.environ:
-    TUNA_REDIS_PORT = os.environ['TUNA_REDIS_PORT']
+  #defaults
+  TUNA_CELERY_BROKER_HOST = 'localhost'
+  TUNA_CELERY_BROKER_PORT = 5672
+  TUNA_CELERY_BROKER_USER = 'tuna_user'
+  TUNA_CELERY_BROKER_PWD = 'tuna1234'
 
-  return True
+  if 'TUNA_CELERY_BROKER_HOST' in os.environ:
+    TUNA_CELERY_BROKER_HOST = os.environ['TUNA_CELERY_BROKER_HOST']
+  if 'TUNA_CELERY_BROKER_USER' in os.environ:
+    TUNA_CELERY_BROKER_USER = os.environ['TUNA_CELERY_BROKER_USER']
+  if 'TUNA_CELERY_BROKER_PWD' in os.environ:
+    TUNA_CELERY_BROKER_PWD = os.environ['TUNA_CELERY_BROKER_PWD']
+  if 'TUNA_CELERY_BROKER_PORT' in os.environ:
+    TUNA_CELERY_BROKER_PORT = os.environ['TUNA_CELERY_BROKER_PORT']
+  if 'TUNA_CELERY_V_HOST' in os.environ:
+    TUNA_CELERY_V_HOST = os.environ['TUNA_CELERY_V_HOST']
 
-check_broker_env()
-set_broker_env()
+  return TUNA_CELERY_BROKER_HOST, TUNA_CELERY_BROKER_PORT, TUNA_CELERY_BROKER_USER, TUNA_CELERY_BROKER_PWD
 
-app = Celery('celery_app',
-             broker_url="amqp://tuna_user:tuna1234@localhost:5672/myvhost",
-             result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/",
-             include=['tuna.miopen.celery_tuning.celery_tasks'])
 
+def get_backend_env():
+  """Get Redis env vars"""
+
+  #defaults
+  TUNA_CELERY_BACKEND_PORT = 6379
+  TUNA_CELERY_BACKEND_HOST = 'localhost'
+
+  if 'TUNA_CELERY_BACKEND_PORT' in os.environ:
+    TUNA_CELERY_BACKEND_PORT = os.environ['TUNA_CELERY_BACKEND_PORT']
+  if 'TUNA_CELERY_BACKEND_HOST' in os.environ:
+    TUNA_CELERY_BACKEND_HOST = os.environ['TUNA_CELERY_BACKEND_HOST']
+
+  return TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST
+
+
+TUNA_CELERY_BROKER_HOST, TUNA_CELERY_BROKER_PORT, TUNA_CELERY_BROKER_USER, TUNA_CELERY_BROKER_PWD = get_broker_env(
+)
+
+TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST = get_backend_env()
+
+#ampq borker & redis backend
+app = Celery(
+    'celery_app',
+    broker_url=
+    f"amqp://{TUNA_CELERY_BROKER_USER}:{TUNA_CELERY_BROKER_PWD}@{TUNA_CELERY_BROKER_HOST}:{TUNA_CELERY_BROKER_PORT}/",
+    result_backend=
+    f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/",
+    include=['tuna.miopen.celery_tuning.celery_tasks'])
+
+#redis broker and backend
 #app = Celery(
 #    'celery_app',
 #    broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/14",
