@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mituna_celery_flower
+    privileged: true
+    group_add:
+      - video
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev:dri:rw
+    stdin_open: true
+    tty: true
+    volumes:
+      - /dev/dri:/dev/dri/:rw
+      - /var/lib/docker/:/var/lib/docker
+    env_file:
+      - .env
+    environment:
+        - TUNA_DB_HOSTNAME=${db_host}
+        - TUNA_DB_NAME=${db_name}
+        - TUNA_DB_USER_NAME=${db_user}
+        - TUNA_DB_USER_PASSWORD=${db_password}
+        - BROKER_URL=amqp://tuna_user:tuna1234@localhost:5672
+        #- FLOWER_BROKER_API_URL=http://tuna:tuna1234@localhost:15672/api
+        #- TUNA_REDIS_PORT=6378
+        #purge offline workers older than 1 day in seconds
+        #- FLOWER_PURGE_OFFLINE_WORKERS=86400
+    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True --purge_offline_workers=10800 --broker_api=ihttp://tuna_user:tuna1234@localhost:15672/api"
+    network_mode: "host"
+
