@@ -82,7 +82,7 @@ app = Celery(
     broker_url=
     f"amqp://{TUNA_CELERY_BROKER_USER}:{TUNA_CELERY_BROKER_PWD}@{TUNA_CELERY_BROKER_HOST}:{TUNA_CELERY_BROKER_PORT}/",
     result_backend=
-    f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/",
+    f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/15",
     include=['tuna.miopen.celery_tuning.celery_tasks'])
 
 #redis broker and backend
