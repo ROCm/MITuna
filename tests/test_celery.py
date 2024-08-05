@@ -28,6 +28,7 @@ import copy
 from time import sleep
 from multiprocessing import Value
 import aioredis
+import pytest_asyncio
 from sqlalchemy.inspection import inspect
 
 from utils import GoFishArgs, add_test_jobs, add_test_session
@@ -48,7 +49,7 @@ from tuna.miopen.celery_tuning.celery_tasks import prep_worker
 from tuna.miopen.worker.fin_utils import compose_config_obj, fin_job
 from tuna.miopen.utils.lib_helper import get_worker
 
-
+@pytest.mark.asyncio
 def test_celery_workers():
   miopen = MIOpen()
   miopen.args = GoFishArgs()
@@ -229,7 +230,7 @@ def test_celery_workers():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  redis = aioredis.from_url("redis://localhost:6379/15")
+  redis = await aioredis.from_url("redis://localhost:6379/15")
   print('Established redis connection')
   counter = 1
 
@@ -251,12 +252,12 @@ def test_celery_workers():
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()
     res_set.append((fin_json, context))
-    assert redis.set(f"celery-task-meta-{counter}", fin_json)
+    await redis.set(f"celery-task-meta-{counter}", fin_json)
     counter += 1
 
   print('Consuming from redis')
   assert miopen.consume(job_counter=counter, prefix=None)
-  redis.close()
+  await redis.close()
 
   with DbSession() as session:
     for fin_json, context in res_set:
