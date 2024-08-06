@@ -25,6 +25,7 @@
 ###############################################################################
 import os
 import copy
+import pytest
 from time import sleep
 from multiprocessing import Value
 import aioredis
