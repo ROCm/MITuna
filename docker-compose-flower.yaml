@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: mituna_celery_flower
+    container_name: mituna_celery_flower_rabbitmq
     privileged: true
     group_add:
       - video
@@ -29,6 +29,6 @@ services:
         #- TUNA_REDIS_PORT=6378
         #purge offline workers older than 1 day in seconds
         #- FLOWER_PURGE_OFFLINE_WORKERS=86400
-    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True --purge_offline_workers=10800 --broker_api=ihttp://tuna_user:tuna1234@localhost:15672/api"
+    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True --purge_offline_workers=10800 --broker_api=http://tuna_user:tuna1234@localhost:15672/api"
     network_mode: "host"
 
