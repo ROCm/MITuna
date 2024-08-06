@@ -50,7 +50,7 @@ from tuna.miopen.worker.fin_utils import compose_config_obj, fin_job
 from tuna.miopen.utils.lib_helper import get_worker
 
 @pytest.mark.asyncio
-def test_celery_workers():
+async def test_celery_workers():
   miopen = MIOpen()
   miopen.args = GoFishArgs()
   miopen.args.label = 'tuna_pytest_celery'
