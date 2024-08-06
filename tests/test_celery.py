@@ -25,6 +25,7 @@
 ###############################################################################
 import os
 import copy
+import json
 import pytest
 from time import sleep
 from multiprocessing import Value
@@ -253,7 +254,7 @@ async def test_celery_workers():
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()
     res_set.append((fin_json, context))
-    await redis.set(f"celery-task-meta-{counter}", fin_json)
+    await redis.set(f"celery-task-meta-{counter}", json.dumps(fin_json))
     counter += 1
 
   print('Consuming from redis')
