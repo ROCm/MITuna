@@ -644,7 +644,8 @@ def runFormat() {
         checkout scm
         def tuna_docker = getDocker("HIP")
         tuna_docker.inside("") {
-            sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/"
+            //yapf bug causes it to complain when aioredis await is present
+            sh "yapf -d -r --style='{based_on_style: google, indent_width: 2}' tuna/ tests/ alembic/ --exclude=tests/test_celery.py"
         }
     }
 }
