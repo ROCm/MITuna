@@ -47,7 +47,7 @@ pymysql==1.1.1
 PyNaCl==1.5
 pyparsing==2.4.7
 pytest==7.4.4
-pytest-asyncio==0.23.8
+pytest-asyncio==0.21
 pyyaml==6.0
 redis==5.0.1
 six==1.12.0
