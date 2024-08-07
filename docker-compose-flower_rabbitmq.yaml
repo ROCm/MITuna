@@ -24,11 +24,13 @@ services:
         - TUNA_DB_NAME=${db_name}
         - TUNA_DB_USER_NAME=${db_user}
         - TUNA_DB_USER_PASSWORD=${db_password}
-        - BROKER_URL=amqp://tuna_user:tuna1234@localhost:5672
-        #- FLOWER_BROKER_API_URL=http://tuna:tuna1234@localhost:15672/api
-        #- TUNA_REDIS_PORT=6378
+        - TUNA_CELERY_BROKER_USER=${TUNA_CELERY_BROKER_USER}
+        - TUNA_CELERY_BROKER_PWD=${TUNA_CELERY_BROKER_PWD}
+        - TUNA_CELERY_BROKER_HOST=${TUNA_CELERY_BROKER_HOST}
+        - TUNA_CELERY_BROKER_PORT=${TUNA_CELERY_BROKER_PORT}
+        - BROKER_URL=amqp://${TUNA_CELERY_BROKER_USER}:${TUNA_CELERY_BROKER_PWD}@${TUNA_CELERY_BROKER_HOST}:${TUNA_CELERY_BROKER_PORT}
         #purge offline workers older than 1 day in seconds
         #- FLOWER_PURGE_OFFLINE_WORKERS=86400
-    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True --purge_offline_workers=10800 --broker_api=http://tuna_user:tuna1234@localhost:15672/api"
+    command: "celery -A tuna.celery_app.celery_app flower --debug --persistent=True --purge_offline_workers=10800 --broker_api=http://${TUNA_CELERY_BROKER_USER}:${TUNA_CELERY_BROKER_PWD}@{TUNA_CELERY_BROKER_HOST}:{TUNA_CELERY_BROKER_PORT}/api/vhost --port=5555"
     network_mode: "host"
 
