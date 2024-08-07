@@ -85,13 +85,6 @@ app = Celery(
     f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/15",
     include=['tuna.miopen.celery_tuning.celery_tasks'])
 
-#redis broker and backend
-#app = Celery(
-#    'celery_app',
-#    broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/14",
-#    result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15",
-#    include=['tuna.miopen.celery_tuning.celery_tasks'])
-
 
 def stop_active_workers():
   """Shutdown active workers"""

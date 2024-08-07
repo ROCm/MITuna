@@ -188,9 +188,7 @@ def finFindCompileEnqueue(){
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        env.TUNA_CELERY_BROKER="${db_host}"
-        //env.BROKER_TRANSPORT="redis://${db_host}:6379/14"
-        //env.CELERY_RESULT_BACKEND="redis://${db_host}:6379/15"
+        env.TUNA_CELERY_BROKER_HOST="${db_host}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
         celery_log="${env.WORKSPACE}/tuna/${branch_id}_find_compile_celery_log.log"
         sh "touch ${celery_log}"
@@ -237,7 +235,7 @@ def finFindEval(){
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        env.TUNA_CELERY_BROKER="${db_host}"
+        env.TUNA_CELERY_BROKER_HOST="${db_host}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
         def pids = []
 
@@ -383,7 +381,7 @@ def perfCompile() {
         env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        env.TUNA_CELERY_BROKER="${db_host}"
+        env.TUNA_CELERY_BROKER_HOST="${db_host}"
         runsql("DELETE FROM conv_job;")
         def sesh1 = runsql("select id from session order by id asc limit 1")
         celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_compile_celery_log.log"
@@ -438,7 +436,7 @@ def perfEval() {
         env.TUNA_DOCKER_NAME="ci-tuna_${branch_id}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        env.TUNA_CELERY_BROKER="${db_host}"
+        env.TUNA_CELERY_BROKER_HOST="${db_host}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
 
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
