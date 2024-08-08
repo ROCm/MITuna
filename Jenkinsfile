@@ -12,6 +12,8 @@ pipeline {
         db_host = "${CI_DB_HOSTNAME}" 
         db_user = "${DB_USER_NAME}"
         db_password = "${DB_USER_PASSWORD}"
+        broker_user = "${TUNA_CELERY_BROKER_USER}"
+        broker_pwd = "${TUNA_CELERY_BROKER_PWD}"
         pipeline_user = "${PIPELINE_USER}"
         pipeline_pwd = "${PIPELINE_PWD}"
         arch = 'gfx90a'
