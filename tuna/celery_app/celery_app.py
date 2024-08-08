@@ -29,6 +29,7 @@ import os
 import subprocess
 from celery import Celery
 from celery.utils.log import get_task_logger
+from tuna.custom_errors import CustomError
 
 LOGGER = get_task_logger("celery_app")
 
@@ -38,16 +39,19 @@ def get_broker_env():
 
   #defaults
   TUNA_CELERY_BROKER_HOST = 'localhost'
-  TUNA_CELERY_BROKER_PORT = 5672
-  TUNA_CELERY_BROKER_USER = 'tuna_user'
-  TUNA_CELERY_BROKER_PWD = 'tuna1234'
+  TUNA_CELERY_BROKER_PORT = 5673
+
+  if 'TUNA_CELERY_BROKER_USER' not in os.environ:
+    raise CustomError('TUNA_CELERY_BROKER_USER must be specified in env')
+  else:
+    TUNA_CELERY_BROKER_USER = os.environ['TUNA_CELERY_BROKER_USER']
+  if 'TUNA_CELERY_BROKER_PWD' not in os.environ:
+    raise CustomError('TUNA_CELERY_BROKER_PWD must be specified in env')
+  else:
+    TUNA_CELERY_BROKER_PWD = os.environ['TUNA_CELERY_BROKER_PWD']
 
   if 'TUNA_CELERY_BROKER_HOST' in os.environ:
     TUNA_CELERY_BROKER_HOST = os.environ['TUNA_CELERY_BROKER_HOST']
-  if 'TUNA_CELERY_BROKER_USER' in os.environ:
-    TUNA_CELERY_BROKER_USER = os.environ['TUNA_CELERY_BROKER_USER']
-  if 'TUNA_CELERY_BROKER_PWD' in os.environ:
-    TUNA_CELERY_BROKER_PWD = os.environ['TUNA_CELERY_BROKER_PWD']
   if 'TUNA_CELERY_BROKER_PORT' in os.environ:
     TUNA_CELERY_BROKER_PORT = os.environ['TUNA_CELERY_BROKER_PORT']
   if 'TUNA_CELERY_V_HOST' in os.environ:
@@ -60,7 +64,7 @@ def get_backend_env():
   """Get Redis env vars"""
 
   #defaults
-  TUNA_CELERY_BACKEND_PORT = 6379
+  TUNA_CELERY_BACKEND_PORT = 6378
   TUNA_CELERY_BACKEND_HOST = 'localhost'
 
   if 'TUNA_CELERY_BACKEND_PORT' in os.environ:
