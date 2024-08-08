@@ -57,7 +57,14 @@ export TUNA_ROCM_VERSION=osdb-12969
 export TUNA_DB_HOSTNAME=10.XXX.XX.XX
 export TUNA_DB_USER_PASSWORD=myrootpwd
 export TUNA_CELERY_JOB_BATCH_SIZE=10 (optional)
-export TUNA_CELERY_BROKER=localhost
+#rabbitMQ
+export TUNA_CELERY_BROKER_HOST=localhost
+export TUNA_CELERY_BROKER_USER=<username>
+export TUNA_CELERY_BROKER_PWD=<pwd>
+export TUNA_CELERY_BROKER_PORT=5672
+#redis
+export TUNA_CELERY_BACKEND_HOST=localhost
+export TUNA_CELERY_BACKEND_PORT=6379
 ```
 
 ##Flower

@@ -25,9 +25,12 @@
 ###############################################################################
 import os
 import copy
+import json
+import pytest
 from time import sleep
 from multiprocessing import Value
 import aioredis
+import pytest_asyncio
 from sqlalchemy.inspection import inspect
 
 from utils import GoFishArgs, add_test_jobs, add_test_session
@@ -42,13 +45,14 @@ from tuna.machine import Machine
 from tuna.libraries import Operation
 from tuna.celery_app.celery_workers import launch_worker_per_node
 from tuna.celery_app.utility import get_q_name
+from tuna.celery_app.celery_app import get_broker_env, get_backend_env
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.miopen.celery_tuning.celery_tasks import prep_worker
 from tuna.miopen.worker.fin_utils import compose_config_obj, fin_job
 from tuna.miopen.utils.lib_helper import get_worker
 
-
-def test_celery_workers():
+@pytest.mark.asyncio
+async def test_celery_workers():
   miopen = MIOpen()
   miopen.args = GoFishArgs()
   miopen.args.label = 'tuna_pytest_celery'
@@ -228,7 +232,7 @@ def test_celery_workers():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  redis = aioredis.from_url("redis://localhost:6379/15")
+  redis = await aioredis.from_url("redis://localhost:6379/15")
   print('Established redis connection')
   counter = 1
 
@@ -250,12 +254,12 @@ def test_celery_workers():
     worker.fin_steps = miopen.args.fin_steps
     fin_json = worker.run()
     res_set.append((fin_json, context))
-    assert redis.set(f"celery-task-meta-{counter}", fin_json)
+    await redis.set(f"celery-task-meta-{counter}", json.dumps(fin_json))
     counter += 1
 
   print('Consuming from redis')
   assert miopen.consume(job_counter=counter, prefix=None)
-  redis.close()
+  await redis.close()
 
   with DbSession() as session:
     for fin_json, context in res_set:
@@ -281,3 +285,15 @@ def test_celery_workers():
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='compile_start').count()
   assert count == 4
+
+
+TUNA_CELERY_BROKER_HOST, TUNA_CELERY_BROKER_PORT, TUNA_CELERY_BROKER_USER, TUNA_CELERY_BROKER_PWD = get_broker_env(
+)
+assert TUNA_CELERY_BROKER_HOST
+assert TUNA_CELERY_BROKER_PORT
+assert TUNA_CELERY_BROKER_USER
+assert TUNA_CELERY_BROKER_PWD
+
+TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST = get_backend_env()
+assert TUNA_CELERY_BACKEND_PORT
+assert TUNA_CELERY_BACKEND_HOST
