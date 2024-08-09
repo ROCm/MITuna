@@ -344,7 +344,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     self.logger.info('Found %s old results', len(results))
     for key in keys:
       try:
-        redis.delete(key)
+        await redis.delete(key)
       except aioredis.exceptions.ResponseError as red_err:
         self.logger.error(red_err)
         self.logger.info(key.decode('utf-8'))

@@ -210,7 +210,7 @@ def finFindCompileEnqueue(){
         sh "cat ${celery_log}"
 
         sh "printenv"
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\" && result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
 
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
@@ -259,7 +259,7 @@ def finFindEval(){
             counter++
         }
 
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\" && result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         //killing off celery workers by pid
         pid_list.each{
           try{
@@ -393,7 +393,7 @@ def perfCompile() {
         sh "./tuna/go_fish.py miopen load_job -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
@@ -410,7 +410,7 @@ def perfCompile() {
         sh "./tuna/go_fish.py miopen load_job -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid2}"
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'conv_${branch_id}_v2';")
         if(compiled_conv_jobs.toInteger() == 0)
@@ -458,7 +458,7 @@ def perfEval() {
             counter++
         }
 
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
         {
@@ -466,7 +466,7 @@ def perfEval() {
         }
 
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
 
 
         pid_list.each{
