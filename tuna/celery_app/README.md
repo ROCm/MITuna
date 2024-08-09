@@ -31,10 +31,11 @@ Launch the celery docker container:
 sudo docker exec -it mituna_celery_1 bash
 
 To test celery on a local machine:
-Start the redis server:
+Install redis and start the redis server:
 ```
 redis-server --daemonize yes
 ```
+Intall rabbitMQ that is used as a broker by celery. Instructions can be found here: [Install rabbitMQ](https://www.rabbitmq.com/docs/install-debian)
 
 Clone MITuna and launch a celery worker:
 ```
@@ -45,6 +46,22 @@ source ~/db_env.db
 celery -A tuna.celery_app.celery worker -l info -E -n worker_name -Q custom_q_name
 
 ```
+
+##User interfaces to track redis backend and rabbitMQ broker data
+
+MITuna provides a docker compose file to launch [flower](https://flower.readthedocs.io/en/latest/), which helps track the tuning:
+```
+docker compose -f docker-compose-flower_rabbitmq.yaml up --build -d
+```
+Navigate to `http://localhost:5555` to interact with the flower UI.
+
+To track the rabbitMQ broker data,install the following:
+```
+rabbitmq-plugins enable rabbitmq_management
+```
+Navigate to `http://localhost:15672` to interact with the rabbitMQ UI. The username and password required
+have to be set up through rabbitMQ, see: [rabbitMQ access control](https://www.rabbitmq.com/docs/access-control).
+
 
 Note:
 myvenv is the virtual environment as per MITuna/requirements.txt.
