@@ -207,6 +207,7 @@ def finFindCompileEnqueue(){
         sh "printenv"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
         def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        sleep 5
         sh "cat ${celery_log}"
 
         sh "printenv"
@@ -254,6 +255,7 @@ def finFindEval(){
             celery_log="${env.WORKSPACE}/tuna/${branch_id}_find_eval_celery_log_${counter}.log"
             sh "touch ${celery_log}"
             def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sleep 5
             sh "cat ${celery_log}"
             pid_list.add(proc_id)
             counter++
@@ -387,6 +389,7 @@ def perfCompile() {
         sh "touch ${celery_log}"
         def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
+        sleep 5
         sh "cat ${celery_log}"
 
         sh "./tuna/go_fish.py miopen import_configs -t alexnet_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
@@ -403,6 +406,7 @@ def perfCompile() {
 
         def pid2 = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid2}"
+        sleep 5
         sh "cat ${celery_log}"
 
         sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
@@ -453,6 +457,7 @@ def perfEval() {
             celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_eval_celery_log_${counter}.log"
             sh "touch ${celery_log}"
             def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sleep 5
             sh "cat ${celery_log}"
             pid_list.add(proc_id)
             counter++
