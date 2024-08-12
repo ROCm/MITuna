@@ -211,7 +211,7 @@ def finFindCompileEnqueue(){
         sh "cat ${celery_log}"
 
         sh "printenv"
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\" && result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
 
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
@@ -450,15 +450,17 @@ def perfEval() {
         sh "echo ${gpu_list}"
         def counter = 0
         def pid_list = []
+        def celery_log_list = []
 
         sh "printenv"
         // &=046
         gpu_list.each{
             celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_eval_celery_log_${counter}.log"
+            celery_log_list.add(${celery_log})
             sh "touch ${celery_log}"
             def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
             sleep 5
-            sh "cat ${celery_log}"
+            //sh "cat ${celery_log}"
             pid_list.add(proc_id)
             counter++
         }
@@ -470,13 +472,52 @@ def perfEval() {
             error("Unable to eval all jobs for alexnet")
         }
 
+        pid_list.each{
+          try{
+            sh "kill -9 ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
+        celery_log_list.each{
+          try{
+            sh cat ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
+
+        counter = 0
+        pid_list = []
+        celery_log_list = []
+
+        gpu_list.each{
+            celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_eval_celery_log_${counter}.log"
+            celery_log_list.add(${celery_log})
+            sh "touch ${celery_log}"
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sleep 5
+            //sh "cat ${celery_log}"
+            pid_list.add(proc_id)
+            counter++
+        }
         sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
 
 
         pid_list.each{
           try{
             sh "kill -9 ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
+        celery_log_list.each{
+          try{
+            sh cat ${it}"
           } catch (Exception err) {
             sh "echo ${err}"
           }
