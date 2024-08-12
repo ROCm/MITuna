@@ -482,7 +482,7 @@ def perfEval() {
 
         celery_log_list.each{
           try{
-            sh cat ${it}"
+            sh "cat ${it}"
           } catch (Exception err) {
             sh "echo ${err}"
           }
@@ -517,7 +517,7 @@ def perfEval() {
 
         celery_log_list.each{
           try{
-            sh cat ${it}"
+            sh "cat ${it}"
           } catch (Exception err) {
             sh "echo ${err}"
           }
