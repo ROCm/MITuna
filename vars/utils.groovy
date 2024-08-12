@@ -206,11 +206,12 @@ def finFindCompileEnqueue(){
 
         sh "printenv"
         def num_jobs = runsql("SELECT count(*) from conv_job WHERE reason = 'finFind_${branch_id}';").toInteger()
-        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l debug --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        sleep 5
         sh "cat ${celery_log}"
 
         sh "printenv"
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\" && result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
 
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
@@ -253,13 +254,14 @@ def finFindEval(){
         gpu_list.each{
             celery_log="${env.WORKSPACE}/tuna/${branch_id}_find_eval_celery_log_${counter}.log"
             sh "touch ${celery_log}"
-            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l debug --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sleep 5
             sh "cat ${celery_log}"
             pid_list.add(proc_id)
             counter++
         }
 
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\" && result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         //killing off celery workers by pid
         pid_list.each{
           try{
@@ -385,15 +387,16 @@ def perfCompile() {
         def sesh1 = runsql("select id from session order by id asc limit 1")
         celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_compile_celery_log.log"
         sh "touch ${celery_log}"
-        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        def pid = sh(script: "celery -A tuna.celery_app.celery_app worker -l debug -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid}"
+        sleep 5
         sh "cat ${celery_log}"
 
         sh "./tuna/go_fish.py miopen import_configs -t alexnet_${branch_id} --mark_recurrent -f utils/recurrent_cfgs/alexnet_4jobs.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
         sh "./tuna/go_fish.py miopen load_job -t alexnet_${branch_id} -l alexnet_${branch_id} --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'alexnet_${branch_id}'");
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid}"
         def compiled_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'alexnet_${branch_id}';")
         if(compiled_jobs.toInteger() == 0)
@@ -401,8 +404,9 @@ def perfCompile() {
             error("Unable to compile any jobs for alexnet")
         }
 
-        def pid2 = sh(script: "celery -A tuna.celery_app.celery_app worker -l info -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
+        def pid2 = sh(script: "celery -A tuna.celery_app.celery_app worker -l debug -E --detach --logfile=${celery_log} -n tuna_${branch_id} -Q compile_q_${db_name}_sess_${sesh1} & echo \$!", returnStdout: true).trim()
         sh "echo ${pid2}"
+        sleep 5
         sh "cat ${celery_log}"
 
         sh "./tuna/go_fish.py miopen import_configs -t conv_${branch_id}_v2 --mark_recurrent -f utils/configs/conv_configs_NHWC.txt --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1"
@@ -410,7 +414,7 @@ def perfCompile() {
         sh "./tuna/go_fish.py miopen load_job -t conv_${branch_id}_v2 -l conv_${branch_id}_v2 --session_id ${sesh1} --fin_steps miopen_perf_compile,miopen_perf_eval ${job_lim}"
         // Get the number of jobs
         def num_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'new' and reason = 'conv_${branch_id}_v2'");
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_compile -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
         sh "kill -9 ${pid2}"
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where state = 'compiled' and reason = 'conv_${branch_id}_v2';")
         if(compiled_conv_jobs.toInteger() == 0)
@@ -446,32 +450,74 @@ def perfEval() {
         sh "echo ${gpu_list}"
         def counter = 0
         def pid_list = []
+        def celery_log_list = []
 
         sh "printenv"
         // &=046
         gpu_list.each{
             celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_eval_celery_log_${counter}.log"
+            celery_log_list.add(celery_log)
             sh "touch ${celery_log}"
-            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l info --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
-            sh "cat ${celery_log}"
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l debug --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sleep 5
+            //sh "cat ${celery_log}"
             pid_list.add(proc_id)
             counter++
         }
 
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l alexnet_${branch_id} --session_id ${sesh1} --enqueue_only"
         def eval_jobs = runsql("SELECT count(*) from conv_job where state = 'evaluated' and reason = 'alexnet_${branch_id}';")
         if(eval_jobs.toInteger() != compiled_jobs.toInteger())
         {
             error("Unable to eval all jobs for alexnet")
         }
 
+        pid_list.each{
+          try{
+            sh "kill -9 ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
+        celery_log_list.each{
+          try{
+            sh "cat ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
         def compiled_conv_jobs = runsql("SELECT count(*) from conv_job where reason = 'conv_${branch_id}_v2' and state = 'compiled';")
-        sh "export BROKER_URL=\"amqp://${broker_user}:${broker_pwd}@${db_host}:5672/\"&& result_backend=\"redis://${db_host}:6379/15\" && ./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
+
+        counter = 0
+        pid_list = []
+        celery_log_list = []
+
+        gpu_list.each{
+            celery_log="${env.WORKSPACE}/tuna/${branch_id}_perf_eval_celery_log_${counter}.log"
+            celery_log_list.add(celery_log)
+            sh "touch ${celery_log}"
+            def proc_id = sh(script: "celery -A tuna.celery_app.celery_app worker -l debug --logfile=${celery_log} -n tuna_${branch_id}_gpu_id_${counter} -Q eval_q_${db_name}_sess_${sesh1} -c 1 2>\0461 1>/dev/null & echo \$!", returnStdout: true).trim()
+            sleep 5
+            //sh "cat ${celery_log}"
+            pid_list.add(proc_id)
+            counter++
+        }
+        sh "./tuna/go_fish.py miopen --fin_steps miopen_perf_eval -l conv_${branch_id}_v2 --session_id ${sesh1} --enqueue_only"
 
 
         pid_list.each{
           try{
             sh "kill -9 ${it}"
+          } catch (Exception err) {
+            sh "echo ${err}"
+          }
+        }
+
+        celery_log_list.each{
+          try{
+            sh "cat ${it}"
           } catch (Exception err) {
             sh "echo ${err}"
           }
