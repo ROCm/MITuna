@@ -665,6 +665,7 @@ class FinClass(WorkerInterface):
       if not fdb_entry.kernel_group is None:
         self.logger.info('Invalidate kernel_group %s', fdb_entry.kernel_group)
         session.query(self.dbt.kernel_cache)\
+            .filter(self.dbt.kernel_cache.valid == 1)\
             .filter(self.dbt.kernel_cache.kernel_group ==
                                           fdb_entry.kernel_group)\
             .update({'valid': 0})
