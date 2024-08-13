@@ -294,6 +294,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def enqueue_jobs(self, job_counter, job_batch_size, q_name):
     """Enqueue celery jobs"""
+    self.logger.info('Starting enqueue')
     with DbSession() as session:
       while True:
         job_list = []
