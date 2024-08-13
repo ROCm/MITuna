@@ -125,7 +125,9 @@ def purge_queue(q_names):
       LOGGER.info('Purging Q %s', q_name)
       cmd = f"celery -A tuna.celery_app.celery_app purge -f -Q {q_name}".split(
           ' ')
-      _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+      subp = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+      #waiting for purge queue before continuing
+      subp.wait()
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.info(exp)
       return False
