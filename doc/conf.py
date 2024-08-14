@@ -30,7 +30,7 @@ breathe_projects = { "MITuna": "xml/" }
 
 # General information about the project.
 project = u'MITuna'
-copyright = u'2022, Advanced Micro Devices, Inc. All rights reserved'
+copyright = u'2024, Advanced Micro Devices, Inc. All rights reserved'
 author = u'Advanced Micro Devices, Inc'
 version = '1.0'
 release = version

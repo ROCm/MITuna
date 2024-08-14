@@ -17,6 +17,8 @@ Sources and binaries can be found at `MITuna's GitHub site <https://github.com/R
    findocs
    flaskapp
    tuningcycle
+   golddb
+   dbversioning
    
 Indices and tables
 ==================

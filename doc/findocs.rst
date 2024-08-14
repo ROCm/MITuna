@@ -1,2 +1,2 @@
 
-.. include:: src/FinDocs.md
+.. include:: ../tuna/miopen/doc/FinDocs.md

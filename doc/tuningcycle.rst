@@ -1,4 +1,4 @@
 TuningCycle
 ************
 
-.. include:: src/TuningCycle.md
+.. include:: ../tuna/miopen/doc/TuningCycle.md

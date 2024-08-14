@@ -59,26 +59,35 @@ ssh <user>@<ip-address>
 For the tuning cycle, every machine needs to be able to access every other machine through
 passwordless ssh.
 
+Install [RabbitMQ](https://www.rabbitmq.com/docs/download)
+
+Install Redis:
+```
+sudo apt-get install redis
+```
+Check */etc/redis/redis.conf and allow for remote connections.
+
+
 
 Installation
 ------------
 Clone the repo using
 ```
 git clone <repo url>
-```
-Enter the Tuna directory
-```
 cd MITuna
 ```
+
 Create a virtual environment, and activate it (by sourcing its `activate` script)
 ```
 python3.9 -m venv myvenv
 source myvenv/bin/activate
 ```
+
 Install the required dependencies:
 ```
 python3.9 -m pip install -r requirements.txt
 ```
+
 The above assumes that Tuna lives in the home directory and the virtual environment was created using the command indicated above.
 
 Add the following environment variables to a local file and then source the file:
@@ -93,10 +102,10 @@ export TUNA_CELERY_JOB_BATCH_SIZE=<integer>
 export TUNA_CELERY_BROKER_HOST=localhost
 export TUNA_CELERY_BROKER_USER=<username>
 export TUNA_CELERY_BROKER_PWD=<pwd>
-export TUNA_CELERY_BROKER_PORT=5672
+export TUNA_CELERY_BROKER_PORT=5672 #default
 #redis
 export TUNA_CELERY_BACKEND_HOST=localhost
-export TUNA_CELERY_BACKEND_PORT=6379
+export TUNA_CELERY_BACKEND_PORT=6379 #default
 
 export gateway_ip=<gateway_ip>
 export gateway_port=<gateway_port>
@@ -125,7 +134,7 @@ The installation and setup are now complete. To start a tuning cycle, please fol
 documented in [TuningCycle](https://github.com/ROCm/MITuna/blob/develop/doc/src/TuningCycle.md)
 
 Logs Storing and Analysis
----------------
+-------------------------
 For use cases requiring logs to be stored, searched and analyzed, Tuna integrates with Logstash and Elastic Search. 
 
 This can be done through exporting the logstash destination details to enable the logs storing service. 
@@ -211,3 +220,15 @@ mypy tuna/rocmlir/rocmlir_lib.py --ignore-missing-imports --follow-imports=skip
 mypy tuna/rocmlir/rocmlir_tables.py --ignore-missing-imports --follow-imports=skip
 mypy tuna/rocmlir/rocmlir_worker.py --ignore-missing-imports --follow-imports=skip
 ```
+
+Generating documentation
+------------------------
+
+MITuna provides general documentation in *MITuna/tuna*. This folder also contains pointers in
+*index.rst* to project specific documentation such as [MIOpen](tuna/miopen/doc).
+Once new documentation is added, it can be generated with:
+```
+cd MITuna/doc
+make html
+```
+The new generated html files can be found in the _build folder.
