@@ -1,5 +1,5 @@
-What is Tuna
-============
+Tuning through MIOpen
+=====================
 
 As a high-performance kernels library, MIOpen needs a substantive tuning effort to discover the
 optimal tuning parameters. Kernel tuning entails compiling and running MIOpen kernels with different
@@ -60,14 +60,14 @@ including the prerequisites are detailed below.
 Before a configuration gets tagged, a model and framework need to be added. This allows for
 benchmarking of a certain model, post tuning.
 
-```
-./go_fish.py --add_model Resnet50 --md_version 1
-./go_fish.py --add_framework Pytorch --fw_version 1
---add_model - model name
---md_version - model version
---add_framework - framework name
---fw_version - framework version
-```
+> ```  
+> ./go_fish.py --add_model Resnet50 --md_version 1  
+> ./go_fish.py --add_framework Pytorch --fw_version 1  
+> --add_model - model name  
+> --md_version - model version  
+> --add_framework - framework name  
+> --fw_version - framework version  
+> ``` 
 
 The config table contains network configurations. If provided with a text file of MIOpenDriver
 commands, the import script can translate those commands and populate the config table.
@@ -76,28 +76,28 @@ A tag will be required when adding a tuning job. Tags are stored in the config_t
 A model and framework name and version are also required. This enables MITuna to track
 benchmark performance post-tuning.
 
-```
-./go_fish.py miopen import_configs --add_model Resnet50 --md_version 1
-./go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1
-./go_fish.py miopen import_configs -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt
---model Resnet50 --md_version 1 --framework Pytorch --fw_version 1</p>
--t - tag
--f - filepath
---model - model name
---md_version - model version
---framework - framework name
---fw_version - framework version
--
-```
+> ``` 
+> ./go_fish.py miopen import_configs --add_model Resnet50 --md_version 1  
+> ./go_fish.py miopen import_configs --add_framework Pytorch --fw_version 1 
+> ./go_fish.py miopen import_configs -t resnet50 -f ../utils/recurrent_cfgs/resnet50.txt  
+> --model Resnet50 --md_version 1 --framework Pytorch --fw_version 1</p>  
+> -t - tag  
+> -f - filepath 
+> --model - model name  
+> --md_version - model version  
+> --framework - framework name  
+> --fw_version - framework version  
+> -
+> ``` 
 
 **Add Solvers (2)**
 
 The solver table contains MIOpen solvers and solver characteristics.
 This should be updated when an MIOpen version modifies solvers.
 
-```
-./go_fish.py miopen --update_solvers
-```
+> ```
+> ./go_fish.py miopen --update_solvers
+> ```
 
 **Add Tuning Session (3)**
 
@@ -108,21 +108,24 @@ This command will need to be run from inside the tuning environment eg MITuna do
 and will populate the table with the version and architecture information.
 
 [Use backend=HIPNOGPU docker]
-```
-./go_fish.py miopen --init_session -l reason
---init_session - create a session entry
--l             - reference text description
-```
+
+> ``` 
+> ./go_fish.py miopen --init_session -l reason  
+> --init_session - create a session entry 
+> -l             - reference text description 
+> ``` 
 
 **Add Applicability (4)**
+
 Each network configuration has a set of applicable solvers. This step will update the
 solver_applicability table with applicable solvers for each configuration for the session.
 
 [Use backend=HIPNOGPU docker]
-```
-./go_fish.py miopen --update_applicability --session_id 1
---session_id - tuning session id
-```
+
+> ``` 
+> ./go_fish.py miopen --update_applicability --session_id 1 
+> --session_id - tuning session id  
+> ``` 
 
 **Load Jobs (5)**
 
@@ -132,14 +135,14 @@ the config_tags table. Jobs should have a compile and an eval fin step pair.
 
 Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, and miopen_find_eval.
 
-```
-./load_job.py --session_id 1 -t resnet50 --fin_steps miopen_perf_compile,miopen_perf_eval -o -l reason
---session_id - tuning session id
--t           - config tag
---fin_steps  - operations to be performed by fin (tuning handle into miopen)
--o           - only_applicable, will create a job for each applicable solver
--l           - reference text description
-```
+> ``` 
+> ./load_job.py --session_id 1 -t resnet50 --fin_steps miopen_perf_compile,miopen_perf_eval -o -l reason  
+> --session_id - tuning session id  
+> -t           - config tag 
+> --fin_steps  - operations to be performed by fin (tuning handle into miopen)  
+> -o           - only_applicable, will create a job for each applicable solver  
+> -l           - reference text description 
+> ``` 
 
 **Compile Step (6)**
 
@@ -150,18 +153,21 @@ terminal.
 
 [Use backend=HIPNOGPU docker]
 To enqueue the jobs run the following on any node:
-```
-./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile --enqueue_only
---session_id    - tuning session id
---fin_steps     - execute this operation
---enqueue_only  - enqueue the jobs to the redis queue
-```
+
+> ``` 
+> ./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile --enqueue_only 
+> --session_id    - tuning session id 
+> --fin_steps     - execute this operation  
+> --enqueue_only  - enqueue the jobs to the redis queue 
+> ``` 
+
 To launch the jobs through Celery workers, on the compile node run:
-```
-./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile
---session_id    - tuning session id
---fin_steps     - execute this operation
-```
+
+> ``` 
+> ./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_compile  
+> --session_id    - tuning session id 
+> --fin_steps     - execute this operation  
+> ``` 
 
 **Evaluation Step (7)**
 
@@ -171,12 +177,13 @@ and the job execution process that launched Celery workers on the evaluation nod
 
 [Use backend=HIP docker]
 To enqueue the jobs run the following on any node:
-```
-./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_eval --enqueue_only
---session_id    - tuning session id
---fin_steps     - execute this operation
---enqueue_only  - enqueue the jobs to the redis queue
-```
+
+> ``` 
+> ./go_fish.py miopen --session_id 1 --fin_steps miopen_perf_eval --enqueue_only  
+> --session_id    - tuning session id 
+> --fin_steps     - execute this operation  
+> --enqueue_only  - enqueue the jobs to the redis queue 
+> ``` 
 
 **Database Export (8)**
 
@@ -186,37 +193,36 @@ for selecting session as well as database type.
 The outputs of this function are database files in the format that MIOpen keeps and manages.
 eg for MI100, -p will produce a gfx90878.db file, -f will produce gfx90878.HIP.fdb.txt, and -k will produce gfx90878.kdb.
 
-```
-./export_db.py --session_id 1 -p
---session_id - tuning session id
--p           - export performance db
--f           - export find db
--k           - export kernel db
-```
+> ``` 
+> ./export_db.py --session_id 1 -p  
+> --session_id - tuning session id  
+> -p           - export performance db  
+> -f           - export find db 
+> -k           - export kernel db 
+> ``` 
 
 
-**NOTE**
+**_NOTE**
 
 A celery worker can also be launched manually. It requires a few extra env variables. Launch the
 enqueue step in a terminal, then separately launch the celery worker manually, sample:
 
-```
-export CELERY_BROKER_URL=redis://<hostname>:6379/14
-export CELERY_RESULT_BACKEND=redis://<hostname>:6379/15
-cd MITuna
-celery -A tuna.celery_app.celery_app worker -l info --logfile=<logfile> -n <unique_worker_name> -Q <q_name>
-
-```
+> ``` 
+> export CELERY_BROKER_URL=redis://<hostname>:6379/14 
+> export CELERY_RESULT_BACKEND=redis://<hostname>:6379/15 
+> cd MITuna 
+> celery -A tuna.celery_app.celery_app worker -l info --logfile=<logfile> -n <unique_worker_name> -Q <q_name> 
+> ``` 
 
 Sample manual launch for the eval step:
 
-```
-export CELERY_BROKER_URL=amqp://<user><password>@<hostname>:6379/14
-export CELERY_RESULT_BACKEND=redis://<hostname>:6379/15
-cd MITuna
-<for each GPUID>
-  celery -A tuna.celery_app.celery_app worker -l info --logfile=<logfile>_gpu_id_<GPUID> -n <unique_worker_name>_gpu_id_<GPUID> -Q <q_name> -c 1
-```
+> ``` 
+> export CELERY_BROKER_URL=amqp://<user><password>@<hostname>:6379/14 
+> export CELERY_RESULT_BACKEND=redis://<hostname>:6379/15
+> cd MITuna 
+> <for each GPUID>  
+>   celery -A tuna.celery_app.celery_app worker -l info --logfile=<logfile>_gpu_id_<GPUID> -n <unique_worker_name>_gpu_id_<GPUID> -Q <q_name> -c 1  
+> ``` 
 
 Launching the worker manually can help with debugging part of the code used by the celery worker
 such as the decorated celery task (@app.task).
