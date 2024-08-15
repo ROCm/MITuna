@@ -1,11 +1,7 @@
-New library integration
-=======================
-An example of how to integrate external applications in Tuna to utilize the scaling
-features of Tuna
-
-
 Tuning through the Example library
-----------------------------------
+==================================
+An example of how to integrate external applications in MITuna.
+
 
 *Example* is mock library that runs the *rocminfo* binary.
 The supported tuning steps are:

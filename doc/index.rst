@@ -14,10 +14,8 @@ Sources and binaries can be found at `MITuna's GitHub site <https://github.com/R
    :caption: Contents:
 
    readme
-   findocs
-   flaskapp
    tuning
-   golddb
+   findocs
    dbversioning
    
 Indices and tables
