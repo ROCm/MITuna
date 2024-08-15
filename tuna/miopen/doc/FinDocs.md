@@ -8,14 +8,14 @@ To run Fin steps in tuna, a new docker needs to be created, that contains FIN, M
 and later a clone of MITuna.
 Steps.
 
-> Navigate to a clone of MITuna and run:
-> ``` 
-> docker build -f Dockerfile -t my_docker_name --build-arg 'BACKEND=HIPNOGPU' .  
-> drun --network host my_docker_name bash  
-> cd  
-> git clone https://github.com/ROCm/MITuna.git  
-> cd MITuna/tuna  
-> ./go_fish.py miopen --update_solver  
-> ./go_fish.py miopen --init_session -l someReason -a gfx908 -n 120  
-> ./go_fish.py miopen --update_applicability --session_id 1  
-> ```  
+.. code-block::  
+  :caption: Navigate to a clone of MITuna and run:
+
+    docker build -f Dockerfile -t my_docker_name --build-arg 'BACKEND=HIPNOGPU' .  
+    drun --network host my_docker_name bash  
+    cd  
+    git clone https://github.com/ROCm/MITuna.git  
+    cd MITuna/tuna  
+    ./go_fish.py miopen --update_solver  
+    ./go_fish.py miopen --init_session -l someReason -a gfx908 -n 120  
+    ./go_fish.py miopen --update_applicability --session_id 1  
