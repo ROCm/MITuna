@@ -6,7 +6,7 @@ asyncio==3.4.3
 attrs==19.3.0
 backcall==0.1.0
 bcrypt==3.2
-breathe==4.30.0
+breathe==4.35.0
 celery==5.3.4
 cryptography==42.0.4
 decorator==4.3.0
