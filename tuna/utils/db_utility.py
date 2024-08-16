@@ -43,6 +43,7 @@ from tuna.utils.metadata import NUM_SQL_RETRIES
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 from tuna.utils.utility import SimpleDict
+from tuna.custom_errors import CustomError
 
 LOGGER = setup_logger('db_utility')
 
@@ -201,8 +202,16 @@ def get_job_rows(session, attribs, tablename, cond_str):
   """Get db rows"""
   ret = None
   attr_str = ','.join(attribs)
-  query = f"SELECT {attr_str} FROM {tablename}"\
-          f" {cond_str};"
+
+  if not attribs:
+    raise CustomError('attribs must be specified')
+
+  if cond_str:
+    query = f"SELECT {attr_str} FROM {tablename}"\
+            f" {cond_str};"
+  else:
+    query = f"SELECT {attr_str} FROM {tablename};"
+
   LOGGER.info('Query Select: %s', query)
   try:
     ret = session.execute(query)

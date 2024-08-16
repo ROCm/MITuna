@@ -35,7 +35,6 @@ from collections.abc import Iterable
 
 from kombu.utils.uuid import uuid
 from sqlalchemy.inspection import inspect
-from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
@@ -95,7 +94,7 @@ class MIOpen(MITunaInterface):
             TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
             TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES,
             TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
-            TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS
+            TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS, TunaArgs.ENQUEUE_ONLY
         ])
     parser.add_argument(
         '--find_mode',
@@ -139,11 +138,6 @@ class MIOpen(MITunaInterface):
         type=int,
         default=None,
         help='Limit the number of gpu workers created by Tuna, index from 0')
-
-    parser.add_argument('--enqueue_only',
-                        action='store_true',
-                        dest='enqueue_only',
-                        help='Enqueue jobs to celery queue')
 
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
@@ -460,16 +454,6 @@ class MIOpen(MITunaInterface):
 
     return kwargs
 
-  def get_job_attr(self):
-    """Get job attr for row selection"""
-    job_attr: List[str]
-    try:
-      job_attr = [column.name for column in inspect(self.dbt.job_table).c]
-      job_attr.remove("insert_ts")
-      job_attr.remove("update_ts")
-    except NoInspectionAvailable as error:
-      self.logger.warning("Ignoring error for init_session: %s", error)
-    return job_attr
 
   def get_jobs(self,
                session: DbSession,
@@ -537,7 +521,7 @@ class MIOpen(MITunaInterface):
                         claim_num: int = None,
                         fin_steps: List[str] = None) -> List[SimpleDict]:
     """Query a job list for update"""
-    ret = []
+    job_entries = []
     if fin_steps:
       conds.append(f"fin_step like '%{fin_steps[0]}%'")
     else:
@@ -551,19 +535,10 @@ class MIOpen(MITunaInterface):
     else:
       cond_str += " ORDER BY retries,config ASC FOR UPDATE SKIP LOCKED"
 
-    #ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
-
     job_entries = gen_select_objs(session, job_attr,
                                   dbt.job_table.__tablename__, cond_str)
 
-    ret = job_entries
-    #if fin_steps:
-    #  ret = self.compose_work_objs_fin(session, entries, dbt)
-    #else:
-    #  ret = entries
-
-    #return ret
-    return ret
+    return job_entries
 
   def compose_work_objs_fin(self, session, job_entries,
                             dbt) -> List[Tuple[SimpleDict, SimpleDict]]:

@@ -29,6 +29,7 @@ import os
 from multiprocessing import Value, Lock, Queue as mpQueue, Process
 from typing import Optional, Dict, Any, List
 from io import StringIO
+from sqlalchemy.exc import NoInspectionAvailable
 import logging
 import argparse
 import subprocess
@@ -518,3 +519,18 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
   def reset_job_state_on_ctrl_c(self):
     """Reset job state for jobs in flight"""
     raise NotImplementedError("Not implemented")
+
+  def has_tunable_opertaion(self):  
+    """Check if current operation is a tuning operation"""
+    raise NotImplementedError("Not implemented")
+
+  def get_job_attr(self):
+    """Get job attr for row selection"""
+    job_attr: List[str]
+    try:
+      job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+      job_attr.remove("insert_ts")
+      job_attr.remove("update_ts")
+    except NoInspectionAvailable as error:
+      self.logger.warning("Ignoring error for init_session: %s", error)
+    return job_attr

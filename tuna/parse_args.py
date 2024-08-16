@@ -48,6 +48,7 @@ class TunaArgs(Enum):
   RESTART_MACHINE: str = 'restart_machine'
   DOCKER_NAME: str = 'docker_name'
   SHUTDOWN_WORKERS: str = 'shutdown_workers'
+  ENQUEUE_ONLY: str = 'enqueue_only'
 
 
 # pylint: disable=too-many-branches
@@ -150,6 +151,12 @@ def setup_arg_parser(desc: str,
                           dest='shutdown_workers',
                           action='store_true',
                           help='Shutdown all active celery workers')
+
+    if TunaArgs.ENQUEUE_ONLY in arg_list:
+      parser.add_argument('--enqueue_only',
+                        action='store_true',
+                        dest='enqueue_only',
+                        help='Enqueue jobs to celery queue')
 
   return parser
 

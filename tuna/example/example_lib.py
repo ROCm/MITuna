@@ -41,7 +41,9 @@ from tuna.example.example_tables import get_tables
 from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
 from tuna.dbBase.sql_alchemy import DbSession
+from tuna.libraries import Operation
 
+Q_NAME=None
 
 class Example(MITunaInterface):
   """Class to support an example of 'romcinfo' run"""
@@ -49,6 +51,7 @@ class Example(MITunaInterface):
   def __init__(self):
     super().__init__(library=Library.EXAMPLE)
     self.args: argparse.Namespace = None
+    self.operation = None
 
   def parse_args(self) -> None:
     # pylint: disable=too-many-statements
@@ -57,7 +60,7 @@ class Example(MITunaInterface):
     parser = setup_arg_parser('Example library integrated with MITuna', [
         TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
-        TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
+        TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME, TunaArgs.ENQUEUE_ONLY
     ])
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
     )
@@ -79,12 +82,33 @@ class Example(MITunaInterface):
                        dest='init_session',
                        help='Set up a new tuning session.')
 
+    group.add_argument('--operation',
+                       dest='operation',
+                       type=Operation,
+                       help='Specify operation',
+                       choices=Operation)
+
     self.args = parser.parse_args()
     if len(sys.argv) == 1:
       parser.print_help()
       sys.exit(-1)
 
     args_check(self.args, parser)
+    self.update_operation()
+
+
+  def update_operation(self):
+    """Set worker operation type"""
+    self.operation = Operation.COMPILE
+    self.fetch_state.add('new')
+    self.set_state = 'running'
+
+  def has_tunable_operation(self):
+    """Check if tunable operation is set"""
+    return self.operation is not None
+
+
+
 
   def launch_worker(self, gpu_idx: int, f_vals: Dict[str, Any], \
                     worker_lst: List[ExampleWorker]) -> bool:
@@ -179,12 +203,28 @@ class Example(MITunaInterface):
                no_update: bool = False):
     """Get jobs based on find_state"""
     self.logger.info('Placeholder')
+    job_entries = gen_select_obj(session, self.get_job_attr, self.dbt.job_table.__tablename__, None)
 
     return True
 
   def get_context_list(self, session, batch_jobs):
     """Get a list of context items to be used for celery task"""
-    raise NotImplementedError("Not implemented in example_lib")
+    context_list = []
+    serialized_jobs = serialize_chunk(batch_jobs)
+    #build context for each celery task
+    for job, config in serialized_jobs:
+      context = {
+          'job': job,
+          'config': config,
+          'operation': self.operation,
+          'arch': self.dbt.session.arch,
+          'num_cu': self.dbt.session.num_cu,
+          'kwargs': kwargs,
+          'fdb_attr': fdb_attr
+      }
+      context_list.append(context)
+
+    return context_list
 
   def celery_enqueue_call(self, context, q_name, task_id=False):
     """Wrapper function for celery enqueue func"""
