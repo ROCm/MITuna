@@ -19,7 +19,7 @@ jsonargparse==4.19.0
 isort==5.13.2
 jedi==0.13.1
 lazy-object-proxy==1.7.1
-markdown-it-py==2.2.0
+markdown-it-py==3.0.0
 mccabe==0.6.1
 myst-parser==4.0.0
 more-itertools==8.3.0
