@@ -18,7 +18,7 @@ The following steps in MITuna make use of celery workers:
 
 A celery worker can be launched manually on a machine like this:
 
-Launch dockers through docker compose:
+Launch dockers through docker-compose:
 ```
 sudo -E docker compose up --build
 ```
@@ -82,22 +82,4 @@ export TUNA_CELERY_BROKER_PORT=5672
 #redis
 export TUNA_CELERY_BACKEND_HOST=localhost
 export TUNA_CELERY_BACKEND_PORT=6379
-```
-
-##Flower
-[Celery flower](https://flower.readthedocs.io/en/latest/) can be installed to track tuning through
-celery. MITuna provides a docker compose in the root directory *docker-compose-flower.yaml*.
-To launch:
-```
-docker compose up -f docker-compose-flower.yaml --build
-```
-
-Note:
-The docker-compose-flower.yaml file pulls in env variables from the local .env file. This file
-does not reside in MITuna and must be created by the user. Sample .env file:
-```
-export db_name=<db_name>
-export db_host=<hostname>
-export db_user=root
-export db_password=<pwd>
 ```
