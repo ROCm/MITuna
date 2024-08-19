@@ -29,7 +29,6 @@ import os
 from multiprocessing import Value, Lock, Queue as mpQueue, Process
 from typing import Optional, Dict, Any, List
 from io import StringIO
-from sqlalchemy.exc import NoInspectionAvailable
 import logging
 import argparse
 import subprocess
@@ -37,6 +36,8 @@ import time
 import threading
 import asyncio
 from datetime import timedelta
+from sqlalchemy.exc import NoInspectionAvailable
+from sqlalchemy.inspection import inspect
 import aioredis
 import kombu
 from paramiko.channel import ChannelFile
@@ -44,7 +45,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
 from tuna.libraries import Library
 from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars
+from tuna.utils.utility import get_env_vars, SimpleDict
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
 from tuna.celery_app.celery_app import get_backend_env, purge_queue
@@ -520,17 +521,29 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """Reset job state for jobs in flight"""
     raise NotImplementedError("Not implemented")
 
-  def has_tunable_opertaion(self):  
+  def has_tunable_operation(self):
     """Check if current operation is a tuning operation"""
     raise NotImplementedError("Not implemented")
 
   def get_job_attr(self):
     """Get job attr for row selection"""
-    job_attr: List[str]
+    job_attr: List[str] = None
     try:
       job_attr = [column.name for column in inspect(self.dbt.job_table).c]
+      print(job_attr)
       job_attr.remove("insert_ts")
       job_attr.remove("update_ts")
     except NoInspectionAvailable as error:
       self.logger.warning("Ignoring error for init_session: %s", error)
     return job_attr
+
+
+  def check_jobs_found(self, job_rows: List[SimpleDict], find_state: List[Any],
+                       session_id: int) -> bool:
+    """check for end of jobs"""
+    if not job_rows:
+      # we are done
+      self.logger.warning('No %s jobs found, session %s', find_state,
+                          session_id)
+      return False
+    return True

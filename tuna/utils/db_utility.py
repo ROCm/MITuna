@@ -43,7 +43,6 @@ from tuna.utils.metadata import NUM_SQL_RETRIES
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 from tuna.utils.utility import SimpleDict
-from tuna.custom_errors import CustomError
 
 LOGGER = setup_logger('db_utility')
 
@@ -201,10 +200,10 @@ def gen_select_objs(session, attribs, tablename, cond_str):
 def get_job_rows(session, attribs, tablename, cond_str):
   """Get db rows"""
   ret = None
-  attr_str = ','.join(attribs)
-
-  if not attribs:
-    raise CustomError('attribs must be specified')
+  if attribs is not None or attribs is not []:
+    attr_str = ','.join(attribs)
+  else:
+    attr_str = '*'
 
   if cond_str:
     query = f"SELECT {attr_str} FROM {tablename}"\

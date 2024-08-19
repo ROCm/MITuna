@@ -67,8 +67,6 @@ class Job(BASE):
   gpu_id = Column(Integer, nullable=False, server_default="-1")
   machine_id = Column(Integer, nullable=False, server_default="-1")
 
-  config = Column(Integer, nullable=False, index=True)
-
 
 def get_tables() -> List[BASE]:
   """Returns a list of all Example lib DB tables"""

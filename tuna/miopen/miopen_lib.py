@@ -589,15 +589,6 @@ class MIOpen(MITunaInterface):
                             rel_cond_str)[0])
     return cfg_entries
 
-  def check_jobs_found(self, job_rows: List[SimpleDict], find_state: List[Any],
-                       session_id: int) -> bool:
-    """check for end of jobs"""
-    if not job_rows:
-      # we are done
-      self.logger.warning('No %s jobs found, session %s', find_state,
-                          session_id)
-      return False
-    return True
 
   def get_job_tables(self, job_rows: List[Tuple[SimpleDict, ...]],
                      job_attr: List[str]) -> List[SimpleDict]:

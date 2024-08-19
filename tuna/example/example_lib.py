@@ -30,20 +30,25 @@ import sys
 import argparse
 
 from typing import Dict, Any, List, Optional
+from kombu.utils.uuid import uuid
 from tuna.mituna_interface import MITunaInterface
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
 from tuna.utils.machine_utility import load_machines
 from tuna.machine import Machine
 
 from tuna.libraries import Library
-from tuna.utils.db_utility import create_tables
+from tuna.utils.db_utility import create_tables, gen_select_objs, gen_update_query
+from tuna.utils.db_utility import session_retry
+from tuna.utils.utility import SimpleDict
 from tuna.example.example_tables import get_tables
 from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
+from tuna.example.tables import ExampleDBTables 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.libraries import Operation
 
-Q_NAME=None
+Q_NAME = None
+
 
 class Example(MITunaInterface):
   """Class to support an example of 'romcinfo' run"""
@@ -52,6 +57,7 @@ class Example(MITunaInterface):
     super().__init__(library=Library.EXAMPLE)
     self.args: argparse.Namespace = None
     self.operation = None
+    self.set_state = None
 
   def parse_args(self) -> None:
     # pylint: disable=too-many-statements
@@ -60,7 +66,7 @@ class Example(MITunaInterface):
     parser = setup_arg_parser('Example library integrated with MITuna', [
         TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
-        TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME, TunaArgs.ENQUEUE_ONLY
+        TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME, TunaArgs.ENQUEUE_ONLY, TunaArgs.SHUTDOWN_WORKERS
     ])
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
     )
@@ -94,8 +100,8 @@ class Example(MITunaInterface):
       sys.exit(-1)
 
     args_check(self.args, parser)
+    self.dbt = ExampleDBTables(session_id=self.args.session_id)
     self.update_operation()
-
 
   def update_operation(self):
     """Set worker operation type"""
@@ -105,9 +111,9 @@ class Example(MITunaInterface):
 
   def has_tunable_operation(self):
     """Check if tunable operation is set"""
+    if self.args is None:
+      self.parse_args()
     return self.operation is not None
-
-
 
 
   def launch_worker(self, gpu_idx: int, f_vals: Dict[str, Any], \
@@ -202,25 +208,37 @@ class Example(MITunaInterface):
                claim_num: int = None,
                no_update: bool = False):
     """Get jobs based on find_state"""
-    self.logger.info('Placeholder')
-    job_entries = gen_select_obj(session, self.get_job_attr, self.dbt.job_table.__tablename__, None)
+    self.logger.info('Fetching DB rows...')
+    job_list = gen_select_objs(session, self.get_job_attr(),
+                                  self.dbt.job_table.__tablename__, "WHERE state='new'")
+    if not self.check_jobs_found(job_list, find_state, session_id):
+      return []
 
-    return True
+    ids = [row.id for row in job_list]
+    self.logger.info("%s jobs %s", find_state, ids)
+    self.logger.info('Updating job state to %s', set_state)
+    for job in job_list:
+      job.state = set_state
+      query: str = gen_update_query(job, ['state'],
+                                    self.dbt.job_table.__tablename__)
+      session.execute(query)
+
+    session.commit()
+
+    return job_list
 
   def get_context_list(self, session, batch_jobs):
     """Get a list of context items to be used for celery task"""
     context_list = []
-    serialized_jobs = serialize_chunk(batch_jobs)
+    serialized_jobs = [elem.to_dict() for elem in batch_jobs]
     #build context for each celery task
-    for job, config in serialized_jobs:
+    for job in serialized_jobs:
       context = {
           'job': job,
-          'config': config,
           'operation': self.operation,
           'arch': self.dbt.session.arch,
-          'num_cu': self.dbt.session.num_cu,
-          'kwargs': kwargs,
-          'fdb_attr': fdb_attr
+          'num_cu': self.dbt.session.num_cu
+          #'kwargs': kwargs,
       }
       context_list.append(context)
 
@@ -228,4 +246,40 @@ class Example(MITunaInterface):
 
   def celery_enqueue_call(self, context, q_name, task_id=False):
     """Wrapper function for celery enqueue func"""
-    raise NotImplementedError('Not implemented')
+    Q_NAME = q_name  #pylint: disable=import-outside-toplevel,unused-variable,invalid-name,redefined-outer-name
+    from tuna.example.celery_tuning.celery_tasks import celery_enqueue  #pylint: disable=import-outside-toplevel
+
+    return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
+
+
+  def reset_job_state_on_ctrl_c(self):
+    temp_obj = SimpleDict()
+    temp_obj.session_id = self.args.session_id  #pylint: disable=invalid-name
+    attribs = ['state']
+    temp_obj.state = 1
+
+    self.logger.info('Resetting job state in DB for in flight jobs')
+
+    if self.operation == Operation.COMPILE:
+      state = 16
+    elif self.operation == Operation.EVAL:
+      state = 12
+
+    query = gen_update_query(temp_obj, attribs,
+                             self.dbt.job_table.__tablename__,
+                             [('session', self.args.session_id),
+                              ('state', state)])
+    with DbSession() as session:
+
+      #pylint: disable=duplicate-code
+      def callback() -> bool:
+        session.execute(query)
+        session.commit()
+        return True
+
+      #pylint: enable=duplicate-code
+
+      assert session_retry(session, callback, lambda x: x(), self.logger)
+      self.logger.info('Sucessfully reset job state')
+      return True
+    """Resetting job state for jobs in flight"""

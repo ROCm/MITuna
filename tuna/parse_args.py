@@ -154,9 +154,9 @@ def setup_arg_parser(desc: str,
 
     if TunaArgs.ENQUEUE_ONLY in arg_list:
       parser.add_argument('--enqueue_only',
-                        action='store_true',
-                        dest='enqueue_only',
-                        help='Enqueue jobs to celery queue')
+                          action='store_true',
+                          dest='enqueue_only',
+                          help='Enqueue jobs to celery queue')
 
   return parser
 
