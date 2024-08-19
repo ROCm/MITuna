@@ -29,21 +29,64 @@ import os
 import subprocess
 from celery import Celery
 from celery.utils.log import get_task_logger
+from tuna.custom_errors import CustomError
 
-#when dockerized: TUNA_CELERY_BROKER = 'mituna_redis'
-TUNA_CELERY_BROKER = 'localhost'
-TUNA_REDIS_PORT = '6379'
 LOGGER = get_task_logger("celery_app")
 
-if 'TUNA_CELERY_BROKER' in os.environ:
-  TUNA_CELERY_BROKER = os.environ['TUNA_CELERY_BROKER']
-if 'TUNA_REDIS_PORT' in os.environ:
-  TUNA_REDIS_PORT = os.environ['TUNA_REDIS_PORT']
 
+def get_broker_env():
+  """Set rabbitmq required env vars"""
+
+  #defaults
+  TUNA_CELERY_BROKER_HOST = 'localhost'
+  TUNA_CELERY_BROKER_PORT = 5672
+
+  if 'TUNA_CELERY_BROKER_USER' not in os.environ:
+    raise CustomError('TUNA_CELERY_BROKER_USER must be specified in env')
+  else:
+    TUNA_CELERY_BROKER_USER = os.environ['TUNA_CELERY_BROKER_USER']
+  if 'TUNA_CELERY_BROKER_PWD' not in os.environ:
+    raise CustomError('TUNA_CELERY_BROKER_PWD must be specified in env')
+  else:
+    TUNA_CELERY_BROKER_PWD = os.environ['TUNA_CELERY_BROKER_PWD']
+
+  if 'TUNA_CELERY_BROKER_HOST' in os.environ:
+    TUNA_CELERY_BROKER_HOST = os.environ['TUNA_CELERY_BROKER_HOST']
+  if 'TUNA_CELERY_BROKER_PORT' in os.environ:
+    TUNA_CELERY_BROKER_PORT = os.environ['TUNA_CELERY_BROKER_PORT']
+  if 'TUNA_CELERY_V_HOST' in os.environ:
+    TUNA_CELERY_V_HOST = os.environ['TUNA_CELERY_V_HOST']
+
+  return TUNA_CELERY_BROKER_HOST, TUNA_CELERY_BROKER_PORT, TUNA_CELERY_BROKER_USER, TUNA_CELERY_BROKER_PWD
+
+
+def get_backend_env():
+  """Get Redis env vars"""
+
+  #defaults
+  TUNA_CELERY_BACKEND_PORT = 6379
+  TUNA_CELERY_BACKEND_HOST = 'localhost'
+
+  if 'TUNA_CELERY_BACKEND_PORT' in os.environ:
+    TUNA_CELERY_BACKEND_PORT = os.environ['TUNA_CELERY_BACKEND_PORT']
+  if 'TUNA_CELERY_BACKEND_HOST' in os.environ:
+    TUNA_CELERY_BACKEND_HOST = os.environ['TUNA_CELERY_BACKEND_HOST']
+
+  return TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST
+
+
+TUNA_CELERY_BROKER_HOST, TUNA_CELERY_BROKER_PORT, TUNA_CELERY_BROKER_USER, TUNA_CELERY_BROKER_PWD = get_broker_env(
+)
+
+TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST = get_backend_env()
+
+#ampq borker & redis backend
 app = Celery(
     'celery_app',
-    broker_url=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/14",
-    result_backend=f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15",
+    broker_url=
+    f"amqp://{TUNA_CELERY_BROKER_USER}:{TUNA_CELERY_BROKER_PWD}@{TUNA_CELERY_BROKER_HOST}:{TUNA_CELERY_BROKER_PORT}/",
+    result_backend=
+    f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/15",
     include=['tuna.miopen.celery_tuning.celery_tasks'])
 
 
@@ -82,7 +125,9 @@ def purge_queue(q_names):
       LOGGER.info('Purging Q %s', q_name)
       cmd = f"celery -A tuna.celery_app.celery_app purge -f -Q {q_name}".split(
           ' ')
-      _ = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+      subp = subprocess.Popen(cmd)  #pylint: disable=consider-using-with
+      #waiting for purge queue before continuing
+      subp.wait()
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.info(exp)
       return False

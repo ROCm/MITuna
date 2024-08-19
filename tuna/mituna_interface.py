@@ -46,7 +46,7 @@ from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
-from tuna.celery_app.celery_app import TUNA_CELERY_BROKER, TUNA_REDIS_PORT, purge_queue
+from tuna.celery_app.celery_app import get_backend_env, purge_queue
 from tuna.celery_app.utility import get_q_name
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.libraries import Operation
@@ -294,6 +294,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def enqueue_jobs(self, job_counter, job_batch_size, q_name):
     """Enqueue celery jobs"""
+    self.logger.info('Starting enqueue')
     with DbSession() as session:
       while True:
         job_list = []
@@ -326,8 +327,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   async def cleanup_redis_results(self, prefix):
     """Remove stale redis results by key"""
-    redis = await aioredis.from_url(
-        f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
+    backend_port, backend_host = get_backend_env()
+    redis = await aioredis.from_url(f"redis://{backend_host}:{backend_port}/15")
 
     keys = []
     cursor = "0"
@@ -344,7 +345,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     self.logger.info('Found %s old results', len(results))
     for key in keys:
       try:
-        redis.delete(key)
+        await redis.delete(key)
       except aioredis.exceptions.ResponseError as red_err:
         self.logger.error(red_err)
         self.logger.info(key.decode('utf-8'))
@@ -357,8 +358,8 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
   async def consume(self, job_counter, prefix):
     """Retrieve celery results from redis db"""
 
-    redis = await aioredis.from_url(
-        f"redis://{TUNA_CELERY_BROKER}:{TUNA_REDIS_PORT}/15")
+    backend_port, backend_host = get_backend_env()
+    redis = await aioredis.from_url(f"redis://{backend_host}:{backend_port}/15")
 
     while job_counter.value > 0:
       cursor = "0"

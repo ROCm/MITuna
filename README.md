@@ -88,7 +88,16 @@ export TUNA_DB_USER_PASSWORD=<password for root>
 export TUNA_DB_HOSTNAME=localhost
 export TUNA_DB_NAME=<database_name>
 export TUNA_CELERY_JOB_BATCH_SIZE=<integer>
-export TUNA_CELERY_BROKER=localhost
+
+#rabbitMQ
+export TUNA_CELERY_BROKER_HOST=localhost
+export TUNA_CELERY_BROKER_USER=<username>
+export TUNA_CELERY_BROKER_PWD=<pwd>
+export TUNA_CELERY_BROKER_PORT=5672
+#redis
+export TUNA_CELERY_BACKEND_HOST=localhost
+export TUNA_CELERY_BACKEND_PORT=6379
+
 export gateway_ip=<gateway_ip>
 export gateway_port=<gateway_port>
 export gateway_user=<gateway_user>
