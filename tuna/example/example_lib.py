@@ -36,12 +36,11 @@ from tuna.utils.machine_utility import load_machines
 from tuna.machine import Machine
 
 from tuna.libraries import Library
-from tuna.utils.db_utility import create_tables, gen_select_objs, gen_update_query
+from tuna.utils.db_utility import create_tables, gen_select_objs
 from tuna.example.example_tables import get_tables
 from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
 from tuna.example.tables import ExampleDBTables
-from tuna.dbBase.sql_alchemy import DbSession
 from tuna.libraries import Operation
 
 Q_NAME = None
@@ -198,41 +197,11 @@ class Example(MITunaInterface):
 
     return kwargs
 
-
-  def get_job_list(self, session, find_state)
+  def get_job_list(self, session, find_state=None, claim_num=None):
     """Get list of jobs"""
     job_list = gen_select_objs(session, self.get_job_attr(),
                                self.dbt.job_table.__tablename__,
                                "WHERE state='new'")
-    return job_list
-
-
-  def get_jobs(self,
-               session: DbSession,
-               find_state: List[str],
-               set_state: str,
-               session_id: int,
-               claim_num: int = None,
-               no_update: bool = False):
-    """Get jobs based on find_state"""
-    self.logger.info('Fetching DB rows...')
-    job_list = gen_select_objs(session, self.get_job_attr(),
-                               self.dbt.job_table.__tablename__,
-                               "WHERE state='new'")
-    if not self.check_jobs_found(job_list, find_state, session_id):
-      return []
-
-    ids = [row.id for row in job_list]
-    self.logger.info("%s jobs %s", find_state, ids)
-    self.logger.info('Updating job state to %s', set_state)
-    for job in job_list:
-      job.state = set_state
-      query: str = gen_update_query(job, ['state'],
-                                    self.dbt.job_table.__tablename__)
-      session.execute(query)
-
-    session.commit()
-
     return job_list
 
   def serialize_jobs(self, session, batch_jobs):
@@ -261,7 +230,6 @@ class Example(MITunaInterface):
     from tuna.example.celery_tuning.celery_tasks import celery_enqueue  #pylint: disable=import-outside-toplevel
 
     return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
-
 
   def process_compile_results(self, session, fin_json, context):
     """Process result from fin_build worker"""

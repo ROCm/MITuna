@@ -44,7 +44,6 @@ from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict, serialize_chunk
 from tuna.utils.machine_utility import load_machines
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
-from tuna.utils.db_utility import gen_update_query
 from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
@@ -453,45 +452,11 @@ class MIOpen(MITunaInterface):
 
     return kwargs
 
-
-  def get_job_list(self, session, find_state)
+  def get_job_list(self, session, find_state, claim_num):
     """Get list of jobs"""
     job_list = self.get_job_objs(session, find_state, self.args.label, self.dbt,
-                                 self.get_job_attr(), claim_num, self.args.fin_steps)
-    return job_list
-
-  def get_jobs(self,
-               session: DbSession,
-               find_state: List[str],
-               set_state: str,
-               session_id: int,
-               claim_num: int = None,
-               no_update: bool = False):
-    """Interface function to get jobs based on session and find_state"""
-    #job_rows: List[SimpleDict]
-    ids: list
-    row: SimpleDict
-
-    self.logger.info('Fetching DB rows...')
-    job_list = self.get_job_objs(session, find_state, self.args.label, self.dbt,
-                                 self.get_job_attr(), claim_num, self.args.fin_steps)
-
-    if not self.check_jobs_found(job_list, find_state, session_id):
-      return []
-
-    if no_update:
-      return job_list
-
-    ids = [row.id for row in job_list]
-    self.logger.info("%s jobs %s", find_state, ids)
-    self.logger.info('Updating job state to %s', set_state)
-    for job in job_list:
-      job.state = set_state
-      query: str = gen_update_query(job, ['state'],
-                                    self.dbt.job_table.__tablename__)
-      session.execute(query)
-
-    session.commit()
+                                 self.get_job_attr(), claim_num,
+                                 self.args.fin_steps)
 
     return job_list
 
@@ -682,7 +647,6 @@ class MIOpen(MITunaInterface):
                                                           uuid()]),
                                       queue=q_name,
                                       reply_to=q_name)
-
 
   def process_compile_results(self, session, fin_json, context):
     """Process result from fin_build worker"""

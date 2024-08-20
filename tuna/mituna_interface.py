@@ -247,6 +247,10 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     return kwargs
 
+  def get_job_list(self, session, find_state, claim_num):
+    """Get list of jobs"""
+    raise NotImplementedError("Not implemented")
+
   def get_jobs(self,
                session: DbSession,
                find_state: List[str],
@@ -258,11 +262,9 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     #job_rows: List[SimpleDict]
     ids: list
     row: SimpleDict
-    job_attr: List[str] = self.get_job_attr()
 
     self.logger.info('Fetching DB rows...')
-    job_list = self.get_job_list(session, find_state, self.args.label, self.dbt,
-                                 job_attr, claim_num, self.args.fin_steps)
+    job_list = self.get_job_list(session, find_state, claim_num)
 
     if not self.check_jobs_found(job_list, find_state, session_id):
       return []
