@@ -48,9 +48,8 @@ cached_machine = Machine(local_machine=True)
 
 
 def prep_kwargs(kwargs, args):
-  """Populate kwargs with serialized job, config and machine"""
+  """Populate kwargs with serialized job and machine"""
   kwargs["job"] = SimpleDict(**args[0])
-  kwargs["config"] = SimpleDict(**args[1])
   kwargs["machine"] = cached_machine
 
   return kwargs
@@ -65,10 +64,9 @@ def prep_worker(context):
   if operation in cached_worker:
     worker = cached_worker[operation]
     worker.job = SimpleDict(**context['job'])
-    worker.config = SimpleDict(**context['config'])
     worker.gpu_id = context['kwargs']['gpu_id']
   else:
-    args = [context['job'], context['config'], context['operation']]
+    args = [context['job'], context['operation']]
     kwargs = prep_kwargs(context['kwargs'], args)
     worker = ExampleWorker(**kwargs)
     cached_worker[operation] = worker

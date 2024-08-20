@@ -87,7 +87,10 @@ app = Celery(
     f"amqp://{TUNA_CELERY_BROKER_USER}:{TUNA_CELERY_BROKER_PWD}@{TUNA_CELERY_BROKER_HOST}:{TUNA_CELERY_BROKER_PORT}/",
     result_backend=
     f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/15",
-    include=['tuna.miopen.celery_tuning.celery_tasks'])
+    include=[
+        'tuna.miopen.celery_tuning.celery_tasks',
+        'tuna.example.celery_tuning.celery_tasks'
+    ])
 
 
 def stop_active_workers():

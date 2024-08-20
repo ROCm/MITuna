@@ -29,6 +29,8 @@ import os
 from multiprocessing import Value, Lock, Queue as mpQueue, Process
 from typing import Optional, Dict, Any, List
 from io import StringIO
+from functools import lru_cache
+import json
 import logging
 import argparse
 import subprocess
@@ -41,6 +43,7 @@ from sqlalchemy.inspection import inspect
 import aioredis
 import kombu
 from paramiko.channel import ChannelFile
+
 from tuna.worker_interface import WorkerInterface
 from tuna.machine import Machine
 from tuna.libraries import Library
@@ -53,6 +56,7 @@ from tuna.celery_app.utility import get_q_name
 from tuna.celery_app.celery_workers import launch_celery_worker
 from tuna.libraries import Operation
 from tuna.custom_errors import CustomError
+from tuna.utils.db_utility import gen_update_query, session_retry
 
 job_counter_lock = threading.Lock()
 
@@ -250,8 +254,34 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
                session_id: int,
                claim_num: int = None,
                no_update=False):
-    """Interface function to get jobs based on find_state"""
-    raise NotImplementedError("Not implemented")
+    """Interface function to get jobs based on session and find_state"""
+    #job_rows: List[SimpleDict]
+    ids: list
+    row: SimpleDict
+    job_attr: List[str] = self.get_job_attr()
+
+    self.logger.info('Fetching DB rows...')
+    job_list = self.get_job_list(session, find_state, self.args.label, self.dbt,
+                                 job_attr, claim_num, self.args.fin_steps)
+
+    if not self.check_jobs_found(job_list, find_state, session_id):
+      return []
+
+    if no_update:
+      return job_list
+
+    ids = [row.id for row in job_list]
+    self.logger.info("%s jobs %s", find_state, ids)
+    self.logger.info('Updating job state to %s', set_state)
+    for job in job_list:
+      job.state = set_state
+      query: str = gen_update_query(job, ['state'],
+                                    self.dbt.job_table.__tablename__)
+      session.execute(query)
+
+    session.commit()
+
+    return job_list
 
   def shutdown_workers(self):
     """Shutdown all active celery workers regardless of queue"""
@@ -323,10 +353,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
           self.logger.info('All tasks added to queue')
           break
 
-  def get_context_list(self, session, batch_jobs):
-    """Get a list of context items to be used for celery task"""
-    raise NotImplementedError("Not implemented")
-
   async def cleanup_redis_results(self, prefix):
     """Remove stale redis results by key"""
     backend_port, backend_host = get_backend_env()
@@ -395,10 +421,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     await redis.close()
 
     return True
-
-  async def parse_result(self, data):
-    """Function callback for celery async jobs to store results"""
-    raise NotImplementedError("Not implemented")
 
   def prep_tuning(self):
     """Prep env for tuning start"""
@@ -519,7 +541,37 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def reset_job_state_on_ctrl_c(self):
     """Reset job state for jobs in flight"""
-    raise NotImplementedError("Not implemented")
+    temp_obj = SimpleDict()
+    temp_obj.session_id = self.args.session_id  #pylint: disable=invalid-name
+    attribs = ['state']
+    temp_obj.state = 1
+
+    self.logger.info('Resetting job state in DB for in flight jobs')
+
+    if self.operation == Operation.COMPILE:
+      state = 16
+    elif self.operation == Operation.EVAL:
+      state = 12
+
+    query = gen_update_query(temp_obj, attribs,
+                             self.dbt.job_table.__tablename__,
+                             [('session', self.args.session_id),
+                              ('state', state)])
+    with DbSession() as session:
+
+      #pylint: disable=duplicate-code
+      def callback() -> bool:
+        session.execute(query)
+        session.commit()
+        return True
+
+      #pylint: enable=duplicate-code
+
+      assert session_retry(session, callback, lambda x: x(), self.logger)
+      self.logger.info('Sucessfully reset job state')
+      return True
+
+    return False
 
   def has_tunable_operation(self):
     """Check if current operation is a tuning operation"""
@@ -537,7 +589,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       self.logger.warning("Ignoring error for init_session: %s", error)
     return job_attr
 
-
   def check_jobs_found(self, job_rows: List[SimpleDict], find_state: List[Any],
                        session_id: int) -> bool:
     """check for end of jobs"""
@@ -547,3 +598,58 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
                           session_id)
       return False
     return True
+
+  @lru_cache(1)
+  def get_context_items(self):
+    """Helper function to get items for celery job context"""
+    f_vals = self.get_f_vals(Machine(local_machine=True), range(0), tuning=True)
+    kwargs = self.get_kwargs(0, f_vals, tuning=True)
+    return kwargs
+
+  def serialize_jobs(self, session, batch_jobs):
+    """Return list of serialize jobs"""
+    raise NotImplementedError("Not implemented")
+
+  def build_context(self, serialized_jobs):
+    """Build context list for enqueue job"""
+    raise NotImplementedError("Not implemented")
+
+  def get_context_list(self, session, batch_jobs):
+    """Return list of jobs (context) for celery queue"""
+
+    context_list: List[dict] = None
+    serialized_jobs = self.serialize_jobs(session, batch_jobs)
+    #build context for each celery task
+    context_list = self.build_context(serialized_jobs)
+
+    return context_list
+
+  async def parse_result(self, data):
+    """Function callback for celery async jobs to store results"""
+    data = json.loads(data)
+
+    with DbSession() as session:
+      try:
+        fin_json = data['result']['ret']
+        context = data['result']['context']
+      except KeyError as kerr:
+        self.logger.error(kerr)
+        return False
+
+      self.logger.info('Parsing: %s', fin_json)
+      if self.operation == Operation.COMPILE:
+        self.process_compile_results(session, fin_json, context)
+      elif self.operation == Operation.EVAL:
+        self.process_eval_results(session, fin_json, context)
+      else:
+        raise CustomError('Unsupported tuning operation')
+
+      return True
+
+  def process_compile_results(self, session, fin_json, context):
+    """Process result from fin_build worker"""
+    raise NotImplementedError("Not implemented")
+
+  def process_eval_results(self, session, fin_json, context):
+    """Process fin_json result"""
+    raise NotImplementedError("Not implemented")

@@ -200,7 +200,7 @@ def gen_select_objs(session, attribs, tablename, cond_str):
 def get_job_rows(session, attribs, tablename, cond_str):
   """Get db rows"""
   ret = None
-  if attribs is not None or attribs is not []:
+  if attribs is not None or attribs != []:
     attr_str = ','.join(attribs)
   else:
     attr_str = '*'
