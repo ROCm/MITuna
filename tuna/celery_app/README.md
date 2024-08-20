@@ -18,7 +18,7 @@ The following steps in MITuna make use of celery workers:
 
 A celery worker can be launched manually on a machine like this:
 
-Launch dockers through docker-compose:
+Launch dockers through docker compose:
 ```
 sudo -E docker compose up --build
 ```
