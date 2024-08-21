@@ -45,7 +45,7 @@ class ExampleWorker(WorkerInterface):
     """Initialize tables"""
     self.dbt = ExampleDBTables(session_id=self.session_id)
 
-  def step(self) -> bool:
+  def step(self) -> str:
     """Function to execute custom command and return result for tuning"""
 
     cmd_output = self.run_cmd()
