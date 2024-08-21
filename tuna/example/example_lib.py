@@ -85,11 +85,6 @@ class Example(MITunaInterface):
                        dest='init_session',
                        help='Set up a new tuning session.')
 
-    group.add_argument('--operation',
-                       dest='operation',
-                       type=Operation,
-                       help='Specify operation',
-                       choices=Operation)
 
     self.args = parser.parse_args()
     if len(sys.argv) == 1:
@@ -97,14 +92,19 @@ class Example(MITunaInterface):
       sys.exit(-1)
 
     args_check(self.args, parser)
+    if self.args.execute and self.args.enqueue_only:
+      parser.error('--operation and --enqueue_only are mutually exclusive')
+
+
     self.dbt = ExampleDBTables(session_id=self.args.session_id)
     self.update_operation()
 
   def update_operation(self):
     """Set worker operation type"""
-    self.operation = Operation.COMPILE
-    self.fetch_state.add('new')
-    self.set_state = 'running'
+    if not self.args.execute:
+      self.operation = Operation.COMPILE
+      self.fetch_state.add('new')
+      self.set_state = 'running'
 
   def has_tunable_operation(self):
     """Check if tunable operation is set"""
@@ -193,7 +193,7 @@ class Example(MITunaInterface):
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing process specific runtime information
     """
-    kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
+    kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals, tuning)
 
     return kwargs
 

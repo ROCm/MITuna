@@ -34,6 +34,7 @@ from tuna.libraries import Operation
 from tuna.machine import Machine
 from tuna.utils.utility import SimpleDict
 from tuna.example.example_lib import Q_NAME
+from tuna.example.example_worker import ExampleWorker
 
 logger = get_task_logger(__name__)
 
