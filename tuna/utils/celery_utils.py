@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 ###############################################################################
 #
 # MIT License
@@ -25,52 +24,22 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module to register MIOpen celery tasks"""
-import copy
-from celery.signals import celeryd_after_setup
-from celery.utils.log import get_task_logger
-from tuna.celery_app.celery_app import app
-from tuna.machine import Machine
-from tuna.utils.celery_utils import prep_default_kwargs, get_cached_worker
-from tuna.example.example_lib import Q_NAME
-from tuna.example.example_worker import ExampleWorker
-
-logger = get_task_logger(__name__)
+"""Utility module for celery helper functions"""
+from tuna.utils.utility import SimpleDict
 
 
-@celeryd_after_setup.connect
-def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-argument
-  """Capture worker name"""
-  app.worker_name = sender
-
-
-cached_machine = Machine(local_machine=True)
-
-
-def prep_kwargs(kwargs, args):
+def prep_default_kwargs(kwargs, args, cached_machine):
   """Populate kwargs with serialized job and machine"""
-  return prep_default_kwargs(kwargs, args, cached_machine)
+  kwargs["job"] = SimpleDict(**args[0])
+  kwargs["machine"] = cached_machine
+
+  return kwargs
 
 
-cached_worker = {}
+def get_cached_worker(context, cached_worker):
+  """Get worker from cache"""
+  worker = cached_worker[context['operation']]
+  worker.job = SimpleDict(**context['job'])
+  worker.gpu_id = context['kwargs']['gpu_id']
 
-
-def prep_worker(context):
-  """Creating tuna worker object based on context"""
-  operation = context['operation']
-  if operation in cached_worker:
-    worker = get_cached_worker(context, cached_worker)
-  else:
-    args = [context['job'], context['operation']]
-    kwargs = prep_kwargs(context['kwargs'], args)
-    worker = ExampleWorker(**kwargs)
-    cached_worker[operation] = worker
   return worker
-
-
-@app.task(trail=True, reply_to=Q_NAME)
-def celery_enqueue(context):
-  """Defines a celery task"""
-  worker = prep_worker(copy.deepcopy(context), ExampleWorker)
-  ret = worker.run()
-  return {"ret": ret, "context": context}

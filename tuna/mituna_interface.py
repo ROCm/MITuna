@@ -277,8 +277,11 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     self.logger.info('Updating job state to %s', set_state)
     for job in job_list:
       job.state = set_state
-      query: str = gen_update_query(job, ['state'],
-                                    self.dbt.job_table.__tablename__)
+      if self.dbt is not None:
+        query: str = gen_update_query(job, ['state'],
+                                      self.dbt.job_table.__tablename__)
+      else:
+        raise CustomError('DBTable must be set')
       session.execute(query)
 
     session.commit()

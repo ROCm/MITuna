@@ -34,6 +34,7 @@ from tuna.libraries import Operation
 from tuna.machine import Machine
 from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
+from tuna.utils.celery_utils import prep_default_kwargs, get_cached_worker
 from tuna.miopen.miopen_lib import Q_NAME
 
 logger = get_task_logger(__name__)
@@ -50,9 +51,8 @@ cached_machine = Machine(local_machine=True)
 
 def prep_kwargs(kwargs, args):
   """Populate kwargs with serialized job, config and machine"""
-  kwargs["job"] = SimpleDict(**args[0])
+  kwargs = prep_default_kwargs(kwargs, args, cached_machine)
   kwargs["config"] = SimpleDict(**args[1])
-  kwargs["machine"] = cached_machine
 
   return kwargs
 
@@ -64,10 +64,8 @@ def prep_worker(context):
   """Creating tuna worker object based on context"""
   operation = context['operation']
   if operation in cached_worker:
-    worker = cached_worker[operation]
-    worker.job = SimpleDict(**context['job'])
+    worker = get_cached_worker(context, cached_worker)
     worker.config = SimpleDict(**context['config'])
-    worker.gpu_id = context['kwargs']['gpu_id']
   else:
     args = [context['job'], context['config'], context['operation']]
     kwargs = prep_kwargs(context['kwargs'], args)
