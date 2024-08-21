@@ -32,7 +32,8 @@ from tuna.example.tables import ExampleDBTables
 
 
 class ExampleWorker(WorkerInterface):
-  """ The Example class implements the worker class. Its purpose is to run a command and return the output."""
+  """ The Example class implements the worker class. Its purpose is to run a command
+  and return the output."""
 
   def __init__(self, **kwargs: Dict[str, Any]) -> None:
     """Constructor"""
