@@ -6,8 +6,6 @@ omit =
       tuna/corrupt_configs.py
       tuna/data_migration_updated_layouts.py
       tuna/export_configs.py
-      tuna/flask.py
-      tuna/flask_example.py
       tuna/miopen/analyze_fdb.py
       tuna/prune_db.py
       tuna/query_db.py
