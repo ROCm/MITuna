@@ -85,7 +85,6 @@ class Example(MITunaInterface):
                        dest='init_session',
                        help='Set up a new tuning session.')
 
-
     self.args = parser.parse_args()
     if len(sys.argv) == 1:
       parser.print_help()
@@ -94,7 +93,6 @@ class Example(MITunaInterface):
     args_check(self.args, parser)
     if self.args.execute and self.args.enqueue_only:
       parser.error('--operation and --enqueue_only are mutually exclusive')
-
 
     self.dbt = ExampleDBTables(session_id=self.args.session_id)
     self.update_operation()
