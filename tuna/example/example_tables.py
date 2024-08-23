@@ -39,7 +39,7 @@ from tuna.example.session import SessionExample
 
 
 class JobEnum(enum.Enum):
-  """Represents job_enum column in config table"""
+  """Represents job_enum column in job table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
   new = 1
