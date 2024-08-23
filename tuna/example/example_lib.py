@@ -42,12 +42,14 @@ from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
 from tuna.example.tables import ExampleDBTables
 from tuna.libraries import Operation
+from tuna.miopen.utils.helper import set_job_state
+from tuna.utils.utility import SimpleDict
 
 Q_NAME = None
 
 
 class Example(MITunaInterface):
-  """Class to support an example of 'romcinfo' run"""
+  """! Class to support an example of 'romcinfo' run"""
 
   def __init__(self):
     super().__init__(library=Library.EXAMPLE)
@@ -98,7 +100,8 @@ class Example(MITunaInterface):
     self.update_operation()
 
   def update_operation(self):
-    """Set worker operation type"""
+    """! Set worker operation type
+    """
     if not self.args.execute:
       self.operation = Operation.COMPILE
       self.fetch_state.add('new')
@@ -158,7 +161,8 @@ class Example(MITunaInterface):
     return worker_lst
 
   def add_tables(self) -> bool:
-    """Generates the library specific schema to the connected SQL server."""
+    """! Generates the library specific schema to the connected SQL server.
+    """
     ret_t: bool = create_tables(get_tables())
     self.logger.info('DB creation successful: %s', ret_t)
 
@@ -166,7 +170,8 @@ class Example(MITunaInterface):
 
   def run(self) -> Optional[List[ExampleWorker]]:
     # pylint: disable=duplicate-code
-    """Main run function of example_lib"""
+    """! Main run function of example_lib
+    """
     res: Optional[List[ExampleWorker]]
     self.parse_args()
     if self.args.add_tables:
@@ -196,18 +201,27 @@ class Example(MITunaInterface):
     return kwargs
 
   def get_job_list(self, session, find_state=None, claim_num=None):
-    """Get list of jobs"""
+    """!Get list of jobs
+    @param session DB session
+    @param find_state state of DB job
+    @param claim_num Number of jobs to pick up
+    """
     job_list = gen_select_objs(session, self.get_job_attr(),
                                self.dbt.job_table.__tablename__,
                                "WHERE state='new'")
     return job_list
 
   def serialize_jobs(self, session, batch_jobs):
-    """Return list of serialize jobs"""
+    """!Return list of serialize jobs
+    @param session DB session
+    @param batch_jobs Number of DB jobs
+    """
     return [elem.to_dict() for elem in batch_jobs]
 
   def build_context(self, serialized_jobs):
-    """Build context list for enqueue job"""
+    """!Build context list for enqueue job
+    @param serialized_jobs List of DB jobs, serialized for Celery
+    """
     context_list = []
     kwargs = self.get_context_items()
     for job in serialized_jobs:
@@ -223,18 +237,40 @@ class Example(MITunaInterface):
     return context_list
 
   def celery_enqueue_call(self, context, q_name, task_id=False):
-    """Wrapper function for celery enqueue func"""
+    """! Wrapper function for celery enqueue func
+    @param context serialized context for Celery job
+    @param q_name Name of custom Celery queue
+    @param task_id custom task ID for redis Key
+    """
     Q_NAME = q_name  #pylint: disable=import-outside-toplevel,unused-variable,invalid-name,redefined-outer-name
     from tuna.example.celery_tuning.celery_tasks import celery_enqueue  #pylint: disable=import-outside-toplevel
 
     return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
 
   def process_compile_results(self, session, fin_json, context):
-    """Process result from fin_build worker"""
+    """! Process result from fin_build worker
+    @param session DB session
+    @param fin_json Result of Celery task, from MIFin in json
+    @param context Celery job execution context, serialized
+    """
     self.logger.info('Pocessing compile results')
-    self.logger.info(fin_json)
+    self.update_job_state(session, fin_json, context)
 
   def process_eval_results(self, session, fin_json, context):
-    """Process fin_json result"""
+    """! Process fin_json result
+    @param session DB session
+    @param fin_json Result of Celery task, from MIFin in json
+    @param context Celery job execution context, serialized
+    """
     self.logger.info('Pocessing eval results')
+    self.update_job_state(session, fin_json, context)
+
+  def update_job_state(self, session, fin_json, context):
+    """! Function to update DB job state post celery task run
+    @param session DB session
+    @param fin_json Result of Celery task, from MIFin in json
+    @param context Celery job execution context, serialized
+    """
     self.logger.info(fin_json)
+    job = SimpleDict(**context['job'])
+    set_job_state(session, job, self.dbt, 'completed', result=fin_json)
