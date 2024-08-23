@@ -60,21 +60,11 @@ def test_example():
   example.args.session_id = 1
   example.args.execute = True
   example.args.label = 'test_example'
-  #assert num_jobs
+  example.args.execute = True
+  assert num_jobs
 
   #testing execute rocminfo
   res = load_machines(example.args)
   res = example.compose_worker_list(res)
-
-
-  example.
-  num_jobs = add_jobs(example.args, dbt)
-  
-  #assert num_jobs
-  with DbSession() as session:
-    query = session.query(Job).filter(Job.session==1)\
-                              .filter(Job.state=='completed')
-    res = query.all()
-    assert res
 
   return True
