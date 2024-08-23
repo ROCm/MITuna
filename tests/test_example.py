@@ -58,6 +58,7 @@ def test_example():
   example.operation = Operation.COMPILE
   example.args.arch = "gfx90a"
   example.args.num_cu = 104
+  example.add_tables()
   example.dbt = ExampleDBTables(session_id=example.args.session_id)
 
   machines = load_machines(example.args)
