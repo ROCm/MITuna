@@ -128,7 +128,7 @@ solver_applicability table with applicable solvers for each configuration for th
 
 Time to create the jobs for the tuning session. Specify the session id, the configs that
 should be tuned, and the fin_step to be executed. Configs can be added by using the tag from
-the config_tags table. Jobs should have a compile and an eval fin step pair.
+the config_tags table. Jobs should have a compile and an eval MIFin step pair.
 
 Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, and miopen_find_eval.
 
@@ -137,7 +137,7 @@ Fin steps include: miopen_perf_compile, miopen_perf_eval, miopen_find_compile, a
   ./load_job.py --session_id 1 -t resnet50 --fin_steps miopen_perf_compile,miopen_perf_eval -o -l reason  
   --session_id - tuning session id  
   -t           - config tag 
-  --fin_steps  - operations to be performed by fin (tuning handle into miopen)  
+  --fin_steps  - operations to be performed by MIFin (tuning handle into miopen)  
   -o           - only_applicable, will create a job for each applicable solver  
   -l           - reference text description 
 

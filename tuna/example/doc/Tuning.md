@@ -76,4 +76,16 @@ a tuning step. This is a standalone step that launches a particular command.
 
 To integrate a new library, similar source code would have to be provided, as the one included
 in */tuna/example*. The full MIOpen library source code for tuning MIOpen is included in
-*/tuna/miopen*.
+=======
+The last step:
+
+.. code-block::  
+
+  ./go_fish.py example --execute --session_id 1
+
+This command will pick up jobs in the *new* state from the job tables associated with the
+session_id 1. The job status will be updated as the jobs are executing, from new to running and
+completed or errored.
+
+To integrate a new library, similar source code would have to be provided, as the one included
+in */tuna/example*. The full MIOpen library source code for tuning is included in
