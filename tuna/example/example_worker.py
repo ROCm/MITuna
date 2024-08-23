@@ -45,7 +45,7 @@ class ExampleWorker(WorkerInterface):
     """Initialize tables"""
     self.dbt = ExampleDBTables(session_id=self.session_id)
 
-  def step(self) -> bool:
+  def step(self) -> str:
     """Main functionality of the worker class. Runs rocminfo"""
     return self.run_cmd()
 
