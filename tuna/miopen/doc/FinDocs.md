@@ -1,10 +1,10 @@
-FIN Documentation
+MIFin Documentation
 ==================
 
-How to run FIN inside a docker!
+How to run MIFin inside a docker!
 -------------------------------
 
-To run Fin steps in tuna, a new docker needs to be created, that contains FIN, MIOpen
+To run MIFin steps in MITuna, a new docker needs to be created, that contains MIFin, MIOpen
 and later a clone of MITuna.
 Steps.
 

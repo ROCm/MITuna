@@ -116,6 +116,7 @@ The above assumes that MITuna lives in the home directory and the virtual enviro
   #redis
   export TUNA_CELERY_BACKEND_HOST=localhost
   export TUNA_CELERY_BACKEND_PORT=6379 #default
+  #ipmi
   export gateway_ip=<gateway_ip>
   export gateway_port=<gateway_port>
   export gateway_user=<gateway_user>
