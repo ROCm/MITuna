@@ -263,8 +263,8 @@ async def test_celery_workers():
 
   with DbSession() as session:
     for fin_json, context in res_set:
-      #testing process_fin_builder_results
-      miopen.process_fin_builder_results(session, fin_json, context)
+      #testing process_compile_results
+      miopen.process_compile_results(session, fin_json, context)
     count = session.query(dbt.job_table).filter(
         dbt.job_table.session == miopen.args.session_id).count()
     assert count == num_jobs
