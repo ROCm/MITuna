@@ -701,8 +701,7 @@ class MIOpen(MITunaInterface):
                                       queue=q_name,
                                       reply_to=q_name)
 
-  def process_compile_results(self, session: DbSession, fin_json: dict,
-                              context: dict) -> bool:
+  def process_compile_results(self, session, fin_json, context):
     """! Process result from fin_build worker
     @param session DB session
     @param fin_json MIFin results for job 
@@ -710,7 +709,7 @@ class MIOpen(MITunaInterface):
     @return Boolean value
     """
     job = SimpleDict(**context['job'])
-    pending = List[Any]
+    pending = None
     solver_id_map = get_solver_ids()
 
     failed_job = False
