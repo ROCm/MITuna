@@ -752,8 +752,7 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def process_eval_results(self, session: DbSession, fin_json: dict,
-                           context: dict) -> bool:
+  def process_eval_results(self, session, fin_json, context):
     """! Process fin_json result
     @param session DB session
     @param fin_json MIFin results for job 
@@ -763,7 +762,7 @@ class MIOpen(MITunaInterface):
     job = SimpleDict(**context['job'])
     failed_job = True
     result_str = ''
-    pending = List[Any]
+    pending = None
     orig_state = 'compiled'
 
     try:
