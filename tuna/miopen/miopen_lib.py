@@ -28,7 +28,7 @@
 
 import sys
 import copy
-from typing import List, Tuple
+from typing import List, Tuple, Any
 from functools import lru_cache
 from collections.abc import Iterable
 
@@ -653,7 +653,7 @@ class MIOpen(MITunaInterface):
     fdb_attr.remove("update_ts")
     return fdb_attr
 
-  def serialize_jobs(self, session, batch_jobs):
+  def serialize_jobs(self, session: DbSession, batch_jobs: List[Any]):
     """! Return list of serialize jobs
     @param session DB session
     @param batch_jobs List of DB jobs
@@ -662,7 +662,8 @@ class MIOpen(MITunaInterface):
     entries = self.compose_work_objs_fin(session, batch_jobs, self.dbt)
     return serialize_chunk(entries)
 
-  def build_context(self, serialized_jobs):
+  def build_context(
+      self, serialized_jobs: Tuple[SimpleDict, SimpleDict]) -> List[dict]:
     """Build context list for enqueue job"""
     context_list = []
     kwargs = self.get_context_items()
@@ -679,7 +680,9 @@ class MIOpen(MITunaInterface):
       }
       context_list.append(context)
 
-  def celery_enqueue_call(self, context, q_name, task_id=False):
+    return context_list
+
+  def celery_enqueue_call(self, context: dict, q_name: str, task_id=False):
     """! Enqueue job (context) for queue:q_name
     @param context Context for Celery job
     @param q_name Custom Celery queue name
@@ -698,7 +701,8 @@ class MIOpen(MITunaInterface):
                                       queue=q_name,
                                       reply_to=q_name)
 
-  def process_compile_results(self, session, fin_json, context):
+  def process_compile_results(self, session: DbSession, fin_json: dict,
+                              context: dict) -> bool:
     """! Process result from fin_build worker
     @param session DB session
     @param fin_json MIFin results for job 
@@ -706,7 +710,7 @@ class MIOpen(MITunaInterface):
     @return Boolean value
     """
     job = SimpleDict(**context['job'])
-    pending = []
+    pending = List[Any]
     solver_id_map = get_solver_ids()
 
     failed_job = False
@@ -748,7 +752,8 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def process_eval_results(self, session, fin_json, context):
+  def process_eval_results(self, session: DbSession, fin_json: dict,
+                           context: dict) -> bool:
     """! Process fin_json result
     @param session DB session
     @param fin_json MIFin results for job 
@@ -758,7 +763,7 @@ class MIOpen(MITunaInterface):
     job = SimpleDict(**context['job'])
     failed_job = True
     result_str = ''
-    pending = []
+    pending = List[Any]
     orig_state = 'compiled'
 
     try:

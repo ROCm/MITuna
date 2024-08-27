@@ -144,7 +144,7 @@ async def test_celery_workers():
     miopen.reset_job_state_on_ctrl_c()
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='new').count()
-    #assert count == num_jobs
+    assert count == num_jobs
 
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
@@ -154,6 +154,8 @@ async def test_celery_workers():
     context_list = miopen.get_context_list(session, [job for job in jobs])
     assert context_list
     assert len(context_list) == 4
+
+
   entries = [job for job in jobs]
 
   job_config_rows = miopen.compose_work_objs_fin(session, entries, miopen.dbt)

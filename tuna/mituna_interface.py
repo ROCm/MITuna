@@ -587,7 +587,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     job_attr: List[str] = None
     try:
       job_attr = [column.name for column in inspect(self.dbt.job_table).c]
-      print(job_attr)
       job_attr.remove("insert_ts")
       job_attr.remove("update_ts")
     except NoInspectionAvailable as error:
