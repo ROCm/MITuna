@@ -709,7 +709,7 @@ class MIOpen(MITunaInterface):
     @return Boolean value
     """
     job = SimpleDict(**context['job'])
-    pending = None
+    pending = []
     solver_id_map = get_solver_ids()
 
     failed_job = False
@@ -761,7 +761,7 @@ class MIOpen(MITunaInterface):
     job = SimpleDict(**context['job'])
     failed_job = True
     result_str = ''
-    pending = None
+    pending = []
     orig_state = 'compiled'
 
     try:
