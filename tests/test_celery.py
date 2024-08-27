@@ -155,6 +155,18 @@ async def test_celery_workers():
     assert context_list
     assert len(context_list) == 4
 
+    #testing serialized_job call
+    serialized_jobs = miopen.serialize_jobs(session, [job for job in jobs])
+    assert serialized_jobs
+
+    #testing build_context call
+    context_l = miopen.build_context(serialized_jobs)
+    assert context_l
+
+  #testing get_context_items
+  assert miopen.get_context_items()
+  #testing get_fdb_attr
+  assert miopen.get_fdb_attr()
 
   entries = [job for job in jobs]
 

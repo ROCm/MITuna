@@ -94,3 +94,5 @@ def test_example():
   for subp in subp_list:
     print(subp.pid)
     subp.kill()
+
+  assert example.has_tunable_operation()

@@ -648,6 +648,7 @@ class MIOpen(MITunaInterface):
     """! Get find_db table attrs
     @return fdb_attr find_db table attributes without timestamps
     """
+    fdb_attr = None
     fdb_attr = [column.name for column in inspect(self.dbt.find_db_table).c]
     fdb_attr.remove("insert_ts")
     fdb_attr.remove("update_ts")

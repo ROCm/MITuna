@@ -606,6 +606,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
   @lru_cache(1)
   def get_context_items(self):
     """Helper function to get items for celery job context"""
+    kwargs = None
     f_vals = self.get_f_vals(Machine(local_machine=True), range(0), tuning=True)
     kwargs = self.get_kwargs(0, f_vals, tuning=True)
     return kwargs

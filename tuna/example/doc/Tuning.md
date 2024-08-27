@@ -3,7 +3,7 @@ Tuning through the Example library
 An example of how to integrate external applications in MITuna.
 
 
-*Example* is mock library that runs the *rocminfo* binary.
+*Example* is mock library that runs the *rocminfo* binary. 
 The supported tuning steps are:
 
 .. code-block::  
@@ -39,7 +39,7 @@ Setting up jobs for tuning:
 
   ./tuna/example/load_job.py -a gfx908 -n 120 -l my_label --session_id 1
 
-This steps loads jobs in the *job* table. These jobs will be picked up for execution in the
+This steps loads jobs in the *job* table. ThNoneese jobs will be picked up for execution in the
 next step. Once these jobs are completed their status will be updated to 'completed' or 'errored'.
 
 The first tuning step:
@@ -70,22 +70,9 @@ To execute a single command, in this case `rocminfo`:
 
   ./go_fish.py example --session_id 1 --execute
 
-For the purpose of this example, the command `rocminfo` is hardcoded. this step is not considered
-a tuning step. This is a standalone step that launches a particular command.
-
-
-To integrate a new library, similar source code would have to be provided, as the one included
-in */tuna/example*. The full MIOpen library source code for tuning MIOpen is included in
-=======
-The last step:
-
-.. code-block::  
-
-  ./go_fish.py example --execute --session_id 1
+For the purpose of this example, the command `rocminfo` is hardcoded. This step is not considered
+a tuning step. This is a standalone step that launches a particular pre-installed binary.
 
 This command will pick up jobs in the *new* state from the job tables associated with the
 session_id 1. The job status will be updated as the jobs are executing, from new to running and
 completed or errored.
-
-To integrate a new library, similar source code would have to be provided, as the one included
-in */tuna/example*. The full MIOpen library source code for tuning is included in
