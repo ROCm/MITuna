@@ -1,0 +1,9 @@
+breathe==4.35.0
+docutils==0.20
+markdown-it-py==3.0.0
+myst-parser==4.0.0
+packaging==24.1
+Pygments==2.18.0
+sphinx==7.4.7
+sphinx_rtd_theme==2.0.0
+twine==5.1.1

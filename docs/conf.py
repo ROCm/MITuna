@@ -25,14 +25,14 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 source_suffix = ['.rst', '.md']
-breathe_projects = { "MITuna": "xml/" }
+breathe_projects = {"MITuna": "xml/"}
 #breathe_projects_source = { "tuna": "xml/" }
 
 # General information about the project.
 project = u'MITuna'
 copyright = u'2024, Advanced Micro Devices, Inc. All rights reserved'
 author = u'Advanced Micro Devices, Inc'
-version = '1.0'
+version = '2.0'
 release = version
 
 templates_path = ['_templates']
@@ -48,8 +48,6 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -62,4 +60,3 @@ html_theme_options = {
     'collapse_navigation': False,
     'display_version': True,
 }
-
