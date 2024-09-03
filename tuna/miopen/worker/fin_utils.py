@@ -28,7 +28,7 @@
 """
 
 from tuna.miopen.utils.metadata import NCHW_LAYOUT, NHWC_LAYOUT, NCDHW_LAYOUT, NDHWC_LAYOUT
-from tuna.miopen.utils.metadata import PREC_TO_CMD, INVERS_DIR_MAP
+from tuna.miopen.utils.metadata import PREC_TO_CMD, INVERS_DIR_MAP, DIR_MAP
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import arch2targetid
 from tuna.miopen.utils.config_type import ConfigType
@@ -39,17 +39,30 @@ LOGGER = setup_logger('fin_utils')
 def fin_job(steps, dynamic_only, job, config, dbt):
   """Construct a fin job dict from a config and a job
   """
+  print(f"Config: {config.to_dict()}")
+  print(f"job: {job.to_dict()}")
+  print(dbt.config_type)
   return_dict = {
       "steps": steps,
       "arch": arch2targetid(dbt.session.arch),
       "num_cu": dbt.session.num_cu,
       "config_tuna_id": config.id,
-      "direction": int(INVERS_DIR_MAP[config.direction]),
       "dynamic_only": dynamic_only,
-      "config": compose_config_obj(config)
   }
+
+  if dbt.config_type == ConfigType.batch_norm:
+    direction_t = int(config.forw) + 4 * int(config.back)
+    return_dict['direction'] = direction_t
+    return_dict["config"] = compose_config_obj(config, ConfigType.batch_norm)
+    return_dict['config']['direction'] = direction_t
+  else:
+    return_dict["direction"] = int(INVERS_DIR_MAP[config.direction]),
+    return_dict["config"] = compose_config_obj(config, ConfigType.convolution)
+
   if job.solver:
     return_dict["solvers"] = [job.solver]
+
+  print(return_dict)
 
   return return_dict
 
@@ -132,6 +145,12 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
 
   #For now this hold, but might change in the future
   return_config['cmd'] = cmd
+
+  if config_type == ConfigType.batch_norm:
+    direction_t = int(config.forw) + 4 * int(config.back)
+    return_config['direction'] = DIR_MAP[direction_t]
+
+  print(f"Config: {return_config}")
 
   return return_config
 
