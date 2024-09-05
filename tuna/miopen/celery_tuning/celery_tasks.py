@@ -51,7 +51,7 @@ cached_machine = Machine(local_machine=True)
 
 def prep_kwargs(kwargs, args):
   """Populate kwargs with serialized job, config and machine"""
-  kwargs = prep_default_kwargs(kwargs, args, cached_machine)
+  kwargs = prep_default_kwargs(kwargs, args[0], cached_machine)
   kwargs["config"] = SimpleDict(**args[1])
 
   return kwargs

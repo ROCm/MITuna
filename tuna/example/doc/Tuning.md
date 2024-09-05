@@ -39,7 +39,7 @@ Setting up jobs for tuning:
 
   ./tuna/example/load_job.py -a gfx908 -n 120 -l my_label --session_id 1
 
-This steps loads jobs in the *job* table. ThNoneese jobs will be picked up for execution in the
+This steps loads jobs in the *job* table. These jobs will be picked up for execution in the
 next step. Once these jobs are completed their status will be updated to 'completed' or 'errored'.
 
 The first tuning step:

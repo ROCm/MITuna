@@ -49,7 +49,7 @@ cached_machine = Machine(local_machine=True)
 
 def prep_kwargs(kwargs, args):
   """Populate kwargs with serialized job and machine"""
-  return prep_default_kwargs(kwargs, args, cached_machine)
+  return prep_default_kwargs(kwargs, args[0], cached_machine)
 
 
 cached_worker = {}

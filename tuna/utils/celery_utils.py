@@ -28,10 +28,10 @@
 from tuna.utils.utility import SimpleDict
 
 
-def prep_default_kwargs(kwargs, args, cached_machine):
+def prep_default_kwargs(kwargs, job, machine):
   """Populate kwargs with serialized job and machine"""
-  kwargs["job"] = SimpleDict(**args[0])
-  kwargs["machine"] = cached_machine
+  kwargs["job"] = SimpleDict(**job)
+  kwargs["machine"] = machine
 
   return kwargs
 
