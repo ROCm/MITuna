@@ -122,7 +122,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCm/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=5c8a57b12ac6f0b8da6637d2daef619d6c942f59
+ARG MIOPEN_BRANCH=eb36fcbcf3cf8bc04818dc748f910ea4b9eeb0df
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
