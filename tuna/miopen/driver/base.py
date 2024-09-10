@@ -266,7 +266,7 @@ class MIOpenDriver(DriverBase):
     assert tok[1] != ''
 
     self.compose_fds(tok, line)
-    if "_layout" in line:
+    if "layout" in line:
       self.update_default_layouts(line)
 
   def compose_fds(self, tok: list, line: str) -> bool:

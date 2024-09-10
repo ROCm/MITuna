@@ -142,7 +142,10 @@ TABLE_COLS_BN_MAP = {
     '-run': ('run', 0),
     'r': ('run', 0),
     '-save': ('save', 0),
-    's': ('save', 0)
+    's': ('save', 0),
+    '-layout': ('in_layout', 'NCHW'),
+    'L': ('in_layout', 'NCHW')
+
 }
 
 SUPPORTED_LAYOUTS = ["NCHW", "NHWC", "NCDHW", "NDHWC"]
