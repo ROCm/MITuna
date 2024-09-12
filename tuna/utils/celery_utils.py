@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,43 +24,22 @@
 # SOFTWARE.
 #
 ###############################################################################
-""" Module for creating DB tables"""
-from sqlalchemy.exc import OperationalError
-from tuna.miopen.db.get_db_tables import get_miopen_tables
-from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
-from tuna.db_engine import ENGINE
-from tuna.utils.logger import setup_logger
-from tuna.utils.db_utility import create_tables
-
-#pylint: disable=too-few-public-methods
-LOGGER = setup_logger('miopen_db_tables')
+"""Utility module for celery helper functions"""
+from tuna.utils.utility import SimpleDict
 
 
-def recreate_triggers(drop_triggers, create_triggers):
-  """Drop and recreate triggers"""
+def prep_default_kwargs(kwargs, job, machine):
+  """Populate kwargs with serialized job and machine"""
+  kwargs["job"] = SimpleDict(**job)
+  kwargs["machine"] = machine
 
-  with ENGINE.connect() as conn:
-    for dtg in drop_triggers:
-      conn.execute(f"drop trigger if exists {dtg}")
-    for trg in create_triggers:
-      try:
-        conn.execute(trg)
-      except OperationalError as oerr:
-        LOGGER.warning("Operational Error occurred while adding trigger: '%s'",
-                       trg)
-        LOGGER.info('%s \n', oerr)
-        continue
-
-  return True
+  return kwargs
 
 
-def main():
-  """Main script function"""
-  #setup MIOpen DB
-  ret_t = create_tables(get_miopen_tables())
-  LOGGER.info('DB creation successful: %s', ret_t)
-  recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
+def get_cached_worker(context, cached_worker):
+  """Get worker from cache"""
+  worker = cached_worker[context['operation']]
+  worker.job = SimpleDict(**context['job'])
+  worker.gpu_id = context['kwargs']['gpu_id']
 
-
-if __name__ == '__main__':
-  main()
+  return worker

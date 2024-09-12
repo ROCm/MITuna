@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,41 +25,19 @@
 #
 ###############################################################################
 """ Module for creating DB tables"""
-from sqlalchemy.exc import OperationalError
-from tuna.miopen.db.get_db_tables import get_miopen_tables
-from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
-from tuna.db_engine import ENGINE
 from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import create_tables
+from tuna.example.example_tables import get_tables
 
 #pylint: disable=too-few-public-methods
-LOGGER = setup_logger('miopen_db_tables')
-
-
-def recreate_triggers(drop_triggers, create_triggers):
-  """Drop and recreate triggers"""
-
-  with ENGINE.connect() as conn:
-    for dtg in drop_triggers:
-      conn.execute(f"drop trigger if exists {dtg}")
-    for trg in create_triggers:
-      try:
-        conn.execute(trg)
-      except OperationalError as oerr:
-        LOGGER.warning("Operational Error occurred while adding trigger: '%s'",
-                       trg)
-        LOGGER.info('%s \n', oerr)
-        continue
-
-  return True
+LOGGER = setup_logger('example_db_tables')
 
 
 def main():
   """Main script function"""
-  #setup MIOpen DB
-  ret_t = create_tables(get_miopen_tables())
+  #setup Example DB
+  ret_t = create_tables(get_tables())
   LOGGER.info('DB creation successful: %s', ret_t)
-  recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
 
 
 if __name__ == '__main__':

@@ -36,19 +36,26 @@ from tuna.utils.machine_utility import load_machines
 from tuna.machine import Machine
 
 from tuna.libraries import Library
-from tuna.utils.db_utility import create_tables
+from tuna.utils.db_utility import create_tables, gen_select_objs
 from tuna.example.example_tables import get_tables
 from tuna.example.example_worker import ExampleWorker
 from tuna.example.session import SessionExample
-from tuna.dbBase.sql_alchemy import DbSession
+from tuna.example.tables import ExampleDBTables
+from tuna.libraries import Operation
+from tuna.miopen.utils.helper import set_job_state
+from tuna.utils.utility import SimpleDict
+
+Q_NAME = None
 
 
 class Example(MITunaInterface):
-  """Class to support an example of 'romcinfo' run"""
+  """! Class to support an example of 'romcinfo' run"""
 
   def __init__(self):
     super().__init__(library=Library.EXAMPLE)
     self.args: argparse.Namespace = None
+    self.operation = None
+    self.set_state = None
 
   def parse_args(self) -> None:
     # pylint: disable=too-many-statements
@@ -57,7 +64,8 @@ class Example(MITunaInterface):
     parser = setup_arg_parser('Example library integrated with MITuna', [
         TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
-        TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
+        TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME, TunaArgs.ENQUEUE_ONLY,
+        TunaArgs.SHUTDOWN_WORKERS
     ])
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
     )
@@ -85,6 +93,26 @@ class Example(MITunaInterface):
       sys.exit(-1)
 
     args_check(self.args, parser)
+    if self.args.execute and self.args.enqueue_only:
+      parser.error('--operation and --enqueue_only are mutually exclusive')
+
+    self.dbt = ExampleDBTables(session_id=self.args.session_id)
+    self.update_operation()
+
+  def update_operation(self):
+    """! Set worker operation type
+    """
+    if not self.args.execute:
+      self.operation = Operation.COMPILE
+      self.fetch_state.add('new')
+      self.set_state = 'running'
+
+  def has_tunable_operation(self):
+    """Check if tunable operation is set"""
+    if self.args is None:
+      self.parse_args()
+    return self.operation is not None
+
 
   def launch_worker(self, gpu_idx: int, f_vals: Dict[str, Any], \
                     worker_lst: List[ExampleWorker]) -> bool:
@@ -133,7 +161,8 @@ class Example(MITunaInterface):
     return worker_lst
 
   def add_tables(self) -> bool:
-    """Generates the library specific schema to the connected SQL server."""
+    """! Generates the library specific schema to the connected SQL server.
+    """
     ret_t: bool = create_tables(get_tables())
     self.logger.info('DB creation successful: %s', ret_t)
 
@@ -141,7 +170,8 @@ class Example(MITunaInterface):
 
   def run(self) -> Optional[List[ExampleWorker]]:
     # pylint: disable=duplicate-code
-    """Main run function of example_lib"""
+    """! Main run function of example_lib
+    """
     res: Optional[List[ExampleWorker]]
     self.parse_args()
     if self.args.add_tables:
@@ -166,26 +196,81 @@ class Example(MITunaInterface):
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing process specific runtime information
     """
-    kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals)
+    kwargs: Dict[str, Any] = super().get_kwargs(gpu_idx, f_vals, tuning)
 
     return kwargs
 
-  def get_jobs(self,
-               session: DbSession,
-               find_state: List[str],
-               set_state: str,
-               session_id: int,
-               claim_num: int = None,
-               no_update: bool = False):
-    """Get jobs based on find_state"""
-    self.logger.info('Placeholder')
+  def get_job_list(self, session, find_state=None, claim_num=None):
+    """!Get list of jobs
+    @param session DB session
+    @param find_state state of DB job
+    @param claim_num Number of jobs to pick up
+    """
+    job_list = gen_select_objs(session, self.get_job_attr(),
+                               self.dbt.job_table.__tablename__,
+                               "WHERE state='new'")
+    return job_list
 
-    return True
+  def serialize_jobs(self, session, batch_jobs):
+    """!Return list of serialize jobs
+    @param session DB session
+    @param batch_jobs Number of DB jobs
+    """
+    return [elem.to_dict() for elem in batch_jobs]
 
-  def get_context_list(self, session, batch_jobs):
-    """Get a list of context items to be used for celery task"""
-    raise NotImplementedError("Not implemented in example_lib")
+  def build_context(self, serialized_jobs):
+    """!Build context list for enqueue job
+    @param serialized_jobs List of DB jobs, serialized for Celery
+    """
+    context_list = []
+    kwargs = self.get_context_items()
+    for job in serialized_jobs:
+      context = {
+          'job': job,
+          'operation': self.operation,
+          'arch': self.dbt.session.arch,
+          'num_cu': self.dbt.session.num_cu,
+          'kwargs': kwargs,
+      }
+      context_list.append(context)
+
+    return context_list
 
   def celery_enqueue_call(self, context, q_name, task_id=False):
-    """Wrapper function for celery enqueue func"""
-    raise NotImplementedError('Not implemented')
+    """! Wrapper function for celery enqueue func
+    @param context serialized context for Celery job
+    @param q_name Name of custom Celery queue
+    @param task_id custom task ID for redis Key
+    """
+    Q_NAME = q_name  #pylint: disable=import-outside-toplevel,unused-variable,invalid-name,redefined-outer-name
+    from tuna.example.celery_tuning.celery_tasks import celery_enqueue  #pylint: disable=import-outside-toplevel
+
+    return celery_enqueue.apply_async((context,), queue=q_name, reply_to=q_name)
+
+  def process_compile_results(self, session, fin_json, context):
+    """! Process result from fin_build worker
+    @param session DB session
+    @param fin_json Result of Celery task, from MIFin in json
+    @param context Celery job execution context, serialized
+    """
+    self.logger.info('Pocessing compile results')
+    self.update_job_state(session, fin_json, context)
+
+  def process_eval_results(self, session, fin_json, context):
+    """! Process fin_json result
+    @param session DB session
+    @param fin_json Result of Celery task, from MIFin in json
+    @param context Celery job execution context, serialized
+    """
+    self.logger.info('Pocessing eval results')
+    self.update_job_state(session, fin_json, context)
+
+  def update_job_state(self, session, fin_json, context):
+    """! Function to update DB job state post celery task run
+    @param session DB session
+    @param fin_json Result of Celery task, from MIFin in json
+    @param context Celery job execution context, serialized
+    """
+    self.logger.info(fin_json)
+    job = SimpleDict(**context['job'])
+    set_job_state(session, job, self.dbt, 'completed', result=fin_json)

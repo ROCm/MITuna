@@ -1,8 +1,8 @@
 MIFin Documentation
-==================
+===================
 
 How to run MIFin inside a docker!
--------------------------------
+---------------------------------
 
 To run MIFin steps in MITuna, a new docker needs to be created, that contains MIFin, MIOpen
 and later a clone of MITuna.

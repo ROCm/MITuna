@@ -28,14 +28,12 @@
 
 import sys
 import copy
-import json
 from typing import List, Tuple, Any
 from functools import lru_cache
 from collections.abc import Iterable
 
 from kombu.utils.uuid import uuid
 from sqlalchemy.inspection import inspect
-from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
@@ -46,7 +44,6 @@ from tuna.tables_interface import DBTablesInterface
 from tuna.utils.utility import SimpleDict, serialize_chunk
 from tuna.utils.machine_utility import load_machines
 from tuna.utils.db_utility import gen_select_objs, has_attr_set, get_class_by_tablename
-from tuna.utils.db_utility import gen_update_query, session_retry
 from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.mixin_tables import FinStep
 from tuna.miopen.utils.metadata import MIOPEN_ALG_LIST
@@ -63,7 +60,6 @@ from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.machine import Machine
 #from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table
@@ -95,7 +91,8 @@ class MIOpen(MITunaInterface):
             TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
             TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES,
             TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
-            TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS
+            TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS,
+            TunaArgs.ENQUEUE_ONLY
         ])
     parser.add_argument(
         '--find_mode',
@@ -139,11 +136,6 @@ class MIOpen(MITunaInterface):
         type=int,
         default=None,
         help='Limit the number of gpu workers created by Tuna, index from 0')
-
-    parser.add_argument('--enqueue_only',
-                        action='store_true',
-                        dest='enqueue_only',
-                        help='Enqueue jobs to celery queue')
 
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
@@ -288,6 +280,7 @@ class MIOpen(MITunaInterface):
   def check_blacklist(self, parser):
     """! Helper function
        @param parser The command line argument parser
+      @return ret Boolean value
     """
     self.args.blacklist = self.args.blacklist.split(',')
     for sol in self.args.blacklist:
@@ -313,7 +306,7 @@ class MIOpen(MITunaInterface):
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
       @param worker_lst List containing worker instances
-      @retturn ret Boolean value
+      @return ret Boolean value
     """
     # pylint: disable=too-many-branches
     worker = None
@@ -343,8 +336,7 @@ class MIOpen(MITunaInterface):
   def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
-      @param res DB query return item containg available machines
-      @param args The command line arguments
+      @param machines List of machines to execute on 
     """
     worker_lst = []
     fin_work_done = False
@@ -392,6 +384,9 @@ class MIOpen(MITunaInterface):
     return worker_lst
 
   def add_tables(self):
+    """! Function to create new DB tables
+    @return Bool
+    """
     ret_t = create_tables(get_miopen_tables())
     self.logger.info('DB creation successful: %s', ret_t)
     recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
@@ -399,7 +394,7 @@ class MIOpen(MITunaInterface):
 
   def run(self):
     # pylint: disable=duplicate-code
-    """Main function to launch library"""
+    """! Main function to launch library"""
     res = None
     if self.args is None:
       self.parse_args()
@@ -450,7 +445,8 @@ class MIOpen(MITunaInterface):
     """! Helper function to set up kwargs for worker instances
       @param gpu_idx Unique ID of the GPU
       @param f_vals Dict containing runtime information
-      @param args The command line arguments
+      @param tuning Boolean that indicates if kwargs are for a tuning step
+      @return kwargs Dictionary
     """
     kwargs = super().get_kwargs(gpu_idx, f_vals, tuning)
     kwargs['fin_steps'] = self.args.fin_steps
@@ -460,50 +456,17 @@ class MIOpen(MITunaInterface):
 
     return kwargs
 
-  def get_job_attr(self):
-    """Get job attr for row selection"""
-    job_attr: List[str]
-    try:
-      job_attr = [column.name for column in inspect(self.dbt.job_table).c]
-      job_attr.remove("insert_ts")
-      job_attr.remove("update_ts")
-    except NoInspectionAvailable as error:
-      self.logger.warning("Ignoring error for init_session: %s", error)
-    return job_attr
+  def get_job_list(self, session, find_state, claim_num):
+    """! Get list of jobs
+    @param session DB session
+    @param find_state DB job state
+    @param claim_num Number of DB jobs to pick up
+    @return List of DB jobs
 
-  def get_jobs(self,
-               session: DbSession,
-               find_state: List[str],
-               set_state: str,
-               session_id: int,
-               claim_num: int = None,
-               no_update: bool = False):
-    """Interface function to get jobs based on session and find_state"""
-    #job_rows: List[SimpleDict]
-    ids: list
-    row: SimpleDict
-    job_attr: List[str] = self.get_job_attr()
-
-    self.logger.info('Fetching DB rows...')
+    """
     job_list = self.get_job_objs(session, find_state, self.args.label, self.dbt,
-                                 job_attr, claim_num, self.args.fin_steps)
-
-    if not self.check_jobs_found(job_list, find_state, session_id):
-      return []
-
-    if no_update:
-      return job_list
-
-    ids = [row.id for row in job_list]
-    self.logger.info("%s jobs %s", find_state, ids)
-    self.logger.info('Updating job state to %s', set_state)
-    for job in job_list:
-      job.state = set_state
-      query: str = gen_update_query(job, ['state'],
-                                    self.dbt.job_table.__tablename__)
-      session.execute(query)
-
-    session.commit()
+                                 self.get_job_attr(), claim_num,
+                                 self.args.fin_steps)
 
     return job_list
 
@@ -515,7 +478,16 @@ class MIOpen(MITunaInterface):
                    job_attr: List[str],
                    claim_num: int = None,
                    fin_steps: List[str] = None) -> List[SimpleDict]:
-    """Get list of job objects"""
+    """! Get list of job objects
+    @param session DB session
+    @param find_state DB job state
+    @param label DB job reason
+    @param dbt Class representing all DB tables associated with this class
+    @param job_attr List of DB job columns
+    @param claim_num Number of DB jobs to pick up
+    @param fin_steps List of MIFin steps
+    @return List of DB jobs
+    """
     entries: List[Tuple[SimpleDict, ...]]
     conds: List[str] = [f"session={dbt.session.id}", "valid=1"]
 
@@ -536,8 +508,15 @@ class MIOpen(MITunaInterface):
                         job_attr: List[str],
                         claim_num: int = None,
                         fin_steps: List[str] = None) -> List[SimpleDict]:
-    """Query a job list for update"""
-    ret = []
+    """! Query a job list for update
+    @param session DB session
+    @param conds List of conditions for DB job WHERE clause
+    @param dbt Class representing all DB tables associated with this class
+    @param job_attr List of DB job columns
+    @param fin_steps List of MIFin steps
+    @return List of MIFin work objects
+    """
+    job_entries = []
     if fin_steps:
       conds.append(f"fin_step like '%{fin_steps[0]}%'")
     else:
@@ -551,23 +530,19 @@ class MIOpen(MITunaInterface):
     else:
       cond_str += " ORDER BY retries,config ASC FOR UPDATE SKIP LOCKED"
 
-    #ret = get_job_rows(session, job_attr, dbt.job_table.__tablename__, cond_str)
-
     job_entries = gen_select_objs(session, job_attr,
                                   dbt.job_table.__tablename__, cond_str)
 
-    ret = job_entries
-    #if fin_steps:
-    #  ret = self.compose_work_objs_fin(session, entries, dbt)
-    #else:
-    #  ret = entries
-
-    #return ret
-    return ret
+    return job_entries
 
   def compose_work_objs_fin(self, session, job_entries,
                             dbt) -> List[Tuple[SimpleDict, SimpleDict]]:
-    """Return jobs for fin work"""
+    """! Return jobs for fin work
+    @param session DB session
+    @param job_entries List of DB jobs
+    @param dbt Class representing all DB tables associated with this class
+    @return ret Job tuple
+    """
     ret = []
 
     cfg_rel = {
@@ -596,7 +571,13 @@ class MIOpen(MITunaInterface):
     return ret
 
   def attach_tensors(self, session, cfg_rel, cfg_entries):
-    """attach tensor relationship information to config entries"""
+    """! Attach tensor relationship information to config entries
+    @param session DB session
+    @param cfg_rel DB Config col value
+    @param cfg_entries List of DB Config entries
+    @return cfg_entries List of DB Config entries with attached tensors (foreign keys)
+
+    """
     for key, val in cfg_rel.items():
       rel_attr = [
           column.name
@@ -614,19 +595,10 @@ class MIOpen(MITunaInterface):
                             rel_cond_str)[0])
     return cfg_entries
 
-  def check_jobs_found(self, job_rows: List[SimpleDict], find_state: List[Any],
-                       session_id: int) -> bool:
-    """check for end of jobs"""
-    if not job_rows:
-      # we are done
-      self.logger.warning('No %s jobs found, session %s', find_state,
-                          session_id)
-      return False
-    return True
-
+  #deprecated
   def get_job_tables(self, job_rows: List[Tuple[SimpleDict, ...]],
                      job_attr: List[str]) -> List[SimpleDict]:
-    """find job tables in query results"""
+    """Find job tables in query results"""
     if has_attr_set(job_rows[0], job_attr):
       job_tables: List[SimpleDict] = job_rows
     else:
@@ -641,7 +613,7 @@ class MIOpen(MITunaInterface):
     return job_tables
 
   def update_operation(self):
-    """Update the workers type that this library needs"""
+    """! Update the workers type that this library needs"""
     if self.args.fin_steps:
       if 'miopen_find_compile' in self.args.fin_steps \
       or 'miopen_perf_compile' in self.args.fin_steps:
@@ -658,7 +630,9 @@ class MIOpen(MITunaInterface):
       self.fetch_state.add("new")
 
   def has_tunable_operation(self):
-    """Check if its a tuning loop operation"""
+    """! Check if its a tuning loop operation
+    @return Bool value that represents if operation is tuning
+    """
     if self.args is None:
       self.parse_args()
     if self.args.subcommand and "load_job" in self.args.subcommand:
@@ -670,23 +644,31 @@ class MIOpen(MITunaInterface):
         s in self.args.fin_steps for s in MIOPEN_CELERY_STEPS)
 
   @lru_cache(1)
-  def get_context_items(self):
-    """Helper function to get items for celery job context"""
-    f_vals = self.get_f_vals(Machine(local_machine=True), range(0), tuning=True)
-    kwargs = self.get_kwargs(0, f_vals, tuning=True)
+  def get_fdb_attr(self):
+    """! Get find_db table attrs
+    @return fdb_attr find_db table attributes without timestamps
+    """
+    fdb_attr = None
     fdb_attr = [column.name for column in inspect(self.dbt.find_db_table).c]
     fdb_attr.remove("insert_ts")
     fdb_attr.remove("update_ts")
-    return kwargs, fdb_attr
+    return fdb_attr
 
-  def get_context_list(self, session, batch_jobs):
-    """Return list of jobs (context) for celery queue"""
-
-    kwargs, fdb_attr = self.get_context_items()
-    context_list = []
+  def serialize_jobs(self, session: DbSession, batch_jobs: List[Any]):
+    """! Return list of serialize jobs
+    @param session DB session
+    @param batch_jobs List of DB jobs
+    @return DB jobs, serialized
+    """
     entries = self.compose_work_objs_fin(session, batch_jobs, self.dbt)
-    serialized_jobs = serialize_chunk(entries)
-    #build context for each celery task
+    return serialize_chunk(entries)
+
+  def build_context(
+      self, serialized_jobs: Tuple[SimpleDict, SimpleDict]) -> List[dict]:
+    """Build context list for enqueue job"""
+    context_list = []
+    kwargs = self.get_context_items()
+    fdb_attr = self.get_fdb_attr()
     for job, config in serialized_jobs:
       context = {
           'job': job,
@@ -701,8 +683,12 @@ class MIOpen(MITunaInterface):
 
     return context_list
 
-  def celery_enqueue_call(self, context, q_name, task_id=False):
-    """Enqueue job (context) for queue:q_name"""
+  def celery_enqueue_call(self, context: dict, q_name: str, task_id=False):
+    """! Enqueue job (context) for queue:q_name
+    @param context Context for Celery job
+    @param q_name Custom Celery queue name
+    @param task_id Custom Redis Key
+    """
 
     #hacky way to get the Q_NAME to the task decorator for interpreter to decorate the
     #function with correct q_name arg
@@ -716,32 +702,13 @@ class MIOpen(MITunaInterface):
                                       queue=q_name,
                                       reply_to=q_name)
 
-  async def parse_result(self, data):
-    """Function callback for celery async jobs to store results"""
-    data = json.loads(data)
-    #self.logger.info(data)
-
-    with DbSession() as session:
-      try:
-        fin_json = data['result']['ret']
-        context = data['result']['context']
-      except KeyError as kerr:
-        self.logger.error(kerr)
-        return False
-
-      #self.logger.info('Parsing: %s', fin_json)
-      #self.logger.info('Parsing context: %s', context)
-      if self.operation == Operation.COMPILE:
-        self.process_fin_builder_results(session, fin_json, context)
-      elif self.operation == Operation.EVAL:
-        self.process_fin_evaluator_results(session, fin_json, context)
-      else:
-        raise CustomError('Unsupported tuning operation')
-
-      return True
-
-  def process_fin_builder_results(self, session, fin_json, context):
-    """Process result from fin_build worker"""
+  def process_compile_results(self, session, fin_json, context):
+    """! Process result from fin_build worker
+    @param session DB session
+    @param fin_json MIFin results for job 
+    @param context Context for Celery job
+    @return Boolean value
+    """
     job = SimpleDict(**context['job'])
     pending = []
     solver_id_map = get_solver_ids()
@@ -785,8 +752,13 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def process_fin_evaluator_results(self, session, fin_json, context):
-    """Process fin_json result"""
+  def process_eval_results(self, session, fin_json, context):
+    """! Process fin_json result
+    @param session DB session
+    @param fin_json MIFin results for job 
+    @param context Context for Celery job
+    @return Boolean value
+    """
     job = SimpleDict(**context['job'])
     failed_job = True
     result_str = ''
@@ -840,37 +812,3 @@ class MIOpen(MITunaInterface):
       set_job_state(session, job, self.dbt, 'errored', result=result_str)
 
     return True
-
-  def reset_job_state_on_ctrl_c(self):
-    """Resetting job state for jobs in flight"""
-    temp_obj = SimpleDict()
-    temp_obj.session_id = self.args.session_id  #pylint: disable=invalid-name
-    attribs = ['state']
-    temp_obj.state = 1
-
-    self.logger.info('Resetting job state in DB for in flight jobs')
-
-    if self.operation == Operation.COMPILE:
-      state = 16
-    elif self.operation == Operation.EVAL:
-      state = 12
-
-    query = gen_update_query(temp_obj, attribs,
-                             self.dbt.job_table.__tablename__,
-                             [('session', self.args.session_id),
-                              ('state', state)])
-    with DbSession() as session:
-
-      #pylint: disable=duplicate-code
-      def callback() -> bool:
-        session.execute(query)
-        session.commit()
-        return True
-
-      #pylint: enable=duplicate-code
-
-      assert session_retry(session, callback, lambda x: x(), self.logger)
-      self.logger.info('Sucessfully reset job state')
-      return True
-
-    return False

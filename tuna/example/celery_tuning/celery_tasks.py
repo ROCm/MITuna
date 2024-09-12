@@ -30,12 +30,10 @@ import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
 from tuna.celery_app.celery_app import app
-from tuna.libraries import Operation
 from tuna.machine import Machine
-from tuna.miopen.utils.lib_helper import get_worker
-from tuna.utils.utility import SimpleDict
 from tuna.utils.celery_utils import prep_default_kwargs, get_cached_worker
-from tuna.miopen.miopen_lib import Q_NAME
+from tuna.example.example_lib import Q_NAME
+from tuna.example.example_worker import ExampleWorker
 
 logger = get_task_logger(__name__)
 
@@ -50,11 +48,8 @@ cached_machine = Machine(local_machine=True)
 
 
 def prep_kwargs(kwargs, args):
-  """Populate kwargs with serialized job, config and machine"""
-  kwargs = prep_default_kwargs(kwargs, args[0], cached_machine)
-  kwargs["config"] = SimpleDict(**args[1])
-
-  return kwargs
+  """Populate kwargs with serialized job and machine"""
+  return prep_default_kwargs(kwargs, args[0], cached_machine)
 
 
 cached_worker = {}
@@ -65,11 +60,10 @@ def prep_worker(context):
   operation = context['operation']
   if operation in cached_worker:
     worker = get_cached_worker(context, cached_worker)
-    worker.config = SimpleDict(**context['config'])
   else:
-    args = [context['job'], context['config'], context['operation']]
+    args = [context['job'], context['operation']]
     kwargs = prep_kwargs(context['kwargs'], args)
-    worker = get_worker(kwargs, args[2])
+    worker = ExampleWorker(**kwargs)
     cached_worker[operation] = worker
   return worker
 
@@ -77,18 +71,6 @@ def prep_worker(context):
 @app.task(trail=True, reply_to=Q_NAME)
 def celery_enqueue(context):
   """Defines a celery task"""
-  kwargs = context['kwargs']
-  operation = context['operation']
-
-  if operation == Operation.EVAL:
-    gpu_id = int((app.worker_name).split('gpu_id_')[1])
-    kwargs['gpu_id'] = gpu_id
-    context['job']['gpu_id'] = gpu_id
-    logger.info("Enqueueing worker %s: gpu(%s), job %s", app.worker_name,
-                gpu_id, context['job'])
-  else:
-    logger.info("Enqueueing worker %s: job %s", app.worker_name, context['job'])
-
-  worker = prep_worker(copy.deepcopy(context))
+  worker = prep_worker(copy.deepcopy(context), ExampleWorker)
   ret = worker.run()
   return {"ret": ret, "context": context}

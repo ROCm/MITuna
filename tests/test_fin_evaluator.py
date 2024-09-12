@@ -205,7 +205,7 @@ def test_fin_evaluator():
   with DbSession() as session:
     for fin_json, context in res_set:
       #testing process_fin_evaluator results
-      miopen.process_fin_evaluator_results(session, fin_json, context)
+      miopen.process_eval_results(session, fin_json, context)
 
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\

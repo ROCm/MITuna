@@ -200,9 +200,17 @@ def gen_select_objs(session, attribs, tablename, cond_str):
 def get_job_rows(session, attribs, tablename, cond_str):
   """Get db rows"""
   ret = None
-  attr_str = ','.join(attribs)
-  query = f"SELECT {attr_str} FROM {tablename}"\
-          f" {cond_str};"
+  if attribs is not None or attribs != []:
+    attr_str = ','.join(attribs)
+  else:
+    attr_str = '*'
+
+  if cond_str:
+    query = f"SELECT {attr_str} FROM {tablename}"\
+            f" {cond_str};"
+  else:
+    query = f"SELECT {attr_str} FROM {tablename};"
+
   LOGGER.info('Query Select: %s', query)
   try:
     ret = session.execute(query)

@@ -42,6 +42,7 @@ def buildSchema(){
     sh "${cmd} -e ${drop_sql}"
     sh "${cmd} -e ${create_sql}"
     sh "./tuna/miopen/db/build_schema.py"
+    sh "./tuna/example/build_schema.py"
 }
 
 def getDockerName(backend)
