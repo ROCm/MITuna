@@ -224,11 +224,12 @@ TENSOR_PRECISION = {
     'INT8': 'INT8',
     'convint8': 'INT8',
     'bnorm': 'FP32',
-    'bnormfp16': 'FP16'
+    'bnormfp16': 'FP16',
+    'bnormbfp16' : 'BFP16'
 }
 
 SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16', 'convint8']
-SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16']
+SUPPORTED_BN_CMDS = ['bnorm', 'bnormfp16', 'bnormbfp16']
 
 CONV_CONFIG_COLS = [
     'batchsize', 'spatial_dim', 'pad_h', 'pad_w', 'pad_d', 'conv_stride_h',
