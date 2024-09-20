@@ -145,7 +145,6 @@ TABLE_COLS_BN_MAP = {
     's': ('save', 0),
     '-layout': ('in_layout', 'NCHW'),
     'L': ('in_layout', 'NCHW')
-
 }
 
 SUPPORTED_LAYOUTS = ["NCHW", "NHWC", "NCDHW", "NDHWC"]
@@ -225,7 +224,7 @@ TENSOR_PRECISION = {
     'convint8': 'INT8',
     'bnorm': 'FP32',
     'bnormfp16': 'FP16',
-    'bnormbfp16' : 'BFP16'
+    'bnormbfp16': 'BFP16'
 }
 
 SUPPORTED_CONV_CMDS = ['conv', 'convfp16', 'convbfp16', 'convint8']
