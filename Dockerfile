@@ -122,7 +122,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCm/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=eb36fcbcf3cf8bc04818dc748f910ea4b9eeb0df
+ARG MIOPEN_BRANCH=bg/bn_driver_enable_nhwc
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm

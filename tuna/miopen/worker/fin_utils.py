@@ -39,9 +39,6 @@ LOGGER = setup_logger('fin_utils')
 def fin_job(steps, dynamic_only, job, config, dbt):
   """Construct a fin job dict from a config and a job
   """
-  print(f"Config: {config.to_dict()}")
-  print(f"job: {job.to_dict()}")
-  print(dbt.config_type)
   return_dict = {
       "steps": steps,
       "arch": arch2targetid(dbt.session.arch),
@@ -61,8 +58,6 @@ def fin_job(steps, dynamic_only, job, config, dbt):
 
   if job.solver:
     return_dict["solvers"] = [job.solver]
-
-  print(return_dict)
 
   return return_dict
 
@@ -149,8 +144,6 @@ def compose_config_obj(config, config_type=ConfigType.convolution):
   if config_type == ConfigType.batch_norm:
     direction_t = int(config.forw) + 4 * int(config.back)
     return_config['direction'] = DIR_MAP[direction_t]
-
-  print(f"Config: {return_config}")
 
   return return_config
 
