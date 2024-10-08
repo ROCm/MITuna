@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
 ###############################################################################
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,3 +24,22 @@
 # SOFTWARE.
 #
 ###############################################################################
+"""Utility module for celery helper functions"""
+from tuna.utils.utility import SimpleDict
+
+
+def prep_default_kwargs(kwargs, job, machine):
+  """Populate kwargs with serialized job and machine"""
+  kwargs["job"] = SimpleDict(**job)
+  kwargs["machine"] = machine
+
+  return kwargs
+
+
+def get_cached_worker(context, cached_worker):
+  """Get worker from cache"""
+  worker = cached_worker[context['operation']]
+  worker.job = SimpleDict(**context['job'])
+  worker.gpu_id = context['kwargs']['gpu_id']
+
+  return worker

@@ -54,7 +54,7 @@ def test_fin_builder():
                            'miopenConvolutionAlgoGEMM')
   assert num_jobs
 
-  #testing process_fdb_compile in process_fin_builder_results
+  #testing process_fdb_compile in process_compile_results
   miopen.args.update_applicability = False
   miopen.args.fin_steps = ["miopen_find_compile"]
   miopen.fetch_state.add('new')
@@ -97,7 +97,7 @@ def test_fin_builder():
 
   with DbSession() as session:
     for fin_json, context in res_set:
-      miopen.process_fin_builder_results(session, fin_json, context)
+      miopen.process_compile_results(session, fin_json, context)
 
   with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\

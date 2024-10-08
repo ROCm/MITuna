@@ -159,7 +159,10 @@ def get_worker_args(args, machine, miopen):
   return kwargs
 
 
-def add_test_session(arch='gfx90a', num_cu=104, label=None):
+def add_test_session(arch='gfx90a',
+                     num_cu=104,
+                     label=None,
+                     session_table=Session):
   args = GoFishArgs()
   if label:
     args.label = label
@@ -172,7 +175,7 @@ def add_test_session(arch='gfx90a', num_cu=104, label=None):
   miopen.args = args
   kwargs = get_worker_args(args, machine, miopen)
   worker = FinClass(**kwargs)
-  session_id = Session().add_new_session(args, worker)
+  session_id = session_table().add_new_session(args, worker)
   assert (session_id)
   return session_id
 

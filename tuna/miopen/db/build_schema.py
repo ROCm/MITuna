@@ -33,7 +33,7 @@ from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import create_tables
 
 #pylint: disable=too-few-public-methods
-LOGGER = setup_logger('db_tables')
+LOGGER = setup_logger('miopen_db_tables')
 
 
 def recreate_triggers(drop_triggers, create_triggers):

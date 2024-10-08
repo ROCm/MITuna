@@ -42,6 +42,7 @@ def buildSchema(){
     sh "${cmd} -e ${drop_sql}"
     sh "${cmd} -e ${create_sql}"
     sh "./tuna/miopen/db/build_schema.py"
+    sh "./tuna/example/build_schema.py"
 }
 
 def getDockerName(backend)
@@ -713,7 +714,6 @@ def runLint() {
             sh "mypy tuna/miopen/parse_miopen_args.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/driver/convolution.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/yaml_parser.py --ignore-missing-imports --follow-imports=skip"
-            sh "mypy tuna/flask_example.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/go_fish.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/driver/batchnorm.py --ignore-missing-imports --follow-imports=skip"
             sh "mypy tuna/miopen/worker/fin_class.py --ignore-missing-imports --follow-imports=skip"

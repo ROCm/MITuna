@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,16 +24,21 @@
 # SOFTWARE.
 #
 ###############################################################################
+""" Module for creating DB tables"""
+from tuna.utils.logger import setup_logger
+from tuna.utils.db_utility import create_tables
+from tuna.example.example_tables import get_tables
 
-from setuptools import find_packages, setup
+#pylint: disable=too-few-public-methods
+LOGGER = setup_logger('example_db_tables')
 
-setup(
-    name='tuna_app',
-    version='1.0.0',
-    packages=find_packages(),
-    include_package_data=True,
-    zip_safe=False,
-    install_requires=[
-        'flask',
-    ],
-)
+
+def main():
+  """Main script function"""
+  #setup Example DB
+  ret_t = create_tables(get_tables())
+  LOGGER.info('DB creation successful: %s', ret_t)
+
+
+if __name__ == '__main__':
+  main()

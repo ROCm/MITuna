@@ -14,9 +14,9 @@ Sources and binaries can be found at `MITuna's GitHub site <https://github.com/R
    :caption: Contents:
 
    readme
+   tuning
    findocs
-   flaskapp
-   tuningcycle
+   dbversioning
    
 Indices and tables
 ==================

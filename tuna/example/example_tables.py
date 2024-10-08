@@ -39,7 +39,7 @@ from tuna.example.session import SessionExample
 
 
 class JobEnum(enum.Enum):
-  """Represents job_enum column in config table"""
+  """Represents job_enum column in job table"""
   # pylint: disable=invalid-name ; names represent entries in job_enum column
   # pylint: disable=duplicate-code
   new = 1
@@ -66,8 +66,6 @@ class Job(BASE):
   result = Column(Text, nullable=True)
   gpu_id = Column(Integer, nullable=False, server_default="-1")
   machine_id = Column(Integer, nullable=False, server_default="-1")
-
-  config = Column(Integer, nullable=False, index=True)
 
 
 def get_tables() -> List[BASE]:
