@@ -211,7 +211,7 @@ def finFindCompileEnqueue(){
         sh "cat ${celery_log}"
 
         sh "printenv"
-        sh "./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "python -m cProfile ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
 
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
