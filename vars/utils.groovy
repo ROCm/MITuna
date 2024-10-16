@@ -211,7 +211,8 @@ def finFindCompileEnqueue(){
         sh "cat ${celery_log}"
 
         sh "printenv"
-        sh "python3 -m cProfile ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "python3 -m cProfile -o cProfile.txt ./tuna/go_fish.py miopen --fin_steps miopen_find_compile -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        archiveArtifacts  "cProfile.txt"
 
         sh "kill -9 ${pid}"
         sh "cat ${celery_log}"
@@ -260,7 +261,8 @@ def finFindEval(){
             counter++
         }
 
-        sh "py-spy record -o profile.svg --subprocesses --function -- python3 -m ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "py-spy record -o profile.speedscope.json --format speedscope --function -- python3 -m ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        archiveArtifacts  "profile.speedscope.json"
         //killing off celery workers by pid
         pid_list.each{
           try{
