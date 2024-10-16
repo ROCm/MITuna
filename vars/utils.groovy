@@ -260,7 +260,7 @@ def finFindEval(){
             counter++
         }
 
-        sh "py-spy record -o profile.svg --subprocesses -- python3 -m ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        sh "py-spy record -o profile.svg --subprocesses --function -- python3 -m ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
         //killing off celery workers by pid
         pid_list.each{
           try{
