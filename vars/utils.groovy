@@ -226,7 +226,7 @@ def finFindCompileEnqueue(){
 
 def finFindEval(){
     def tuna_docker = getDocker("HIP")
-    tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args} --cap-add SYS_PTRACE") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
@@ -261,8 +261,8 @@ def finFindEval(){
             counter++
         }
 
-        sh "py-spy record -o profile.speedscope.json --format speedscope --function -- python3 -m ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
-        archiveArtifacts  "profile.speedscope.json"
+        sh "py-spy record -o profile.svg -- python3 ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+        archiveArtifacts  "profile.svg"
         //killing off celery workers by pid
         pid_list.each{
           try{
