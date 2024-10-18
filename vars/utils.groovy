@@ -234,7 +234,7 @@ def finFindEval(){
         env.gateway_ip = "${gateway_ip}"
         env.gateway_port = "${gateway_port}"
         env.gateway_user = "${gateway_user}"
-        env.PYTHONPATH=env.WORKSPACE
+        env.PYTHONPATH="${env.WORKSPACE}/tuna"
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         env.TUNA_CELERY_BROKER_HOST="${db_host}"
         def sesh1 = runsql("select id from session order by id asc limit 1")
@@ -267,7 +267,7 @@ def finFindEval(){
             archiveArtifacts  "profile.svg"
             sh "echo ${err}"
           }
-          //archiveArtifacts  "profile.svg"
+          archiveArtifacts  "profile.svg"
         //killing off celery workers by pid
         pid_list.each{
           try{
