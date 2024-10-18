@@ -261,8 +261,13 @@ def finFindEval(){
             counter++
         }
 
-        sh "py-spy record -o profile.svg -- python3 ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
-        archiveArtifacts  "profile.svg"
+        try{
+          sh "py-spy record -o profile.svg -- python3 ./tuna/go_fish.py miopen --fin_steps miopen_find_eval -l finFind_${branch_id} --session_id ${sesh1} --enqueue_only"
+          } catch (Exception err) {
+            archiveArtifacts  "profile.svg"
+            sh "echo ${err}"
+          }
+          //archiveArtifacts  "profile.svg"
         //killing off celery workers by pid
         pid_list.each{
           try{
