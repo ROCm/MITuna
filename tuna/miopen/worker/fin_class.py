@@ -635,6 +635,7 @@ class FinClass(WorkerInterface):
          self.get_fin_input(), '-o', fin_output])  # pylint: disable=no-member
 
     ret_code, out_str = super().run_command(cmd)
+
     if ret_code != 0:
       result = [{
         'solver': 'all',
