@@ -473,6 +473,7 @@ class WorkerInterface(Process):
         self.logger.error('Error executing command: %s', ' '.join(cmd))
         if err:
           err_str: str = err.read()
+          out = err_str
           self.logger.error('%s : %s', ret_code, err_str)
           if "disk I/O error" in err_str:
             self.logger.error('fin retry : %u', i)

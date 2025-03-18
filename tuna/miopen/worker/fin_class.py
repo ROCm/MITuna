@@ -256,13 +256,13 @@ class FinClass(WorkerInterface):
     if self.__prep_fin_input(self.local_file, to_file=True):
       fin_cmd = self.__compose_fincmd()
       ret_code, out, err = self.exec_docker_cmd(fin_cmd)
-      if ret_code > 0:
+      if ret_code != 0:
         self.logger.warning('Err executing cmd: %s', fin_cmd)
         self.logger.warning(out)
         raise ValueError(
             f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
-
-      result = self.__parse_out()
+      else:
+        result = self.__parse_out()
 
     return result
 
@@ -634,9 +634,14 @@ class FinClass(WorkerInterface):
         ['/opt/rocm/bin/fin', '-i',
          self.get_fin_input(), '-o', fin_output])  # pylint: disable=no-member
 
-    ret_code, _ = super().run_command(cmd)
+    ret_code, out_str = super().run_command(cmd)
     if ret_code != 0:
-      return None
+      result = [{
+        'solver': 'all',
+        'success': False,
+        'result': out_str
+      }]
+      return result
 
     # load the output json file and strip the env
     fin_json = json.loads(self.machine.read_file(fin_output))[1:]
