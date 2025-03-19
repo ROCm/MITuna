@@ -644,11 +644,11 @@ class FinClass(WorkerInterface):
     ret_code, out_str = super().run_command(cmd)
 
     if ret_code != 0:
-      result = [{
+      result = {
         'solver': 'all',
         'success': False,
         'result': out_str
-      }]
+      }
       return result
 
     # load the output json file and strip the env
