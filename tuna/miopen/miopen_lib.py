@@ -772,7 +772,7 @@ class MIOpen(MITunaInterface):
 
     try:
       if fin_json:
-        if 'success' in fin_json[0] and fin_json[0]["success"] == False:
+        if 'success' in fin_json and fin_json["success"] == False:
           status = fin_json
         else:
           if 'miopen_find_eval_result' in fin_json:
