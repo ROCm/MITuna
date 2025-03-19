@@ -721,7 +721,7 @@ class MIOpen(MITunaInterface):
     try:
       if fin_json:
         if 'success' in fin_json and fin_json["success"] == False:
-          status = fin_json
+          status = [fin_json]
         else:
           if 'miopen_find_compile_result' in fin_json:
             status = process_fdb_w_kernels(session, fin_json,
@@ -773,7 +773,7 @@ class MIOpen(MITunaInterface):
     try:
       if fin_json:
         if 'success' in fin_json and fin_json["success"] == False:
-          status = fin_json
+          status = [fin_json]
         else:
           if 'miopen_find_eval_result' in fin_json:
             status = process_fdb_w_kernels(session,
