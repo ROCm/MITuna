@@ -261,8 +261,8 @@ class FinClass(WorkerInterface):
         self.logger.warning(out)
         raise ValueError(
             f'Failed to execute fin cmd: {fin_cmd} err: {err.read()}')
-      else:
-        result = self.__parse_out()
+
+      result = self.__parse_out()
 
     return result
 
