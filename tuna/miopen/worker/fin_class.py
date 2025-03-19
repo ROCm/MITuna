@@ -647,7 +647,7 @@ class FinClass(WorkerInterface):
       result = {
         'solver': 'all',
         'success': False,
-        'result': out_str[-128:].replace('\n',';')
+        'result': out_str[-128:].replace('\n',';').replace('\'','"')
       }
       return result
 
