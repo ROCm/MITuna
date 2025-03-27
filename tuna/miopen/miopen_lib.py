@@ -363,6 +363,8 @@ class MIOpen(MITunaInterface):
         cfg_rows = query.all()
         len_rows = len(cfg_rows)
         proc_lim = (len_rows + 99) / 100
+        if 32 < proc_lim:
+          proc_lim  = 32
         while len(worker_ids) > proc_lim:
           worker_ids.pop()
 
@@ -718,14 +720,17 @@ class MIOpen(MITunaInterface):
     status = None
     try:
       if fin_json:
-        if 'miopen_find_compile_result' in fin_json:
-          status = process_fdb_w_kernels(session, fin_json,
-                                         copy.deepcopy(context), self.dbt,
-                                         context['fdb_attr'], pending)
+        if 'success' in fin_json and fin_json["success"] == False:
+          status = [fin_json]
+        else:
+          if 'miopen_find_compile_result' in fin_json:
+            status = process_fdb_w_kernels(session, fin_json,
+                                           copy.deepcopy(context), self.dbt,
+                                           context['fdb_attr'], pending)
 
-        elif 'miopen_perf_compile_result' in fin_json:
-          status = process_pdb_compile(session, fin_json, job, self.dbt,
-                                       solver_id_map)
+          elif 'miopen_perf_compile_result' in fin_json:
+            status = process_pdb_compile(session, fin_json, job, self.dbt,
+                                         solver_id_map)
 
         success, result_str = get_fin_result(status)
         failed_job = not success
@@ -767,24 +772,27 @@ class MIOpen(MITunaInterface):
 
     try:
       if fin_json:
-        if 'miopen_find_eval_result' in fin_json:
-          status = process_fdb_w_kernels(session,
-                                         fin_json,
-                                         copy.deepcopy(context),
-                                         self.dbt,
-                                         context['fdb_attr'],
-                                         pending,
-                                         result_str='miopen_find_eval_result',
-                                         check_str='evaluated')
-        elif 'miopen_perf_eval_result' in fin_json:
-          status = process_fdb_w_kernels(session,
-                                         fin_json,
-                                         copy.deepcopy(context),
-                                         self.dbt,
-                                         context['fdb_attr'],
-                                         pending,
-                                         result_str='miopen_perf_eval_result',
-                                         check_str='evaluated')
+        if 'success' in fin_json and fin_json["success"] == False:
+          status = [fin_json]
+        else:
+          if 'miopen_find_eval_result' in fin_json:
+            status = process_fdb_w_kernels(session,
+                                           fin_json,
+                                           copy.deepcopy(context),
+                                           self.dbt,
+                                           context['fdb_attr'],
+                                           pending,
+                                           result_str='miopen_find_eval_result',
+                                           check_str='evaluated')
+          elif 'miopen_perf_eval_result' in fin_json:
+            status = process_fdb_w_kernels(session,
+                                           fin_json,
+                                           copy.deepcopy(context),
+                                           self.dbt,
+                                           context['fdb_attr'],
+                                           pending,
+                                           result_str='miopen_perf_eval_result',
+                                           check_str='evaluated')
 
         success, result_str = get_fin_result(status)
         failed_job = not success
