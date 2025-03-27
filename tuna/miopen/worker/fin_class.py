@@ -49,10 +49,9 @@ from tuna.miopen.utils.metadata import FIN_CACHE
 from tuna.miopen.utils.metadata import INVERS_DIR_MAP
 from tuna.miopen.worker.fin_utils import compose_config_obj
 from tuna.miopen.utils.config_type import ConfigType
-from tuna.miopen.db.solver import get_solver_ids, get_id_solvers
-from tuna.utils.metadata import MAX_JOB_RETRIES
-from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename
 from tuna.utils.db_utility import session_retry
+from tuna.miopen.db.solver import get_solver_ids, get_id_solvers
+from tuna.utils.db_utility import gen_select_objs, get_class_by_tablename
 from tuna.utils.utility import split_packets
 from tuna.utils.utility import SimpleDict
 
@@ -258,7 +257,7 @@ class FinClass(WorkerInterface):
 
     if self.__prep_fin_input(self.local_file, to_file=True):
       fin_cmd = self.__compose_fincmd()
-      for i in range(MAX_JOB_RETRIES):
+      for i in range(3):
         ret_code, out, err = self.exec_docker_cmd(fin_cmd)
         if ret_code != 0:
           self.logger.warning('Error executing cmd(%u): %s', i, fin_cmd)
