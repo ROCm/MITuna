@@ -94,6 +94,7 @@ async def test_celery_workers():
 
 
   cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{miopen.args.session_id} -Q test_{db_name}"  #pylint: disable=line-too-long
+  q_name = f"test_{db_name}"
   #testing launch_worker_per_node
   subp_list = launch_worker_per_node([machine], cmd, True)
   #wait for workers to finish launch
