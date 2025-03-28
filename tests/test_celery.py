@@ -246,7 +246,8 @@ async def test_celery_workers():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  redis = await aioredis.from_url("redis://localhost:6379/15")
+  backend_host = os.environ['TUNA_CELERY_BACKEND_HOST']
+  redis = await aioredis.from_url(f"redis://{backend_host}:6379/15")
   print('Established redis connection')
   counter = 1
 
