@@ -6,7 +6,7 @@ ARG OSDB_BKC_VERSION=
 ARG HASVER=${ROCMVERSION:+$ROCMVERSION}
 ARG HASVER=${HASVER:-$OSDB_BKC_VERSION}
 
-ARG BASEIMAGE=rocm/miopen:ci_35ccb8
+ARG BASEIMAGE=rocm/miopen:ci_d50fb6
 ARG UBUNTU=ubuntu:22.04
 
 #use UBUNTU with rocm version set
@@ -122,7 +122,7 @@ ARG MIOPEN_DIR=/root/dMIOpen
 #Clone MIOpen
 RUN git clone https://github.com/ROCm/MIOpen.git $MIOPEN_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=eb20d3ed4
+ARG MIOPEN_BRANCH=ca2eb7538
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
