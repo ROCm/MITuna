@@ -336,7 +336,7 @@ class MIOpen(MITunaInterface):
   def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
-      @param machines List of machines to execute on 
+      @param machines List of machines to execute on
     """
     worker_lst = []
     fin_work_done = False
@@ -707,7 +707,7 @@ class MIOpen(MITunaInterface):
   def process_compile_results(self, session, fin_json, context):
     """! Process result from fin_build worker
     @param session DB session
-    @param fin_json MIFin results for job 
+    @param fin_json MIFin results for job
     @param context Context for Celery job
     @return Boolean value
     """
@@ -720,7 +720,7 @@ class MIOpen(MITunaInterface):
     status = None
     try:
       if fin_json:
-        if 'success' in fin_json and fin_json["success"] == False:
+        if 'success' in fin_json and fin_json["success"] is False:
           status = [fin_json]
         else:
           if 'miopen_find_compile_result' in fin_json:
@@ -760,7 +760,7 @@ class MIOpen(MITunaInterface):
   def process_eval_results(self, session, fin_json, context):
     """! Process fin_json result
     @param session DB session
-    @param fin_json MIFin results for job 
+    @param fin_json MIFin results for job
     @param context Context for Celery job
     @return Boolean value
     """
@@ -772,7 +772,7 @@ class MIOpen(MITunaInterface):
 
     try:
       if fin_json:
-        if 'success' in fin_json and fin_json["success"] == False:
+        if 'success' in fin_json and fin_json["success"] is False:
           status = [fin_json]
         else:
           if 'miopen_find_eval_result' in fin_json:
