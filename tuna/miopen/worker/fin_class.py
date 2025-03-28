@@ -644,9 +644,13 @@ class FinClass(WorkerInterface):
 
     if ret_code != 0:
       result = {
-        'solver': 'all',
-        'success': False,
-        'result': out_str[-128:].replace('\n',';').replace('\'','"').replace('%','x').replace(':',': ')  # correct string for sql
+          'solver':
+              'all',
+          'success':
+              False,
+          'result':
+              out_str[-128:].replace('\n', ';').replace('\'', '"').replace(
+                  '%', 'x').replace(':', ': ')  # correct string for sql
       }
       return result
 
