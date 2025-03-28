@@ -32,8 +32,8 @@ import tempfile
 import functools
 from time import sleep
 from typing import List, Dict, Tuple
-import paramiko
 import random
+import paramiko
 try:
   import queue
 except ImportError:
