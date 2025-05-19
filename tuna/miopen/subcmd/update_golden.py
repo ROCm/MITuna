@@ -114,15 +114,15 @@ def get_perf_str(args: argparse.Namespace, table_name):
   """Create perf table SQL query and return"""
   new_table = f"""
   create table {table_name} as select a.config, a.num_cu, a.arch, b.k1 as k1, c.k1 as k2,
-    d.k1 as k3, c.k1-b.k1 as gv4_5, d.k1-c.k1 as gv5_6 from conv_golden a
+    d.k1 as k3, c.k1-b.k1 as gv4_5, d.k1-c.k1 as gv5_6 from conv_golden as a
     inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden
-    where golden_miopen_v={args.golden_v-2} and kernel_time!=-1 group by config, arch, num_cu)
+    where golden_miopen_v={args.golden_v-2} and kernel_time>0 group by config, arch, num_cu)
       as b on a.config=b.config and a.arch=b.arch and a.num_cu=b.num_cu
     inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden
-    where golden_miopen_v={args.golden_v-1} and kernel_time!=-1 group by config, arch, num_cu)
+    where golden_miopen_v={args.golden_v-1} and kernel_time>0 group by config, arch, num_cu)
       as c on a.config=c.config and a.arch=c.arch and a.num_cu=c.num_cu
     inner join(select config, min(kernel_time) as k1, arch, num_cu from conv_golden
-    where golden_miopen_v={args.golden_v} and kernel_time!=-1 group by config, arch, num_cu)
+    where golden_miopen_v={args.golden_v} and kernel_time>0 group by config, arch, num_cu)
       as d on a.config=d.config and a.arch=d.arch and a.num_cu=d.num_cu
   where a.golden_miopen_v={args.golden_v} group by a.config, a.arch, a.num_cu, b.k1, c.k1, d.k1;
   """
@@ -134,11 +134,11 @@ def create_perf_table(args: argparse.Namespace, logger: logging.Logger):
   if args.golden_v == 0:
     table_name = "conv_gv0"
   elif args.golden_v == 1:
-    table_name = "conv_gv10"
+    table_name = "conv_gv1_0"
   else:
     vm1 = str(args.golden_v - 1)
     vm2 = str(args.golden_v - 2)
-    table_name = f"conv_gv{vm2}{vm1}{args.golden_v}"
+    table_name = f"conv_gv{vm2}_{vm1}_{args.golden_v}"
   print(table_name)
   with ENGINE.connect() as conn:
     try:
@@ -167,7 +167,7 @@ def gold_base_update(session: DbSession,
     " set cg.valid=ps.valid, cg.params=ps.params, cg.workspace_sz=ps.workspace_sz"\
     ", cg.kernel_time=ps.kernel_time, cg.kernel_group=ps.kernel_group, cg.session=ps.session"\
     f" where cg.golden_miopen_v={gold_v} and ps.golden_miopen_v={base_gold_v} and ps.valid=1"\
-    " and ps.kernel_time>=0;"
+    " and ps.kernel_time>0;"
     logger.info(update_q)
     session.execute(update_q)
 
@@ -176,7 +176,7 @@ def gold_base_update(session: DbSession,
   ", fdb_key, params, kernel_time, workspace_sz, alg_lib, opencl, kernel_group, session, solver)"\
   f" select valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
-  f" from conv_golden where golden_miopen_v={base_gold_v} and valid=1 and kernel_time>=0;"
+  f" from conv_golden where golden_miopen_v={base_gold_v} and valid=1 and kernel_time>0;"
   logger.info(insert_q)
   session.execute(insert_q)
   session.commit()
@@ -199,7 +199,7 @@ def gold_session_update(session: DbSession,
     " set cg.valid=ps.valid, cg.params=ps.params, cg.workspace_sz=ps.workspace_sz"\
     ", cg.kernel_time=ps.kernel_time, cg.kernel_group=ps.kernel_group, cg.session=ps.session"\
     f" where cg.golden_miopen_v={gold_v} and ps.session={tune_s} and ps.valid=1"\
-    " and ps.kernel_time>=0;"
+    " and ps.kernel_time>0;"
     session.execute(update_q)
 
   logger.info("Gold %s Insert session %s.", gold_v, tune_s)
@@ -208,7 +208,7 @@ def gold_session_update(session: DbSession,
   f" select cfd.valid, {gold_v}, arch, num_cu, config, fdb_key, params, kernel_time"\
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   " from conv_find_db as cfd inner join session as s on cfd.session=s.id"\
-  f" where session={tune_s} and cfd.valid=1 and kernel_time>=0;"
+  f" where session={tune_s} and cfd.valid=1 and kernel_time>0;"
   session.execute(insert_q)
   session.commit()
 
