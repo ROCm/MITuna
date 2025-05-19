@@ -368,6 +368,7 @@ class WorkerInterface(Process):
     if (ret_code != 0 or not out) and err:
       self.logger.info('Error executing cmd: %s \n code: %u err: %s', cmd,
                        ret_code, err.read())
+      err.seek(0)
 
     return ret_code, strout, err
 
@@ -384,6 +385,7 @@ class WorkerInterface(Process):
     if (ret_code != 0 or not out) and err:
       self.logger.info('Error executing cmd: %s \n code: %u err: %s', cmd,
                        ret_code, err.read())
+      err.seek(0)
 
     return ret_code, strout, err
 
@@ -473,6 +475,7 @@ class WorkerInterface(Process):
         self.logger.error('Error executing command: %s', ' '.join(cmd))
         if err:
           err_str: str = err.read()
+          out = err_str
           self.logger.error('%s : %s', ret_code, err_str)
           if "disk I/O error" in err_str:
             self.logger.error('fin retry : %u', i)

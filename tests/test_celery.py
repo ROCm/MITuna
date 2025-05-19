@@ -93,7 +93,7 @@ async def test_celery_workers():
   assert subp_list == []
 
 
-  cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{miopen.args.session_id} -Q test_{db_name}"  #pylint: disable=line-too-long
+  cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{miopen.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
   #testing launch_worker_per_node
   subp_list = launch_worker_per_node([machine], cmd, True)
   #wait for workers to finish launch
@@ -246,7 +246,8 @@ async def test_celery_workers():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  redis = await aioredis.from_url("redis://localhost:6379/15")
+  backend_host = os.environ['TUNA_CELERY_BACKEND_HOST']
+  redis = await aioredis.from_url(f"redis://{backend_host}:6379/15")
   print('Established redis connection')
   counter = 1
 

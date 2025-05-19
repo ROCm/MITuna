@@ -87,7 +87,18 @@ app = Celery(
     f"amqp://{TUNA_CELERY_BROKER_USER}:{TUNA_CELERY_BROKER_PWD}@{TUNA_CELERY_BROKER_HOST}:{TUNA_CELERY_BROKER_PORT}/",
     result_backend=
     f"redis://{TUNA_CELERY_BACKEND_HOST}:{TUNA_CELERY_BACKEND_PORT}/15",
-    broker_transport_options={"heartbeat": 60},
+    broker_transport_options={
+        "heartbeat": 60,
+        'retry': True,
+        'retry_policy': {
+            'max_retries': 60,
+            'interval_start': 0,
+            'interval_step': 2,
+            'interval_max': 30
+        },
+    },
+    broker_connection_retry_on_startup=True,
+    broker_channel_error_retry=True,
     include=[
         'tuna.miopen.celery_tuning.celery_tasks',
         'tuna.example.celery_tuning.celery_tasks'
