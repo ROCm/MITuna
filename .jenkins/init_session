@@ -11,7 +11,7 @@ def initSession(){
   //build_args needs to be equivalent to utils.getBuildArgs for the image to be transferable
   def backend = "HIP"
   //def miopen_v = sh (script: "git rev-parse --short ${miopen_branch_name}", returnStdout: true).trim()
-  def build_args = " --network host --build-arg ROCMVERSION=${rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg ARCH_TARGET=${arch}"
+  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg ARCH_TARGET=${arch}"
 
   if(base_image != '')
   {
