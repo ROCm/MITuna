@@ -9,15 +9,17 @@ library "${util_lib}"
 
 def initSession(){
   //build_args needs to be equivalent to utils.getBuildArgs for the image to be transferable
-  def backend = "HIP"
+  def backend    = "HIP"
+  def base_image = "${params.base_image}"
+  def job_label  = "${params.job_label}"
   //def miopen_v = sh (script: "git rev-parse --short ${miopen_branch_name}", returnStdout: true).trim()
-  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg ARCH_TARGET=${arch}"
+  def build_args = " --network host --build-arg ROCMVERSION=${params.rocm_version} --build-arg OSDB_BKC_VERSION=${params.osdb_bkc_version} --build-arg BACKEND=${backend} --build-arg MIOPEN_BRANCH=${miopen_branch_name} --build-arg ARCH_TARGET=${params.arch}"
 
   if(base_image != '')
   {
     build_args = build_args + " --build-arg BASEIMAGE=${base_image}"
     ci_str = "rocm/miopen:ci_"
-    if(ci_str != base_image.substring(0, ci_str.length()) || build_miopen_deps != '')
+    if(ci_str != base_image.substring(0, ci_str.length()) || params.build_miopen_deps != '')
     {
       build_args = build_args + " --build-arg BUILD_MIOPEN_DEPS=1"
     }
@@ -31,9 +33,9 @@ def initSession(){
 
   def num_session_prev = utils.runsql("SELECT count(*) from session where reason='${job_label}';")
 
-  if(arch != '' && num_cu != '')
+  if(params.arch != '' && params.num_cu != '')
   {
-    def margs = "-a ${arch} -n ${num_cu}"
+    def margs = "-a ${params.arch} -n ${params.num_cu}"
     sh "docker run ${docker_args} ${tuna_docker_name} ./tuna/go_fish.py miopen --init_session -l ${job_label} ${margs} --docker_name ${base_image}"
     tuna_docker.push()
   }
@@ -69,17 +71,10 @@ def VerifyArgs()
 pipeline {
   agent { node { label 'build-node' } }
   environment {
-      arch              = "${params.arch}"
-      num_cu            = "${params.num_cu}"
       db_name           = "${params.db_name}"
       db_host           = "${params.db_host}"
       db_user           = "${params.db_user}"
       db_password       = "${params.db_password}"
-      rocm_version      = "${params.rocm_version}"
-      osdb_bkc_version  = "${params.osdb_bkc_version}"
-      build_miopen_deps = "${params.build_miopen_deps}"
-      base_image        = "${params.base_image}"
-      job_label         = "${params.job_label}"
       branch_id         = "${params.branch_name}_${BUILD_ID}"
       docker_args       = "--network host --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_CELERY_BROKER_HOST=${PIPELINE_CELERY_BROKER_HOST} -e TUNA_CELERY_BROKER_USER=${TUNA_CELERY_BROKER_USER} -e TUNA_CELERY_BROKER_PWD=${TUNA_CELERY_BROKER_PWD} -e TUNA_CELERY_BROKER_PORT=${TUNA_CELERY_BROKER_PORT} -e TUNA_CELERY_BACKEND_HOST=${PIPELINE_CELERY_BACKEND_HOST} -e TUNA_CELERY_BACKEND_PORT=${TUNA_CELERY_BACKEND_PORT} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
   }
