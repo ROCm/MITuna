@@ -55,12 +55,12 @@ def initSession(){
 
 def VerifyArgs()
 {
-    if(rocm_version != '' && osdb_bkc_version != '')
+    if(params.rocm_version != '' && params.osdb_bkc_version != '')
     {
       error "Can only specify either the ROCm version or the OSDB build number"
     }
 
-    if(job_label=='')
+    if(params.job_label=='')
     {
         error "Job label is required for init session!"
     }
