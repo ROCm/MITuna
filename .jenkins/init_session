@@ -69,17 +69,17 @@ def VerifyArgs()
 pipeline {
   agent { node { label 'build-node' } }
   environment {
-      arch              = params.arch
-      num_cu            = params.num_cu
-      db_name           = params.db_name
-      db_host           = params.db_host
-      db_user           = params.db_user
-      db_password       = params.db_password
-      rocm_version      = params.rocm_version
-      osdb_bkc_version  = params.osdb_bkc_version
-      build_miopen_deps = params.build_miopen_deps
-      base_image        = params.base_image
-      job_label         = params.job_label
+      arch              = "${params.arch}"
+      num_cu            = "${params.num_cu}"
+      db_name           = "${params.db_name}"
+      db_host           = "${params.db_host}"
+      db_user           = "${params.db_user}"
+      db_password       = "${params.db_password}"
+      rocm_version      = "${params.rocm_version}"
+      osdb_bkc_version  = "${params.osdb_bkc_version}"
+      build_miopen_deps = "${params.build_miopen_deps}"
+      base_image        = "${params.base_image}"
+      job_label         = "${params.job_label}"
       branch_id         = "${params.branch_name}_${BUILD_ID}"
       docker_args       = "--network host --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_CELERY_BROKER_HOST=${PIPELINE_CELERY_BROKER_HOST} -e TUNA_CELERY_BROKER_USER=${TUNA_CELERY_BROKER_USER} -e TUNA_CELERY_BROKER_PWD=${TUNA_CELERY_BROKER_PWD} -e TUNA_CELERY_BROKER_PORT=${TUNA_CELERY_BROKER_PORT} -e TUNA_CELERY_BACKEND_HOST=${PIPELINE_CELERY_BACKEND_HOST} -e TUNA_CELERY_BACKEND_PORT=${TUNA_CELERY_BACKEND_PORT} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password} -e gateway_ip=${gateway_ip} -e gateway_port=${gateway_port} -e gateway_user=${gateway_user}"
   }
