@@ -2,7 +2,7 @@ def shared_library_branch = scm.branches[0].name
 if (shared_library_branch .contains("*/")) {
     shared_library_branch  = shared_library_branch.split("\\*/")[1]
     }
-echo shared_library_branch 
+echo shared_library_branch
 
 library "jenkins-shared@${shared_library_branch}"
 
@@ -16,7 +16,7 @@ def VerifyArgs()
     if(params.rocm_version != '' && params.osdb_bkc_version != '')
     {
       error "Can only specify either the ROCm version or the OSDB build number"
-    }        
+    }
     if(params.job_label == '')
     {
         def new_label = utils.getJobReason()
@@ -30,8 +30,8 @@ def VerifyArgs()
     if(params.session_id == '')
     {
         error "Session id is required!"
-    }   
-    
+    }
+
     if(params.all_configs)
     {
         if(params.config_tag != '')
@@ -44,7 +44,8 @@ def VerifyArgs()
 pipeline {
   agent { node { label 'mysql' } }
   environment {
-    tuna_docker_name = utils.getDockerName("HIPNOGPU")
+    backend = "HIPNOGPU"
+    docker_args = "--network host -e TUNA_LOGLEVEL=${tuna_loglevel} -e TUNA_CELERY_BROKER_HOST=${PIPELINE_CELERY_BROKER_HOST} -e TUNA_CELERY_BROKER_USER=${TUNA_CELERY_BROKER_USER} -e TUNA_CELERY_BROKER_PWD=${TUNA_CELERY_BROKER_PWD} -e TUNA_CELERY_BROKER_PORT=${TUNA_CELERY_BROKER_PORT} -e TUNA_CELERY_BACKEND_HOST=${PIPELINE_CELERY_BACKEND_HOST} -e TUNA_CELERY_BACKEND_PORT=${TUNA_CELERY_BACKEND_PORT} -e TUNA_DB_HOSTNAME=${db_host} -e TUNA_DB_NAME=${params.db_name} -e TUNA_DB_USER_NAME=${db_user} -e TUNA_DB_PASSWORD=${db_password}"
   }
   parameters {
     string(name: 'branch_name', defaultValue: 'load_job_pipeline', description: '')
@@ -82,7 +83,7 @@ pipeline {
     {
         steps {
           script {
-            utils.LoadJobs()
+            utils.loadJobs()
           }
         }
     }

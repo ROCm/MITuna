@@ -42,7 +42,7 @@ pipeline {
     stage("Check params")
     {
       steps {
-          VerifyArgs()   
+          VerifyArgs()
       }
     }
     stage('evaluate')
