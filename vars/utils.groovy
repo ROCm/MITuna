@@ -64,7 +64,9 @@ def getDockerImage(build_args)
     try{
         echo "Pulling down image: ${image_name}"
         docker_image = docker.image("${image_name}")
-        docker_image.pull()
+        docker.withRegistry('', "$DOCKER_CRED"){
+            docker_image.pull()
+        }
     }
     catch(org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e){
         echo "The job was cancelled or aborted"
