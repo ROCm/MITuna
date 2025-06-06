@@ -182,11 +182,11 @@ class RocMLIRWorker(WorkerInterface):
     if self.dbt.session.tuning_space:
       special_args += f" --tuning-space={self.dbt.session.tuning_space.name}"
 
-    if not os.path.exists("./bin/tuningRunner.py"):
+    if not os.path.exists("../mlir/utils/performance/tuningRunner.py"):
       raise FileNotFoundError("tuningRunner.py not found;"
                               "  wrong directory or missing setup")
 
-    cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
+    cmd = env_str + f" python3 ../mlir/utils/performance/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
                      --output=- --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}' 2>/dev/null"
