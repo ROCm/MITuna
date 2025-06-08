@@ -193,8 +193,7 @@ class RocMLIRWorker(WorkerInterface):
       "--mlir-build-dir `pwd`",
       "--output=-",
       "--tflops",
-      f"--rocmlir_gen_flags='--device={self.gpu_id}'",
-      "2>/dev/null"
+      f"--rocmlir_gen_flags='--device={self.gpu_id}'"
     ]
     cmd = " ".join(cmd_parts)
     print("CMD TO RUN: ", cmd)
