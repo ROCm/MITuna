@@ -196,7 +196,6 @@ class RocMLIRWorker(WorkerInterface):
       f"--rocmlir_gen_flags='--device={self.gpu_id}'"
     ]
     cmd = " ".join(cmd_parts)
-    print("CMD TO RUN: ", cmd)
 
     retcode, out = super().run_command(cmd)
 
