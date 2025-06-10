@@ -186,16 +186,10 @@ class RocMLIRWorker(WorkerInterface):
       raise FileNotFoundError("tuningRunner.py not found;"
                               "  wrong directory or missing setup")
 
-    cmd_parts = [
-      env_str,
-      "python3 ./bin/tuningRunner.py -q", special_args,
-      f"--config='{config_string}'",
-      "--mlir-build-dir `pwd`",
-      "--output=-",
-      "--tflops",
-      f"--rocmlir_gen_flags='--device={self.gpu_id}'"
-    ]
-    cmd = " ".join(cmd_parts)
+    cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
+                     --config='{config_string}' --mlir-build-dir `pwd` \
+                     --output=- --tflops \
+                     --rocmlir_gen_flags='--device={self.gpu_id}'"
 
     retcode, out = super().run_command(cmd)
 
