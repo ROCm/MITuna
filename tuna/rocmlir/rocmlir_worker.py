@@ -189,7 +189,7 @@ class RocMLIRWorker(WorkerInterface):
     cmd = env_str + f" python3 ./bin/tuningRunner.py -q {special_args} \
                      --config='{config_string}' --mlir-build-dir `pwd` \
                      --output=- --tflops \
-                     --rocmlir_gen_flags='--device={self.gpu_id}'"
+                     --rocmlir_gen_flags='--device={self.gpu_id}' 2>/dev/null"
 
     retcode, out = super().run_command(cmd)
 
