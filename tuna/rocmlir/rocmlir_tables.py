@@ -347,6 +347,7 @@ class ConvolutionConfig(BASE, SimpleCSVMixin):
         # Add options if they aren't already supplied.
         # We need trailing spaces here to account for the string concat.
 
+        one_config = ""
         # For datatype, check for the presence of a positional arg.
         if line[0][0] == "-":
           one_config = f"{datatype} "
