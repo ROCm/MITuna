@@ -532,7 +532,7 @@ class WorkerInterface(Process):
       ret_code, out, err = self.exec_docker_cmd(cmd)
 
       if ret_code != 0:
-        self.logger.error('Error executing command: %s', ' '.join(cmd))
+        self.logger.error('Error executing command: %s', cmd)
         if err:
           err_str: str = err.read()
           self.logger.error('%s : %s', ret_code, err_str)
