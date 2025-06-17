@@ -623,13 +623,18 @@ class AttentionConfig(BASE, SimpleCSVMixin):
   group_size = Column(Integer, nullable=False, server_default="0")
   seq_len_q = Column(Integer, nullable=False, server_default="0")
   seq_len_k = Column(Integer, nullable=False, server_default="0")
+  num_heads_q = Column(Integer, nullable=False, server_default="0")
+  num_heads_kv = Column(Integer, nullable=False, server_default="0")
   head_dim_qk = Column(Integer, nullable=False, server_default="0")
   head_dim_v = Column(Integer, nullable=False, server_default="0")
   with_attn_scale = Column(Boolean, nullable=False, server_default="0")
+  with_attn_bias = Column(Boolean, nullable=False, server_default="0")
+  causal = Column(Boolean, nullable=False, server_default="0")
   transpose_Q = Column(Boolean, nullable=False, server_default="0")
   transpose_K = Column(Boolean, nullable=False, server_default="0")
   transpose_V = Column(Boolean, nullable=False, server_default="0")
   transpose_O = Column(Boolean, nullable=False, server_default="0")
+  return_lse = Column(Boolean, nullable=False, server_default="0")
   kernel_repeats = Column(Integer, nullable=False, server_default="0")
 
   def __repr__(self) -> str:
@@ -647,9 +652,14 @@ class AttentionConfig(BASE, SimpleCSVMixin):
       'group_size': '-g',
       'seq_len_q': '-seq_len_q',
       'seq_len_k': '-seq_len_k',
+      'num_heads_q': '-num_heads_q',
+      'num_heads_kv': '-num_heads_kv',
       'head_dim_qk': '-head_dim_qk',
       'head_dim_v': '-head_dim_v',
+      'causal': '-causal',
+      'return_lse': '-return_lse',
       'with_attn_scale': '-with-attn-scale',
+      'with_attn_bias': '-with-attn-bias',
       # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
       #    'kernel_repeats': '--kernel-repeats',
       'kernel_repeats': None,
@@ -691,9 +701,14 @@ class AttentionConfig(BASE, SimpleCSVMixin):
         '-g': 'group_size',
         '-seq_len_q': 'seq_len_q',
         '-seq_len_k': 'seq_len_k',
+        '-num_heads_q': 'num_heads_q',
+        '-num_heads_kv': 'num_heads_kv',
         '-head_dim_qk': 'head_dim_qk',
         '-head_dim_v': 'head_dim_v',
+        '-causal': 'causal',
+        '-return_lse': 'return_lse',
         '-with-attn-scale': 'with_attn_scale',
+        '-with-attn-bias': 'with_attn_bias',
         '-t': 'data_type'
     }
     # kernel-repeats has no flag, but perfRunner.py uses 5.
@@ -720,10 +735,10 @@ class AttentionConfig(BASE, SimpleCSVMixin):
       lines = config_file.readlines()
 
       # All combinations of types and transposition (A and B)
-      for datatype, transQ, transK, transV, transO, withAttnScale, line in \
+      for datatype, transQ, transK, transV, transO, withAttnScale, withAttnBias, causal, return_lse, line in \
               itertools.product(['f32', 'f16'], ['false', 'true'],
                                 ['false', 'true'], ['false', 'true'],
-                                ['false', 'true'], ['false', 'true'], lines):
+                                ['false', 'true'], ['false', 'true'], ['false', 'true'], ['false', 'true'], ['false', 'true'], lines):
         line = line.strip()
 
         # Skip empty lines
@@ -738,6 +753,10 @@ class AttentionConfig(BASE, SimpleCSVMixin):
         one_config += make_option_if_not_in_line("-transO", transO, line)
         one_config += make_option_if_not_in_line("-with-attn-scale",
                                                  withAttnScale, line)
+        one_config += make_option_if_not_in_line("-with-attn-bias",
+                                                 withAttnBias, line)
+        one_config += make_option_if_not_in_line("-causal", causal, line)
+        one_config += make_option_if_not_in_line("-return_lse", return_lse, line)
 
         # Strip to avoid spurious spaces
         one_config += line
