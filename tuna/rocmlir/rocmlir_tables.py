@@ -697,7 +697,7 @@ class AttentionConfig(BASE, SimpleCSVMixin):
         '-seq_len_k': 'seq_len_k',
         '-head_dim_qk': 'head_dim_qk',
         '-head_dim_v': 'head_dim_v',
-        'causal': 'causal',
+        '-causal': 'causal',
         '-with-attn-scale': 'with_attn_scale',
         '-with-attn-bias': 'with_attn_bias',
         '-t': 'data_type'
