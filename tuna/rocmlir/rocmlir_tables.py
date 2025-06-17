@@ -626,6 +626,7 @@ class AttentionConfig(BASE, SimpleCSVMixin):
   head_dim_qk = Column(Integer, nullable=False, server_default="0")
   head_dim_v = Column(Integer, nullable=False, server_default="0")
   with_attn_scale = Column(Boolean, nullable=False, server_default="0")
+  with_attn_bias = Column(Boolean, nullable=False, server_default="0")
   transpose_Q = Column(Boolean, nullable=False, server_default="0")
   transpose_K = Column(Boolean, nullable=False, server_default="0")
   transpose_V = Column(Boolean, nullable=False, server_default="0")
@@ -650,6 +651,7 @@ class AttentionConfig(BASE, SimpleCSVMixin):
       'head_dim_qk': '-head_dim_qk',
       'head_dim_v': '-head_dim_v',
       'with_attn_scale': '-with-attn-scale',
+      'with_attn_bias': '-with-attn-bias',
       # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
       #    'kernel_repeats': '--kernel-repeats',
       'kernel_repeats': None,
@@ -694,6 +696,7 @@ class AttentionConfig(BASE, SimpleCSVMixin):
         '-head_dim_qk': 'head_dim_qk',
         '-head_dim_v': 'head_dim_v',
         '-with-attn-scale': 'with_attn_scale',
+        '-with-attn-bias': 'with_attn_bias',
         '-t': 'data_type'
     }
     # kernel-repeats has no flag, but perfRunner.py uses 5.
@@ -720,10 +723,10 @@ class AttentionConfig(BASE, SimpleCSVMixin):
       lines = config_file.readlines()
 
       # All combinations of types and transposition (A and B)
-      for datatype, transQ, transK, transV, transO, withAttnScale, line in \
+      for datatype, transQ, transK, transV, transO, withAttnScale, withAttnBias, line in \
               itertools.product(['f32', 'f16'], ['false', 'true'],
                                 ['false', 'true'], ['false', 'true'],
-                                ['false', 'true'], ['false', 'true'], lines):
+                                ['false', 'true'], ['false', 'true'], ['false', 'true'], lines):
         line = line.strip()
 
         # Skip empty lines
@@ -738,6 +741,8 @@ class AttentionConfig(BASE, SimpleCSVMixin):
         one_config += make_option_if_not_in_line("-transO", transO, line)
         one_config += make_option_if_not_in_line("-with-attn-scale",
                                                  withAttnScale, line)
+        one_config += make_option_if_not_in_line("-with-attn-bias",
+                                                 withAttnBias, line)
 
         # Strip to avoid spurious spaces
         one_config += line
