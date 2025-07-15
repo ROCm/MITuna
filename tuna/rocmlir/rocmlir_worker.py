@@ -135,7 +135,7 @@ class RocMLIRWorker(WorkerInterface):
                               before_sleep=before_sleep_log(
                                   self.logger, logging.DEBUG)):
         with attempt:
-         try:
+          try:
             retcode, cmd_output = self.run_cmd()
           except ValueError as verr:
             self.logger.info(verr)
