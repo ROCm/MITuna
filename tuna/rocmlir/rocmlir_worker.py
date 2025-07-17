@@ -196,7 +196,7 @@ class RocMLIRWorker(WorkerInterface):
       if arg.startswith("--config="):
         config_str = arg.split("=", 1)[1].strip("'\"")
         matched_dtype = matchDtype(config_str)
-        if matchDtype:
+        if matched_dtype:
           dtype = matched_dtype.group(1)
           allowed_dtypes = initializeDataTypesAttention()
           if dtype not in allowed_dtypes:
