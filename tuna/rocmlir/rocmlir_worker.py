@@ -56,6 +56,7 @@ class RocMLIRWorker(WorkerInterface):
     self.result_attr = [column.name for column in inspect(self.dbt.results).c]
     self.result_attr.remove("insert_ts")
     self.result_attr.remove("update_ts")
+    self.any_failed = False
 
 # Can either have one of these, or --device below, but no combinations.
 #     self.envmt.append(f"ROCR_VISIBLE_DEVICES={self.gpu_id}")
@@ -139,12 +140,14 @@ class RocMLIRWorker(WorkerInterface):
           except ValueError as verr:
             self.logger.info(verr)
             self.set_job_state('error', result=verr)
+            self.any_failed = True
           else:
             if retcode != 0:
               quoted_output = cmd_output.replace("'", r"\'")
               msg = f"Error code {retcode}, output {quoted_output}"
               self.logger.info(msg)
               self.set_job_state('error', result=msg)
+              self.any_failed = True
             elif len(cmd_output) == 0:
               self.logger.info("Empty command result, retrying.")
               raise TryAgain

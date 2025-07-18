@@ -27,6 +27,7 @@
 """Module that represents the WorkerInterface class interface"""
 
 from multiprocessing import Process, Lock
+import sys
 try:
   import queue
 except ImportError:
@@ -510,6 +511,8 @@ class WorkerInterface(Process):
           self.logger.warning('No more steps, quitting...')
           with self.bar_lock:
             self.num_procs.value -= 1
+          if hasattr(self, "any_failed") and self.any_failed:
+            sys.exit(1)
           return True
     except KeyboardInterrupt as err:
       self.logger.error('%s', err)
@@ -517,11 +520,6 @@ class WorkerInterface(Process):
       with self.bar_lock:
         self.num_procs.value -= 1
       return False
-
-    with self.bar_lock:
-      self.num_procs.value -= 1
-
-    return True
 
   def run_command(self, cmd: str) -> Tuple[int, str]:
     """Run cmd and return ret_code"""
