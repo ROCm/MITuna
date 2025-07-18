@@ -24,7 +24,7 @@
 # SOFTWARE.
 #
 ###############################################################################
-"""Module that encapsulates different liraries supported by Tuna"""
+"""Module that encapsulates different libraries supported by Tuna"""
 from enum import Enum
 
 
