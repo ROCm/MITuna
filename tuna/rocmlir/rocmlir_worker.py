@@ -42,6 +42,7 @@ from tuna.worker_interface import WorkerInterface
 from tuna.rocmlir.rocmlir_tables import RocMLIRDBTables
 from tuna.utils.db_utility import session_retry, gen_insert_query
 from tuna.rocmlir.config_type import ConfigType
+from tuna.rocmlir.rocmlir_utils import initializeDataTypesAttention, matchDtype
 
 
 class RocMLIRWorker(WorkerInterface):
@@ -191,6 +192,17 @@ class RocMLIRWorker(WorkerInterface):
                      --output=- --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}' 2>/dev/null"
 
+    for arg in cmd:
+      if arg.startswith("--config="):
+        config_str = arg.split("=", 1)[1].strip("'\"")
+        matched_dtype = matchDtype(config_str)
+        if matched_dtype:
+          dtype = matched_dtype.group(1)
+          allowed_dtypes = initializeDataTypesAttention()
+          if dtype not in allowed_dtypes:
+            print(f"Skipping unsupported attention dtype: {dtype} from config: {config_str}")
+            return
+        
     retcode, out = super().run_command(cmd)
 
     return retcode, out
