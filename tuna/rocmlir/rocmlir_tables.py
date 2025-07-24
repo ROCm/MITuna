@@ -635,6 +635,8 @@ class AttentionConfig(BASE, SimpleCSVMixin):
   transpose_V = Column(Boolean, nullable=False, server_default="0")
   transpose_O = Column(Boolean, nullable=False, server_default="0")
   return_lse = Column(Boolean, nullable=False, server_default="0")
+  # default value is 1
+  split_kv = Column(Integer, nullable=False, server_default="1")
   kernel_repeats = Column(Integer, nullable=False, server_default="0")
 
   def __repr__(self) -> str:
@@ -658,6 +660,7 @@ class AttentionConfig(BASE, SimpleCSVMixin):
       'head_dim_v': '-head_dim_v',
       'causal': '-causal',
       'return_lse': '-return_lse',
+      'split_kv': '-split_kv',
       'with_attn_scale': '-with-attn-scale',
       'with_attn_bias': '-with-attn-bias',
       # Count on tuneMLIRKernels to set config.MLIR_N_REPEATS to 1.
@@ -707,6 +710,7 @@ class AttentionConfig(BASE, SimpleCSVMixin):
         '-head_dim_v': 'head_dim_v',
         '-causal': 'causal',
         '-return_lse': 'return_lse',
+        '-split_kv': 'split_kv',
         '-with-attn-scale': 'with_attn_scale',
         '-with-attn-bias': 'with_attn_bias',
         '-t': 'data_type'
