@@ -118,11 +118,12 @@ RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.
 RUN dpkg -i dumb-init_*.deb && rm dumb-init_*.deb
 
 
-ARG MIOPEN_DIR=/root/dMIOpen
+ARG ROCM_LIBS_DIR=/root/rocm-libraries
+ARG MIOPEN_DIR=$ROCM_LIBS_DIR/projects/miopen
 #Clone MIOpen
-RUN git clone https://github.com/ROCm/MIOpen.git $MIOPEN_DIR
+RUN git clone https://github.com/ROCm/rocm-libraries.git $ROCM_LIBS_DIR
 WORKDIR $MIOPEN_DIR
-ARG MIOPEN_BRANCH=ca2eb7538
+ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -136,6 +137,7 @@ RUN . /env; if [ -z $NO_ROCM_INST ] || ! [ -z $BUILD_MIOPEN_DEPS ]; then\
         if ! [ -z $ARCH_TARGET ]; then \
             sed -i "s#\(composable_kernel.*\)#\1 -DGPU_TARGETS=\"$ARCH_TARGET\"#" requirements.txt; \
         fi; \
+        apt-get remove -y composablekernel-dev miopen-hip; \
         CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $MIOPEN_DEPS -DCMAKE_POLICY_VERSION_MINIMUM=3.5; \
         git checkout requirements.txt; \
     fi
