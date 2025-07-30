@@ -46,7 +46,7 @@ class SessionMixin():
   rocm_v: str = Column(String(length=64), nullable=False)
   reason: str = Column(String(length=60), nullable=False)
   ticket: str = Column(String(length=64), nullable=False, server_default="N/A")
-  docker: str = Column(String(length=64),
+  docker: str = Column(String(length=128),
                        nullable=False,
                        server_default="miopentuna")
 

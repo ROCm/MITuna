@@ -1,4 +1,4 @@
-###############################################################################
+#############################################################################
 #
 # MIT License
 #
@@ -23,15 +23,31 @@
 # SOFTWARE.
 #
 ###############################################################################
-
+import os
+import sys
+import copy
 from multiprocessing import Value
 
-from tuna.worker_interface import WorkerInterface
+sys.path.append("../tuna")
+sys.path.append("tuna")
+
+this_path = os.path.dirname(__file__)
+
 from tuna.miopen.db.session import Session
-from tuna.machine import Machine
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.find_db import ConvolutionFindDB
 from tuna.miopen.miopen_lib import MIOpen
+from tuna.miopen.db.solver import get_solver_ids
+from tuna.utils.logger import setup_logger
+from tuna.miopen.utils.metadata import ALG_SLV_MAP
+from tuna.utils.db_utility import connect_db
+from tuna.miopen.subcmd.import_configs import import_cfgs
+from tuna.miopen.subcmd.load_job import add_jobs
+from tuna.utils.machine_utility import load_machines
+from tuna.machine import Machine
+from tuna.miopen.utils.lib_helper import get_worker
+from tuna.miopen.worker.fin_class import FinClass
+from tuna.miopen.db.tables import MIOpenDBTables
 
 # TODO: This is a copy and is unacceptable
 sqlite_config_cols = [
@@ -44,9 +60,9 @@ sqlite_config_cols = [
 
 sqlite_perf_db_cols = ["solver", "config", "arch", "num_cu", "params"]
 
-valid_arch_cu = [("gfx803", 36), ("gfx803", 64), ("gfx900", 56), ("gfx900", 64),
-                 ("gfx906", 60), ("gfx906", 64), ("gfx908", 120),
-                 ("gfx1030", 36)]
+#valid_arch_cu = [("gfx803", 36), ("gfx803", 64), ("gfx900", 56), ("gfx900", 64),
+#                 ("gfx906", 60), ("gfx906", 64), ("gfx908", 120),
+#                 ("gfx1030", 36)]
 
 
 def get_sqlite_table(cnx, table_name):
@@ -115,11 +131,15 @@ class GoFishArgs():
   solver_id = None
   find_mode = 1
   blacklist = None
+  init_session = True
+  check_status = True
+  subcommand = None
+  shutdown_workers = None
 
 
 class ExampleArgs():
-  arch = 'gfx908'
-  num_cu = 120
+  arch = 'gfx90a'
+  num_cu = 104
   local_machine = True
   remote_machine = False
   session_id = None
@@ -139,7 +159,10 @@ def get_worker_args(args, machine, miopen):
   return kwargs
 
 
-def add_test_session(arch='gfx908', num_cu=120, label=None):
+def add_test_session(arch='gfx90a',
+                     num_cu=104,
+                     label=None,
+                     session_table=Session):
   args = GoFishArgs()
   if label:
     args.label = label
@@ -151,8 +174,8 @@ def add_test_session(arch='gfx908', num_cu=120, label=None):
   miopen = MIOpen()
   miopen.args = args
   kwargs = get_worker_args(args, machine, miopen)
-  worker = WorkerInterface(**kwargs)
-  session_id = Session().add_new_session(args, worker)
+  worker = FinClass(**kwargs)
+  session_id = session_table().add_new_session(args, worker)
   assert (session_id)
   return session_id
 
@@ -209,3 +232,61 @@ class TensorEntry:
 
   def to_dict(self, ommit_valid=False):
     return vars(self)
+
+
+def add_cfgs(tag, filename, logger_name):
+  #import configs
+  args = CfgImportArgs()
+  args.tag = tag
+  args.mark_recurrent = True
+  args.file_name = f"{this_path}/../utils/configs/{filename}"
+
+  dbt = MIOpenDBTables(config_type=args.config_type)
+  counts = import_cfgs(args, dbt, setup_logger(logger_name))
+  return dbt
+
+
+def add_test_jobs(miopen,
+                  session_id,
+                  dbt,
+                  label,
+                  tag,
+                  fin_steps,
+                  logger_name,
+                  algo=None):
+  machine_lst = load_machines(miopen.args)
+  machine = machine_lst[0]
+  #update solvers
+  kwargs = get_worker_args(miopen.args, machine, miopen)
+  fin_worker = FinClass(**kwargs)
+  assert (fin_worker.get_solvers())
+
+  #get applicability
+  dbt = add_cfgs(label, 'conv_configs_NCHW.txt', label)
+  miopen.args.update_applicability = True
+  worker_lst = miopen.compose_worker_list(machine_lst)
+  for worker in worker_lst:
+    worker.join()
+  #load jobs
+  args = LdJobArgs
+  args.label = label
+  args.tag = tag
+  args.fin_steps = fin_steps
+  args.session_id = session_id
+  logger = setup_logger(logger_name)
+
+  #limit job scope
+  if algo:
+    args.algo = algo
+    solver_arr = ALG_SLV_MAP[args.algo]
+    solver_id_map = get_solver_ids()
+    if solver_arr:
+      solver_ids = []
+      for solver in solver_arr:
+        sid = solver_id_map.get(solver, None)
+        solver_ids.append((solver, sid))
+      args.solvers = solver_ids
+    args.only_applicable = True
+
+  connect_db()
+  return add_jobs(args, dbt, logger)

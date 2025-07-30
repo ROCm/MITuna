@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6380:6379"
+    expose:
+      - "6380"
+    restart: always
+    container_name: mituna_redis
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      #perf_compile step requires HIPNOGPU
+      #args:
+      #  - "BACKEND=HIPNOGPU"
+    container_name: mituna_celery
+    privileged: true
+    group_add: 
+      - video
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev:dri:rw
+    stdin_open: true
+    tty: true
+    volumes:
+      - /dev/dri:/dev/dri/:rw
+      - /var/lib/docker/:/var/lib/docker
+    env_file:
+      - .env
+    environment:
+        - TUNA_DB_HOSTNAME=${db_host}
+        - TUNA_DB_NAME=${db_name}
+        - TUNA_DB_USER_NAME=${db_user}
+        - TUNA_DB_USER_PASSWORD=${db_password}
+        - HIP_VISIBLE_DEVICES=1
+    command: "celery -A tuna.celery_app.celery worker -l info -E"
+    depends_on:
+      - redis
+

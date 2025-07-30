@@ -22,7 +22,7 @@ def QueryConfigs(arch, num_cu, fdb_prefix)
   }
   if(params.miopen_version != '')
   {
-    sh "wget https://github.com/ROCmSoftwarePlatform/MIOpen/blob/${params.miopen_version}/src/kernels/${fdb_prefix}.HIP.fdb.txt?raw=true -O ${fdb_prefix}.HIP.fdb.txt"
+    sh "wget https://github.com/ROCm/MIOpen/blob/${params.miopen_version}/src/kernels/${fdb_prefix}.HIP.fdb.txt?raw=true -O ${fdb_prefix}.HIP.fdb.txt"
     script_args = script_args + " --fdb_filename ${fdb_prefix}.HIP.fdb.txt"
     archiveArtifacts "${fdb_prefix}.HIP.fdb.txt"
   }
@@ -45,7 +45,7 @@ def VerifyArgs()
   if(params.miopen_version != '')
   {
     // Checking only one arch is sufficient
-    statusCode = sh script:" wget -q --method=HEAD https://github.com/ROCmSoftwarePlatform/MIOpen/blob/${params.miopen_version}/src/kernels/gfx900_56.HIP.fdb.txt?raw=true ", returnStatus:true
+    statusCode = sh script:" wget -q --method=HEAD https://github.com/ROCm/MIOpen/blob/${params.miopen_version}/src/kernels/gfx900_56.HIP.fdb.txt?raw=true ", returnStatus:true
     if(statusCode)
     {
 	    error "Invalid MIOpen version for find db"

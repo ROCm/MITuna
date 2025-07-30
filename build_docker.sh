@@ -39,8 +39,8 @@ fi
 DOCKNAME="miopentuna"
 BRANCHNAME="develop"
 FINBRANCHHNAME="develop"
-BRANCHURL="https://github.com/ROCmSoftwarePlatform/MIOpen.git"
-FINBRANCHURL="https://github.com/ROCmSoftwarePlatform/fin.git"
+BRANCHURL="https://github.com/ROCm/MIOpen.git"
+FINBRANCHURL="https://github.com/ROCm/fin.git"
 BACKEND="HIP"
 ROCMVERSION="0"
 BKC_VERSION=0

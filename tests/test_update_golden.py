@@ -32,7 +32,7 @@ from tuna.miopen.subcmd.update_golden import (
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
-from tuna.miopen.db.miopen_tables import ConvolutionGolden
+from tuna.miopen.db.convolutionjob_tables import ConvolutionGolden
 from tuna.miopen.db.find_db import ConvolutionFindDB
 from utils import add_test_session, DummyArgs, build_fdb_entry
 

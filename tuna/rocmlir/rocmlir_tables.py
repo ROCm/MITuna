@@ -164,18 +164,6 @@ class ConvolutionJob(BASE, JobMixin):
                   index=True)
 
 
-class SimpleCSVMixin():
-  """Just a method to write whole table as CSV."""
-  def export_as_csv(self, filename):
-    with open(filename, 'w', encoding='utf8') as f:
-      outcsv = csv.writer(f)
-#       with DbCursor() as cur:
-#         # (may need list(cur....))
-#         outcsv.writerows(cur.execute(f"select * from {self.__tablename__};"))
-      with DbSession() as session:
-        outcsv.writerows(session.execute(sql_select(self.__table__.columns)))
-
-
 def make_option_if_not_in_line(option, value, line):
   """If option is not already in line, make an option-value string."""
   if f"{option} " in line:
@@ -184,7 +172,7 @@ def make_option_if_not_in_line(option, value, line):
   return f"{option} {value} "
 
 
-class ConvolutionConfig(BASE, SimpleCSVMixin):
+class ConvolutionConfig(BASE):
   """Represents convolution config table"""
   __tablename__ = "rocmlir_conv_config"
 
@@ -347,11 +335,17 @@ class ConvolutionConfig(BASE, SimpleCSVMixin):
         # Add options if they aren't already supplied.
         # We need trailing spaces here to account for the string concat.
 
-        one_config = ""
         # For datatype, check for the presence of a positional arg.
         if line[0][0] == "-":
           one_config = f"{datatype} "
 
+        if "-F" not in line:
+          one_config += f"{direction} "  # -F included in direction.
+        one_config += make_option_if_not_in_line("-f", layout, line)
+        one_config += make_option_if_not_in_line("-I", layout, line)
+        one_config += make_option_if_not_in_line("-O", layout, line)
+        one_config += line
+        one_config = one_config.strip()
         if "-F" not in line:
           one_config += f"{direction} "  # -F included in direction.
         one_config += make_option_if_not_in_line("-f", layout, line)

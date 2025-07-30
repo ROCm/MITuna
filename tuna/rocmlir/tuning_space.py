@@ -27,12 +27,4 @@
 """Module that encapsulates different tuning spaces used by tuning driver."""
 from enum import Enum
 
-#TuningSpace = Enum('TuningSpace', ["quick", "full", "exhaustive"])
-
-class TuningSpace(Enum):
-  quick: str = 'quick'
-  full: str = 'full'
-  exhaustive: str = 'exhaustive'
-
-  def __str__(self) -> str:
-    return self.value
+TuningSpace = Enum('TuningSpace', ["quick", "full", "exhaustive"])

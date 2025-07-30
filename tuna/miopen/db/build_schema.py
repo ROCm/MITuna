@@ -26,14 +26,14 @@
 ###############################################################################
 """ Module for creating DB tables"""
 from sqlalchemy.exc import OperationalError
-from tuna.miopen.db.miopen_tables import get_miopen_tables
+from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
 from tuna.db_engine import ENGINE
 from tuna.utils.logger import setup_logger
 from tuna.utils.db_utility import create_tables
 
 #pylint: disable=too-few-public-methods
-LOGGER = setup_logger('db_tables')
+LOGGER = setup_logger('miopen_db_tables')
 
 
 def recreate_triggers(drop_triggers, create_triggers):

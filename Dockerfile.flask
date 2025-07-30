@@ -20,7 +20,7 @@ RUN apt-get update -y && apt install -y vim python3-pip git
 
 WORKDIR /etc/flask
 
-RUN git clone https://rocm-mici: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@github.com/ROCmSoftwarePlatform/Tuna.git
+RUN git clone https://rocm-mici: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@github.com/ROCm/Tuna.git
 
 RUN pip3 install -r /etc/flask/Tuna/requirements.txt
 

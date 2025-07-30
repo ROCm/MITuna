@@ -27,6 +27,7 @@
 
 from setuptools import setup, find_packages
 import os
+
 thelibFolder = os.path.dirname(os.path.realpath(__file__))
 requirementPath = thelibFolder + '/requirements.txt'
 readmePath = thelibFolder + '/README.md'
@@ -45,14 +46,14 @@ setup(
     name='MITuna',
     python_requires='>=3.9',
     #some version number you may wish to add - increment this after every update
-    version='1.0',
+    version='2.0',
     description="Tuna is a distributed tuning infrastructure that provides pre-compiled kernels "\
                 "for MIOpen customers through automated Jenkins pipelines and SLURM scalable "\
                 "architecture. MITuna also provides a scalable task management infrastructure "\
                 "ready to integrate with external libaries.",
     long_description=readme,
     license='MIT',
-    url='https://github.com/ROCmSoftwarePlatform/MITuna.git',
+    url='https://github.com/ROCm/MITuna.git',
     install_requires=install_requires,
 
     # Use one of the below approach to define package and/or module names:

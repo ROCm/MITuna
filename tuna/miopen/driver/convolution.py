@@ -29,14 +29,15 @@
 from typing import Dict, Set, Optional, Any
 from re import search
 from tuna.utils.logger import setup_logger
-from tuna.miopen.driver.base import DriverBase
+from tuna.miopen.driver.base import MIOpenDriver
 from tuna.miopen.utils.metadata import CONV_CONFIG_COLS
 from tuna.miopen.utils.helper import get_db_id
-from tuna.miopen.db.miopen_tables import ConvolutionConfig
+from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
 from tuna.miopen.utils.metadata import CONV_2D_DEFAULTS, SUPPORTED_CONV_CMDS, PREC_TO_CMD
 from tuna.miopen.utils.metadata import CONV_3D_DEFAULTS, TENSOR_COLS
-from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION
-from tuna.miopen.utils.metadata import DIRECTION, DIR_MAP, CONV_SKIP_ARGS, INVERS_DIR_MAP
+from tuna.miopen.utils.metadata import TABLE_COLS_CONV_MAP, TENSOR_PRECISION, DIR_MAP
+from tuna.miopen.utils.metadata import DIRECTION, CONV_SKIP_ARGS, INVERS_DIR_MAP
+from tuna.miopen.utils.metadata import SUPPORTED_LAYOUTS
 from tuna.miopen.utils.parsing import get_fd_name, conv_arg_valid, get_fds_from_cmd
 from tuna.miopen.utils.config_type import ConfigType
 
@@ -44,7 +45,7 @@ LOGGER = setup_logger('driver_conv')
 
 
 #pylint: disable=too-many-instance-attributes
-class DriverConvolution(DriverBase):
+class DriverConvolution(MIOpenDriver):
   """Represents an MIOpenDriver convolution command"""
 
   def __init__(self,
@@ -79,9 +80,9 @@ class DriverConvolution(DriverBase):
     self.trans_output_pad_h: int = 0
     self.trans_output_pad_w: int = 0
     self.trans_output_pad_d: int = 0
-    self.out_layout: str = 'NCHW'
-    self.in_layout: str = 'NCHW'
-    self.fil_layout: str = 'NCHW'
+    self.out_layout: str = None  # type: ignore #use config_set_defaults to pull from 2D/3D defaults
+    self.in_layout: str = None  # type: ignore
+    self.fil_layout: str = None  # type: ignore
     self.in_d: int = 1
     self.in_h: int = 32
     self.in_w: int = 32
@@ -109,6 +110,11 @@ class DriverConvolution(DriverBase):
     if self.in_layout != self.out_layout != self.fil_layout:
       raise ValueError(
           'Layouts do not match: in_layout/out_layout/fil_layout must match.')
+    for layout in [self.in_layout, self.out_layout, self.fil_layout]:
+      if not layout in SUPPORTED_LAYOUTS:
+        raise ValueError(
+            f'Layout {layout} is not a supported layout: ({SUPPORTED_LAYOUTS}).'
+        )
 
   @property
   def cmd(self) -> str:
@@ -124,23 +130,26 @@ class DriverConvolution(DriverBase):
       )
     self._cmd = value
 
-  def get_layouts(self):
-    """Get convolution layouts"""
-    return ["in_layout", "out_layout", 'fil_layout']
-
   def parse_fdb_key(self, line: str) -> None:
-    """import config attributes from fdb key line"""
-    fds: str
+    """Import config attributes from fdb key line"""
+    fds: dict
     direction: str
     fds, _, direction = get_fds_from_cmd(line)
-    setattr(self, 'direction', DIR_MAP[direction])
+    setattr(self, 'direction',
+            DIR_MAP.get(direction,
+                        ''))  # Use .get() to safely access the dictionary
+
     for key in self.to_dict():
       if key in fds:
         setattr(self, key, fds[key])
 
-    pattern_3d = '[0-9]x[0-9]x[0-9]'
+    pattern_3d = '[0-9]+x[0-9]+x[0-9]+'
     if search(pattern_3d, line):
       setattr(self, 'spatial_dim', 3)
+
+  def get_layouts(self):
+    """Get convolution layouts"""
+    return ["in_layout", "out_layout", 'fil_layout']
 
   def parse_driver_line(self, line: str) -> None:
     """Parse MIOpenDriver line"""

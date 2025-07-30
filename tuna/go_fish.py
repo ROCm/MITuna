@@ -26,6 +26,7 @@
 ###############################################################################
 """! @brief Script to launch tuning jobs, or execute commands on available machines"""
 
+import os
 import argparse
 import sys
 import logging
@@ -69,24 +70,25 @@ def parse_args() -> Dict[str, Any]:
 
 def main() -> bool:
   """Main function to start Tuna"""
-  LOGGER.info(sys.argv)
-  LOGGER.info(len(sys.argv))
 
   args: Dict[str, Any]
   args = parse_args()
+  clean_args()
 
   #case no yaml file
   library: Union[Example, MIOpen]
   yaml_files: List[str]
   library = get_library(args)
-  clean_args()
   yaml_files = [args['yaml']]
 
   #case with yaml file
   if args['yaml']:
     yaml_files = parse_yaml(args['yaml'], args['lib'])
 
-  worker_lst: list
+  job_batch_size = 1000
+  if 'TUNA_CELERY_JOB_BATCH_SIZE' in os.environ:
+    job_batch_size = int(os.environ['TUNA_CELERY_JOB_BATCH_SIZE'])
+
   try:
     for yaml_file in yaml_files:
       args['yaml_file'] = yaml_file
@@ -94,14 +96,19 @@ def main() -> bool:
         sys.argv[2] = yaml_file
         LOGGER.info("Executing with yaml file: %s", yaml_file)
 
-      #returns a list of workers/processes it started
-      worker_lst = library.run()
-      if worker_lst is None:
-        continue
+      if library.has_tunable_operation():
+        #Celery operations
+        library.tune(job_batch_size=job_batch_size)
+      else:
+        #non-celery operations
+        #returns a list of workers/processes it started
+        worker_lst = library.run()
+        if worker_lst is None:
+          continue
 
-      for worker in worker_lst:
-        worker.join()
-        LOGGER.warning('Process finished')
+        for worker in worker_lst:
+          worker.join()
+          LOGGER.warning('Process finished')
   except KeyboardInterrupt:
     LOGGER.warning('Interrupt signal caught')
 

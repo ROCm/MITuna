@@ -48,7 +48,7 @@ from tuna.miopen.utils.analyze_parse_db import get_sqlite_cfg_dict
 from tuna.utils.db_utility import DB_Type
 from tuna.miopen.db.tables import MIOpenDBTables, ConfigType
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.utils.db_utility import get_id_solvers
+from tuna.miopen.db.solver import get_id_solvers
 from utils import add_test_session, DummyArgs, CfgEntry, TensorEntry, build_fdb_entry
 
 session_id = add_test_session(arch='gfx90a',

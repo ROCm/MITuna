@@ -36,7 +36,8 @@ this_path = os.path.dirname(__file__)
 
 from tuna.machine import Machine
 from tuna.dbBase.sql_alchemy import DbSession
-from tuna.worker_interface import WorkerInterface
+#from tuna.worker_interface import WorkerInterface
+from tuna.miopen.worker.fin_class import FinClass
 from tuna.miopen.db.session import Session
 from utils import DummyArgs
 
@@ -55,7 +56,6 @@ def test_add_session():
       'machine': machine,
       'gpu_id': 0,
       'num_procs': num_gpus,
-      'barred': v,
       'bar_lock': Lock(),
       'envmt': ["MIOPEN_LOG_LEVEL=7"],
       'reset_interval': False,
@@ -79,7 +79,7 @@ def test_add_session():
   args.docker_name = docker_name
   args.solver_id = 1
 
-  worker = WorkerInterface(**kwargs)
+  worker = FinClass(**kwargs)
   sess_id = Session().add_new_session(args, worker)
   print(f"session id: {sess_id}")
   assert (sess_id)

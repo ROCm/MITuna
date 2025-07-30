@@ -31,6 +31,11 @@ MIOPEN_TUNING_STEPS = [
     'list_solvers', 'fin_steps', 'import_db', 'check_status', 'execute_cmd'
 ]
 
+MIOPEN_CELERY_STEPS = [
+    "miopen_find_compile", "miopen_find_eval", "miopen_perf_compile",
+    "miopen_perf_eval"
+]
+
 MIOPEN_SUBCOMMANDS = [
     'import_configs', 'load_job', 'export_db', 'update_golden'
 ]

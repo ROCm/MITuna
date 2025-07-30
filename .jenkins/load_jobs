@@ -64,7 +64,7 @@ pipeline {
     string(name: 'db_name', defaultValue: "${PIPELINE_DB_NAME}", description: 'Name of the database schema')
     string(name: 'db_user', defaultValue: "${PIPELINE_USER}", description: 'Username for the databse')
     string(name: 'db_password', defaultValue: "${PIPELINE_PWD}", description: 'Password for the user')
-    string(name: 'docker_registry', defaultValue: "${headnode}:5000", description: 'Name of the docker registry for pushing images')
+    string(name: 'docker_registry', defaultValue: "${DOCKER_REGISTRY}", description: 'Name of the docker registry for pushing images')
     string(name: 'base_image', defaultValue: '', description: 'Put a fully qualified docker name here to use (optional)')   
     choice(name: 'cmd', choices: ['', 'conv', 'convfp16', 'convbfp16'], description: 'get configs for cmd type')
     choice(name: 'stage', choices: ['perf', 'fin_find'], description: 'Load jobs args')

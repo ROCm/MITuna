@@ -32,14 +32,13 @@ import random
 import logging
 from time import sleep
 from datetime import datetime
+from typing import Callable, Any, List, Dict
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
 from sqlalchemy import create_engine
-from typing import Callable, Any, List, Dict
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
-from tuna.miopen.db.miopen_tables import Solver
 from tuna.utils.metadata import NUM_SQL_RETRIES
 from tuna.utils.logger import setup_logger
 from tuna.utils.utility import get_env_vars
@@ -108,36 +107,6 @@ def create_indices(all_indices):
         continue
 
 
-def get_solver_ids():
-  """DB solver name to id map"""
-  # TODO: Get this info from the SQLAlchemy class  # pylint: disable=fixme
-  solver_id_map = {}
-  with DbSession() as session:
-    query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
-    res = session_retry(session, query.all, lambda x: x(), LOGGER)
-    for slv, sid in res:
-      solver_id_map[slv] = sid
-      solver_id_map[slv.replace(', ', '-')] = sid
-
-  return solver_id_map
-
-
-def get_id_solvers():
-  """DB solver id to name map"""
-  solver_id_map_c = {}
-  solver_id_map_h = {}
-  with DbSession() as session:
-    query = session.query(Solver.solver, Solver.id).filter(Solver.valid == 1)
-    res = session_retry(session, query.all, lambda x: x(), LOGGER)
-    for slv, sid in res:
-      solver_id_map_c[slv] = sid
-      solver_id_map_h[slv.replace(', ', '-')] = sid
-    id_solver_map_c = {val: key for key, val in solver_id_map_c.items()}
-    id_solver_map_h = {val: key for key, val in solver_id_map_h.items()}
-
-  return id_solver_map_c, id_solver_map_h
-
-
 def session_retry(session: DbSession,
                   callback: Callable,
                   actuator: Callable,
@@ -170,7 +139,7 @@ def get_attr_vals(obj, attr_list):
     val = getattr(obj, attr)
     if val is None:
       val = 'NULL'
-    elif isinstance(val, str) or isinstance(val, datetime):
+    elif isinstance(val, (datetime, str)):
       val = f"'{val}'"
     elif isinstance(val, bytes):
       val = val.decode('utf-8')
@@ -181,7 +150,7 @@ def get_attr_vals(obj, attr_list):
   return attr_vals
 
 
-def gen_update_query(obj, attribs, tablename):
+def gen_update_query(obj, attribs, tablename, where_clause_tuples_lst=None):
   """Create an update query string to table with tablename for an object (obj)
   for the attributes in attribs"""
   set_arr = []
@@ -190,15 +159,20 @@ def gen_update_query(obj, attribs, tablename):
     set_arr.append(f"{attr}={attr_vals[attr]}")
 
   set_str = ','.join(set_arr)
-  query = f"UPDATE {tablename} SET {set_str}"\
-          f" WHERE id={obj.id};"
+  if where_clause_tuples_lst:
+    where_clause = ' AND '.join(f"{x}={y}" for x, y in where_clause_tuples_lst)
+    query = f"UPDATE {tablename} SET {set_str}"\
+            f" WHERE {where_clause};"
+  else:
+    query = f"UPDATE {tablename} SET {set_str}"\
+            f" WHERE id={obj.id};"
   LOGGER.info('Query Update: %s', query)
   return query
 
 
 def gen_insert_query(obj, attribs, tablename):
   """create a select query and generate name space objects for the results"""
-  attr_list = [attr for attr in attribs]
+  attr_list = list(attribs)
   attr_list.remove('id')
   attr_str = ','.join(attr_list)
 
@@ -214,11 +188,42 @@ def gen_insert_query(obj, attribs, tablename):
 
 def gen_select_objs(session, attribs, tablename, cond_str):
   """create a select query and generate name space objects for the results"""
-  attr_str = ','.join(attribs)
-  query = f"SELECT {attr_str} FROM {tablename}"\
-          f" {cond_str};"
+  ret = get_job_rows(session, attribs, tablename, cond_str)
+  entries = None
+
+  if ret:
+    entries = db_rows_to_obj(ret, attribs)
+
+  return entries
+
+
+def get_job_rows(session, attribs, tablename, cond_str):
+  """Get db rows"""
+  ret = None
+  if attribs is not None or attribs != []:
+    attr_str = ','.join(attribs)
+  else:
+    attr_str = '*'
+
+  if cond_str:
+    query = f"SELECT {attr_str} FROM {tablename}"\
+            f" {cond_str};"
+  else:
+    query = f"SELECT {attr_str} FROM {tablename};"
+
   LOGGER.info('Query Select: %s', query)
-  ret = session.execute(query)
+  try:
+    ret = session.execute(query)
+  except (Exception, KeyboardInterrupt) as ex:  #pylint: disable=broad-except
+    LOGGER.warning(ex)
+    ret = None
+    session.rollback()
+
+  return ret
+
+
+def db_rows_to_obj(ret, attribs):
+  """Compose SimpleDict list of db jobs"""
   entries = []
   for row in ret:
     #LOGGER.info('select_row: %s', row)
@@ -239,13 +244,17 @@ def has_attr_set(obj, attribs):
 
 def get_class_by_tablename(tablename):
   """use tablename to find class"""
-  for c in BASE._decl_class_registry.values():
-    if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
-      return c
+  # pylint: disable=protected-access
+  for class_name in BASE._decl_class_registry.values():
+    if hasattr(class_name,
+               '__tablename__') and class_name.__tablename__ == tablename:
+      return class_name
+  return None
 
 
-def build_dict_val_key(obj: SimpleDict, exclude: List[str] = ['id']):
-  """take object with to_dict function and create a key using values from the object's sorted keys"""
+def build_dict_val_key(obj: SimpleDict, exclude: List[str] = ['id']):  # pylint: disable=W0102
+  """take object with to_dict function and create a key using values from the object's \
+  sorted keys"""
   obj_dict = obj.to_dict()
   for val in exclude:
     obj_dict.pop(val, False)
