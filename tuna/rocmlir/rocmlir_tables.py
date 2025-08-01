@@ -360,7 +360,7 @@ class ConvolutionConfig(BASE):
     return configs
 
 
-class ResultsMixin(SimpleCSVMixin):  # pylint: disable=too-many-instance-attributes
+class ResultsMixin():  # pylint: disable=too-many-instance-attributes
   """Collects the results of tuning."""
 
   def __init__(self, **kwargs):
@@ -440,7 +440,7 @@ class GEMMJob(BASE, JobMixin):
                   index=True)
 
 
-class GEMMConfig(BASE, SimpleCSVMixin):
+class GEMMConfig(BASE):
   """Represents GEMM config table"""
   __tablename__ = "rocmlir_gemm_config"
 
@@ -609,7 +609,7 @@ class AttentionJob(BASE, JobMixin):
                   index=True)
 
 
-class AttentionConfig(BASE, SimpleCSVMixin):
+class AttentionConfig(BASE):
   """Represents Attention config table"""
   __tablename__ = "rocmlir_attention_config"
 
