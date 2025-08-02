@@ -183,6 +183,19 @@ class RocMLIRWorker(WorkerInterface):
     if self.dbt.session.tuning_space:
       special_args += f" --tuning-space={self.dbt.session.tuning_space.name}"
 
+     # Check for unsupported attention dtypes before constructing the command
+    if self.dbt.config_type == ConfigType.attention:
+      matched_dtype = matchDtype(config_string)
+      if matched_dtype:
+        dtype = matched_dtype.group(1)
+        allowed_dtypes = initializeDataTypesAttention()
+        if dtype not in allowed_dtypes:
+          self.logger.warning(
+              "Skipping unsupported attention dtype: %s from config: %s",
+              dtype, config_string)
+          # Return a specific message to indicate skipping
+          return 0, "Unsupported dtype for attention - SKIPPED"
+
     if not os.path.exists("./bin/tuningRunner.py"):
       raise FileNotFoundError("tuningRunner.py not found;"
                               "  wrong directory or missing setup")
@@ -192,16 +205,16 @@ class RocMLIRWorker(WorkerInterface):
                      --output=- --tflops \
                      --rocmlir_gen_flags='--device={self.gpu_id}' 2>/dev/null"
 
-    for arg in cmd:
-      if arg.startswith("--config="):
-        config_str = arg.split("=", 1)[1].strip("'\"")
-        matched_dtype = matchDtype(config_str)
-        if matched_dtype:
-          dtype = matched_dtype.group(1)
-          allowed_dtypes = initializeDataTypesAttention()
-          if dtype not in allowed_dtypes:
-            print(f"Skipping unsupported attention dtype: {dtype} from config: {config_str}")
-            return
+    # for arg in cmd:
+    #   if arg.startswith("--config="):
+    #     config_str = arg.split("=", 1)[1].strip("'\"")
+    #     matched_dtype = matchDtype(config_str)
+    #     if matched_dtype:
+    #       dtype = matched_dtype.group(1)
+    #       allowed_dtypes = initializeDataTypesAttention()
+    #       if dtype not in allowed_dtypes:
+    #         print(f"Skipping unsupported attention dtype: {dtype} from config: {config_str}")
+    #         return
         
     retcode, out = super().run_command(cmd)
 
