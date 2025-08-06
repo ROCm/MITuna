@@ -103,7 +103,17 @@ class RocMLIRWorker(WorkerInterface):
 
       def actuator(func, result_str):
         return func(session, result_str)
-
+      
+      if "Unsupported dtype" in result_str:
+        self.logger.warning(f"Skipping unsupported dtype for job {self.job.id}")
+        session.execute(f"""
+                        UPDATE rocmlir_attention_job
+                        SET state='completed'
+                        gpu_id={self.gpu_id}, result='{result_str}'
+                        WHERE id={self.job.id}
+                        """)
+        return True # Skipping unsupported dtype is not an error
+      
       #retry returns false on failure, callback return on success
       ret = session_retry(session, self.update_result_table,
                           functools.partial(actuator, result_str=result_str),
