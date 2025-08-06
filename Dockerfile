@@ -121,8 +121,9 @@ RUN dpkg -i dumb-init_*.deb && rm dumb-init_*.deb
 ARG ROCM_LIBS_DIR=/root/rocm-libraries
 ARG MIOPEN_DIR=$ROCM_LIBS_DIR/projects/miopen
 #Clone MIOpen
-RUN git clone https://github.com/ROCm/rocm-libraries.git $ROCM_LIBS_DIR
+RUN git clone --filter=blob:none --sparse https://github.com/ROCm/rocm-libraries.git $ROCM_LIBS_DIR
 WORKDIR $MIOPEN_DIR
+RUN git sparse-checkout set projects/miopen
 ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
