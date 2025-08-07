@@ -106,6 +106,57 @@ def __update_fdb_w_kernels(  #pylint: disable=too-many-arguments,too-many-locals
   return status
 
 
+def __update_tuning_data(  #pylint: disable=too-many-arguments,too-many-locals
+    session: DbSession,
+    fin_json,
+    config,
+    session_id,
+    dbt,
+    job,
+    tuning_data_attr,
+    pending,
+    result_str: str = 'miopen_perf_eval_result',
+    check_str: str = 'evaluated') -> list:
+  """update tuning_data from json results"""
+  status = []
+  solver_id_map = get_solver_ids()
+  if result_str in fin_json.keys():
+    for tuning_data_obj in fin_json.get(result_str):
+      slv_stat = get_fin_slv_status(tuning_data_obj, check_str)
+      status.append(slv_stat)
+
+      if tuning_data_obj[check_str]:
+        #returned entry is added to the table
+        tuning_data_entries = __compose_tuning_data_entries(session, fin_json, tuning_data_obj, session_id,
+                                        dbt, config, job, tuning_data_attr,
+                                        solver_id_map, pending)
+
+        for tuning_data_entry in tuning_data_entries:
+          __check_layout_mismatch(tuning_data_entry, slv_stat, config)
+          if tuning_data_entry in pending:
+            pending.remove(tuning_data_entry)
+            query = gen_insert_query(tuning_data_entry, tuning_data_attr,
+                                    dbt.find_db_table.__tablename__)
+            session.execute(query)
+          else:
+            query = gen_update_query(tuning_data_entry, tuning_data_attr,
+                                    dbt.find_db_table.__tablename__)
+            session.execute(query)
+      else:
+        LOGGER.warning("Failed tuning_data update, cfg_id: %s, obj: %s",
+                       fin_json['config_tuna_id'], tuning_data_obj)
+  else:
+    status = [{
+        'solver': 'all',
+        'success': False,
+        'result': 'Eval: No results'
+    }]
+
+  session.commit()
+
+  return status
+
+
 def process_pdb_compile(session, fin_json, job, dbt, solver_id_map):
   """retrieve perf db compile json results"""
   status = []
@@ -240,6 +291,50 @@ def get_fdb_entry(session, solver, session_id, dbt, config, fdb_attr):
   return obj, fdb_entry
 
 
+def __update_tuning_data_entry(session, solver, session_id, dbt, config, params, job, tuning_data_attr,
+                       pending):
+  """ Add a new entry to fdb if there isnt one already """
+  obj, tuning_data_entry = get_tuning_data_entry(session, solver, session_id, dbt, config, params,
+                                 tuning_data_attr)
+  if obj:  # existing entry in db
+    # This can be removed if we implement the delete orphan cascade
+    tuning_data_entry = obj
+  else:
+    # Bundle Insert for later
+    pending.append(tuning_data_entry)
+  return tuning_data_entry
+
+
+def get_tuning_data_entry(session, solver, session_id, dbt, config, params, tuning_data_attr):
+  """ Get FindDb entry from db """
+  obj = None
+  tuning_data_entry = None
+
+  conds = [
+      f"session={session_id}", f"config={config.id}", f"solver={solver}",
+      f"params={params}", "opencl=0"
+  ]
+  cond_str = f"where {' AND '.join(conds)}"
+  entries = gen_select_objs(session, tuning_data_attr, dbt.tuning_data_table.__tablename__,
+                            cond_str)
+
+  if entries:
+    assert len(entries) == 1
+    obj = entries[0]
+  else:
+    tuning_data_entry = SimpleDict()
+    for attr in tuning_data_attr:
+      setattr(tuning_data_entry, attr, None)
+    setattr(tuning_data_entry, 'session', session_id)
+    setattr(tuning_data_entry, 'opencl', False)
+    setattr(tuning_data_entry, 'config', config.id)
+    setattr(tuning_data_entry, 'solver', solver)
+    setattr(tuning_data_entry, 'params', params)
+    setattr(tuning_data_entry, 'logger', LOGGER)
+
+  return obj, tuning_data_entry
+
+
 def __compose_fdb_entry(  #pylint: disable=too-many-arguments
     session, fin_json, fdb_obj, session_id, dbt, config, job, fdb_attr,
     solver_id_map, pending):
@@ -262,6 +357,38 @@ def __compose_fdb_entry(  #pylint: disable=too-many-arguments
   return fdb_entry
 
 
+def __compose_tuning_data_entries(  #pylint: disable=too-many-arguments
+    session, fin_json, tuning_data_obj, session_id, dbt, config, job, tuning_data_attr,
+    solver_id_map, pending):
+  """Compose a FindDB table entry from fin_output"""
+  solver = solver_id_map[tuning_data_obj['solver_name']]
+
+  tuning_data_entries = []
+  for item in tuning_data_obj['alt_solutions']:
+    entry = __update_tuning_data_entry(session, solver, session_id, dbt, config, item['params'], job,
+                                  tuning_data_attr, pending)
+    entry.fdb_key = fin_json['db_key']
+    entry.alg_lib = tuning_data_obj['algorithm']
+    entry.workspace_sz = tuning_data_obj['workspace']
+    entry.valid = True
+    entry.params = item['params']
+    entry.kernel_time = item['time']
+    tuning_data_entries.append(entry)
+
+  if not tuning_data_obj['alt_solutions']:
+    entry = __update_tuning_data_entry(session, solver, session_id, dbt, config, tuning_data_obj['params'], job,
+                                  tuning_data_attr, pending)
+    entry.fdb_key = fin_json['db_key']
+    entry.alg_lib = tuning_data_obj['algorithm']
+    entry.workspace_sz = tuning_data_obj['workspace']
+    entry.valid = True
+    entry.params = tuning_data_obj['params']
+    entry.kernel_time = tuning_data_obj['time']
+    tuning_data_entries.append(entry)
+
+  return tuning_data_entries
+
+
 def process_fdb_w_kernels(session,
                           fin_json,
                           context,
@@ -277,6 +404,35 @@ def process_fdb_w_kernels(session,
   #get_db_obj_by_id(context['config']['id'], dbt.config_table)
 
   callback = __update_fdb_w_kernels
+  status = session_retry(
+      session, callback,
+      lambda x: x(session, fin_json, config, context['kwargs']['session_id'],
+                  dbt, job, fdb_attr, pending, result_str, check_str), LOGGER)
+
+  if not status:
+    LOGGER.warning('Fin: Unable to update Database')
+    status = [{
+        'solver': 'all',
+        'success': False,
+        'result': 'Fin: Unable to update Database'
+    }]
+
+  return status
+
+
+def process_tuning_data(session,
+                          fin_json,
+                          context,
+                          dbt,
+                          fdb_attr,
+                          pending,
+                          result_str='miopen_perf_eval_result',
+                          check_str='evaluated'):
+  """initiate find db update"""
+  job = SimpleDict(**context['job'])
+  config = SimpleDict(**context['config'])
+
+  callback = __update_tuning_data
   status = session_retry(
       session, callback,
       lambda x: x(session, fin_json, config, context['kwargs']['session_id'],

@@ -656,6 +656,17 @@ class MIOpen(MITunaInterface):
     fdb_attr.remove("update_ts")
     return fdb_attr
 
+  @lru_cache(1)
+  def get_tuning_data_attr(self):
+    """! Get tuning_data table attrs
+    @return tuning_data_attr tuning_data table attributes without timestamps
+    """
+    tuning_data_attr = None
+    tuning_data_attr = [column.name for column in inspect(self.dbt.tuning_data_table).c]
+    tuning_data_attr.remove("insert_ts")
+    tuning_data_attr.remove("update_ts")
+    return tuning_data_attr
+
   def serialize_jobs(self, session: DbSession, batch_jobs: List[Any]):
     """! Return list of serialize jobs
     @param session DB session
@@ -671,6 +682,7 @@ class MIOpen(MITunaInterface):
     context_list = []
     kwargs = self.get_context_items()
     fdb_attr = self.get_fdb_attr()
+    tuning_data_attr = self.get_tuning_data_attr()
     for job, config in serialized_jobs:
       context = {
           'job': job,
@@ -679,7 +691,8 @@ class MIOpen(MITunaInterface):
           'arch': self.dbt.session.arch,
           'num_cu': self.dbt.session.num_cu,
           'kwargs': kwargs,
-          'fdb_attr': fdb_attr
+          'fdb_attr': fdb_attr,
+          'tuning_data_attr': tuning_data_attr
       }
       context_list.append(context)
 
