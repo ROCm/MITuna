@@ -424,7 +424,7 @@ def process_tuning_data(session,
                           fin_json,
                           context,
                           dbt,
-                          fdb_attr,
+                          tuning_data_attr,
                           pending,
                           result_str='miopen_perf_eval_result',
                           check_str='evaluated'):
@@ -436,7 +436,7 @@ def process_tuning_data(session,
   status = session_retry(
       session, callback,
       lambda x: x(session, fin_json, config, context['kwargs']['session_id'],
-                  dbt, job, fdb_attr, pending, result_str, check_str), LOGGER)
+                  dbt, job, tuning_data_attr, pending, result_str, check_str), LOGGER)
 
   if not status:
     LOGGER.warning('Fin: Unable to update Database')

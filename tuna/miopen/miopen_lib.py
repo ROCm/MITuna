@@ -61,7 +61,7 @@ from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 #from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
+from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile, process_tuning_data
 from tuna.miopen.utils.json_to_sql import clean_cache_table
 from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.worker.fin_utils import get_fin_result
@@ -136,6 +136,13 @@ class MIOpen(MITunaInterface):
         type=int,
         default=None,
         help='Limit the number of gpu workers created by Tuna, index from 0')
+
+    parser.add_argument(
+        '-R',
+        '--rich_data',
+        dest='rich_data',
+        action='store_true',
+        help='record intermediate parameter results from perf tuning')
 
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
@@ -691,6 +698,7 @@ class MIOpen(MITunaInterface):
           'arch': self.dbt.session.arch,
           'num_cu': self.dbt.session.num_cu,
           'kwargs': kwargs,
+          'rich_data': self.args.rich_data,
           'fdb_attr': fdb_attr,
           'tuning_data_attr': tuning_data_attr
       }
@@ -806,6 +814,15 @@ class MIOpen(MITunaInterface):
                                            pending,
                                            result_str='miopen_perf_eval_result',
                                            check_str='evaluated')
+            if context.rich_data:
+                status = process_tuning_data(session,
+                                            fin_json,
+                                            copy.deepcopy(context),
+                                            self.dbt,
+                                            context['tuning_data_attr'],
+                                            pending,
+                                            result_str='miopen_perf_eval_result',
+                                            check_str='evaluated')
 
         success, result_str = get_fin_result(status)
         failed_job = not success
