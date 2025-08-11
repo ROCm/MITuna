@@ -26,7 +26,7 @@
 ###############################################################################
 """ Module for creating DB tables"""
 
-from tuna.miopen.db.find_db import BNFindDB, ConvolutionFindDB
+from tuna.miopen.db.find_db import BNFindDB, ConvolutionFindDB, ConvolutionTuningData
 from tuna.miopen.db.bn_golden_tables import BNGolden
 from tuna.miopen.db.fusion_config_tables import FusionConfig
 from tuna.miopen.db.fusion_config_tables import FusionConfigTags, FusionJob
