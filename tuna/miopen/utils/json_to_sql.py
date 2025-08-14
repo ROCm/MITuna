@@ -136,11 +136,11 @@ def __update_tuning_data(  #pylint: disable=too-many-arguments,too-many-locals
           if tuning_data_entry in pending:
             pending.remove(tuning_data_entry)
             query = gen_insert_query(tuning_data_entry, tuning_data_attr,
-                                    dbt.find_db_table.__tablename__)
+                                    dbt.tuning_data_table.__tablename__)
             session.execute(query)
           else:
             query = gen_update_query(tuning_data_entry, tuning_data_attr,
-                                    dbt.find_db_table.__tablename__)
+                                    dbt.tuning_data_table.__tablename__)
             session.execute(query)
       else:
         LOGGER.warning("Failed tuning_data update, cfg_id: %s, obj: %s",
@@ -312,7 +312,7 @@ def get_tuning_data_entry(session, solver, session_id, dbt, config, params, tuni
 
   conds = [
       f"session={session_id}", f"config={config.id}", f"solver={solver}",
-      f"params={params}", "opencl=0"
+      f"params=\"{params}\"", "opencl=0"
   ]
   cond_str = f"where {' AND '.join(conds)}"
   entries = gen_select_objs(session, tuning_data_attr, dbt.tuning_data_table.__tablename__,
