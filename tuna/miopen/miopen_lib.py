@@ -142,6 +142,7 @@ class MIOpen(MITunaInterface):
         '--rich_data',
         dest='rich_data',
         action='store_true',
+        default=False,
         help='record intermediate parameter results from perf tuning')
 
     subcommands = parser.add_subcommands(required=False)
@@ -814,7 +815,7 @@ class MIOpen(MITunaInterface):
                                            pending,
                                            result_str='miopen_perf_eval_result',
                                            check_str='evaluated')
-            if context.rich_data:
+            if context["rich_data"]:
                 status = process_tuning_data(session,
                                             fin_json,
                                             copy.deepcopy(context),
