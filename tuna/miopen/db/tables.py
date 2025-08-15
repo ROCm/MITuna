@@ -30,7 +30,7 @@ from tuna.miopen.db.batch_norm_tables import BNBenchmark, BNConfig
 from tuna.miopen.db.batch_norm_tables import BNConfigTags, BNFinJobCache
 from tuna.miopen.db.batch_norm_tables import BNJob, BNJobCache, BNKernelCache
 from tuna.miopen.db.batch_norm_tables import BNSolverApplicability
-from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB
+from tuna.miopen.db.find_db import ConvolutionFindDB, BNFindDB, ConvolutionTuningData
 from tuna.miopen.db.convolutionjob_tables import ConvolutionJob
 from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig
 from tuna.miopen.db.convolutionjob_tables import ConvolutionConfigTags
@@ -102,6 +102,7 @@ class MIOpenDBTables(DBTablesInterface):
       self.config_table = ConvolutionConfig
       self.config_tags_table = ConvolutionConfigTags
       self.find_db_table = ConvolutionFindDB
+      self.tuning_data_table = ConvolutionTuningData
       self.solver_app = ConvSolverApplicability
       self.cache_table = ConvJobCache
       self.fin_cache_table = ConvFinJobCache
