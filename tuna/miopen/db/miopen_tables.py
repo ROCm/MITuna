@@ -26,7 +26,7 @@
 ###############################################################################
 """ Module for creating DB tables"""
 
-from tuna.miopen.db.find_db import BNFindDB, ConvolutionFindDB
+from tuna.miopen.db.find_db import BNFindDB, ConvolutionFindDB, ConvolutionTuningData
 from tuna.miopen.db.bn_golden_tables import BNGolden
 from tuna.miopen.db.fusion_config_tables import FusionConfig
 from tuna.miopen.db.fusion_config_tables import FusionConfigTags, FusionJob
@@ -59,6 +59,7 @@ def add_conv_tables(miopen_tables):
   miopen_tables.append(ConvJobCache())
   miopen_tables.append(ConvFinJobCache())
   miopen_tables.append(ConvolutionFindDB())
+  miopen_tables.append(ConvolutionTuningData())
   miopen_tables.append(ConvolutionGolden())
   miopen_tables.append(ConvSolverAnalyticsAggregated())
   miopen_tables.append(ConvSolverAnalyticsDetailed())
