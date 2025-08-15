@@ -108,8 +108,9 @@ class RocMLIRWorker(WorkerInterface):
         self.logger.warning(f"Skipping unsupported dtype for job {self.job.id}")
         session.execute(f"""
                         UPDATE rocmlir_attention_job
-                        SET state='completed'
-                        gpu_id={self.gpu_id}, result='{result_str}'
+                        SET state='completed',
+                          gpu_id={self.gpu_id},
+                          result='{result_str}'
                         WHERE id={self.job.id}
                         """)
         return True # Skipping unsupported dtype is not an error
