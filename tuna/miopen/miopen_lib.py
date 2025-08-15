@@ -61,7 +61,8 @@ from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 #from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile, process_tuning_data
+from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_tuning_data
+from tuna.miopen.utils.json_to_sql import process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table
 from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.worker.fin_utils import get_fin_result
