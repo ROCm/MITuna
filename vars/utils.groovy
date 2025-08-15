@@ -313,7 +313,7 @@ def finFindEval(){
 
         def MIOPEN_BRANCH = runsql("SELECT miopen_v from session WHERE id=1;")
         def fdb_file = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -f --session_id ${sesh1}", returnStdout: true)
-        archiveArtifacts  "${fdb_file}"
+        archiveArtifacts "${fdb_file}"
         def kdb_file = sh(script: "./tuna/go_fish.py miopen export_db -a ${arch} -n ${num_cu} -k --session_id ${sesh1}", returnStdout: true)
         archiveArtifacts "${kdb_file}"
 
@@ -692,6 +692,9 @@ def Coverage(current_run, main_branch) {
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
         sh "coverage report -m"
         sh "python3 -m coverage json"
+        sh "coverage html"
+        sh "tar -cjf htmlcov.bz2.tar htmlcov/"
+        archiveArtifacts "htmlcov.bz2.tar"
         if (current_run == main_branch) {
             sh "python3 tests/covscripts/coverage.py ${main_branch}"
             archiveArtifacts artifacts: "${env.COVERAGE_ARTIFACT_FILE_NAME}", allowEmptyArchive: true, fingerprint: true
