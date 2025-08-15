@@ -124,7 +124,7 @@ ARG MIOPEN_DIR=$ROCM_LIBS_DIR/projects/miopen
 RUN git clone --filter=blob:none --sparse https://github.com/ROCm/rocm-libraries.git $ROCM_LIBS_DIR
 WORKDIR $MIOPEN_DIR
 RUN git sparse-checkout set projects/miopen
-ARG MIOPEN_BRANCH=develop
+ARG MIOPEN_BRANCH=ca2eb7538
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
