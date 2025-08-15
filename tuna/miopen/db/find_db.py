@@ -143,6 +143,7 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
         'find_db')
     self.fdb_slv_dir = {}
 
+
 class ConvolutionTuningData(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attributes
   """Concrete convolution find_db class"""
   __tablename__ = "conv_tuning_data"

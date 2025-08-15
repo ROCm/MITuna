@@ -670,7 +670,9 @@ class MIOpen(MITunaInterface):
     @return tuning_data_attr tuning_data table attributes without timestamps
     """
     tuning_data_attr = None
-    tuning_data_attr = [column.name for column in inspect(self.dbt.tuning_data_table).c]
+    tuning_data_attr = [
+        column.name for column in inspect(self.dbt.tuning_data_table).c
+    ]
     tuning_data_attr.remove("insert_ts")
     tuning_data_attr.remove("update_ts")
     return tuning_data_attr
@@ -816,14 +818,14 @@ class MIOpen(MITunaInterface):
                                            result_str='miopen_perf_eval_result',
                                            check_str='evaluated')
             if context["rich_data"]:
-                status = process_tuning_data(session,
-                                            fin_json,
-                                            copy.deepcopy(context),
-                                            self.dbt,
-                                            context['tuning_data_attr'],
-                                            pending,
-                                            result_str='miopen_perf_eval_result',
-                                            check_str='evaluated')
+              status = process_tuning_data(session,
+                                           fin_json,
+                                           copy.deepcopy(context),
+                                           self.dbt,
+                                           context['tuning_data_attr'],
+                                           pending,
+                                           result_str='miopen_perf_eval_result',
+                                           check_str='evaluated')
 
         success, result_str = get_fin_result(status)
         failed_job = not success
