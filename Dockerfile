@@ -124,7 +124,7 @@ ARG MIOPEN_DIR=$ROCM_LIBS_DIR/projects/miopen
 RUN git clone --filter=blob:none --sparse https://github.com/ROCm/rocm-libraries.git $ROCM_LIBS_DIR
 WORKDIR $MIOPEN_DIR
 RUN git sparse-checkout set projects/miopen
-ARG MIOPEN_BRANCH=users/cderb/more_solutions
+ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -168,7 +168,7 @@ RUN git submodule update --init --recursive
 ARG FIN_DIR=$MIOPEN_DIR/fin
 WORKDIR $FIN_DIR
 # Can be a branch or a SHA
-ARG FIN_BRANCH=cderb/more_solutions
+ARG FIN_BRANCH=cderb/tuning
 RUN if ! [ -z $FIN_BRANCH ]; then \
         git fetch && git checkout $FIN_BRANCH; \
     fi
