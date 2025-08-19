@@ -96,7 +96,7 @@ def buildDockers(){
 def getDocker(backend){
     def tuna_docker
     docker.withRegistry('', "$DOCKER_CRED"){
-        def build_args = " --build-arg BACKEND=${backend}"
+        def build_args = " --build-arg BACKEND=${backend} --network host --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
         tuna_docker = docker.image(getDockerImageName(build_args))
         tuna_docker.pull()
     }
