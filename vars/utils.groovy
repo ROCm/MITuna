@@ -84,10 +84,10 @@ def getDockerImage(build_args)
 
 def buildDockers(){
     docker.withRegistry('', "$DOCKER_CRED"){
-        def build_args = " --build-arg BACKEND=HIPNOGPU --network host --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
+        def build_args = " --build-arg BACKEND=HIPNOGPU"
         def tuna_docker_hipnogpu = docker.build(getDockerImageName(build_args), "${build_args} .")
         tuna_docker_hipnogpu.push()
-        build_args = " --build-arg BACKEND=HIP --network host --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
+        build_args = " --build-arg BACKEND=HIP"
         def tuna_docker_hip = docker.build(getDockerImageName(build_args), "${build_args} .")
         tuna_docker_hip.push()
     }
@@ -96,7 +96,7 @@ def buildDockers(){
 def getDocker(backend){
     def tuna_docker
     docker.withRegistry('', "$DOCKER_CRED"){
-        def build_args = " --build-arg BACKEND=${backend} --network host --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
+        def build_args = " --build-arg BACKEND=${backend}"
         tuna_docker = docker.image(getDockerImageName(build_args))
         tuna_docker.pull()
     }
@@ -158,7 +158,7 @@ def finSolvers(){
 
 def finApplicability(){
     def tuna_docker = getDocker("HIP")
-    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
