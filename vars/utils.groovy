@@ -84,10 +84,10 @@ def getDockerImage(build_args)
 
 def buildDockers(){
     docker.withRegistry('', "$DOCKER_CRED"){
-        def build_args = " --build-arg BACKEND=HIPNOGPU"
+        def build_args = " --build-arg BACKEND=HIPNOGPU --network host --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
         def tuna_docker_hipnogpu = docker.build(getDockerImageName(build_args), "${build_args} .")
         tuna_docker_hipnogpu.push()
-        build_args = " --build-arg BACKEND=HIP"
+        build_args = " --build-arg BACKEND=HIP --network host --privileged --device=/dev/kfd --device /dev/dri:/dev/dri:rw --volume /dev/dri:/dev/dri:rw --group-add video"
         def tuna_docker_hip = docker.build(getDockerImageName(build_args), "${build_args} .")
         tuna_docker_hip.push()
     }
