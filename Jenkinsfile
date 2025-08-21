@@ -62,7 +62,7 @@ pipeline {
         }
         stage("fin applicability"){
         //init_session called here
-        agent{  label utils.rocmnode("tunatest") }
+        agent{  label "gfx90a" }
         steps {
             script{
             utils.finApplicability()
