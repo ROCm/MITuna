@@ -183,6 +183,10 @@ def test_fin_evaluator():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
+  tuning_data_attr = [column.name for column in inspect(miopen.dbt.tuning_data_table).c]
+  tuning_data_attr.remove("insert_ts")
+  tuning_data_attr.remove("update_ts")
+
   res_set = []
   for elem in job_config_rows:
     job_dict, config_dict = serialize_job_config_row(elem)
@@ -193,7 +197,9 @@ def test_fin_evaluator():
         'arch': miopen.dbt.session.arch,
         'num_cu': miopen.dbt.session.num_cu,
         'kwargs': kwargs,
-        'fdb_attr': fdb_attr
+        'fdb_attr': fdb_attr,
+        'rich_data': True,
+        'tuning_data_attr': tuning_data_attr
     }
 
     worker = prep_worker(copy.deepcopy(context))
