@@ -151,17 +151,18 @@ def test_fin_evaluator():
     worker.join()
 
   #load jobs
+  fin_step = 'miopen_perf_eval'
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_eval'
   args.tag = 'tuna_pytest_fin_eval'
-  args.fin_steps = ['miopen_find_eval']
+  args.fin_steps = [fin_step]
   args.session_id = miopen.args.session_id
 
   logger = setup_logger('test_fin_evaluator')
   num_jobs = add_jobs(args, dbt, logger)
   assert num_jobs > 0
 
-  miopen.args.fin_steps = ["miopen_find_eval"]
+  miopen.args.fin_steps = [fin_step]
   miopen.args.label = 'tuna_pytest_fin_eval'
   miopen.fetch_state.add('new')
   miopen.operation = Operation.EVAL
@@ -226,7 +227,7 @@ def test_fin_evaluator():
                                          .filter(dbt.job_table.state=='evaluated').count()
     assert count == num_jobs
 
-  assert kwargs['fin_steps'] == ['miopen_find_eval']
+  assert kwargs['fin_steps'] == [fin_step]
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
@@ -236,7 +237,7 @@ def test_fin_evaluator():
       [context['job'], context['config'], context['operation']])
   assert worker_kwargs['config']
   assert worker_kwargs['job']
-  assert worker_kwargs['fin_steps'] == ['miopen_find_eval']
+  assert worker_kwargs['fin_steps'] == [fin_step]
   fin_eval = get_worker(worker_kwargs, miopen.operation)
 
   #testing check_gpu
