@@ -63,6 +63,7 @@ class MIOpenDBTables(DBTablesInterface):
     self.config_table = None
     self.config_tags_table = None
     self.find_db_table = None
+    self.tuning_data_table = None
     self.solver_app = None
     self.cache_table = None
     self.fin_cache_table = None
