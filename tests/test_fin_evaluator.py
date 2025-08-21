@@ -183,7 +183,9 @@ def test_fin_evaluator():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
-  tuning_data_attr = [column.name for column in inspect(miopen.dbt.tuning_data_table).c]
+  tuning_data_attr = [
+      column.name for column in inspect(miopen.dbt.tuning_data_table).c
+  ]
   tuning_data_attr.remove("insert_ts")
   tuning_data_attr.remove("update_ts")
 
