@@ -229,7 +229,8 @@ def test_fin_evaluator():
   with DbSession() as session:
     #testing process_fin_evaluator results perf_eval
     fin_perf_json = copy.deepcopy(fin_json)
-    fin_perf_json['miopen_perf_eval_result'] = fin_perf_json['miopen_find_eval_result']
+    fin_perf_json['miopen_perf_eval_result'] = fin_perf_json[
+        'miopen_find_eval_result']
     del fin_perf_json['miopen_find_eval_result']
     for fin_json, context in res_set:
       #testing process_fin_evaluator results
