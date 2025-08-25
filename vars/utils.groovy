@@ -159,7 +159,6 @@ def finSolvers(){
 def finApplicability(){
     def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
-        checkout scm
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
