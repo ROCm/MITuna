@@ -151,7 +151,7 @@ def test_fin_evaluator():
     worker.join()
 
   #load jobs
-  fin_step = 'miopen_perf_eval'
+  fin_step = 'miopen_find_eval'
   args = LdJobArgs
   args.label = 'tuna_pytest_fin_eval'
   args.tag = 'tuna_pytest_fin_eval'
@@ -212,11 +212,10 @@ def test_fin_evaluator():
     res_set.append((fin_json, context))
 
   with DbSession() as session:
+    #testing process_fin_evaluator results find_eval
     for fin_json, context in res_set:
-      #testing process_fin_evaluator results
       miopen.process_eval_results(session, fin_json, context)
 
-  with DbSession() as session:
     valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='errored')\
                                          .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
@@ -226,6 +225,15 @@ def test_fin_evaluator():
     count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
                                          .filter(dbt.job_table.state=='evaluated').count()
     assert count == num_jobs
+
+  with DbSession() as session:
+    #testing process_fin_evaluator results perf_eval
+    fin_perf_json = copy.deepcopy(fin_json)
+    fin_perf_json['miopen_perf_eval'] = fin_perf_json['miopen_find_eval']
+    del fin_perf_json['miopen_find_eval']
+    for fin_json, context in res_set:
+      #testing process_fin_evaluator results
+      miopen.process_eval_results(session, fin_json, context)
 
   assert kwargs['fin_steps'] == [fin_step]
 
