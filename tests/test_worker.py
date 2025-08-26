@@ -44,7 +44,6 @@ from tuna.miopen.utils.config_type import ConfigType
 from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.miopen.subcmd.import_configs import import_cfgs
 from tuna.miopen.subcmd.load_job import test_tag_name as tag_name_test, add_jobs
@@ -88,10 +87,9 @@ def add_job(w):
   args.fin_steps = ['not_fin']
   args.session_id = w.session_id
 
-  connect_db()
   if args.tag:
     try:
-      tag_name_test(args.tag, dbt)
+      assert tag_name_test(args.tag, dbt)
     except ValueError as terr:
       print(terr)
 
