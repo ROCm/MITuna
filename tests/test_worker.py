@@ -39,6 +39,7 @@ from tuna.utils.machine_utility import load_machines
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.machine import Machine
 from tuna.sql import DbCursor
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
@@ -175,6 +176,12 @@ def test_worker():
   subp = Popen(cmd, stdout=PIPE, shell=True, universal_newlines=True)
   hostname = subp.stdout.readline().strip()
   machine = Machine(hostname=hostname, local_machine=True)
+
+  with DbSession() as session:
+    session.execute(
+      f"delete from conv_job WHERE reason='tuna_pytest_worker'"
+    )
+    session.commit()
 
   keys = {}
   num_gpus = Value('i', 2)
