@@ -178,9 +178,7 @@ def test_worker():
   machine = Machine(hostname=hostname, local_machine=True)
 
   with DbSession() as session:
-    session.execute(
-      f"delete from conv_job WHERE reason='tuna_pytest_worker'"
-    )
+    session.execute(f"delete from conv_job WHERE reason='tuna_pytest_worker'")
     session.commit()
 
   keys = {}
