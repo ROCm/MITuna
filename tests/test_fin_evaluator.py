@@ -177,12 +177,14 @@ def eval_step(machine, miopen, fin_step, num_jobs):
       miopen.process_eval_results(session, fin_json, context)
 
     valid_fin_err = session.query(miopen.dbt.job_table).filter(miopen.dbt.job_table.session==miopen.args.session_id)\
+                                         .filter(miopen.dbt.job_table.reason==miopen.args.label)\
                                          .filter(miopen.dbt.job_table.state=='errored')\
                                          .filter(miopen.dbt.job_table.result.contains('%Find Compile: No results%'))\
                                          .count()
     #ommiting valid Fin/MIOpen errors
     num_jobs = num_jobs - valid_fin_err
     count = session.query(miopen.dbt.job_table).filter(miopen.dbt.job_table.session==miopen.args.session_id)\
+                                         .filter(miopen.dbt.job_table.reason==miopen.args.label)\
                                          .filter(miopen.dbt.job_table.state=='evaluated').count()
     assert count == num_jobs
 
