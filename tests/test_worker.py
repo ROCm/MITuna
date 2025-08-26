@@ -177,16 +177,16 @@ def test_worker():
   hostname = subp.stdout.readline().strip()
   machine = Machine(hostname=hostname, local_machine=True)
 
-  with DbSession() as session:
-    session.execute(f"delete from conv_job WHERE reason='tuna_pytest_worker'")
-    session.commit()
-
   keys = {}
   num_gpus = Value('i', 2)
   v = Value('i', 0)
   e = Value('i', 0)
 
-  session_id = add_test_session()
+  session_id = add_test_session(label='tuna_pytest_worker')
+
+  with DbSession() as session:
+    session.execute(f"delete from conv_job WHERE session={session_id}")
+    session.commit()
 
   keys = {
       'machine': machine,
