@@ -232,7 +232,16 @@ def test_fin_evaluator():
 
   add_cfgs()
 
-  #add cfg for perf_eval
+  #run applicability
+  args = GoFishArgs()
+  machine_lst = load_machines(args)
+  miopen.args.update_applicability = True
+
+  worker_lst = miopen.compose_worker_list(machine_lst)
+  for worker in worker_lst:
+    worker.join()
+
+  #move cfg for perf_eval
   query1 = f"select count(*) from {dbt.config_tags_table.__tablename__} \
       where tag='tuna_pytest_fin_perf_eval';"
 
@@ -244,14 +253,6 @@ def test_fin_evaluator():
     if count == 0:
       session.execute(query2)
     session.commit()
-
-  args = GoFishArgs()
-  machine_lst = load_machines(args)
-  miopen.args.update_applicability = True
-
-  worker_lst = miopen.compose_worker_list(machine_lst)
-  for worker in worker_lst:
-    worker.join()
 
   #find_eval
   #load jobs
