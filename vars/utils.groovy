@@ -643,8 +643,7 @@ def pytestSuite2() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        //sh "wget ${BUILD_URL}/artifact/.coverage"
-        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), artifacts: ".coverage")
+        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), filter: ".coverage")
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
@@ -671,8 +670,7 @@ def pytestSuite3() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        //sh "wget ${BUILD_URL}/artifact/.coverage"
-        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), artifacts: ".coverage")
+        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), filter: ".coverage")
         //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         sshagent (credentials: ['bastion-ssh-key']) {
 	   //test evaluation
@@ -698,8 +696,7 @@ def Coverage(current_run, main_branch) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        //sh "wget ${BUILD_URL}/artifact/.coverage"
-        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), artifacts: ".coverage")
+        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), filter: ".coverage")
         sh "coverage report -m"
         sh "python3 -m coverage json"
         sh "coverage html"
