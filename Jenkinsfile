@@ -69,11 +69,27 @@ pipeline {
             }
             }
         }
-        stage("pytest"){
-        agent{  label "gfx90a" }
+        stage("pytest1"){
+        agent { label utils.rocmnode("tunatest") }
         steps{
             script{
             utils.pytestSuite1()
+            }
+            }
+        }
+        stage("pytest2"){
+        agent { label utils.rocmnode("tunatest") }
+        steps{
+            script{
+            utils.pytestSuite2()
+            }
+            }
+        }
+        stage("pytest3"){
+        agent{  label "gfx90a" }
+        steps{
+            script{
+            utils.pytestSuite3()
             }
             }
         }

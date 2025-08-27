@@ -577,8 +577,8 @@ def perfEval() {
 }
 
 def pytestSuite1() {
-    def tuna_docker = getDocker("HIP")
-    tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
+    def tuna_docker = getDocker("HIPNOGPU")
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_CELERY_BROKER_HOST = "${db_host}"
         env.TUNA_CELERY_BACKEND_HOST = "${db_host}"
@@ -622,20 +622,12 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_mituna_interface.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
-           // test fin builder and test fin builder conv in sequence
-           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_worker.py -s"
-           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
-           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_celery.py -s"
-	   //test evaluation
-           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
-           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
         }
         sh "coverage report -m "
     }
 }
 
 
-/*
 def pytestSuite2() {
     def tuna_docker = getDocker("HIPNOGPU")
     tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
@@ -654,6 +646,9 @@ def pytestSuite2() {
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {
+           // test fin builder and test fin builder conv in sequence
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_celery.py -s"
         }
         sh "coverage report -m"
     }
@@ -675,11 +670,14 @@ def pytestSuite3() {
         //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
 
         sshagent (credentials: ['bastion-ssh-key']) {
+	   //test evaluation
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_worker.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
         }
         sh "coverage report -m"
     }
 }
-*/
 
 
 def Coverage(current_run, main_branch) {
