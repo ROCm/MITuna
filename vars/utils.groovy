@@ -624,6 +624,7 @@ def pytestSuite1() {
            // sh "pytest tests/test_mmi.py "
         }
         sh "coverage report -m "
+        archiveArtifacts ".coverage"
     }
 }
 
@@ -642,6 +643,7 @@ def pytestSuite2() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
+        sh "wget ${env.TUNA_COVERAGE_URL}/${env.branch}/${BUILD_ID}/artifact/.coverage"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
@@ -651,6 +653,7 @@ def pytestSuite2() {
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_celery.py -s"
         }
         sh "coverage report -m"
+        archiveArtifacts ".coverage"
     }
 }
 
@@ -667,8 +670,8 @@ def pytestSuite3() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
+        sh "wget ${env.TUNA_COVERAGE_URL}/${env.branch}/${BUILD_ID}/artifact/.coverage"
         //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
-
         sshagent (credentials: ['bastion-ssh-key']) {
 	   //test evaluation
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_worker.py -s"
@@ -676,6 +679,7 @@ def pytestSuite3() {
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
         }
         sh "coverage report -m"
+        archiveArtifacts ".coverage"
     }
 }
 
@@ -692,6 +696,7 @@ def Coverage(current_run, main_branch) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        sh "wget ${env.TUNA_COVERAGE_URL}/${env.branch}/${BUILD_ID}/artifact/.coverage"
         sh "coverage report -m"
         sh "python3 -m coverage json"
         sh "coverage html"
