@@ -580,6 +580,8 @@ def pytestSuite1() {
     def tuna_docker = getDocker("HIP")
     tuna_docker.inside("--network host  --dns 8.8.8.8") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_CELERY_BROKER_HOST = "${db_host}"
+        env.TUNA_CELERY_BACKEND_HOST = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
         env.TUNA_DB_USER_PASSWORD="${db_password}"
@@ -621,7 +623,7 @@ def pytestSuite1() {
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
            // test fin builder and test fin builder conv in sequence
-           sh "python3 -m coverage run -a -m pytest tests/test_worker.py -s"
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_worker.py -s"
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_celery.py -s"
 	   //test evaluation
