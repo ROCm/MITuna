@@ -578,7 +578,7 @@ def perfEval() {
 
 def pytestSuite1() {
     def tuna_docker = getDocker("HIP")
-    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+    tuna_docker.inside("--network host --dns 8.8.8.8 ${docker_args} ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_CELERY_BROKER_HOST = "${db_host}"
         env.TUNA_CELERY_BACKEND_HOST = "${db_host}"
