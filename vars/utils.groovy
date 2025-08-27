@@ -643,7 +643,7 @@ def pytestSuite2() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "wget ${env.TUNA_COVERAGE_URL}/${env.branch}/${BUILD_ID}/artifact/.coverage"
+        sh "wget ${env.TUNA_COVERAGE_URL}/${scm.branches[0].name}/${BUILD_ID}/artifact/.coverage"
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
@@ -670,7 +670,7 @@ def pytestSuite3() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
-        sh "wget ${env.TUNA_COVERAGE_URL}/${env.branch}/${BUILD_ID}/artifact/.coverage"
+        sh "wget ${env.TUNA_COVERAGE_URL}/${scm.branches[0].name}/${BUILD_ID}/artifact/.coverage"
         //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         sshagent (credentials: ['bastion-ssh-key']) {
 	   //test evaluation
@@ -696,7 +696,7 @@ def Coverage(current_run, main_branch) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
-        sh "wget ${env.TUNA_COVERAGE_URL}/${env.branch}/${BUILD_ID}/artifact/.coverage"
+        sh "wget ${env.TUNA_COVERAGE_URL}/${scm.branches[0].name}/${BUILD_ID}/artifact/.coverage"
         sh "coverage report -m"
         sh "python3 -m coverage json"
         sh "coverage html"
