@@ -61,7 +61,8 @@ from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 #from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile
+from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_tuning_data
+from tuna.miopen.utils.json_to_sql import process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table
 from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.worker.fin_utils import get_fin_result
@@ -136,6 +137,14 @@ class MIOpen(MITunaInterface):
         type=int,
         default=None,
         help='Limit the number of gpu workers created by Tuna, index from 0')
+
+    parser.add_argument(
+        '-R',
+        '--rich_data',
+        dest='rich_data',
+        action='store_true',
+        default=False,
+        help='record intermediate parameter results from perf tuning')
 
     subcommands = parser.add_subcommands(required=False)
     subcommands.add_subcommand('import_configs',
@@ -656,6 +665,19 @@ class MIOpen(MITunaInterface):
     fdb_attr.remove("update_ts")
     return fdb_attr
 
+  @lru_cache(1)
+  def get_tuning_data_attr(self):
+    """! Get tuning_data table attrs
+    @return tuning_data_attr tuning_data table attributes without timestamps
+    """
+    tuning_data_attr = None
+    tuning_data_attr = [
+        column.name for column in inspect(self.dbt.tuning_data_table).c
+    ]
+    tuning_data_attr.remove("insert_ts")
+    tuning_data_attr.remove("update_ts")
+    return tuning_data_attr
+
   def serialize_jobs(self, session: DbSession, batch_jobs: List[Any]):
     """! Return list of serialize jobs
     @param session DB session
@@ -671,6 +693,7 @@ class MIOpen(MITunaInterface):
     context_list = []
     kwargs = self.get_context_items()
     fdb_attr = self.get_fdb_attr()
+    tuning_data_attr = self.get_tuning_data_attr()
     for job, config in serialized_jobs:
       context = {
           'job': job,
@@ -679,7 +702,9 @@ class MIOpen(MITunaInterface):
           'arch': self.dbt.session.arch,
           'num_cu': self.dbt.session.num_cu,
           'kwargs': kwargs,
-          'fdb_attr': fdb_attr
+          'rich_data': self.args.rich_data,
+          'fdb_attr': fdb_attr,
+          'tuning_data_attr': tuning_data_attr
       }
       context_list.append(context)
 
@@ -790,6 +815,15 @@ class MIOpen(MITunaInterface):
                                            copy.deepcopy(context),
                                            self.dbt,
                                            context['fdb_attr'],
+                                           pending,
+                                           result_str='miopen_perf_eval_result',
+                                           check_str='evaluated')
+            if context["rich_data"]:
+              status = process_tuning_data(session,
+                                           fin_json,
+                                           copy.deepcopy(context),
+                                           self.dbt,
+                                           context['tuning_data_attr'],
                                            pending,
                                            result_str='miopen_perf_eval_result',
                                            check_str='evaluated')

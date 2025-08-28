@@ -460,7 +460,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
     return False
 
   def chk_gpu_status(self, gpu_id: int) -> bool:
-    """check gpu status, can clinfo find the device"""
+    """check gpu status, can rocminfo find the device"""
     line: str
     stdout: StringIO = StringIO()
     logger: logging.Logger = self.get_logger()
@@ -472,7 +472,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         return False
       logger.info('Checking GPU %u status', gpu_id)
       _, stdout, _ = cnx.exec_command(
-          f'GPU_DEVICE_ORDINAL={gpu_id} {CLINFO} | grep gfx', timeout=30)
+          f'ROCR_VISIBLE_DEVICES={gpu_id} {ROCMINFO} | grep gfx', timeout=30)
     else:
       logger.warning('No available gpus to check')
 
@@ -483,18 +483,18 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
         line = line.strip()
         logger.info(line)
         if line.find(f"{self.get_gpu(gpu_id)['arch']}") == -1:  #type: ignore
-          logger.warning('clinfo failed: %s', line)
-          logger.warning('clinfo failed for Device ID: %u', gpu_id)
+          logger.warning('rocminfo failed: %s', line)
+          logger.warning('rocminfo failed for Device ID: %u', gpu_id)
           return False
 
         logger.info('GPU %u status success', gpu_id)
         return True
       except (socket.timeout, socket.error) as error:
-        logger.warning('clinfo failed for Device ID: %u', gpu_id)
+        logger.warning('rocminfo failed for Device ID: %u', gpu_id)
         logger.warning('%s', error)
         return False
 
-    logger.warning('clinfo failed by default for Device ID: %u', gpu_id)
+    logger.warning('rocminfo failed by default for Device ID: %u', gpu_id)
     return False
 
   def getusedspace(self) -> float:

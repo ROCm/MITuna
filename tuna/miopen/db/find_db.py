@@ -53,7 +53,7 @@ class FindDBMixin():  # pylint: disable=too-many-instance-attributes
     return Column(Integer, ForeignKey("solver.id"), nullable=False)
 
   fdb_key = Column(String(length=128), nullable=True)
-  params = Column(Text, nullable=False)
+  params = Column(String(length=512), nullable=False)
   kernel_time = Column(Float, nullable=False)
   workspace_sz = Column(BigInteger, nullable=False)
   alg_lib = Column(String(length=64), nullable=True)
@@ -136,6 +136,25 @@ class ConvolutionFindDB(BASE, FindDBMixin):  #pylint: disable=too-many-instance-
   config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
 
   kernel_group = Column(Integer, nullable=True)
+
+  @orm.reconstructor
+  def __init__(self, **kwargs):
+    self.logger = kwargs['logger'] if 'logger' in kwargs else setup_logger(
+        'find_db')
+    self.fdb_slv_dir = {}
+
+
+class ConvolutionTuningData(BASE, FindDBMixin):  #pylint: disable=too-many-instance-attributes
+  """Concrete convolution find_db class"""
+  __tablename__ = "conv_tuning_data"
+  __table_args__ = (UniqueConstraint("session",
+                                     "opencl",
+                                     "config",
+                                     "solver",
+                                     "params",
+                                     name="uq_idx"),)
+
+  config = Column(Integer, ForeignKey("conv_config.id"), nullable=False)
 
   @orm.reconstructor
   def __init__(self, **kwargs):
