@@ -39,11 +39,11 @@ from tuna.utils.machine_utility import load_machines
 from tuna.miopen.worker.fin_class import FinClass
 from tuna.machine import Machine
 from tuna.sql import DbCursor
+from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.config_type import ConfigType
 from utils import get_worker_args, add_test_session
 from utils import CfgImportArgs, LdJobArgs, GoFishArgs
 from tuna.miopen.db.tables import MIOpenDBTables
-from tuna.utils.db_utility import connect_db
 from tuna.utils.logger import setup_logger
 from tuna.miopen.subcmd.import_configs import import_cfgs
 from tuna.miopen.subcmd.load_job import test_tag_name as tag_name_test, add_jobs
@@ -68,14 +68,15 @@ def add_job(w):
   #update solvers
   miopen = MIOpen()
   miopen.args = args
+  miopen.dbt = dbt
   kwargs = get_worker_args(args, machine, miopen)
   fin_worker = FinClass(**kwargs)
   assert (fin_worker.get_solvers())
 
   #get applicability
-  args.update_applicability = True
-  args.label = 'tuna_pytest_worker'
-  args.session_id = w.session_id
+  miopen.args.update_applicability = True
+  miopen.args.label = 'tuna_pytest_worker'
+  miopen.args.session_id = w.session_id
   worker_lst = miopen.compose_worker_list(machine_lst)
   for worker in worker_lst:
     worker.join()
@@ -87,10 +88,9 @@ def add_job(w):
   args.fin_steps = ['not_fin']
   args.session_id = w.session_id
 
-  connect_db()
   if args.tag:
     try:
-      tag_name_test(args.tag, dbt)
+      assert tag_name_test(args.tag, dbt)
     except ValueError as terr:
       print(terr)
 
@@ -181,7 +181,11 @@ def test_worker():
   v = Value('i', 0)
   e = Value('i', 0)
 
-  session_id = add_test_session()
+  session_id = add_test_session(label='tuna_pytest_worker')
+
+  with DbSession() as session:
+    session.execute(f"delete from conv_job WHERE session={session_id}")
+    session.commit()
 
   keys = {
       'machine': machine,

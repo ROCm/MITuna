@@ -61,7 +61,8 @@ from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
 #from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
-from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_pdb_compile, process_tuning_data
+from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_tuning_data
+from tuna.miopen.utils.json_to_sql import process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table
 from tuna.miopen.utils.helper import set_job_state
 from tuna.miopen.worker.fin_utils import get_fin_result
@@ -670,7 +671,9 @@ class MIOpen(MITunaInterface):
     @return tuning_data_attr tuning_data table attributes without timestamps
     """
     tuning_data_attr = None
-    tuning_data_attr = [column.name for column in inspect(self.dbt.tuning_data_table).c]
+    tuning_data_attr = [
+        column.name for column in inspect(self.dbt.tuning_data_table).c
+    ]
     tuning_data_attr.remove("insert_ts")
     tuning_data_attr.remove("update_ts")
     return tuning_data_attr
@@ -816,14 +819,14 @@ class MIOpen(MITunaInterface):
                                            result_str='miopen_perf_eval_result',
                                            check_str='evaluated')
             if context["rich_data"]:
-                status = process_tuning_data(session,
-                                            fin_json,
-                                            copy.deepcopy(context),
-                                            self.dbt,
-                                            context['tuning_data_attr'],
-                                            pending,
-                                            result_str='miopen_perf_eval_result',
-                                            check_str='evaluated')
+              status = process_tuning_data(session,
+                                           fin_json,
+                                           copy.deepcopy(context),
+                                           self.dbt,
+                                           context['tuning_data_attr'],
+                                           pending,
+                                           result_str='miopen_perf_eval_result',
+                                           check_str='evaluated')
 
         success, result_str = get_fin_result(status)
         failed_job = not success

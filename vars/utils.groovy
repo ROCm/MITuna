@@ -158,8 +158,7 @@ def finSolvers(){
 
 def finApplicability(){
     def tuna_docker = getDocker("HIP")
-    tuna_docker.inside("--network host  --dns 8.8.8.8") {
-        checkout scm
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ${docker_args}") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
@@ -571,7 +570,7 @@ def perfEval() {
         if(golden_entries.toInteger() != fdb_entries.toInteger())
         {
             echo "#fdb jobs: ${fdb_entries}"
-            echo "#goden jobs: ${golden_entries}"
+            echo "#golden jobs: ${golden_entries}"
             error("FDB entries and golden entries do not match")
         }
     }
@@ -579,8 +578,10 @@ def perfEval() {
 
 def pytestSuite1() {
     def tuna_docker = getDocker("HIPNOGPU")
-    tuna_docker.inside("--network host  --dns 8.8.8.8") {
+    tuna_docker.inside("--network host  --dns 8.8.8.8 ") {
         env.TUNA_DB_HOSTNAME = "${db_host}"
+        env.TUNA_CELERY_BROKER_HOST = "${db_host}"
+        env.TUNA_CELERY_BACKEND_HOST = "${db_host}"
         env.TUNA_DB_NAME="${db_name}"
         env.TUNA_DB_USER_NAME="${db_user}"
         env.TUNA_DB_USER_PASSWORD="${db_password}"
@@ -623,6 +624,7 @@ def pytestSuite1() {
            // sh "pytest tests/test_mmi.py "
         }
         sh "coverage report -m "
+        archiveArtifacts ".coverage"
     }
 }
 
@@ -641,16 +643,17 @@ def pytestSuite2() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
+        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), filter: ".coverage")
         addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         // download the latest perf db
         //runsql("DELETE FROM config_tags; DELETE FROM job; DELETE FROM config;")
         sshagent (credentials: ['bastion-ssh-key']) {
            // test fin builder and test fin builder conv in sequence
-           sh "python3 -m coverage run -a -m pytest tests/test_worker.py -s"
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_fin_builder.py -s"
            sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_celery.py -s"
         }
         sh "coverage report -m"
+        archiveArtifacts ".coverage"
     }
 }
 
@@ -667,13 +670,16 @@ def pytestSuite3() {
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
 
+        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), filter: ".coverage")
         //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
-
         sshagent (credentials: ['bastion-ssh-key']) {
+	   //test evaluation
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_worker.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
         }
         sh "coverage report -m"
+        archiveArtifacts ".coverage"
     }
 }
 
@@ -690,6 +696,7 @@ def Coverage(current_run, main_branch) {
         env.gateway_user = "${gateway_user}"
         env.PYTHONPATH=env.WORKSPACE
         env.PATH="${env.WORKSPACE}/tuna:${env.PATH}"
+        copyArtifacts(projectName: "${JOB_NAME}", selector: specific("${BUILD_NUMBER}"), filter: ".coverage")
         sh "coverage report -m"
         sh "python3 -m coverage json"
         sh "coverage html"

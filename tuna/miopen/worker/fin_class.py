@@ -125,11 +125,12 @@ class FinClass(WorkerInterface):
     self.fdb_attr.remove("insert_ts")
     self.fdb_attr.remove("update_ts")
 
-    self.tuning_data_attr = [
-        column.name for column in inspect(self.dbt.tuning_data_table).c
-    ]
-    self.tuning_data_attr.remove("insert_ts")
-    self.tuning_data_attr.remove("update_ts")
+    if self.config_type == ConfigType.convolution:
+      self.tuning_data_attr = [
+          column.name for column in inspect(self.dbt.tuning_data_table).c
+      ]
+      self.tuning_data_attr.remove("insert_ts")
+      self.tuning_data_attr.remove("update_ts")
 
   def get_miopen_v(self) -> str:
     """Interface function to get new branch hash"""

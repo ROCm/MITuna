@@ -125,49 +125,10 @@ def add_fake_fdb_entries(job_query, dbt, kernel_group):
     session.commit()
 
 
-def test_fin_evaluator():
-  miopen = MIOpen()
-  miopen.args = GoFishArgs()
-  machine_lst = load_machines(miopen.args)
-  machine = machine_lst[0]
-  miopen.args.label = 'tuna_pytest_fin_eval'
-  miopen.args.session_id = add_test_session(label='tuna_pytest_fin_eval')
-
-  #update solvers
-  kwargs = get_worker_args(miopen.args, machine, miopen)
-  fin_worker = FinClass(**kwargs)
-  assert fin_worker.get_solvers()
-
-  add_cfgs()
-  dbt = MIOpenDBTables(config_type=ConfigType.convolution,
-                       session_id=miopen.args.session_id)
-
-  args = GoFishArgs()
-  machine_lst = load_machines(args)
-  miopen.args.update_applicability = True
-
-  worker_lst = miopen.compose_worker_list(machine_lst)
-  for worker in worker_lst:
-    worker.join()
-
-  #load jobs
-  args = LdJobArgs
-  args.label = 'tuna_pytest_fin_eval'
-  args.tag = 'tuna_pytest_fin_eval'
-  args.fin_steps = ['miopen_find_eval']
-  args.session_id = miopen.args.session_id
-
-  logger = setup_logger('test_fin_evaluator')
-  num_jobs = add_jobs(args, dbt, logger)
-  assert num_jobs > 0
-
-  miopen.args.fin_steps = ["miopen_find_eval"]
-  miopen.args.label = 'tuna_pytest_fin_eval'
+def eval_step(machine, miopen, fin_step, num_jobs):
   miopen.fetch_state.add('new')
   miopen.operation = Operation.EVAL
   miopen.set_state = 'eval_start'
-  miopen.dbt = MIOpenDBTables(session_id=miopen.args.session_id,
-                              config_type=ConfigType.convolution)
   with DbSession() as session:
     jobs = miopen.get_jobs(session, miopen.fetch_state, miopen.set_state,
                            miopen.args.session_id)
@@ -183,6 +144,12 @@ def test_fin_evaluator():
   fdb_attr.remove("insert_ts")
   fdb_attr.remove("update_ts")
 
+  tuning_data_attr = [
+      column.name for column in inspect(miopen.dbt.tuning_data_table).c
+  ]
+  tuning_data_attr.remove("insert_ts")
+  tuning_data_attr.remove("update_ts")
+
   res_set = []
   for elem in job_config_rows:
     job_dict, config_dict = serialize_job_config_row(elem)
@@ -193,7 +160,9 @@ def test_fin_evaluator():
         'arch': miopen.dbt.session.arch,
         'num_cu': miopen.dbt.session.num_cu,
         'kwargs': kwargs,
-        'fdb_attr': fdb_attr
+        'fdb_attr': fdb_attr,
+        'rich_data': True,
+        'tuning_data_attr': tuning_data_attr
     }
 
     worker = prep_worker(copy.deepcopy(context))
@@ -203,22 +172,23 @@ def test_fin_evaluator():
     res_set.append((fin_json, context))
 
   with DbSession() as session:
+    #testing process_fin_evaluator results
     for fin_json, context in res_set:
-      #testing process_fin_evaluator results
       miopen.process_eval_results(session, fin_json, context)
 
-  with DbSession() as session:
-    valid_fin_err = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
-                                         .filter(dbt.job_table.state=='errored')\
-                                         .filter(dbt.job_table.result.contains('%Find Compile: No results%'))\
+    valid_fin_err = session.query(miopen.dbt.job_table).filter(miopen.dbt.job_table.session==miopen.args.session_id)\
+                                         .filter(miopen.dbt.job_table.reason==miopen.args.label)\
+                                         .filter(miopen.dbt.job_table.state=='errored')\
+                                         .filter(miopen.dbt.job_table.result.contains('%Find Compile: No results%'))\
                                          .count()
     #ommiting valid Fin/MIOpen errors
     num_jobs = num_jobs - valid_fin_err
-    count = session.query(dbt.job_table).filter(dbt.job_table.session==miopen.args.session_id)\
-                                         .filter(dbt.job_table.state=='evaluated').count()
+    count = session.query(miopen.dbt.job_table).filter(miopen.dbt.job_table.session==miopen.args.session_id)\
+                                         .filter(miopen.dbt.job_table.reason==miopen.args.label)\
+                                         .filter(miopen.dbt.job_table.state=='evaluated').count()
     assert count == num_jobs
 
-  assert kwargs['fin_steps'] == ['miopen_find_eval']
+  assert kwargs['fin_steps'] == [fin_step]
 
   job_config = job_config_rows[0]
   job_dict, config_dict = serialize_job_config_row(job_config)
@@ -228,7 +198,7 @@ def test_fin_evaluator():
       [context['job'], context['config'], context['operation']])
   assert worker_kwargs['config']
   assert worker_kwargs['job']
-  assert worker_kwargs['fin_steps'] == ['miopen_find_eval']
+  assert worker_kwargs['fin_steps'] == [fin_step]
   fin_eval = get_worker(worker_kwargs, miopen.operation)
 
   #testing check_gpu
@@ -241,3 +211,77 @@ def test_fin_evaluator():
   find_eval_file = f"{this_path}/../utils/test_files/fin_output_find_eval.json"
   fin_json = json.loads(machine.read_file(find_eval_file))[1:]
   assert len(fin_json) == 1
+
+
+def test_fin_evaluator():
+  logger = setup_logger('test_fin_evaluator')
+  miopen = MIOpen()
+  miopen.args = GoFishArgs()
+  machine_lst = load_machines(miopen.args)
+  machine = machine_lst[0]
+  miopen.args.label = 'tuna_pytest_fin_eval'
+  miopen.args.session_id = add_test_session(label='tuna_pytest_fin_eval')
+  dbt = MIOpenDBTables(config_type=ConfigType.convolution,
+                       session_id=miopen.args.session_id)
+  miopen.dbt = dbt
+
+  #update solvers
+  kwargs = get_worker_args(miopen.args, machine, miopen)
+  fin_worker = FinClass(**kwargs)
+  assert fin_worker.get_solvers()
+
+  add_cfgs()
+
+  #run applicability
+  args = GoFishArgs()
+  machine_lst = load_machines(args)
+  miopen.args.update_applicability = True
+
+  worker_lst = miopen.compose_worker_list(machine_lst)
+  for worker in worker_lst:
+    worker.join()
+
+  #move cfg for perf_eval
+  query1 = f"select count(*) from {dbt.config_tags_table.__tablename__} \
+      where tag='tuna_pytest_fin_perf_eval';"
+
+  query2 = f"update {dbt.config_tags_table.__tablename__} \
+      set tag='tuna_pytest_fin_perf_eval' where tag='tuna_pytest_fin_eval' order by config limit 1;"
+
+  with DbSession() as session:
+    count = session.execute(query1).fetchone()[0]
+    if count == 0:
+      session.execute(query2)
+    session.commit()
+
+  #find_eval
+  #load jobs
+  fin_step = 'miopen_find_eval'
+  args = LdJobArgs
+  args.label = 'tuna_pytest_fin_eval'
+  args.tag = 'tuna_pytest_fin_eval'
+  args.fin_steps = [fin_step]
+  args.session_id = miopen.args.session_id
+  miopen.args.fin_steps = [fin_step]
+  miopen.args.label = args.label
+
+  num_jobs = add_jobs(args, dbt, logger)
+  assert num_jobs > 0
+
+  eval_step(machine, miopen, fin_step, num_jobs)
+
+  #perf_eval
+  #load jobs
+  fin_step = 'miopen_perf_eval'
+  args = LdJobArgs
+  args.label = 'tuna_pytest_fin_perf_eval'
+  args.tag = 'tuna_pytest_fin_perf_eval'
+  args.fin_steps = [fin_step]
+  args.session_id = miopen.args.session_id
+  miopen.args.fin_steps = [fin_step]
+  miopen.args.label = args.label
+
+  num_jobs = add_jobs(args, dbt, logger)
+  assert num_jobs > 0
+
+  eval_step(machine, miopen, fin_step, num_jobs)

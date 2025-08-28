@@ -127,30 +127,39 @@ def __update_tuning_data(  #pylint: disable=too-many-arguments,too-many-locals
 
       if tuning_data_obj[check_str]:
         #returned entry is added to the table
-        tuning_data_entries = __compose_tuning_data_entries(session, fin_json, tuning_data_obj, session_id,
-                                        dbt, config, job, tuning_data_attr,
-                                        solver_id_map, pending)
+        solver = solver_id_map[tuning_data_obj['solver_name']]
 
-        for tuning_data_entry in tuning_data_entries:
-          __check_layout_mismatch(tuning_data_entry, slv_stat, config)
-          if tuning_data_entry in pending:
-            pending.remove(tuning_data_entry)
-            query = gen_insert_query(tuning_data_entry, tuning_data_attr,
-                                    dbt.tuning_data_table.__tablename__)
-            session.execute(query)
-          else:
-            query = gen_update_query(tuning_data_entry, tuning_data_attr,
-                                    dbt.tuning_data_table.__tablename__)
-            session.execute(query)
+        for item in tuning_data_obj['alt_solutions']:
+          entry = __update_tuning_data_entry(session, solver, session_id, dbt,
+                                             config, item['params'], job,
+                                             tuning_data_attr, pending)
+          entry.fdb_key = fin_json['db_key']
+          entry.alg_lib = tuning_data_obj['algorithm']
+          entry.workspace_sz = tuning_data_obj['workspace']
+          entry.valid = True
+          entry.params = item['params']
+          entry.kernel_time = item['time']
+          __submit_tuning_data_entry(session, dbt, entry, tuning_data_attr,
+                                     slv_stat, config, pending)
+
+        if not tuning_data_obj['alt_solutions']:
+          entry = __update_tuning_data_entry(session, solver, session_id, dbt,
+                                             config, tuning_data_obj['params'],
+                                             job, tuning_data_attr, pending)
+          entry.fdb_key = fin_json['db_key']
+          entry.alg_lib = tuning_data_obj['algorithm']
+          entry.workspace_sz = tuning_data_obj['workspace']
+          entry.valid = True
+          entry.params = tuning_data_obj['params']
+          entry.kernel_time = tuning_data_obj['time']
+          __submit_tuning_data_entry(session, dbt, entry, tuning_data_attr,
+                                     slv_stat, config, pending)
+
       else:
         LOGGER.warning("Failed tuning_data update, cfg_id: %s, obj: %s",
                        fin_json['config_tuna_id'], tuning_data_obj)
   else:
-    status = [{
-        'solver': 'all',
-        'success': False,
-        'result': 'Eval: No results'
-    }]
+    status = [{'solver': 'all', 'success': False, 'result': 'Eval: No results'}]
 
   session.commit()
 
@@ -291,11 +300,12 @@ def get_fdb_entry(session, solver, session_id, dbt, config, fdb_attr):
   return obj, fdb_entry
 
 
-def __update_tuning_data_entry(session, solver, session_id, dbt, config, params, job, tuning_data_attr,
-                       pending):
+def __update_tuning_data_entry(session, solver, session_id, dbt, config, params,
+                               job, tuning_data_attr, pending):
   """ Add a new entry to fdb if there isnt one already """
-  obj, tuning_data_entry = get_tuning_data_entry(session, solver, session_id, dbt, config, params,
-                                 tuning_data_attr)
+  obj, tuning_data_entry = get_tuning_data_entry(session, solver, session_id,
+                                                 dbt, config, params,
+                                                 tuning_data_attr)
   if obj:  # existing entry in db
     # This can be removed if we implement the delete orphan cascade
     tuning_data_entry = obj
@@ -305,7 +315,8 @@ def __update_tuning_data_entry(session, solver, session_id, dbt, config, params,
   return tuning_data_entry
 
 
-def get_tuning_data_entry(session, solver, session_id, dbt, config, params, tuning_data_attr):
+def get_tuning_data_entry(session, solver, session_id, dbt, config, params,
+                          tuning_data_attr):
   """ Get FindDb entry from db """
   obj = None
   tuning_data_entry = None
@@ -315,8 +326,8 @@ def get_tuning_data_entry(session, solver, session_id, dbt, config, params, tuni
       f"params=\"{params}\"", "opencl=0"
   ]
   cond_str = f"where {' AND '.join(conds)}"
-  entries = gen_select_objs(session, tuning_data_attr, dbt.tuning_data_table.__tablename__,
-                            cond_str)
+  entries = gen_select_objs(session, tuning_data_attr,
+                            dbt.tuning_data_table.__tablename__, cond_str)
 
   if entries:
     assert len(entries) == 1
@@ -357,36 +368,20 @@ def __compose_fdb_entry(  #pylint: disable=too-many-arguments
   return fdb_entry
 
 
-def __compose_tuning_data_entries(  #pylint: disable=too-many-arguments
-    session, fin_json, tuning_data_obj, session_id, dbt, config, job, tuning_data_attr,
-    solver_id_map, pending):
+def __submit_tuning_data_entry(  #pylint: disable=too-many-arguments
+    session, dbt, tuning_data_entry, tuning_data_attr, slv_stat, config,
+    pending):
   """Compose a FindDB table entry from fin_output"""
-  solver = solver_id_map[tuning_data_obj['solver_name']]
-
-  tuning_data_entries = []
-  for item in tuning_data_obj['alt_solutions']:
-    entry = __update_tuning_data_entry(session, solver, session_id, dbt, config, item['params'], job,
-                                  tuning_data_attr, pending)
-    entry.fdb_key = fin_json['db_key']
-    entry.alg_lib = tuning_data_obj['algorithm']
-    entry.workspace_sz = tuning_data_obj['workspace']
-    entry.valid = True
-    entry.params = item['params']
-    entry.kernel_time = item['time']
-    tuning_data_entries.append(entry)
-
-  if not tuning_data_obj['alt_solutions']:
-    entry = __update_tuning_data_entry(session, solver, session_id, dbt, config, tuning_data_obj['params'], job,
-                                  tuning_data_attr, pending)
-    entry.fdb_key = fin_json['db_key']
-    entry.alg_lib = tuning_data_obj['algorithm']
-    entry.workspace_sz = tuning_data_obj['workspace']
-    entry.valid = True
-    entry.params = tuning_data_obj['params']
-    entry.kernel_time = tuning_data_obj['time']
-    tuning_data_entries.append(entry)
-
-  return tuning_data_entries
+  __check_layout_mismatch(tuning_data_entry, slv_stat, config)
+  if tuning_data_entry in pending:
+    pending.remove(tuning_data_entry)
+    query = gen_insert_query(tuning_data_entry, tuning_data_attr,
+                             dbt.tuning_data_table.__tablename__)
+    session.execute(query)
+  else:
+    query = gen_update_query(tuning_data_entry, tuning_data_attr,
+                             dbt.tuning_data_table.__tablename__)
+    session.execute(query)
 
 
 def process_fdb_w_kernels(session,
@@ -421,13 +416,13 @@ def process_fdb_w_kernels(session,
 
 
 def process_tuning_data(session,
-                          fin_json,
-                          context,
-                          dbt,
-                          tuning_data_attr,
-                          pending,
-                          result_str='miopen_perf_eval_result',
-                          check_str='evaluated'):
+                        fin_json,
+                        context,
+                        dbt,
+                        tuning_data_attr,
+                        pending,
+                        result_str='miopen_perf_eval_result',
+                        check_str='evaluated'):
   """initiate find db update"""
   job = SimpleDict(**context['job'])
   config = SimpleDict(**context['config'])
@@ -436,7 +431,8 @@ def process_tuning_data(session,
   status = session_retry(
       session, callback,
       lambda x: x(session, fin_json, config, context['kwargs']['session_id'],
-                  dbt, job, tuning_data_attr, pending, result_str, check_str), LOGGER)
+                  dbt, job, tuning_data_attr, pending, result_str, check_str),
+      LOGGER)
 
   if not status:
     LOGGER.warning('Fin: Unable to update Database')

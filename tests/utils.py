@@ -125,6 +125,7 @@ class GoFishArgs():
   config_type = None
   reset_interval = None
   dynamic_solvers_only = False
+  rich_data = False
   label = 'pytest'
   docker_name = 'miopentuna'
   ticket = 'N/A'
