@@ -674,9 +674,9 @@ def pytestSuite3() {
         //addMachine(arch, num_cu, machine_ip, machine_local_ip, username, pwd, port)
         sshagent (credentials: ['bastion-ssh-key']) {
 	   //test evaluation
-           //sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_worker.py -s"
-           //sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
-           //sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
+           sh "TUNA_LOGLEVEL=INFO python3 -m coverage run -a -m pytest tests/test_worker.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_evaluator.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
         }
         sh "coverage report -m"
         archiveArtifacts ".coverage"
