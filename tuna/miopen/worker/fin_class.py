@@ -97,10 +97,10 @@ class FinClass(WorkerInterface):
 
     #add cache directories
     self.envmt.append(
-        f"MIOPEN_USER_DB_PATH=/tmp/miopenpdb/thread-{self.gpu_id}/config/miopen"
+        "MIOPEN_USER_DB_PATH=/tmp/miopenpdb/config"
     )
     self.envmt.append(
-        f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
+        "MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/cache")
 
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
 
