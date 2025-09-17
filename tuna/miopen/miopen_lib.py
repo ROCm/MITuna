@@ -95,13 +95,6 @@ class MIOpen(MITunaInterface):
             TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS,
             TunaArgs.ENQUEUE_ONLY
         ])
-    parser.add_argument(
-        '--find_mode',
-        dest='find_mode',
-        type=int,
-        default=1,
-        help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
-        choices=['1', '3'])
     parser.add_argument('--ticket',
                         dest='ticket',
                         type=str,
@@ -226,11 +219,6 @@ class MIOpen(MITunaInterface):
     if self.args.fin_steps and self.args.subcommand != 'load_job':
       self.check_fin_args(parser)
       self.set_prefix()
-
-    if self.args.find_mode is None and not (self.args.check_status or
-                                            self.args.restart_machine or
-                                            self.args.execute_cmd):
-      parser.error('find_mode must be specified for a tuning run')
 
     if self.args.blacklist:
       self.check_blacklist(parser)
@@ -441,9 +429,6 @@ class MIOpen(MITunaInterface):
 
     envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
     envmt.append("MIOPEN_DEBUG_IMPLICIT_GEMM_FIND_ALL_SOLUTIONS=1")
-
-    if self.args.find_mode:
-      envmt.append(f"MIOPEN_FIND_MODE={self.args.find_mode}")
 
     if self.args.blacklist:
       bk_str = ", ".join([f"{arg}=0" for arg in self.args.blacklist])

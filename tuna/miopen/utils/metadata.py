@@ -35,16 +35,7 @@ DOCKER_CMD = "sudo docker run --device='/dev/kfd' --device='/dev/dri' -w /tmp/mi
              -v /tmp/miopenpdb:/tmp/miopenpdb --user=root --group-add video --privileged=true \
              --rm {} bash  -c \"{}\""
 
-MIOPEN_DB_VERSION = "1.0.0"
-MIOPEN_USER_DB_PATH = "/tmp/miopenpdb/config/miopen"
-MIOPEN_CACHE_DIR = "/tmp/miopenpdb/cache"
-if 'MIOPEN_CACHE_DIR' in os.environ:
-  MIOPEN_CACHE_DIR = os.environ['MIOPEN_CACHE_DIR']
-KCACHE_DIR = f"{MIOPEN_CACHE_DIR}/tuna_kcache"
 FIN_CACHE = "/tmp/miopenpdb/cache"
-TUNA_DOCKER_NAME = 'miopentuna'
-if 'TUNA_DOCKER_NAME' in os.environ:
-  TUNA_DOCKER_NAME = os.environ['TUNA_DOCKER_NAME']
 if 'FIN_CACHE' in os.environ:
   FIN_CACHE = os.environ['FIN_CACHE']
 
