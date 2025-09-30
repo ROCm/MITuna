@@ -2,3 +2,5 @@
 __pycache__
 *.rej
 *.orig
+myvenv
+venv
