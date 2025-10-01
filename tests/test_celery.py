@@ -82,6 +82,9 @@ async def test_celery_workers():
   assert q_name == f"compile_q_{db_name}_sess_{miopen.args.session_id}"
   q_name = get_q_name(miopen, op_eval=True)
   assert q_name == f"eval_q_{db_name}_sess_{miopen.args.session_id}"
+  # Test else branch (neither op_compile nor op_eval)
+  q_name = get_q_name(miopen, op_compile=False, op_eval=False)
+  assert q_name == f"unknown_op_{db_name}_sess_{miopen.args.session_id}"
 
   #testing prep_tuning
   _, subp_list = miopen.prep_tuning()
