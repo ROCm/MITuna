@@ -124,7 +124,9 @@ ARG MIOPEN_DIR=$ROCM_LIBS_DIR/projects/miopen
 RUN git clone --filter=blob:none --sparse https://github.com/ROCm/rocm-libraries.git $ROCM_LIBS_DIR
 WORKDIR $MIOPEN_DIR
 RUN git sparse-checkout set projects/miopen
-ARG MIOPEN_BRANCH=4940cf3ec
+# not sure what this commit is, using latest develop for now
+# ARG MIOPEN_BRANCH=4940cf3ec 
+ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -209,3 +211,26 @@ RUN python3 setup.py install
 
 # reset WORKDIR to /tuna
 WORKDIR /tuna
+
+# save BASEIMAGE as env variable
+ENV BASEIMAGE=${BASEIMAGE}
+
+# install mysql-server and mysql-client
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    mysql-server \
+    mysql-client
+
+# install redis-server
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    redis-server
+
+# install RabbitMQ server
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    rabbitmq-server
+
+# install iproute2
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    iproute2
+
+# clean up apt cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
