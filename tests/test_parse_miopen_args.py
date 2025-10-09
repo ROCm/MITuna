@@ -289,8 +289,8 @@ class TestLoadJobParser:
     parser = get_load_job_parser()
     with pytest.raises(SystemExit):
       parser.parse_args([
-          '-t', 'tag', '-A', 'miopenConvolutionAlgoDirect', '-s',
-          'ConvAsm1x1U', '-l', 'test', '--session_id', '1'
+          '-t', 'tag', '-A', 'miopenConvolutionAlgoDirect', '-s', 'ConvAsm1x1U',
+          '-l', 'test', '--session_id', '1'
       ])
 
   def test_only_dynamic_argument(self):
@@ -495,8 +495,8 @@ class TestExportDbParser:
     """Test parsing complete argument set."""
     parser = get_export_db_parser()
     args = parser.parse_args([
-        '--session_id', '99', '-a', 'gfx90a', '-n', '110', '-f',
-        '-c', '--config_tag', 'production', '--filename', 'export.fdb'
+        '--session_id', '99', '-a', 'gfx90a', '-n', '110', '-f', '-c',
+        '--config_tag', 'production', '--filename', 'export.fdb'
     ])
     assert args.session_id == 99
     assert args.arch == 'gfx90a'
@@ -661,9 +661,8 @@ class TestParserIntegration:
   def test_export_db_parser_typical_usage(self):
     """Test typical export_db usage scenario."""
     parser = get_export_db_parser()
-    args = parser.parse_args([
-        '--session_id', '1234', '-a', 'gfx90a', '-n', '110', '-f'
-    ])
+    args = parser.parse_args(
+        ['--session_id', '1234', '-a', 'gfx90a', '-n', '110', '-f'])
     assert args.session_id == 1234
     assert args.arch == 'gfx90a'
     assert args.num_cu == 110
