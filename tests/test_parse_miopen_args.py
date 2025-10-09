@@ -32,7 +32,6 @@ including argument validation, default values, and error handling.
 """
 
 import pytest
-from jsonargparse import ArgumentError
 
 from tuna.miopen.parse_miopen_args import (get_import_cfg_parser,
                                            get_load_job_parser,
