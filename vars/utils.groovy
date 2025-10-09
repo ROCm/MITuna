@@ -605,6 +605,13 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_machine.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_dbBase.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_driver.py -s"
+           // Phase 1-3: New testing infrastructure and database tests
+           sh "python3 -m coverage run -a -m pytest tests/test_parse_miopen_args.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_miopen_tables.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_get_db_tables.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_triggers.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_build_schema.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_find.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_class.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_utils.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_add_session.py -s"
