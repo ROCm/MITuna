@@ -190,13 +190,6 @@ def import_cfgs_pd(args: argparse.Namespace, dbt: MIOpenDBTables,
   """import configs to mysql from file with driver invocations"""
   logger.info('Importing configs with pandas (--use_pd).')
 
-  logger.info('Reading current conv_configs from DB.')
-  query="SELECT * FROM conv_config"
-  conv_config_df = pd.read_sql(query, ENGINE) #Wow that was simple
-  logger.info('Rows in DB table conv_config: %u',len(conv_config_df))
-
-  connect_db()
-
   counts: dict = {}
   counts['cnt_configs'] = 0
   counts['cnt_tagged_configs'] = set()
@@ -223,28 +216,68 @@ def import_cfgs_pd(args: argparse.Namespace, dbt: MIOpenDBTables,
     except ValueError as err:
         logger.warning(err)
   new_conv_config_df = pd.DataFrame.from_dict(new_conv_config_df)
+  new_conv_config_df['new']=True
+  new_conv_config_df['insert_ts'] = pd.Timestamp.now().round(freq='s')
+  new_conv_config_df['update_ts'] = pd.Timestamp.now().round(freq='s')
+  new_conv_config_df['valid'] = 1
+  new_conv_config_df['recurrent'] = 1*(args.mark_recurrent)
+  new_conv_config_df['tag']=args.tag
+
+  if not args.tag_only:
+    logger.info('Reading current conv_configs from DB.')
+    query="SELECT * FROM conv_config"
+    conv_config_df = pd.read_sql(query, ENGINE)
+    conv_config_df['new']=False
+    logger.info('Rows in DB table conv_config: %u',len(conv_config_df))
+
+    #Remove commands already in database
+    df = pd.concat([conv_config_df,new_conv_config_df])
+    df.drop_duplicates(subset=['driver'], keep='first', inplace = True)
+    logger.info('Found %u out of %u new commands already in database.',len(conv_config_df)+len(new_conv_config_df)-len(df),len(new_conv_config_df))
+    df = df[df['new']==True].drop(columns=['new']).set_index('id')
+
+    if len(df) > 0:
+      logger.info('Inserting %u new commands to DB table conv_config.',len(df))
+      rows_affected = df.to_sql('conv_config', ENGINE, if_exists='append',index=False)
+      if rows_affected != len(df):
+        logger.warning("Problem in inserting to DB.")
+
+    else:
+      logger.info('No new items to insert to DB table conv_config.')
+    counts['cnt_configs'] = len(df)
+
+  logger.info('Reading current conv_configs from DB.')
+  query="SELECT * FROM conv_config"
+  conv_config_df = pd.read_sql(query, ENGINE) #Wow that was simple
+  logger.info('Rows in DB table conv_config: %u',len(conv_config_df))  
+  
+  logger.info('Reading current conv_configs_tags from DB.')
+  query="SELECT * FROM conv_config_tags"
+  conv_config_tags_df = pd.read_sql(query, ENGINE)
+  conv_config_tags_df['new'] = False
+  logger.info('Rows in DB table conv_config_tags: %u',len(conv_config_tags_df))  
+
+  configs=[] #read the configs from the db, configs are ids of conv_config table.
+  for index, row in new_conv_config_df.iterrows():
+    sub=conv_config_df[row['driver']==conv_config_df['driver']]
+    configs.append(sub['id'].values[0])
+  new_conv_config_df['config'] = configs
+  new_conv_config_df = new_conv_config_df[['insert_ts','update_ts','valid','tag','recurrent','config','new']]
 
   #Remove commands already in database
-  new_conv_config_df['new']=True
-  conv_config_df['new']=False
-  df = pd.concat([conv_config_df,new_conv_config_df])
-  df.drop_duplicates(subset=['driver'], keep='first', inplace = True)
-  logger.info('Found %u out of %u new commands already in database.',len(conv_config_df)+len(new_conv_config_df)-len(df),len(new_conv_config_df))
+  df = pd.concat([conv_config_tags_df,new_conv_config_df])
+  df.drop_duplicates(subset=['config','tag'], keep='first', inplace = True)
+  logger.info('Found %u out of %u new commands already in database.',len(conv_config_tags_df)+len(new_conv_config_df)-len(df),len(new_conv_config_df))
   df = df[df['new']==True].drop(columns=['new']).set_index('id')
 
-  df['insert_ts'] = pd.Timestamp.now().round(freq='s')
-  df['update_ts'] = pd.Timestamp.now().round(freq='s')
-  df['valid'] = 1
-
   if len(df) > 0:
-    logger.info('Inserting %u new commands to DB table conv_config.',len(df))
-    rows_affected = df.to_sql('conv_config', ENGINE, if_exists='append',index=False)
+    logger.info('Inserting %u new commands to DB table conv_config_tags.',len(df))
+    rows_affected = df.to_sql('conv_config_tags', ENGINE, if_exists='append',index=False)
     if rows_affected != len(df):
-      logger.warning("Error in inserting to DB.")
-
+      logger.warning("Problem in inserting to DB.")
   else:
-    logger.info('No new items to insert to DB table conv_config.')
-  counts['cnt_configs'] = len(df)
+    logger.info('No new items to insert to DB table conv_config_tags.')
+  counts['cnt_tagged_configs']  = set(df['config'].values)
 
   return counts
 
