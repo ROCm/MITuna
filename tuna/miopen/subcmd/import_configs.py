@@ -43,6 +43,11 @@ from tuna.miopen.driver.batchnorm import DriverBatchNorm
 from tuna.miopen.db.tables import MIOpenDBTables
 from tuna.miopen.db.benchmark import Framework, Model
 
+import pandas as pd
+#import ipdb
+from sqlalchemy import Column
+from sqlalchemy import Column, Integer, DateTime, text
+from sqlalchemy.sql import func as sqla_func
 
 def create_query(tag: str, mark_recurrent: bool, config_id: int) -> dict:
   """Helper function to build query to add tag"""
@@ -178,6 +183,95 @@ def import_cfgs(args: argparse.Namespace, dbt: MIOpenDBTables,
       except ValueError as err:
         logger.warning(err)
 
+  return counts
+
+def import_cfgs_pd(args: argparse.Namespace, dbt: MIOpenDBTables,
+                logger: logging.Logger) -> dict:
+  """import configs to mysql from file with driver invocations"""
+  print('Importing configs with pandas (--use_pd).')
+
+  print('Reading current conv_configs from DB.')
+  query="SELECT * FROM conv_config"
+  conv_config_df = pd.read_sql(query, ENGINE) #Wow that was simple
+  print('Example from the DB:',conv_config_df.transpose())
+  print('old:',len(conv_config_df))
+
+  connect_db()
+
+  counts: dict = {}
+  counts['cnt_configs'] = 0
+  counts['cnt_tagged_configs'] = set()
+
+  # Read lines with unique MIOpenDriver commands
+  unique_lines: List[str] = []
+  with open(os.path.expanduser(args.file_name), "r") as infile:  # pylint: disable=unspecified-encoding
+    line_cnt = 0
+    for line in infile:
+      line_cnt += 1
+      line = line.strip()
+      if not line in unique_lines:
+        unique_lines.append(line)
+        logger.info("parsed: %u, unique: %u", line_cnt, len(unique_lines))
+      
+  # Turn the lines into a dataframe.
+  new_conv_config_df=[]
+  for line in unique_lines:
+    try:
+      driver = DriverConvolution(line, args.command)
+      cf_dict = driver.get_conv_dict()
+      new_cf = driver.get_db_obj(keep_id=True)
+      copy_dict: Dict[str, Any] = {}
+      for key, val in vars(new_cf).items():
+        copy_dict[key] = val
+      
+      #cf_dict=new_cf.to_dict(ommit_ts=False) #this is the dictionary
+      #cf_dict['input_tensor']=new_cf.input_t
+      #cf_dict['input_tensor'] = new_cf
+      #cf_dict['weight_tensor'] = new_cf.super().get_weight_t_id()
+      #print(cf_dict.keys())
+      #print(copy_dict.keys())
+      #exit()
+      new_conv_config_df.append(cf_dict)
+    except ValueError as err:
+        logger.warning(err)
+  new_conv_config_df = pd.DataFrame.from_dict(new_conv_config_df)
+  print('new:',len(new_conv_config_df))
+
+  print('Example from new df:',conv_config_df.transpose())
+  #next need to create a df of those rows in new_conv_config_df which are not in conv_config
+  eq_subset_columns = new_conv_config_df.columns
+  print('old columns:',list(conv_config_df.columns))
+  print('new columns:',list(new_conv_config_df.columns))
+
+  print('new columns are missing:',set(conv_config_df.columns).difference(set(new_conv_config_df.columns)))
+
+  new_conv_config_df['new']=True
+  conv_config_df['new']=False
+  df = pd.concat([conv_config_df,new_conv_config_df])
+
+  print('Before duplicate removal:',len(df))
+  df.drop_duplicates(subset=eq_subset_columns,inplace = True)
+  print('After duplicate removal:',len(df))
+
+
+  df_new = df[df['new']==True].drop(columns=['new']).set_index('id')
+  #df_new['insert_ts'] = pd.Timestamp.now().round(freq='s') #Column(DateTime, nullable=False, server_default=sqla_func.now())
+  #df_new['update_ts'] = pd.Timestamp.now().round(freq='s')
+  df_new['valid'] = 1
+  print(df_new.head().transpose())
+  print('New items to insert:',len(df_new),list(df_new.columns))
+
+  if len(df_new) > 0:
+    print('Inserting new items to DB.')
+    print(df_new.head())
+    df_new.to_sql('conv_config', ENGINE, if_exists='append',index=False)
+  #then would need to insert those in a db. How is that done with pandas?
+
+  # {'input_tensor', 'weight_tensor', 'valid', 'update_ts', 'md5', 'insert_ts'} fields exist in conv_config_df but not on new_conv_config_df
+  # would need to insert these????
+
+
+  #ipdb.set_trace()
   return counts
 
 
@@ -352,6 +446,11 @@ def run_import_configs(args: argparse.Namespace,
     return True
 
   set_import_cfg_batches(args)
+
+  if args.use_pd:
+     counts = import_cfgs_pd(args, dbt, logger)
+     return True
+  
   counts = import_cfgs(args, dbt, logger)
 
   logger.info('New configs added: %u', counts['cnt_configs'])
@@ -365,6 +464,7 @@ def main():
   """ main """
   parser = get_import_cfg_parser(with_yaml=False)
   args = parser.parse_args()
+  print(args)
   run_import_configs(args, setup_logger('import_configs'))
 
 

@@ -141,6 +141,11 @@ def get_import_cfg_parser(
                       step in case the config does not exist in the table. Wildcard columns \
                       allowed for tagging')
 
+  parser.add_argument('--use_pd',
+                      action='store_true',
+                      dest='use_pd',
+                      help='Use pandas dataframes for much faster config import. This flag may not work with some of the other flags.')
+
   return parser
 
 
