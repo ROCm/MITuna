@@ -614,8 +614,10 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_find.py -s"
            // Phase 4: MIOpen core library tests
            sh "python3 -m coverage run -a -m pytest tests/test_miopen_lib.py -s"
-           // Phase 5: Enhanced subcmd tests
+           // Phase 5: Enhanced subcmd tests  
+           // test_update_golden.py - integration tests with real DB
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
+           // test_update_golden_enhanced.py - comprehensive unit tests with mocks
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden_enhanced.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_class.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_utils.py -s"
