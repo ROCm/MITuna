@@ -255,8 +255,8 @@ def import_cfgs_pd(args: argparse.Namespace, dbt: MIOpenDBTables,
 
 
   df_new = df[df['new']==True].drop(columns=['new']).set_index('id')
-  #df_new['insert_ts'] = pd.Timestamp.now().round(freq='s') #Column(DateTime, nullable=False, server_default=sqla_func.now())
-  #df_new['update_ts'] = pd.Timestamp.now().round(freq='s')
+  df_new['insert_ts'] = pd.Timestamp.now().round(freq='s') #Column(DateTime, nullable=False, server_default=sqla_func.now())
+  df_new['update_ts'] = pd.Timestamp.now().round(freq='s')
   df_new['valid'] = 1
   print(df_new.head().transpose())
   print('New items to insert:',len(df_new),list(df_new.columns))
