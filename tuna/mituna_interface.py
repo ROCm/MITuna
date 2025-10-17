@@ -60,11 +60,13 @@ from tuna.utils.db_utility import gen_update_query, session_retry
 
 job_counter_lock = threading.Lock()
 
+
 class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-public-methods
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
   def __init__(self, library=Library.MIOPEN) -> None:
+    
     self.self: Library = self
 
     self.logger: logging.Logger = setup_logger(logger_name=library.value,
