@@ -414,7 +414,6 @@ class MIOpen(MITunaInterface):
   def run(self):
     # pylint: disable=duplicate-code
     """! Main function to launch library"""
-    print('At run.')
     res = None
     if self.args is None:
       self.parse_args()

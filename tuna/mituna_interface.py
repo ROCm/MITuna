@@ -332,16 +332,23 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     with DbSession() as session:
       while True:
         job_list = []
-        if jobs.value >= max_jobs:
-          self.logger.warning('Number of jobs %u to enque reached maximum: %u.', jobs.value,max_jobs)
-        else:
+        n_jobs = job_batch_size
+
+        if max_jobs >= 0:
+          if jobs.value >= max_jobs:
+            self.logger.warning('Number of jobs %u to enque has reached maximum: %u.', jobs.value, max_jobs)
+            n_jobs = 0
+          else:
+            n_jobs=min(job_batch_size, max_jobs-jobs.value) 
+
+        if n_jobs > 0:   
           #get all the jobs from mySQL
           job_list = self.get_jobs(
               session,
               self.fetch_state,
               self.set_state,  #pylint: disable=no-member
               self.args.session_id,  #pylint: disable=no-member
-              min(job_batch_size, max_jobs-jobs.value) )
+              n_jobs )
 
         with job_counter_lock:
           job_counter.value = job_counter.value + len(job_list)
