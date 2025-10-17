@@ -194,7 +194,7 @@ class WorkerInterface(Process):
     """check for end of jobs"""
     if not job_rows:
       # we are done
-      self.logger.warning('No %s jobs found!!!, session %s', find_state,
+      self.logger.warning('No %s jobs found, session %s', find_state,
                           self.session_id)
       if imply_end:
         self.logger.warning("set end")

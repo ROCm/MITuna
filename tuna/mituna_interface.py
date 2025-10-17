@@ -58,8 +58,6 @@ from tuna.libraries import Operation
 from tuna.custom_errors import CustomError
 from tuna.utils.db_utility import gen_update_query, session_retry
 
-import time
-
 job_counter_lock = threading.Lock()
 
 class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-public-methods
@@ -331,15 +329,13 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def enqueue_jobs(self, job_counter, job_batch_size, q_name, jobs, max_jobs):
     """Enqueue celery jobs"""
-    self.logger.warning('Starting enqueue: %u %u.',jobs.value,max_jobs)
     with DbSession() as session:
       while True:
         job_list = []
         if jobs.value >= max_jobs:
           self.logger.warning('Number of jobs %u to enque reached maximum: %u.', jobs.value,max_jobs)
-        #get all the jobs from mySQL
         else:
-          self.logger.warning('Fetching %u jobs from database.',  min(job_batch_size, max_jobs-jobs.value))
+          #get all the jobs from mySQL
           job_list = self.get_jobs(
               session,
               self.fetch_state,
@@ -359,7 +355,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
             self.celery_enqueue_call(context, q_name=q_name)
 
         self.logger.info('Job counter: %s', job_counter.value)
-
         if not job_list:
           self.logger.info('All tasks added to queue')
           break
@@ -496,7 +491,6 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     try:
       enqueue_proc = Process(target=self.enqueue_jobs,
                              args=[job_counter, job_batch_size, q_name, jobs, self.args.max_job_count])
-      logging.warning('Starting a new enqueue_jobs process.')
       #Start enqueue proc
       enqueue_proc.start()
 
@@ -607,7 +601,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """check for end of jobs"""
     if not job_rows:
       # we are done
-      self.logger.warning('No %s jobs found!!!!!, session %s', find_state,
+      self.logger.warning('No %s jobs found, session %s', find_state,
                           session_id)
       return False
     return True
