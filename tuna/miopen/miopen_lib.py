@@ -113,6 +113,14 @@ class MIOpen(MITunaInterface):
         dest='solver_id',
         default=None,
         help='Specify solver_id. Use --list_solvers to see options')
+
+    parser.add_argument(
+        '--max_job_count',
+        type=int,
+        dest='max_job_count',
+        default=-1,
+        help='Specify max number of jobs to enqueue.')
+
     parser.add_argument('--dynamic_solvers_only',
                         dest='dynamic_solvers_only',
                         action='store_true',
@@ -406,6 +414,7 @@ class MIOpen(MITunaInterface):
   def run(self):
     # pylint: disable=duplicate-code
     """! Main function to launch library"""
+    print('At run.')
     res = None
     if self.args is None:
       self.parse_args()

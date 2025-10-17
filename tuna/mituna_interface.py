@@ -58,15 +58,15 @@ from tuna.libraries import Operation
 from tuna.custom_errors import CustomError
 from tuna.utils.db_utility import gen_update_query, session_retry
 
-job_counter_lock = threading.Lock()
+import time
 
+job_counter_lock = threading.Lock()
 
 class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-public-methods
   """ Interface class extended by libraries. The purpose of this class is to define
   common functionalities. """
 
   def __init__(self, library=Library.MIOPEN) -> None:
-
     self.self: Library = self
 
     self.logger: logging.Logger = setup_logger(logger_name=library.value,
@@ -329,22 +329,27 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """Wrapper function for celery enqueue func"""
     raise NotImplementedError('Not implemented')
 
-  def enqueue_jobs(self, job_counter, job_batch_size, q_name):
+  def enqueue_jobs(self, job_counter, job_batch_size, q_name, jobs, max_jobs):
     """Enqueue celery jobs"""
-    self.logger.info('Starting enqueue')
+    self.logger.warning('Starting enqueue: %u %u.',jobs.value,max_jobs)
     with DbSession() as session:
       while True:
         job_list = []
+        if jobs.value >= max_jobs:
+          self.logger.warning('Number of jobs %u to enque reached maximum: %u.', jobs.value,max_jobs)
         #get all the jobs from mySQL
-        job_list = self.get_jobs(
-            session,
-            self.fetch_state,
-            self.set_state,  #pylint: disable=no-member
-            self.args.session_id,  #pylint: disable=no-member
-            job_batch_size)
+        else:
+          self.logger.warning('Fetching %u jobs from database.',  min(job_batch_size, max_jobs-jobs.value))
+          job_list = self.get_jobs(
+              session,
+              self.fetch_state,
+              self.set_state,  #pylint: disable=no-member
+              self.args.session_id,  #pylint: disable=no-member
+              min(job_batch_size, max_jobs-jobs.value) )
 
         with job_counter_lock:
           job_counter.value = job_counter.value + len(job_list)
+          jobs.value = jobs.value + len(job_list)
 
         for i in range(0, len(job_list), job_batch_size):
           batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
@@ -354,6 +359,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
             self.celery_enqueue_call(context, q_name=q_name)
 
         self.logger.info('Job counter: %s', job_counter.value)
+
         if not job_list:
           self.logger.info('All tasks added to queue')
           break
@@ -485,9 +491,12 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     #set job count to 1 until first job fetch is finished
     job_counter = Value('i', 1)
+    jobs = Value('i', 0)
+    
     try:
       enqueue_proc = Process(target=self.enqueue_jobs,
-                             args=[job_counter, job_batch_size, q_name])
+                             args=[job_counter, job_batch_size, q_name, jobs, self.args.max_job_count])
+      logging.warning('Starting a new enqueue_jobs process.')
       #Start enqueue proc
       enqueue_proc.start()
 
@@ -511,7 +520,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       #check for new jobs
       while consume_proc.is_alive():
         enqueue_proc = Process(target=self.enqueue_jobs,
-                               args=[job_counter, job_batch_size, q_name])
+                               args=[job_counter, job_batch_size, q_name, jobs, self.args.max_job_count])
         enqueue_proc.start()
         enqueue_proc.join()
         time.sleep(10)
@@ -598,7 +607,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """check for end of jobs"""
     if not job_rows:
       # we are done
-      self.logger.warning('No %s jobs found, session %s', find_state,
+      self.logger.warning('No %s jobs found!!!!!, session %s', find_state,
                           session_id)
       return False
     return True
