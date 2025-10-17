@@ -327,7 +327,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """Wrapper function for celery enqueue func"""
     raise NotImplementedError('Not implemented')
 
-  def enqueue_jobs(self, job_counter, job_batch_size, q_name, jobs, max_jobs):
+  def enqueue_jobs(self, job_counter, job_batch_size, q_name, jobs = None, max_jobs = -1):
     """Enqueue celery jobs"""
     with DbSession() as session:
       while True:
