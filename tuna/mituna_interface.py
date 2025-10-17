@@ -66,7 +66,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
   common functionalities. """
 
   def __init__(self, library=Library.MIOPEN) -> None:
-    
+
     self.self: Library = self
 
     self.logger: logging.Logger = setup_logger(logger_name=library.value,
