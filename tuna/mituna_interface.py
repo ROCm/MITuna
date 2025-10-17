@@ -81,6 +81,12 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
         self.db_name = os.environ["TUNA_DB_NAME"]
         self.prefix = None
 
+        # Track jobs claimed by this specific instance when in distributor mode
+        self.claimed_job_ids = set()
+        self.completed_job_ids = set()
+        # if less than 25% of the jobs are remaining, we can grab more jobs
+        self.progress_factor = 0.25
+
     def check_docker(self, worker: WorkerInterface, dockername="miopentuna") -> bool:
         """! Checking for docker
         @param worker The worker interface instance
@@ -343,12 +349,21 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
         raise NotImplementedError("Not implemented")
 
     def enqueue_jobs(self, job_counter, job_batch_size, q_name):
-        """Enqueue celery jobs"""
+        """Enqueue celery jobs with machine-specific progress tracking"""
         self.logger.info("Starting enqueue")
+        current_batch_size = 0
+
         with DbSession() as session:
             while True:
-                job_list = []
-                # get all the jobs from mySQL
+                # Check if we should enqueue more jobs based on OUR progress
+                if current_batch_size > 0:
+                    if not self.should_enqueue_more_jobs(session, current_batch_size):
+                        self.logger.info(
+                            "Waiting for our current batch to progress before enqueuing more"
+                        )
+                        break
+
+                # Get jobs from database
                 job_list = self.get_jobs(
                     session,
                     self.fetch_state,
@@ -357,20 +372,63 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                     job_batch_size,
                 )
 
+                if not job_list:
+                    self.logger.info("No more jobs available to enqueue")
+                    break
+
+                # Track the jobs we just claimed
+                new_job_ids = {job.id for job in job_list}
+                self.claimed_job_ids.update(new_job_ids)
+
+                self.logger.info("Claimed jobs: %s", list(new_job_ids))
+
                 with job_counter_lock:
                     job_counter.value = job_counter.value + len(job_list)
 
-                for i in range(0, len(job_list), job_batch_size):
-                    batch_jobs = job_list[i : min(i + job_batch_size, len(job_list))]
-                    context_list = self.get_context_list(session, batch_jobs)
-                    for context in context_list:
-                        # calling celery task, enqueuing to celery queue
-                        self.celery_enqueue_call(context, q_name=q_name)
+                # Process all jobs in this batch (remove the inner for loop)
+                context_list = self.get_context_list(session, job_list)
+                for context in context_list:
+                    # calling celery task, enqueuing to celery queue
+                    self.celery_enqueue_call(context, q_name=q_name)
 
-                self.logger.info("Job counter: %s", job_counter.value)
-                if not job_list:
-                    self.logger.info("All tasks added to queue")
-                    break
+                current_batch_size = len(job_list)
+                self.logger.info(
+                    "Job counter: %s, enqueued batch size: %s",
+                    job_counter.value,
+                    current_batch_size,
+                )
+
+                # Cleanup old tracking data periodically
+                self.cleanup_completed_jobs()
+
+    def should_enqueue_more_jobs(self, session, current_batch_size):
+        """Check if we should enqueue more jobs based on THIS instance's progress"""
+        # Count only jobs claimed by this machine instance
+        our_in_progress_count = len(self.claimed_job_ids - self.completed_job_ids)
+
+        # Allow enqueuing when less than 25% of our claimed jobs are still in progress
+        progress_threshold = current_batch_size * self.progress_factor
+
+        self.logger.info(
+            "Our jobs in progress: %d, completed: %d, threshold: %d",
+            our_in_progress_count,
+            len(self.completed_job_ids),
+            progress_threshold,
+        )
+
+        return our_in_progress_count < progress_threshold
+
+    def cleanup_completed_jobs(self):
+        """Periodically clean up old job tracking data"""
+        # Keep sets from growing indefinitely
+        max_tracking_size = 10000
+        if len(self.completed_job_ids) > max_tracking_size:
+            # Keep only the most recent completions
+            recent_completions = list(self.completed_job_ids)[-5000:]
+            self.completed_job_ids = set(recent_completions)
+
+            # Remove old claimed jobs that are completed
+            self.claimed_job_ids -= set(recent_completions[:-1000])
 
     async def cleanup_redis_results(self, prefix):
         """Remove stale redis results by key"""
@@ -525,6 +583,9 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
             with job_counter_lock:
                 job_counter.value = job_counter.value - 1
 
+            # Progress-aware polling - shorter intervals, smarter enqueuing
+            poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 5))
+
             # check for new jobs
             while consume_proc.is_alive():
                 enqueue_proc = Process(
@@ -532,7 +593,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 )
                 enqueue_proc.start()
                 enqueue_proc.join()
-                time.sleep(10)
+                time.sleep(poll_interval)  # Shorter, configurable polling
 
             consume_proc.join()
 
@@ -663,6 +724,13 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
             try:
                 fin_json = data["result"]["ret"]
                 context = data["result"]["context"]
+
+                # Extract job ID from context to track completion
+                job_id = self.extract_job_id_from_context(context)
+                if job_id and job_id in self.claimed_job_ids:
+                    self.completed_job_ids.add(job_id)
+                    self.logger.info("Marked job %s as completed", job_id)
+
             except KeyError as kerr:
                 self.logger.error(kerr)
                 return False
@@ -676,6 +744,12 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 raise CustomError("Unsupported tuning operation")
 
             return True
+
+    def extract_job_id_from_context(self, context):
+        """Extract job ID from celery task context"""
+        # This needs to be implemented in the MIOpen subclass
+        # based on how job IDs are stored in the context
+        raise NotImplementedError("Subclass must implement job ID extraction")
 
     def process_compile_results(self, session, fin_json, context):
         """Process result from fin_build worker"""

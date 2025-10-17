@@ -943,3 +943,11 @@ class MIOpen(MITunaInterface):
             set_job_state(session, job, self.dbt, "errored", result=result_str)
 
         return True
+
+    def extract_job_id_from_context(self, context):
+        """Extract job ID from MIOpen celery task context"""
+        try:
+            # Extract job ID from the job context
+            return context.get("job", {}).get("id")
+        except (AttributeError, KeyError):
+            return None
