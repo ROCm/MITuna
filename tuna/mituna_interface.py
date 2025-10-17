@@ -289,15 +289,22 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
         ids = [row.id for row in job_list]
         self.logger.info("%s jobs %s", find_state, ids)
         self.logger.info("Updating job state to %s", set_state)
-        for job in job_list:
-            job.state = set_state
-            if self.dbt is not None:
-                query: str = gen_update_query(
-                    job, ["state"], self.dbt.job_table.__tablename__
-                )
-            else:
-                raise CustomError("DBTable must be set")
+        
+        # OPTIMIZATION: Use bulk UPDATE instead of individual updates
+        if self.dbt is not None:
+            id_str = ','.join(map(str, ids))
+            query = f"""
+                UPDATE {self.dbt.job_table.__tablename__} 
+                SET state = '{set_state}' 
+                WHERE id IN ({id_str})
+            """
             session.execute(query)
+            
+            # Update local objects to reflect new state
+            for job in job_list:
+                job.state = set_state
+        else:
+            raise CustomError("DBTable must be set")
 
         session.commit()
 
@@ -349,57 +356,96 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
         raise NotImplementedError("Not implemented")
 
     def enqueue_jobs(self, job_counter, job_batch_size, q_name):
-        """Enqueue celery jobs with machine-specific progress tracking"""
+        """Enqueue celery jobs with machine-specific progress tracking and error handling"""
         self.logger.info("Starting enqueue")
         current_batch_size = 0
+        
+        max_retries = 3
+        retry_delay = 5  # seconds
+        consecutive_empty_fetches = 0
+        max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
 
-        with DbSession() as session:
-            while True:
-                # Check if we should enqueue more jobs based on OUR progress
-                if current_batch_size > 0:
-                    if not self.should_enqueue_more_jobs(session, current_batch_size):
-                        self.logger.info(
-                            "Waiting for our current batch to progress before enqueuing more"
+        while True:
+            # Retry loop for database operations
+            for attempt in range(max_retries):
+                try:
+                    with DbSession() as session:
+                        # Check if we should enqueue more jobs based on OUR progress
+                        if current_batch_size > 0:
+                            if not self.should_enqueue_more_jobs(session, current_batch_size):
+                                self.logger.info(
+                                    "Waiting for our current batch to progress before enqueuing more"
+                                )
+                                return  # Exit gracefully
+
+                        # Get jobs from database
+                        job_list = self.get_jobs(
+                            session,
+                            self.fetch_state,
+                            self.set_state,  # pylint: disable=no-member
+                            self.args.session_id,  # pylint: disable=no-member
+                            job_batch_size,
                         )
-                        break
 
-                # Get jobs from database
-                job_list = self.get_jobs(
-                    session,
-                    self.fetch_state,
-                    self.set_state,  # pylint: disable=no-member
-                    self.args.session_id,  # pylint: disable=no-member
-                    job_batch_size,
-                )
+                        if not job_list:
+                            consecutive_empty_fetches += 1
+                            self.logger.info('No jobs found (attempt %d/%d)', 
+                                           consecutive_empty_fetches, max_empty_fetches)
+                            
+                            if consecutive_empty_fetches >= max_empty_fetches:
+                                self.logger.info('No new jobs after %d attempts. Exiting enqueue loop.', 
+                                               max_empty_fetches)
+                                return  # Exit gracefully
+                            
+                            time.sleep(60)  # Wait before next check
+                            break  # Break retry loop, continue main loop
 
-                if not job_list:
-                    self.logger.info("No more jobs available to enqueue")
-                    break
+                        # Reset counter when jobs are found
+                        consecutive_empty_fetches = 0
 
-                # Track the jobs we just claimed
-                new_job_ids = {job.id for job in job_list}
-                self.claimed_job_ids.update(new_job_ids)
+                        # Track the jobs we just claimed
+                        new_job_ids = {job.id for job in job_list}
+                        self.claimed_job_ids.update(new_job_ids)
 
-                self.logger.info("Claimed jobs: %s", list(new_job_ids))
+                        self.logger.info("Claimed jobs: %s", list(new_job_ids))
 
-                with job_counter_lock:
-                    job_counter.value = job_counter.value + len(job_list)
+                        with job_counter_lock:
+                            job_counter.value = job_counter.value + len(job_list)
 
-                # Process all jobs in this batch (remove the inner for loop)
-                context_list = self.get_context_list(session, job_list)
-                for context in context_list:
-                    # calling celery task, enqueuing to celery queue
-                    self.celery_enqueue_call(context, q_name=q_name)
+                        # Process all jobs in this batch
+                        context_list = self.get_context_list(session, job_list)
+                        for context in context_list:
+                            try:
+                                # calling celery task, enqueuing to celery queue
+                                self.celery_enqueue_call(context, q_name=q_name)
+                            except Exception as enqueue_err:  # pylint: disable=broad-exception-caught
+                                self.logger.error('Failed to enqueue job: %s', enqueue_err)
+                                # Continue with other jobs rather than failing completely
+                                continue
 
-                current_batch_size = len(job_list)
-                self.logger.info(
-                    "Job counter: %s, enqueued batch size: %s",
-                    job_counter.value,
-                    current_batch_size,
-                )
+                        current_batch_size = len(job_list)
+                        self.logger.info(
+                            "Job counter: %s, enqueued batch size: %s",
+                            job_counter.value,
+                            current_batch_size,
+                        )
 
-                # Cleanup old tracking data periodically
-                self.cleanup_completed_jobs()
+                        # Cleanup old tracking data periodically
+                        self.cleanup_completed_jobs()
+                        break  # Success, break retry loop
+                        
+                except Exception as db_err:  # pylint: disable=broad-exception-caught
+                    self.logger.warning('Database error on attempt %d/%d: %s', 
+                                      attempt + 1, max_retries, db_err)
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                    else:
+                        self.logger.error('Max retries exceeded for database operation. Exiting.')
+                        raise
+            
+            # If we got here with no jobs, the consecutive_empty_fetches logic handled it
+            if not job_list:
+                continue
 
     def should_enqueue_more_jobs(self, session, current_batch_size):
         """Check if we should enqueue more jobs based on THIS instance's progress"""
