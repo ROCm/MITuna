@@ -89,17 +89,40 @@ def mock_dbt():
   tuning_data_table.c = [tuning_col1, tuning_col2, tuning_col3]
   dbt.tuning_data_table = tuning_data_table
 
+  # Mock job_table - required by WorkerInterface.__init__
+  job_table = Mock()
+  job_col1 = Mock()
+  job_col1.name = 'id'
+  job_col2 = Mock()
+  job_col2.name = 'config'
+  job_col3 = Mock()
+  job_col3.name = 'solver'
+  job_col4 = Mock()
+  job_col4.name = 'insert_ts'
+  job_col5 = Mock()
+  job_col5.name = 'update_ts'
+  job_table.c = [job_col1, job_col2, job_col3, job_col4, job_col5]
+  job_table.__tablename__ = 'conv_job'
+  dbt.job_table = job_table
+
   return dbt
 
 
 @pytest.fixture(autouse=True)
-def patch_miopen_dbtables(mock_dbt):
-  """Patch MIOpenDBTables to return mock instead of creating real DB connection"""
+def patch_miopen_dbtables(mock_dbt, mock_machine):
+  """Patch MIOpenDBTables and other external dependencies"""
   # Patch at the actual import location since it's imported inside set_db_tables()
   with patch('tuna.miopen.db.tables.MIOpenDBTables', return_value=mock_dbt):
     with patch('tuna.miopen.worker.fin_class.inspect') as mock_inspect:
       mock_inspect.side_effect = lambda x: x  # Return the object itself
-      yield
+      # Patch database connection to avoid real DB access
+      with patch('tuna.worker_interface.connect_db'):
+        # Patch logger setup to avoid file system operations
+        with patch('tuna.worker_interface.set_usr_logger') as mock_logger:
+          mock_logger.return_value = Mock()
+          # Patch machine.connect to avoid SSH connections
+          mock_machine.connect.return_value = Mock()
+          yield
 
 
 @pytest.fixture
@@ -390,7 +413,7 @@ class TestFinClassEdgeCases:
 
 @pytest.mark.unit
 @pytest.mark.worker
-class TestFinClassAttributes:
+class TestFinClassDatabaseAttributes:
   """Test FinClass database table attributes"""
 
   def test_config_attributes_initialized(self, fin_worker_kwargs):
