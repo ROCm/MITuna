@@ -113,7 +113,8 @@ def patch_miopen_dbtables(mock_dbt, mock_machine):
   """Patch MIOpenDBTables and other external dependencies"""
   # Patch at the actual import location since it's imported inside set_db_tables()
   with patch('tuna.miopen.db.tables.MIOpenDBTables', return_value=mock_dbt):
-    with patch('tuna.miopen.worker.fin_class.inspect') as mock_inspect:
+    # Patch inspect in worker_interface where it's actually called
+    with patch('tuna.worker_interface.inspect') as mock_inspect:
       mock_inspect.side_effect = lambda x: x  # Return the object itself
       # Patch database connection to avoid real DB access
       with patch('tuna.worker_interface.connect_db'):
