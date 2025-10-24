@@ -619,8 +619,13 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden.py -s"
            // test_update_golden_enhanced.py - comprehensive unit tests with mocks
            sh "python3 -m coverage run -a -m pytest tests/test_update_golden_enhanced.py -s"
-           sh "python3 -m coverage run -a -m pytest tests/test_fin_class.py -s"
+           // Phase 6: Enhanced worker/driver tests
+           sh "python3 -m coverage run -a -m pytest tests/test_driver.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_driver_enhanced.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_utils.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_utils_enhanced.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_class.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_class_enhanced.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_add_session.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_merge_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_merge_db_functions.py -s"
