@@ -58,13 +58,51 @@ def mock_dbt():
   session.rocm_v = 'expected_hash'  # Must match mocked exec_docker_cmd return
   session.miopen_v = 'expected_hash'  # Must match mocked get_miopen_v return
   dbt.session = session
-  dbt.config_table = Mock()
-  dbt.find_db_table = Mock()
+  
+  # Mock config_table with columns that can be inspected
+  config_table = Mock()
+  mock_col = Mock()
+  mock_col.name = 'id'
+  config_table.c = [mock_col]
+  config_table.relationships = {}
+  dbt.config_table = config_table
+  
+  # Mock find_db_table with columns
+  find_db_table = Mock()
+  find_col1 = Mock()
+  find_col1.name = 'id'
+  find_col2 = Mock()
+  find_col2.name = 'insert_ts'
+  find_col3 = Mock()
+  find_col3.name = 'update_ts'
+  find_db_table.c = [find_col1, find_col2, find_col3]
+  dbt.find_db_table = find_db_table
+  
+  # Mock tuning_data_table for convolution config type
+  tuning_data_table = Mock()
+  tuning_col1 = Mock()
+  tuning_col1.name = 'id'
+  tuning_col2 = Mock()
+  tuning_col2.name = 'insert_ts'
+  tuning_col3 = Mock()
+  tuning_col3.name = 'update_ts'
+  tuning_data_table.c = [tuning_col1, tuning_col2, tuning_col3]
+  dbt.tuning_data_table = tuning_data_table
+  
   return dbt
 
 
+@pytest.fixture(autouse=True)
+def patch_miopen_dbtables(mock_dbt):
+  """Patch MIOpenDBTables to return mock instead of creating real DB connection"""
+  with patch('tuna.miopen.worker.fin_class.MIOpenDBTables', return_value=mock_dbt):
+    with patch('tuna.miopen.worker.fin_class.inspect') as mock_inspect:
+      mock_inspect.side_effect = lambda x: x  # Return the object itself
+      yield
+
+
 @pytest.fixture
-def fin_worker_kwargs(mock_machine, mock_dbt):
+def fin_worker_kwargs(mock_machine):
   """Create FinClass worker kwargs"""
   return {
       'machine': mock_machine,
@@ -83,8 +121,7 @@ def fin_worker_kwargs(mock_machine, mock_dbt):
       'config_type': ConfigType.convolution,
       'session_id': 1,
       'find_mode': 1,
-      'blacklist': None,
-      'dbt': mock_dbt
+      'blacklist': None
   }
 
 
@@ -232,15 +269,12 @@ class TestFinClassQueueOperations:
 
   def test_can_add_jobs_to_queue(self, fin_worker_kwargs):
     """Test adding jobs to queue"""
-    # Get the shared queue from kwargs
-    test_queue = fin_worker_kwargs['job_queue']
     worker = FinClass(**fin_worker_kwargs)
     test_job = {'id': 1, 'config': 'test'}
 
-    # Put directly on the shared queue
-    test_queue.put(test_job)
-    assert not test_queue.empty()
-    retrieved_job = test_queue.get()
+    # Verify worker can put and get from queue
+    worker.job_queue.put(test_job)
+    retrieved_job = worker.job_queue.get(timeout=1)
     assert retrieved_job == test_job
 
 
