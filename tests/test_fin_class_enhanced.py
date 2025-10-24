@@ -58,7 +58,7 @@ def mock_dbt():
   session.rocm_v = 'expected_hash'  # Must match mocked exec_docker_cmd return
   session.miopen_v = 'expected_hash'  # Must match mocked get_miopen_v return
   dbt.session = session
-  
+
   # Mock config_table with columns that can be inspected
   config_table = Mock()
   mock_col = Mock()
@@ -66,7 +66,7 @@ def mock_dbt():
   config_table.c = [mock_col]
   config_table.relationships = {}
   dbt.config_table = config_table
-  
+
   # Mock find_db_table with columns
   find_db_table = Mock()
   find_col1 = Mock()
@@ -77,7 +77,7 @@ def mock_dbt():
   find_col3.name = 'update_ts'
   find_db_table.c = [find_col1, find_col2, find_col3]
   dbt.find_db_table = find_db_table
-  
+
   # Mock tuning_data_table for convolution config type
   tuning_data_table = Mock()
   tuning_col1 = Mock()
@@ -88,14 +88,15 @@ def mock_dbt():
   tuning_col3.name = 'update_ts'
   tuning_data_table.c = [tuning_col1, tuning_col2, tuning_col3]
   dbt.tuning_data_table = tuning_data_table
-  
+
   return dbt
 
 
 @pytest.fixture(autouse=True)
 def patch_miopen_dbtables(mock_dbt):
   """Patch MIOpenDBTables to return mock instead of creating real DB connection"""
-  with patch('tuna.miopen.worker.fin_class.MIOpenDBTables', return_value=mock_dbt):
+  with patch('tuna.miopen.worker.fin_class.MIOpenDBTables',
+             return_value=mock_dbt):
     with patch('tuna.miopen.worker.fin_class.inspect') as mock_inspect:
       mock_inspect.side_effect = lambda x: x  # Return the object itself
       yield
