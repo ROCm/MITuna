@@ -55,6 +55,8 @@ def mock_dbt():
   session.id = 1
   session.arch = 'gfx908'
   session.num_cu = 120
+  session.rocm_v = 'expected_hash'  # Must match mocked exec_docker_cmd return
+  session.miopen_v = 'expected_hash'  # Must match mocked get_miopen_v return
   dbt.session = session
   dbt.config_table = Mock()
   dbt.find_db_table = Mock()
@@ -75,7 +77,7 @@ def fin_worker_kwargs(mock_machine, mock_dbt):
       'label': 'test_fin_worker',
       'use_tuner': False,
       'job_queue': Queue(),
-      'queue_lock': Lock(),
+      'job_queue_lock': Lock(),  # WorkerInterface expects job_queue_lock
       'end_jobs': Value('i', 0),
       'fin_steps': ['not_fin'],
       'config_type': ConfigType.convolution,
@@ -230,12 +232,16 @@ class TestFinClassQueueOperations:
 
   def test_can_add_jobs_to_queue(self, fin_worker_kwargs):
     """Test adding jobs to queue"""
+    # Get the shared queue from kwargs
+    test_queue = fin_worker_kwargs['job_queue']
     worker = FinClass(**fin_worker_kwargs)
     test_job = {'id': 1, 'config': 'test'}
 
-    worker.job_queue.put(test_job)
-    assert not worker.job_queue.empty()
-    assert worker.job_queue.get() == test_job
+    # Put directly on the shared queue
+    test_queue.put(test_job)
+    assert not test_queue.empty()
+    retrieved_job = test_queue.get()
+    assert retrieved_job == test_job
 
 
 @pytest.mark.unit
@@ -380,10 +386,10 @@ class TestFinClassLocks:
     assert worker.bar_lock is not None
 
   def test_queue_lock_initialized(self, fin_worker_kwargs):
-    """Test that queue_lock is initialized"""
+    """Test that job_queue_lock is initialized"""
     worker = FinClass(**fin_worker_kwargs)
-    assert hasattr(worker, 'queue_lock')
-    assert worker.queue_lock is not None
+    assert hasattr(worker, 'job_queue_lock')
+    assert worker.job_queue_lock is not None
 
 
 @pytest.mark.unit

@@ -178,8 +178,10 @@ class FinClass(WorkerInterface):
     """Initialize tables"""
     # pylint: disable=import-outside-toplevel
     from tuna.miopen.db.tables import MIOpenDBTables
-    self.dbt = MIOpenDBTables(session_id=self.session_id,
-                              config_type=self.config_type)
+    # Allow dbt to be provided via kwargs (for testing)
+    if not hasattr(self, 'dbt') or self.dbt is None:
+      self.dbt = MIOpenDBTables(session_id=self.session_id,
+                                config_type=self.config_type)
 
   def compose_work_objs(
       self, session: DbSession,
