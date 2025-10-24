@@ -137,7 +137,8 @@ def nchw_config():
 
   config.input_t = input_t
   config.weight_t = weight_t
-  config.__dict__ = {
+  # Return a plain dict without overriding MagicMock.__dict__
+  config.to_dict.return_value = {
       'id': config.id,
       'batchsize': config.batchsize,
       'spatial_dim': config.spatial_dim,
@@ -161,9 +162,6 @@ def nchw_config():
       'valid': config.valid,
       'input_t': input_t,
       'weight_t': weight_t
-  }
-  config.to_dict = lambda: {
-      k: v for k, v in config.__dict__.items() if not k.startswith('_')
   }
 
   return config
@@ -247,7 +245,8 @@ def nhwc_config():
 
   config.input_t = input_t
   config.weight_t = weight_t
-  config.__dict__ = {
+  # Return a plain dict without overriding MagicMock.__dict__
+  config.to_dict.return_value = {
       'id': config.id,
       'batchsize': config.batchsize,
       'spatial_dim': config.spatial_dim,
@@ -271,9 +270,6 @@ def nhwc_config():
       'valid': config.valid,
       'input_t': input_t,
       'weight_t': weight_t
-  }
-  config.to_dict = lambda: {
-      k: v for k, v in config.__dict__.items() if not k.startswith('_')
   }
 
   return config
@@ -403,7 +399,7 @@ class TestComposeConfigObj:
     bn_config.id = 1
     bn_config.mode = 1
     bn_config.to_dict.return_value = {'id': 1, 'mode': 1}
-    bn_config.__dict__.keys.return_value = []
+    # Ensure no tensor attributes exist; no need to mock __dict__.keys()
 
     result = fu.compose_config_obj(bn_config, ConfigType.batch_norm)
     assert result is not None
