@@ -39,8 +39,8 @@ from tuna.miopen.utils.config_type import ConfigType
 @pytest.fixture
 def mock_dbt():
   """Create mock database tables"""
-  dbt = Mock(spec=MIOpenDBTables)
-  session = Mock(spec=Session)
+  dbt = Mock()
+  session = Mock()
   session.id = 1
   session.arch = 'gfx908'
   session.num_cu = 120
@@ -51,7 +51,7 @@ def mock_dbt():
 @pytest.fixture
 def mock_conv_job():
   """Create mock convolution job"""
-  job = Mock(spec=ConvolutionJob)
+  job = Mock()
   job.id = 1
   job.valid = 1
   job.config = 1
@@ -62,7 +62,7 @@ def mock_conv_job():
 @pytest.fixture
 def nchw_config():
   """Create NCHW convolution config"""
-  config = Mock(spec=ConvolutionConfig)
+  config = Mock()
   config.id = 1
   config.batchsize = 128
   config.spatial_dim = 2
@@ -86,7 +86,7 @@ def nchw_config():
   config.valid = 1
 
   # Mock input tensor
-  input_t = Mock(spec=TensorTable)
+  input_t = Mock()
   input_t.id = 1
   input_t.dim0 = 1
   input_t.dim1 = 128
@@ -111,7 +111,7 @@ def nchw_config():
   }
 
   # Mock weight tensor
-  weight_t = Mock(spec=TensorTable)
+  weight_t = Mock()
   weight_t.id = 2
   weight_t.dim0 = 128
   weight_t.dim1 = 128
@@ -172,7 +172,7 @@ def nchw_config():
 @pytest.fixture
 def nhwc_config():
   """Create NHWC convolution config"""
-  config = Mock(spec=ConvolutionConfig)
+  config = Mock()
   config.id = 2
   config.batchsize = 64
   config.spatial_dim = 2
@@ -196,7 +196,7 @@ def nhwc_config():
   config.valid = 1
 
   # Mock input tensor (NHWC layout)
-  input_t = Mock(spec=TensorTable)
+  input_t = Mock()
   input_t.id = 3
   input_t.dim0 = 1
   input_t.dim1 = 64  # D
@@ -221,7 +221,7 @@ def nhwc_config():
   }
 
   # Mock weight tensor (NHWC layout)
-  weight_t = Mock(spec=TensorTable)
+  weight_t = Mock()
   weight_t.id = 4
   weight_t.dim0 = 64
   weight_t.dim1 = 64
