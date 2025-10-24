@@ -27,7 +27,7 @@
 """Enhanced comprehensive tests for fin_utils module"""
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock
 import tuna.miopen.worker.fin_utils as fu
 from tuna.miopen.db.convolutionjob_tables import ConvolutionConfig, ConvolutionJob
 from tuna.miopen.db.tensortable import TensorTable
@@ -39,8 +39,8 @@ from tuna.miopen.utils.config_type import ConfigType
 @pytest.fixture
 def mock_dbt():
   """Create mock database tables"""
-  dbt = Mock()
-  session = Mock()
+  dbt = MagicMock()
+  session = MagicMock()
   session.id = 1
   session.arch = 'gfx908'
   session.num_cu = 120
@@ -51,7 +51,7 @@ def mock_dbt():
 @pytest.fixture
 def mock_conv_job():
   """Create mock convolution job"""
-  job = Mock()
+  job = MagicMock()
   job.id = 1
   job.valid = 1
   job.config = 1
@@ -62,7 +62,7 @@ def mock_conv_job():
 @pytest.fixture
 def nchw_config():
   """Create NCHW convolution config"""
-  config = Mock()
+  config = MagicMock()
   config.id = 1
   config.batchsize = 128
   config.spatial_dim = 2
@@ -86,7 +86,7 @@ def nchw_config():
   config.valid = 1
 
   # Mock input tensor
-  input_t = Mock()
+  input_t = MagicMock()
   input_t.id = 1
   input_t.dim0 = 1
   input_t.dim1 = 128
@@ -111,7 +111,7 @@ def nchw_config():
   }
 
   # Mock weight tensor
-  weight_t = Mock()
+  weight_t = MagicMock()
   weight_t.id = 2
   weight_t.dim0 = 128
   weight_t.dim1 = 128
@@ -172,7 +172,7 @@ def nchw_config():
 @pytest.fixture
 def nhwc_config():
   """Create NHWC convolution config"""
-  config = Mock()
+  config = MagicMock()
   config.id = 2
   config.batchsize = 64
   config.spatial_dim = 2
@@ -196,7 +196,7 @@ def nhwc_config():
   config.valid = 1
 
   # Mock input tensor (NHWC layout)
-  input_t = Mock()
+  input_t = MagicMock()
   input_t.id = 3
   input_t.dim0 = 1
   input_t.dim1 = 64  # D
@@ -221,7 +221,7 @@ def nhwc_config():
   }
 
   # Mock weight tensor (NHWC layout)
-  weight_t = Mock()
+  weight_t = MagicMock()
   weight_t.id = 4
   weight_t.dim0 = 64
   weight_t.dim1 = 64
@@ -399,11 +399,11 @@ class TestComposeConfigObj:
   def test_compose_config_with_batch_norm(self, mock_dbt):
     """Test composing config for batch normalization"""
     # Create a simple batch norm config
-    bn_config = Mock()
+    bn_config = MagicMock()
     bn_config.id = 1
     bn_config.mode = 1
-    bn_config.to_dict = lambda: {'id': 1, 'mode': 1}
-    bn_config.__dict__ = {'keys': lambda: []}
+    bn_config.to_dict.return_value = {'id': 1, 'mode': 1}
+    bn_config.__dict__.keys.return_value = []
 
     result = fu.compose_config_obj(bn_config, ConfigType.batch_norm)
     assert result is not None
