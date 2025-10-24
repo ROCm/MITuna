@@ -378,7 +378,7 @@ class TestDriverBatchNormSerialization:
 
 @pytest.mark.unit
 @pytest.mark.driver
-class TestDriverBatchNormAlphaB eta:
+class TestDriverBatchNormAlphaBeta:
   """Test DriverBatchNorm alpha/beta parameters"""
 
   def test_alpha_parameter(self):
@@ -421,7 +421,7 @@ class TestDriverDatabaseRoundTrip:
     config.out_layout = 'NCHW'
     config.direction = 'F'
     config.valid = 1
-    
+
     # Create mock tensor
     input_tensor = TensorTable()
     input_tensor.id = 1
@@ -434,7 +434,7 @@ class TestDriverDatabaseRoundTrip:
     input_tensor.num_dims = 2
     input_tensor.data_type = 'FP32'
     input_tensor.valid = 1
-    
+
     weight_tensor = TensorTable()
     weight_tensor.id = 2
     weight_tensor.dim0 = 128
@@ -446,10 +446,10 @@ class TestDriverDatabaseRoundTrip:
     weight_tensor.num_dims = 2
     weight_tensor.data_type = 'FP32'
     weight_tensor.valid = 1
-    
+
     config.input_t = input_tensor
     config.weight_t = weight_tensor
-    
+
     # Create driver from db_obj
     driver = DriverConvolution(db_obj=config)
     assert driver.batchsize == 128
@@ -471,7 +471,7 @@ class TestDriverDatabaseRoundTrip:
     config.beta = 0
     config.direction = 'F'
     config.valid = 1
-    
+
     # Create mock tensor
     input_tensor = TensorTable()
     input_tensor.id = 1
@@ -484,12 +484,11 @@ class TestDriverDatabaseRoundTrip:
     input_tensor.num_dims = 2
     input_tensor.data_type = 'FP32'
     input_tensor.valid = 1
-    
+
     config.input_t = input_tensor
-    
+
     # Create driver from db_obj
     driver = DriverBatchNorm(db_obj=config)
     assert driver.batchsize == 256
     assert driver.mode == 1
     assert driver.direction == 'F'
-
