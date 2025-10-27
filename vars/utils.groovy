@@ -626,6 +626,7 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_fin_utils_enhanced.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_class.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_fin_class_enhanced.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_fin_class_additional.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_add_session.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_merge_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_merge_db_functions.py -s"
