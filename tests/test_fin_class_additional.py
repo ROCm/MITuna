@@ -182,7 +182,8 @@ def test_compose_fincmd_local_and_remote_exceptions(mock_machine):
   mock_machine.local_machine = True
   cmd = worker._FinClass__compose_fincmd()
   assert '/opt/rocm/bin/fin' in cmd
-  assert 'thread-0' in cmd
+  assert f"-i {worker.local_file}" in cmd
+  assert f"-o {worker.local_output}" in cmd
 
   # Remote path with SSHException then IOError
   mock_machine.local_machine = False
@@ -287,6 +288,8 @@ def test_prep_fin_input_true_and_false(mock_machine):
 def test_run_fin_cmd_failure_result_format(mock_machine):
   worker = FinClass(**base_kwargs(mock_machine))
   mock_machine.make_temp_file.return_value = '/tmp/fin_out.json'
+  # FinClass relies on get_fin_input from builder/eval; stub it here
+  worker.get_fin_input = lambda: '/tmp/fin_in.json'
   with patch('tuna.worker_interface.WorkerInterface.run_command',
              return_value=(1, 'error%bad:msg')):
     res = worker.run_fin_cmd()
