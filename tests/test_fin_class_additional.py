@@ -92,6 +92,20 @@ def mock_dbt():
   job_table.c = mk_cols(['id', 'config', 'solver', 'insert_ts', 'update_ts'])
   dbt.job_table = job_table
 
+  # Needed for __parse_applicability label filter
+  config_tags_table = Mock()
+  config_tags_table.config = 'config'
+  dbt.config_tags_table = config_tags_table
+
+  # Minimal solver table factory used in __add_new_solvers
+  class _DummySolverTable:
+
+    def __init__(self, **kwargs):
+      for k, v in kwargs.items():
+        setattr(self, k, v)
+
+  dbt.solver_table = _DummySolverTable
+
   solver_app = Mock()
   solver_app.__tablename__ = 'conv_solver_applicability'
   solver_app.id = 1
