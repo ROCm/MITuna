@@ -28,6 +28,7 @@
 
 import json
 import os
+import queue
 from io import StringIO
 from unittest.mock import Mock, patch
 
@@ -211,6 +212,187 @@ def test_get_fin_results_raises_after_retries(mock_machine):
     with patch.object(worker, 'exec_docker_cmd', return_value=(1, '', err)):
       with pytest.raises(ValueError):
         worker._FinClass__get_fin_results()
+
+
+def test_compose_work_objs_appends_not_fin_when_no_steps(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  worker.fin_steps = []
+  conds = []
+  with patch('tuna.worker_interface.WorkerInterface.compose_work_objs',
+             return_value=[]):
+    worker.compose_work_objs(Mock(), conds)
+  assert "fin_step='not_fin'" in conds
+
+
+def test_compose_fincmd_remote_success_copy(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  mock_machine.local_machine = False
+  worker.machine = mock_machine
+  sftp = Mock()
+  sftp.put.side_effect = None
+  ssh = Mock()
+  ssh.open_sftp.return_value = sftp
+  worker.cnx = Mock()
+  worker.cnx.ssh = ssh
+  cmd = worker._FinClass__compose_fincmd()
+  assert '/opt/rocm/bin/fin' in cmd
+
+
+def test_get_solvers_none_returns_false(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  with patch.object(worker, '_FinClass__get_fin_results', return_value=None):
+    assert worker.get_solvers() is False
+
+
+def test_get_solvers_parses_when_present(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  fake = [
+      None, {
+          'all_solvers': [{
+              'id': '1',
+              'name': 'S',
+              'tunable': '0',
+              'type': 0,
+              'dynamic': 0
+          }]
+      }
+  ]
+  with patch.object(worker, '_FinClass__get_fin_results', return_value=fake), \
+       patch.object(worker, '_FinClass__parse_solvers', return_value=True) as p:
+    assert worker.get_solvers() is True
+    p.assert_called_once()
+
+
+def test_parse_out_local_bad_json_returns_none(mock_machine, tmp_path):
+  worker = FinClass(**base_kwargs(mock_machine))
+  with open(worker.local_output, 'w') as f:
+    f.write('{not json')
+  assert worker._FinClass__parse_out() is None
+
+
+def test_set_all_configs_success_batch_norm_and_blocks(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  worker.config_type = ConfigType.batch_norm
+
+  class Row:
+
+    def __init__(self, i):
+      self.id = i
+
+    def get_direction(self):
+      return 2
+
+  rows = [Row(1), Row(2), Row(3)]
+  q = Mock()
+  q.all.return_value = rows
+  with patch.object(worker, 'query_cfgs', return_value=q), \
+       patch('tuna.miopen.worker.fin_class.compose_config_obj', return_value={'id': 1, 'direction': 1}):
+    assert worker._FinClass__set_all_configs(idx=0, num_blk=2) is True
+    assert isinstance(worker.all_configs, list)
+
+
+def test_set_all_configs_queue_empty_exception(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  with patch.object(worker, 'query_cfgs') as q:
+    q.all.return_value = []
+    # simulate Empty immediately
+    worker.job_queue.get = Mock(side_effect=queue.Empty)
+    assert worker._FinClass__set_all_configs(idx=1, num_blk=1) is False
+
+
+def test_prep_fin_input_default_outfile(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  with patch.object(worker, '_FinClass__create_dumplist', return_value=True), \
+       patch.object(worker, '_FinClass__dump_json', return_value=True):
+    assert worker._FinClass__prep_fin_input(outfile=None, to_file=True)
+
+
+def test_insert_applicability_builds_queries(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  worker.solver_id_map = {'A': 26}
+  json_in = [{"input": {"config_tuna_id": 7}, "applicable_solvers": ['A']}]
+  session = Mock()
+  session.execute = Mock()
+  session.commit = Mock()
+  assert worker._FinClass__insert_applicability(session, json_in) is True
+  assert session.execute.call_count >= 2
+
+
+def test_parse_applicability_flow(mock_machine):
+  worker = FinClass(**base_kwargs(mock_machine))
+  worker.label = 'taggy'
+  packs = [[{"input": {"config_tuna_id": 7}, "applicable_solvers": []}], []]
+  with patch('tuna.miopen.worker.fin_class.split_packets', return_value=packs), \
+       patch('tuna.miopen.worker.fin_class.session_retry', side_effect=lambda s, fn, cb, lg: fn) as _sr:
+    # Dummy session and query chain
+    class Q:
+
+      def filter(self, *a, **k):
+        return self
+
+      def group_by(self, *a, **k):
+        return self
+
+      def all(self):
+        return []
+
+    class DS:
+
+      def __enter__(self):
+        self.q = Q()
+        self._s = Mock()
+        self._s.query = Mock(return_value=self.q)
+        self._s.execute = Mock()
+        self._s.commit = Mock()
+        return self._s
+
+      def __exit__(self, *a):
+        return False
+
+    with patch('tuna.miopen.worker.fin_class.DbSession', DS):
+      assert worker._FinClass__parse_applicability(packs[0]) is True
+
+
+def test_add_new_solvers_invalid_request_error(mock_machine):
+  from sqlalchemy.exc import InvalidRequestError
+  worker = FinClass(**base_kwargs(mock_machine))
+  solvers = [{'id': '1', 'name': 'X', 'tunable': '0', 'type': 0, 'dynamic': 0}]
+
+  class DS2:
+
+    def __enter__(self):
+      s = Mock()
+      s.add.side_effect = InvalidRequestError('bad')
+      s.commit = Mock()
+      return s
+
+    def __exit__(self, *a):
+      return False
+
+  with patch('tuna.miopen.worker.fin_class.DbSession', DS2):
+    max_id, sids = worker._FinClass__add_new_solvers(solvers)
+    assert max_id >= 1 and 1 in sids
+
+
+def test_populate_kernels_sets_fields():
+  kern = {
+      'kernel_file': 'f',
+      'comp_options': 'opts',
+      'blob': 'abc',
+      'md5_sum': 'h',
+      'uncompressed_size': 9
+  }
+
+  class K:
+    pass
+
+  k = K()
+  res = FinClass.populate_kernels(kern, k)
+  assert res.kernel_name == 'f'
+  assert res.kernel_args == 'opts'
+  assert res.kernel_blob == b'abc'
+  assert res.kernel_hash == 'h'
+  assert res.uncompressed_size == 9
 
 
 def test_parse_out_remote_bad_json_returns_none(mock_machine):
