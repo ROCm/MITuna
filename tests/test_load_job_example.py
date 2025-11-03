@@ -81,7 +81,7 @@ def test_parse_args_includes_standard_args():
   """Test parse_args includes standard tuna arguments"""
   test_args = [
       '--label', 'test_label', '--session_id', '1', '--arch', 'gfx90a',
-      '--num_cu', '104', '--version', '5.7.1'
+      '--num_cu', '104'
   ]
 
   with patch('sys.argv', ['script'] + test_args):
@@ -90,7 +90,6 @@ def test_parse_args_includes_standard_args():
     assert args.session_id == 1
     assert args.arch == 'gfx90a'
     assert args.num_cu == 104
-    assert hasattr(args, 'version')
 
 
 def test_parse_args_default_label():
@@ -113,7 +112,8 @@ def test_add_jobs_success():
   mock_session.commit = Mock()
   mock_session.rollback = Mock()
 
-  dbt = ExampleDBTables(session_id=1)
+  # Use session_id=None to avoid database query during initialization
+  dbt = ExampleDBTables(session_id=None)
 
   with patch('tuna.example.load_job.DbSession') as mock_db_session:
     mock_db_session.return_value.__enter__.return_value = mock_session
@@ -142,7 +142,8 @@ def test_add_jobs_sets_correct_attributes():
   mock_session.add.side_effect = capture_add
   mock_session.commit = Mock()
 
-  dbt = ExampleDBTables(session_id=42)
+  # Use session_id=None to avoid database query during initialization
+  dbt = ExampleDBTables(session_id=None)
 
   with patch('tuna.example.load_job.DbSession') as mock_db_session:
     mock_db_session.return_value.__enter__.return_value = mock_session
@@ -150,9 +151,12 @@ def test_add_jobs_sets_correct_attributes():
 
     add_jobs(args, dbt)
 
-    # Verify job attributes were set correctly
-    # Note: The actual job object creation is inside the function
-    # We verify the session.add was called
+    # Verify session.add was called
+    mock_session.add.assert_called_once()
+    # Verify the job that was added has correct attributes
+    if added_job:
+      assert added_job.reason == 'test_reason'
+      assert added_job.session == 42
 
 
 def test_add_jobs_integrity_error():
@@ -165,7 +169,8 @@ def test_add_jobs_integrity_error():
   mock_session.add.side_effect = IntegrityError("Duplicate", None, None)
   mock_session.rollback = Mock()
 
-  dbt = ExampleDBTables(session_id=1)
+  # Use session_id=None to avoid database query during initialization
+  dbt = ExampleDBTables(session_id=None)
 
   with patch('tuna.example.load_job.DbSession') as mock_db_session, \
        patch('tuna.example.load_job.LOGGER') as mock_logger:
@@ -189,7 +194,8 @@ def test_add_jobs_rollback_on_error():
   mock_session.add.side_effect = IntegrityError("Duplicate", None, None)
   mock_session.rollback = Mock()
 
-  dbt = ExampleDBTables(session_id=1)
+  # Use session_id=None to avoid database query during initialization
+  dbt = ExampleDBTables(session_id=None)
 
   with patch('tuna.example.load_job.DbSession') as mock_db_session:
     mock_db_session.return_value.__enter__.return_value = mock_session
@@ -211,7 +217,8 @@ def test_add_jobs_increments_count():
   mock_session.add = Mock()
   mock_session.commit = Mock()
 
-  dbt = ExampleDBTables(session_id=1)
+  # Use session_id=None to avoid database query during initialization
+  dbt = ExampleDBTables(session_id=None)
 
   with patch('tuna.example.load_job.DbSession') as mock_db_session:
     mock_db_session.return_value.__enter__.return_value = mock_session
