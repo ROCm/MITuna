@@ -33,15 +33,14 @@ sys.path.append("tuna")
 from tuna.example.example_tables import Job, JobEnum, get_tables
 from tuna.example.session import SessionExample
 from tuna.machine import Machine
-from sqlalchemy import inspect
 
 
 def test_job_enum_values():
   """Test JobEnum enum values"""
-  assert JobEnum.new == 1
-  assert JobEnum.running == 3
-  assert JobEnum.completed == 4
-  assert JobEnum.error == 5
+  assert JobEnum.new.value == 1
+  assert JobEnum.running.value == 3
+  assert JobEnum.completed.value == 4
+  assert JobEnum.error.value == 5
 
   # Test enum members exist
   assert hasattr(JobEnum, 'new')
@@ -76,8 +75,8 @@ def test_job_table_unique_constraint():
 
 def test_job_table_columns():
   """Test all Job table column definitions"""
-  inspector = inspect(Job)
-  columns = [col['name'] for col in inspector.get_columns()]
+  # Access columns directly from the table
+  columns = [col.name for col in Job.__table__.columns]
 
   # Check required columns exist
   assert 'session' in columns
@@ -95,10 +94,8 @@ def test_job_table_state_default():
   # The default should be 'new' which maps to JobEnum.new == 1
   # But since state is an Enum column, we check the server_default
   # Let's check by inspecting the table
-  from sqlalchemy import inspect
-  inspector = inspect(Job)
   state_col = None
-  for col in inspector.columns:
+  for col in Job.__table__.columns:
     if col.name == 'state':
       state_col = col
       break
