@@ -42,7 +42,7 @@ def test_step_calls_run_cmd():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -62,7 +62,7 @@ def test_run_cmd_constructs_command():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -92,7 +92,7 @@ def test_run_cmd_includes_envmt():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -118,7 +118,7 @@ def test_run_cmd_runs_rocminfo():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -141,7 +141,7 @@ def test_run_cmd_returns_output():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -164,7 +164,7 @@ def test_run_cmd_with_empty_envmt():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -191,7 +191,7 @@ def test_worker_inherits_worker_interface():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -205,7 +205,7 @@ def test_set_db_tables():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=None,
                            gpu_id=0,
                            machine=mock_machine,
@@ -223,7 +223,7 @@ def test_worker_initialization():
   mock_machine.hostname = 'test_host'
   mock_machine.port = 22
 
-  with patch('tuna.example.tables.DbSession'):
+  with patch('tuna.tables_interface.DbSession'):
     worker = ExampleWorker(session_id=1,
                            gpu_id=0,
                            machine=mock_machine,
