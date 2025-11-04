@@ -135,11 +135,12 @@ ARG BUILD_MIOPEN_DEPS=
 ARG ARCH_TARGET=
 RUN . /env; if [ -z $NO_ROCM_INST ] || ! [ -z $BUILD_MIOPEN_DEPS ]; then\
         pip install cget; \
+        sed -i "s#\(composable_kernel.*\)#\1 -DMIOPEN_REQ_LIBS_ONLY=ON#" requirements.txt; \
         if ! [ -z $ARCH_TARGET ]; then \
             sed -i "s#\(composable_kernel.*\)#\1 -DGPU_TARGETS=\"$ARCH_TARGET\"#" requirements.txt; \
         fi; \
         apt-get remove -y composablekernel-dev miopen-hip; \
-        CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $MIOPEN_DEPS -DCMAKE_POLICY_VERSION_MINIMUM=3.5; \
+        CXX=/opt/rocm/llvm/bin/clang++ cget install -f ./dev-requirements.txt --prefix $MIOPEN_DEPS; \
         git checkout requirements.txt; \
     fi
 
