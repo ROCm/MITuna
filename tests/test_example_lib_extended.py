@@ -109,7 +109,8 @@ def test_parse_args_creates_example_dbt():
 
   test_args = ['--session_id', '42', '--arch', 'gfx90a', '--num_cu', '104']
 
-  with patch('sys.argv', ['script'] + test_args):
+  with patch('sys.argv', ['script'] + test_args), \
+       patch('tuna.tables_interface.DbSession'):
     example.parse_args()
     assert isinstance(example.dbt, ExampleDBTables)
     assert example.dbt.session_id == 42
@@ -254,11 +255,13 @@ def test_compose_worker_list_normal():
 
   mock_machine = Mock()
   mock_machine.id = 1
+  mock_machine.get_num_cpus.return_value = 10  # Return a number for multiplication
 
-  with patch.object(example, 'get_num_procs') as mock_get_num_procs, \
+  with patch('tuna.mituna_interface.get_env_vars') as mock_get_env, \
        patch.object(example, 'get_f_vals') as mock_get_f_vals, \
        patch.object(example, 'launch_worker') as mock_launch:
-    mock_get_num_procs.return_value = [0, 1]
+    # Mock get_env_vars to return empty slurm_cpus so it uses machine.get_num_cpus()
+    mock_get_env.return_value = {'slurm_cpus': 0}
     mock_get_f_vals.return_value = {'envmt': []}
     mock_launch.return_value = True
 
@@ -292,9 +295,11 @@ def test_compose_worker_list_empty_worker_ids():
   example.args.restart_machine = False
 
   mock_machine = Mock()
+  mock_machine.get_num_cpus.return_value = 0  # Return 0 so int(0 * 0.6) = 0, resulting in empty list
 
-  with patch.object(example, 'get_num_procs') as mock_get_num_procs:
-    mock_get_num_procs.return_value = []
+  with patch('tuna.mituna_interface.get_env_vars') as mock_get_env:
+    # Mock get_env_vars to return empty slurm_cpus so it uses machine.get_num_cpus()
+    mock_get_env.return_value = {'slurm_cpus': 0}
 
     result = example.compose_worker_list([mock_machine])
 
@@ -449,7 +454,8 @@ def test_celery_enqueue_call():
   context = {'job': {'id': 1}, 'operation': Operation.COMPILE}
   q_name = 'test_queue'
 
-  with patch('tuna.example.example_lib.celery_enqueue') as mock_celery_enqueue:
+  with patch('tuna.example.celery_tuning.celery_tasks.celery_enqueue'
+            ) as mock_celery_enqueue:
     mock_async_result = Mock()
     mock_celery_enqueue.apply_async.return_value = mock_async_result
 
