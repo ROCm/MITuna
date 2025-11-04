@@ -77,12 +77,14 @@ def test_run_cmd_constructs_command():
     # Verify exec_docker_cmd was called
     assert mock_exec_docker.called
 
-    # Get the command that was passed (it will be a string joined from the list)
+    # Get the command that was passed (it's a list)
     call_args = mock_exec_docker.call_args[0]
     cmd = call_args[0]
 
-    # Command should be a string containing rocminfo
-    assert '/opt/rocm/bin/rocminfo' in cmd or 'rocminfo' in cmd
+    # Command should be a list containing rocminfo
+    assert isinstance(cmd, list)
+    cmd_str = ' '.join(cmd)
+    assert '/opt/rocm/bin/rocminfo' in cmd_str or 'rocminfo' in cmd_str
     assert result == 'test_output'
 
 
@@ -108,8 +110,11 @@ def test_run_cmd_includes_envmt():
     call_args = mock_exec_docker.call_args[0]
     cmd = call_args[0]
 
+    # Command should be a list
+    assert isinstance(cmd, list)
+    cmd_str = ' '.join(cmd)
     # Environment should be included at the start
-    assert 'VAR1=value1' in cmd or 'VAR2=value2' in cmd
+    assert 'VAR1=value1' in cmd_str or 'VAR2=value2' in cmd_str
 
 
 def test_run_cmd_runs_rocminfo():
@@ -125,9 +130,8 @@ def test_run_cmd_runs_rocminfo():
                            envmt=[])
 
   with patch.object(worker, 'exec_docker_cmd') as mock_exec_docker:
-    mock_out = StringIO('rocminfo output')
     mock_err = StringIO('')
-    mock_exec_docker.return_value = (0, mock_out, mock_err)
+    mock_exec_docker.return_value = (0, 'rocminfo output', mock_err)
 
     result = worker.run_cmd()
 
@@ -182,7 +186,10 @@ def test_run_cmd_with_empty_envmt():
     # Command should still contain rocminfo even with empty envmt
     call_args = mock_exec_docker.call_args[0]
     cmd = call_args[0]
-    assert 'rocminfo' in cmd.lower() or '/opt/rocm/bin/rocminfo' in cmd
+    # Command should be a list
+    assert isinstance(cmd, list)
+    cmd_str = ' '.join(cmd)
+    assert 'rocminfo' in cmd_str.lower() or '/opt/rocm/bin/rocminfo' in cmd_str
 
 
 def test_worker_inherits_worker_interface():
