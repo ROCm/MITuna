@@ -561,17 +561,27 @@ def perfEval() {
             error("Unable to eval all conv jobs")
         }
 
-        def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
-        def next_gold_v = last_gold_v.toInteger() + 1
-        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${last_gold_v}"
-
-        def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
-        def fdb_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
-        if(golden_entries.toInteger() != fdb_entries.toInteger())
+        // Verify that evaluation created find_db entries before updating golden
+        def fdb_entries_before = runsql("SELECT count(*) from conv_find_db where session= ${sesh1};")
+        if(fdb_entries_before.toInteger() == 0)
         {
-            echo "#fdb jobs: ${fdb_entries}"
-            echo "#golden jobs: ${golden_entries}"
-            error("FDB entries and golden entries do not match")
+            error("No find_db entries created during evaluation for session ${sesh1}")
+        }
+
+        def last_gold_v = runsql("SELECT max(golden_miopen_v) from conv_golden;")
+        // Handle NULL case when conv_golden table is empty (first run or fresh database)
+        def next_gold_v = (last_gold_v == "NULL" || last_gold_v == "") ? 1 : last_gold_v.toInteger() + 1
+        def base_gold_v = (last_gold_v == "NULL" || last_gold_v == "") ? 0 : last_gold_v
+        sh "./tuna/go_fish.py miopen update_golden --session_id ${sesh1} --golden_v ${next_gold_v} --base_golden_v ${base_gold_v}"
+
+        // Verify that update_golden created entries and they match find_db count
+        def golden_entries = runsql("SELECT count(*) from conv_golden where session= ${sesh1};")
+        def fdb_entries_after = runsql("SELECT count(*) from conv_find_db where session= ${sesh1};")
+        if(golden_entries.toInteger() != fdb_entries_after.toInteger())
+        {
+            echo "#fdb entries: ${fdb_entries_after}"
+            echo "#golden entries: ${golden_entries}"
+            error("FDB entries and golden entries do not match after update_golden")
         }
     }
 }
