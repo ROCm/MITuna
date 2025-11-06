@@ -6,7 +6,7 @@ ARG OSDB_BKC_VERSION=
 ARG HASVER=${ROCMVERSION:+$ROCMVERSION}
 ARG HASVER=${HASVER:-$OSDB_BKC_VERSION}
 
-ARG BASEIMAGE=rocm/miopen:ci_3708da
+ARG BASEIMAGE=rocm/miopen:ci_7c45f0
 ARG UBUNTU=ubuntu:22.04
 
 #use UBUNTU with rocm version set
@@ -18,6 +18,8 @@ FROM $USEIMAGE as dtuna-ver-0
 #args before from are wiped
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
+# pass through baseimage for later use
+ARG BASEIMAGE
 
 RUN test -d /opt/rocm*; \
     if [ $? -eq 0 ] ; then \
