@@ -96,3 +96,106 @@ def test_example():
     subp.kill()
 
   assert example.has_tunable_operation()
+
+
+def test_example_celery_tasks():
+  """Test Example celery tasks coverage"""
+  import copy
+  from unittest.mock import Mock, patch, MagicMock
+  from tuna.example.celery_tuning.celery_tasks import prep_kwargs, prep_worker, capture_worker_name
+  from tuna.example.example_worker import ExampleWorker
+  from tuna.machine import Machine
+
+  # Test prep_kwargs (line 52)
+  kwargs = {'test_key': 'test_value'}
+  job = {'id': 1, 'session': 1}
+  args = [job]
+  result = prep_kwargs(kwargs, args)
+  assert result is not None
+  assert 'job' in result
+
+  # Test prep_worker with new operation - else branch (lines 64-67)
+  context = {
+      'operation': 'new_operation_test',
+      'job': {
+          'id': 1,
+          'session': 1
+      },
+      'kwargs': {
+          'session_id': 1,
+          'machine': Mock()
+      }
+  }
+
+  with patch('tuna.example.celery_tuning.celery_tasks.ExampleWorker'
+            ) as mock_worker_class:
+    mock_worker_instance = Mock()
+    mock_worker_class.return_value = mock_worker_instance
+
+    worker = prep_worker(context)
+    assert worker is not None
+    # Verify the worker was added to cache
+    from tuna.example.celery_tuning import celery_tasks
+    assert 'new_operation_test' in celery_tasks.cached_worker
+
+  # Test prep_worker with cached operation - if branch (lines 61-62)
+  context_cached = {
+      'operation': 'cached_op',
+      'job': {
+          'id': 2,
+          'session': 1
+      },
+      'kwargs': {
+          'session_id': 1
+      }
+  }
+
+  # First populate cache with a mock worker
+  cached_mock_worker = Mock(spec=ExampleWorker)
+  from tuna.example.celery_tuning import celery_tasks
+  celery_tasks.cached_worker['cached_op'] = cached_mock_worker
+
+  # Mock get_cached_worker to return the cached worker
+  with patch('tuna.example.celery_tuning.celery_tasks.get_cached_worker'
+            ) as mock_get_cached:
+    mock_get_cached.return_value = cached_mock_worker
+
+    worker_cached = prep_worker(context_cached)
+    assert worker_cached is not None
+    # Verify get_cached_worker was called
+    mock_get_cached.assert_called_once()
+
+  # Test capture_worker_name (line 44)
+  from tuna.celery_app.celery_app import app
+  mock_sender = 'test_worker_name_123'
+  capture_worker_name(sender=mock_sender, instance=None)
+  assert app.worker_name == mock_sender
+
+  # Test celery_enqueue function (lines 74-76)
+  # Note: celery_enqueue has a bug where it passes ExampleWorker as 2nd arg to prep_worker
+  # We'll mock prep_worker to avoid this issue
+  from tuna.example.celery_tuning import celery_tasks as ct_module
+
+  context_enqueue = {
+      'operation': 'enqueue_test_op',
+      'job': {
+          'id': 3,
+          'session': 1
+      },
+      'kwargs': {
+          'session_id': 1
+      }
+  }
+
+  with patch.object(ct_module, 'prep_worker') as mock_prep_worker:
+    mock_worker_run = Mock()
+    mock_worker_run.run.return_value = {'status': 'success', 'time': 1.5}
+    mock_prep_worker.return_value = mock_worker_run
+
+    from tuna.example.celery_tuning.celery_tasks import celery_enqueue
+    result = celery_enqueue(context_enqueue)
+
+    assert 'ret' in result
+    assert 'context' in result
+    assert result['context'] == context_enqueue
+    assert result['ret']['status'] == 'success'

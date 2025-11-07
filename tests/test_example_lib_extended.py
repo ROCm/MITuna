@@ -532,3 +532,41 @@ def test_run_add_tables_mode():
     mock_parse.assert_called_once()
     mock_add_tables.assert_called_once()
     assert result is None
+
+
+def test_parse_args_no_arguments():
+  """Test parse_args with no arguments (lines 92-93)"""
+  import pytest
+  example = Example()
+
+  # Test with only script name (no arguments)
+  with patch('sys.argv', ['script']), \
+       pytest.raises(SystemExit) as exc_info:
+    example.parse_args()
+
+  # Should exit with -1
+  assert exc_info.value.code == -1
+
+
+def test_run_normal_execution():
+  """Test run() method normal execution (lines 180-182)"""
+  example = Example()
+
+  mock_machine = Mock()
+  mock_worker_list = [Mock(), Mock()]
+
+  with patch.object(example, 'parse_args') as mock_parse, \
+       patch('tuna.example.example_lib.load_machines') as mock_load_machines, \
+       patch.object(example, 'compose_worker_list') as mock_compose:
+
+    example.args = Mock()
+    example.args.add_tables = False
+    mock_load_machines.return_value = [mock_machine]
+    mock_compose.return_value = mock_worker_list
+
+    result = example.run()
+
+    mock_parse.assert_called_once()
+    mock_load_machines.assert_called_once_with(example.args)
+    mock_compose.assert_called_once_with([mock_machine])
+    assert result == mock_worker_list
