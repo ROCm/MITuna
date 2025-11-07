@@ -73,7 +73,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     apt-utils \
     build-essential \
     cmake \ 
-    clang-format-12 \
+    clang-format \
     curl \
     doxygen \
     gdb \
