@@ -40,7 +40,7 @@ import asyncio
 from datetime import timedelta
 from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.inspection import inspect
-import aioredis
+import redis.asyncio as aioredis
 import kombu
 from paramiko.channel import ChannelFile
 
@@ -502,7 +502,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     for key in keys:
       try:
         await redis.delete(key)
-      except aioredis.exceptions.ResponseError as red_err:
+      except Exception as red_err:
         self.logger.error(red_err)
         self.logger.info(key.decode("utf-8"))
         continue
@@ -540,7 +540,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
             await redis.delete(key)
             with job_counter_lock:
               job_counter.value = job_counter.value - 1
-        except aioredis.exceptions.ResponseError as red_err:
+        except Exception as red_err:
           self.logger.error(red_err)
           self.logger.info(key.decode("utf-8"))
 

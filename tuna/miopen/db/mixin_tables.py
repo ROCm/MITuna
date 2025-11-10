@@ -27,7 +27,7 @@
 """Represents Mixin type table class definitions """
 import enum
 from sqlalchemy.sql import func as sqla_func
-from sqlalchemy.databases import mysql
+from sqlalchemy.dialects import mysql
 from sqlalchemy import Float, Boolean
 from sqlalchemy.dialects.mysql import TINYINT, MEDIUMBLOB, LONGBLOB
 from sqlalchemy.ext.declarative import declared_attr
@@ -64,9 +64,9 @@ class MIOpenJobMixin(JobMixin):
 
   solver = Column(String(length=128), nullable=True, server_default="")
   eval_mid = Column(Integer, server_default="-1")
-  fin_step = Column(mysql.MSSet(*(list(k for k in FinStep.__members__))),
-                    nullable=False,
-                    server_default="not_fin")
+  fin_step = Column(mysql.SET(*(list(k for k in FinStep.__members__))),
+                  nullable=False,
+                  server_default="not_fin")
 
 
 class ConfigTagMixin():
