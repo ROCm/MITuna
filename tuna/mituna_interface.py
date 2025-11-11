@@ -363,6 +363,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     """Enqueue celery jobs with machine-specific progress tracking and error handling"""
     self.logger.info("Starting enqueue")
     current_batch_size = 0
+    first_batch = True
 
     max_retries = 3
     retry_delay = 5  # seconds
@@ -375,7 +376,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
         try:
           with DbSession() as session:
             # Check if we should enqueue more jobs based on OUR progress
-            if current_batch_size > 0:
+            # Skip check only on the very first batch
+            if not first_batch:
               if not self.should_enqueue_more_jobs(session, current_batch_size):
                 self.logger.info(
                     "Waiting for our current batch to progress before enqueuing more"
@@ -429,6 +431,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 continue
 
             current_batch_size = len(job_list)
+            first_batch = False  # Mark that we've completed the first batch
             self.logger.info(
                 "Job counter: %s, enqueued batch size: %s",
                 job_counter.value,
