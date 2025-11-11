@@ -34,6 +34,7 @@ from typing import Dict
 
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
+from sqlalchemy import text
 
 from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
 from tuna.miopen.db.solver import get_solver_ids
@@ -160,7 +161,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
       where session={args.session_id} and fin_step='{fin_step_str}'"
 
     logger.info(query)
-    ret = session.execute(query)
+    ret = session.execute(text(query))
     pre_ex: Dict[str, Dict[str, bool]] = {}
     for config, solver in ret:
       if config not in pre_ex:

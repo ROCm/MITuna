@@ -31,6 +31,7 @@ import string
 from time import sleep
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Query
+from sqlalchemy import text
 
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
@@ -229,7 +230,7 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
   query: str = gen_update_query(job, job_set_attr, dbt.job_table.__tablename__)
 
   def callback() -> bool:
-    session.execute(query)
+    session.execute(text(query))
     session.commit()
     return True
 

@@ -27,6 +27,7 @@
 """Utility module for parsing fin json results"""
 import functools
 from sqlalchemy.exc import OperationalError
+from sqlalchemy import text
 
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
@@ -68,13 +69,13 @@ def __update_fdb_w_kernels(  #pylint: disable=too-many-arguments,too-many-locals
         if not pending:
           query = gen_update_query(fdb_entry, fdb_attr,
                                    dbt.find_db_table.__tablename__)
-          session.execute(query)
+          session.execute(text(query))
         else:
           assert len(pending) == 1
           pending.pop()
           query = gen_insert_query(fdb_entry, fdb_attr,
                                    dbt.find_db_table.__tablename__)
-          session.execute(query)
+          session.execute(text(query))
 
           fdb_entry = __update_fdb_entry(session,
                                          solver_id_map[fdb_obj['solver_name']],
@@ -83,7 +84,7 @@ def __update_fdb_w_kernels(  #pylint: disable=too-many-arguments,too-many-locals
           fdb_entry.kernel_group = fdb_entry.id
           query = gen_update_query(fdb_entry, ['kernel_group'],
                                    dbt.find_db_table.__tablename__)
-          session.execute(query)
+          session.execute(text(query))
 
         if fdb_obj['reason'] == 'Success':
           __compose_kernel_entry(session, fdb_obj, fdb_entry, dbt)
@@ -377,11 +378,11 @@ def __submit_tuning_data_entry(  #pylint: disable=too-many-arguments
     pending.remove(tuning_data_entry)
     query = gen_insert_query(tuning_data_entry, tuning_data_attr,
                              dbt.tuning_data_table.__tablename__)
-    session.execute(query)
+    session.execute(text(query))
   else:
     query = gen_update_query(tuning_data_entry, tuning_data_attr,
                              dbt.tuning_data_table.__tablename__)
-    session.execute(query)
+    session.execute(text(query))
 
 
 def process_fdb_w_kernels(session,
