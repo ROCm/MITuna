@@ -40,6 +40,7 @@ import asyncio
 from datetime import timedelta
 from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.inspection import inspect
+from sqlalchemy import text
 import redis.asyncio as aioredis
 import kombu
 from paramiko.channel import ChannelFile
@@ -302,7 +303,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 SET state = '{set_state}' 
                 WHERE id IN ({id_str})
             """
-      session.execute(query)
+      session.execute(text(query))
 
       # Update local objects to reflect new state
       for job in job_list:
@@ -697,7 +698,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
       # pylint: disable=duplicate-code
       def callback() -> bool:
-        session.execute(query)
+        session.execute(text(query))
         session.commit()
         return True
 

@@ -39,7 +39,7 @@ try:
 except ImportError:
   import Queue as queue  #type: ignore
 
-from sqlalchemy import func as sqlalchemy_func
+from sqlalchemy import func as sqlalchemy_func, text
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
 
@@ -491,7 +491,7 @@ class FinClass(WorkerInterface):
       self.logger.info('Commit bulk configs (%s), entries (%s), please wait',
                        len(app_cfgs), len(app_values))
       for sql_str in inserts:
-        session.execute(sql_str)
+        session.execute(text(sql_str))
       session.commit()
       self.logger.info('End bulk inserts')
 

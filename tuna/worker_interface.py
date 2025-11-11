@@ -44,6 +44,7 @@ from time import sleep
 from typing import List, Tuple, Union, Set, Optional, Any, Dict
 from sqlalchemy.exc import IntegrityError, OperationalError, NoInspectionAvailable
 from sqlalchemy.inspection import inspect
+from sqlalchemy import text
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.machine import Machine
@@ -283,7 +284,7 @@ class WorkerInterface(Process):
                 job_set_attr = ['state']
                 query: str = gen_update_query(job, job_set_attr,
                                               self.dbt.job_table.__tablename__)
-                session.execute(query)
+                session.execute(text(query))
 
               session.commit()
               self.job_queue_push(job_rows)
@@ -349,7 +350,7 @@ class WorkerInterface(Process):
                                     self.dbt.job_table.__tablename__)
 
       def callback() -> bool:
-        session.execute(query)
+        session.execute(text(query))
         session.commit()
         return True
 
