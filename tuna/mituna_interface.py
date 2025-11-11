@@ -369,6 +369,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     retry_delay = 5  # seconds
     consecutive_empty_fetches = 0
     max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
+    poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 60))
 
     while True:
       # Retry loop for database operations
@@ -382,7 +383,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 self.logger.info(
                     "Waiting for our current batch to progress before enqueuing more"
                 )
-                return  # Exit gracefully
+                time.sleep(poll_interval)
+                break  # Break retry loop, continue main loop to check again
 
             # Get jobs from database
             job_list = self.get_jobs(
@@ -402,9 +404,9 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 self.logger.info(
                     'No new jobs after %d attempts. Exiting enqueue loop.',
                     max_empty_fetches)
-                return  # Exit gracefully
+                return  # Exit gracefully - truly no more jobs
 
-              time.sleep(60)  # Wait before next check
+              time.sleep(poll_interval)  # Wait before next check
               break  # Break retry loop, continue main loop
 
             # Reset counter when jobs are found
@@ -452,9 +454,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 'Max retries exceeded for database operation. Exiting.')
             raise
 
-      # If we got here with no jobs, the consecutive_empty_fetches logic handled it
-      if not job_list:
-        continue
+      # Continue polling - either waiting for progress or for new jobs
+      # The loop will naturally continue checking
 
   def should_enqueue_more_jobs(self, session, current_batch_size):
     """Check if we should enqueue more jobs based on THIS instance's progress"""
@@ -613,11 +614,6 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     # set job count to 1 until first job fetch is finished
     job_counter = Value("i", 1)
     try:
-      enqueue_proc = Process(target=self.enqueue_jobs,
-                             args=[job_counter, job_batch_size, q_name])
-      # Start enqueue proc
-      enqueue_proc.start()
-
       # cleanup old results
       cleanup_proc = Process(target=self.async_wrap,
                              args=(self.cleanup_redis_results, self.prefix))
@@ -630,23 +626,14 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       self.logger.info("Starting consume thread")
       consume_proc.start()
 
-      enqueue_proc.join()
-      # enqueue finished first fetch, remove hold on job_counter
-      with job_counter_lock:
-        job_counter.value = job_counter.value - 1
+      # Start enqueue proc - let it run continuously with persistent state
+      enqueue_proc = Process(target=self.enqueue_jobs,
+                             args=[job_counter, job_batch_size, q_name])
+      enqueue_proc.start()
 
-      # Progress-aware polling - shorter intervals, smarter enqueuing
-      poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 5))
-
-      # check for new jobs
-      while consume_proc.is_alive():
-        enqueue_proc = Process(target=self.enqueue_jobs,
-                               args=[job_counter, job_batch_size, q_name])
-        enqueue_proc.start()
-        enqueue_proc.join()
-        time.sleep(poll_interval)  # Shorter, configurable polling
-
+      # Wait for both processes to complete naturally
       consume_proc.join()
+      enqueue_proc.join()
 
     except (
         KeyboardInterrupt,
