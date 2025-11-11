@@ -379,7 +379,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 self.logger.info(
                     "Waiting for our current batch to progress before enqueuing more"
                 )
-                return  # Exit gracefully
+                break  # Exit retry loop, will wait and check again
 
             # Get jobs from database
             job_list = self.get_jobs(
@@ -447,6 +447,12 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
             self.logger.error(
                 'Max retries exceeded for database operation. Exiting.')
             raise
+
+      # If we broke out because we're waiting for progress, sleep before next check
+      if current_batch_size > 0 and (not job_list or not self.should_enqueue_more_jobs(None, current_batch_size)):
+        self.logger.info("Sleeping 60s before checking for more jobs...")
+        time.sleep(60)
+        continue
 
       # If we got here with no jobs, the consecutive_empty_fetches logic handled it
       if not job_list:
