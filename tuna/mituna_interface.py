@@ -379,7 +379,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
             # Check if we should enqueue more jobs based on OUR progress
             # Skip check only on the very first batch
             if not first_batch:
-              if not self.should_enqueue_more_jobs(session, current_batch_size):
+              if not self.should_enqueue_more_jobs(session, job_batch_size):
                 self.logger.info(
                     "Waiting for our current batch to progress before enqueuing more"
                 )
@@ -457,13 +457,13 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       # Continue polling - either waiting for progress or for new jobs
       # The loop will naturally continue checking
 
-  def should_enqueue_more_jobs(self, session, current_batch_size):
+  def should_enqueue_more_jobs(self, session, job_batch_size):
     """Check if we should enqueue more jobs based on THIS instance's progress"""
     # Count only jobs claimed by this machine instance
     our_in_progress_count = len(self.claimed_job_ids - self.completed_job_ids)
 
     # Allow enqueuing when less than 25% of our claimed jobs are still in progress
-    progress_threshold = current_batch_size * self.progress_factor
+    progress_threshold = job_batch_size * self.progress_factor
 
     self.logger.info(
         "Our jobs in progress: %d, completed: %d, threshold: %d",
@@ -762,9 +762,6 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
         # Extract job ID from context to track completion
         job_id = self.extract_job_id_from_context(context)
-        if job_id and job_id in self.claimed_job_ids:
-          self.completed_job_ids.add(job_id)
-          self.logger.info("Marked job %s as completed", job_id)
 
       except KeyError as kerr:
         self.logger.error(kerr)
@@ -778,7 +775,40 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       else:
         raise CustomError("Unsupported tuning operation")
 
+      # Update tracking after processing to get the final job state
+      if job_id and job_id in self.claimed_job_ids:
+        # Check the final state of the job after processing
+        final_state = self.get_job_final_state(session, job_id)
+        
+        if final_state in ['evaluated', 'errored']:
+          # Job is truly complete
+          self.completed_job_ids.add(job_id)
+          self.logger.info("Marked job %s as completed with state: %s", job_id, final_state)
+        elif final_state == 'compiled':
+          # Job failed and was reset to compiled for retry
+          # Remove from claimed so it can be re-grabbed
+          self.claimed_job_ids.discard(job_id)
+          self.logger.info("Job %s failed and reset to 'compiled' - removed from claimed set for retry", job_id)
+        else:
+          self.logger.warning("Job %s has unexpected final state: %s", job_id, final_state)
+
       return True
+
+  def get_job_final_state(self, session, job_id):
+    """Query the database to get the current state of a job"""
+    try:
+      if self.dbt is not None:
+        query = f"""
+          SELECT state FROM {self.dbt.job_table.__tablename__}
+          WHERE id = {job_id}
+        """
+        result = session.execute(text(query)).fetchone()
+        if result:
+          return result[0]
+      return None
+    except Exception as err:  # pylint: disable=broad-exception-caught
+      self.logger.error("Error querying job state for job %s: %s", job_id, err)
+      return None
 
   def extract_job_id_from_context(self, context):
     """Extract job ID from celery task context"""

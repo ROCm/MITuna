@@ -215,7 +215,16 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result=""):
     job.result = result
   if increment_retries:
     job_set_attr.append('retries')
-    job.retries += 1
+    # Query current retry count from database to avoid using stale context data
+    query_retries = f"SELECT retries FROM {dbt.job_table.__tablename__} WHERE id = {job.id}"
+    current_retries = session.execute(text(query_retries)).scalar()
+    if current_retries is not None:
+      job.retries = current_retries + 1
+      LOGGER.info('Job %s retry count: %d -> %d', job.id, current_retries, job.retries)
+    else:
+      # Fallback if query fails
+      job.retries = getattr(job, 'retries', 0) + 1
+      LOGGER.warning('Could not query current retries for job %s, using fallback', job.id)
 
   #pylint: disable=duplicate-code
   if '_start' in state:
