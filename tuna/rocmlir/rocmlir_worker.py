@@ -35,6 +35,7 @@ import logging
 import traceback
 
 from sqlalchemy.inspection import inspect
+from sqlalchemy import text
 
 from tenacity import Retrying, stop_after_attempt, before_sleep_log, wait_random
 
@@ -94,7 +95,7 @@ class RocMLIRWorker(WorkerInterface):
     self.logger.info('Inserting results for job_id=%s', self.job.id)
     query = gen_insert_query(obj, self.result_attr,
                              self.dbt.results.__tablename__)
-    session.execute(query)
+    session.execute(text(query))
     session.commit()
     return True
 

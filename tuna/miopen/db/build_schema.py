@@ -26,6 +26,7 @@
 ###############################################################################
 """ Module for creating DB tables"""
 from sqlalchemy.exc import OperationalError
+from sqlalchemy import text
 from tuna.miopen.db.get_db_tables import get_miopen_tables
 from tuna.miopen.db.triggers import get_miopen_triggers, drop_miopen_triggers
 from tuna.db_engine import ENGINE
@@ -41,15 +42,16 @@ def recreate_triggers(drop_triggers, create_triggers):
 
   with ENGINE.connect() as conn:
     for dtg in drop_triggers:
-      conn.execute(f"drop trigger if exists {dtg}")
+      conn.execute(text(f"drop trigger if exists {dtg}"))
     for trg in create_triggers:
       try:
-        conn.execute(trg)
+        conn.execute(text(trg))
       except OperationalError as oerr:
         LOGGER.warning("Operational Error occurred while adding trigger: '%s'",
                        trg)
         LOGGER.info('%s \n', oerr)
         continue
+    conn.commit()
 
   return True
 
