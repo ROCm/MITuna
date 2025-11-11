@@ -138,6 +138,20 @@ def session_retry(session: DbSession,
   return False
 
 
+def sanitize_sql_string(value: str, max_length: int = 2000) -> str:
+  """Sanitize string for safe SQL insertion by escaping special characters"""
+  # Truncate to safe length to avoid excessively long queries
+  if len(value) > max_length:
+    value = value[:max_length] + '... [truncated]'
+  
+  # Escape backslashes first (must be done before quotes)
+  value = value.replace('\\', '\\\\')
+  # Escape single quotes by doubling them (SQL standard)
+  value = value.replace("'", "''")
+  
+  return value
+
+
 def get_attr_vals(obj, attr_list):
   """create the dictionary of values for the attribute list """
   attr_vals = {}
@@ -146,10 +160,14 @@ def get_attr_vals(obj, attr_list):
     if val is None:
       val = 'NULL'
     elif isinstance(val, (datetime, str)):
-      val = f"'{val}'"
+      # Sanitize and escape the string value
+      sanitized = sanitize_sql_string(str(val))
+      val = f"'{sanitized}'"
     elif isinstance(val, bytes):
       val = val.decode('utf-8')
-      val = f"'{val}'"
+      # Sanitize and escape the string value
+      sanitized = sanitize_sql_string(val)
+      val = f"'{sanitized}'"
     else:
       val = str(val)
     attr_vals[attr] = val
