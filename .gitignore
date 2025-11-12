@@ -9,3 +9,5 @@ venv
 MACHINE_TEST_SUMMARY.md
 tests/TEST_COVERAGE_MACHINE.md
 tests/run_machine_tests.sh
+QUICK_TEST_GUIDE.md
+tests/TEST_FIXES_MACHINE.md
