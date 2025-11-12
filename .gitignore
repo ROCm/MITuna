@@ -4,3 +4,8 @@ __pycache__
 *.orig
 myvenv
 venv
+
+# Temporary files
+MACHINE_TEST_SUMMARY.md
+tests/TEST_COVERAGE_MACHINE.md
+tests/run_machine_tests.sh
