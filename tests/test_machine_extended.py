@@ -89,15 +89,21 @@ def test_get_avail_gpus_empty():
   m.avail_gpus = None
   m.gpus = []
 
-  # Mock get_properties to populate gpus
-  with patch.object(m, 'get_properties') as mock_get_props:
-    mock_get_props.return_value = ([], [{'arch': 'gfx908', 'num_cu': 120}])
+  # Mock get_properties to populate gpus (with side effect)
+  def mock_get_properties_side_effect():
+    """Mock that also sets self.gpus like the real method does"""
+    m.gpus = [{'arch': 'gfx908', 'num_cu': 120}]
+    return ([], m.gpus)
 
+  with patch.object(
+      m, 'get_properties',
+      side_effect=mock_get_properties_side_effect) as mock_get_props:
     gpus = m.get_avail_gpus()
 
     # get_properties should be called when gpus is empty
     mock_get_props.assert_called_once()
-    assert len(gpus) > 0
+    # Should now have GPU 0 available
+    assert gpus == [0]
 
 
 def test_get_gpu_out_of_bounds():
