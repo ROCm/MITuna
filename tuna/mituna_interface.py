@@ -26,7 +26,7 @@
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
 import os
-from multiprocessing import Value, Lock, Queue as mpQueue, Process
+from multiprocessing import Value, Lock, Queue as mpQueue, Process, Manager
 from typing import Optional, Dict, Any, List
 from io import StringIO
 from functools import lru_cache
@@ -361,13 +361,16 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
   def _should_wait_for_progress(self, job_batch_size):
     """Check if we should wait before fetching more jobs based on progress"""
-    our_in_progress_count = len(self.claimed_job_ids - self.completed_job_ids)
+    # Convert to sets for set operations
+    claimed_set = set(self.claimed_job_ids)
+    completed_set = set(self.completed_job_ids)
+    our_in_progress_count = len(claimed_set - completed_set)
     progress_threshold = job_batch_size * self.progress_factor
 
     self.logger.info(
         "Jobs in progress: %d, completed: %d, threshold: %.0f",
         our_in_progress_count,
-        len(self.completed_job_ids),
+        len(completed_set),
         progress_threshold,
     )
 
@@ -404,10 +407,10 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
   def _process_job_batch(self, job_list, job_counter, q_name):
     """Process a batch of jobs by enqueuing them to Celery"""
-    # Track the jobs we just claimed
-    new_job_ids = {job.id for job in job_list}
-    self.claimed_job_ids.update(new_job_ids)
-    self.logger.info("Claimed jobs: %s", list(new_job_ids))
+    # Track the jobs we just claimed (extend list with new job IDs)
+    new_job_ids = [job.id for job in job_list]
+    self.claimed_job_ids.extend(new_job_ids)
+    self.logger.info("Claimed %d jobs", len(new_job_ids))
 
     # Update job counter
     with job_counter_lock:
@@ -473,15 +476,20 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
   def cleanup_completed_jobs(self):
     """Periodically clean up old job tracking data"""
-    # Keep sets from growing indefinitely
+    # Keep lists from growing indefinitely
     max_tracking_size = 10000
     if len(self.completed_job_ids) > max_tracking_size:
       # Keep only the most recent completions
       recent_completions = list(self.completed_job_ids)[-5000:]
-      self.completed_job_ids = set(recent_completions)
-
+      # Clear and repopulate the shared list
+      del self.completed_job_ids[:]
+      self.completed_job_ids.extend(recent_completions)
+      
       # Remove old claimed jobs that are completed
-      self.claimed_job_ids -= set(recent_completions[:-1000])
+      completed_set = set(recent_completions[:-1000])
+      claimed_list = [job_id for job_id in self.claimed_job_ids if job_id not in completed_set]
+      del self.claimed_job_ids[:]
+      self.claimed_job_ids.extend(claimed_list)
 
   async def cleanup_redis_results(self, prefix):
     """Remove stale redis results by key"""
@@ -610,6 +618,12 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
     # set job count to 1 until first job fetch is finished
     job_counter = Value("i", 1)
+    
+    # Create shared data structures for cross-process communication
+    manager = Manager()
+    self.claimed_job_ids = manager.list()  # Shared list across processes
+    self.completed_job_ids = manager.list()  # Shared list across processes
+    
     try:
       # cleanup old results
       cleanup_proc = Process(target=self.async_wrap,
@@ -778,14 +792,18 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
         final_state = self.get_job_final_state(session, job_id)
         
         if final_state in ['evaluated', 'errored']:
-          # Job is truly complete
-          self.completed_job_ids.add(job_id)
+          # Job is truly complete - append to completed list
+          self.completed_job_ids.append(job_id)
           self.logger.info("Marked job %s as completed with state: %s", job_id, final_state)
         elif final_state == 'compiled':
           # Job failed and was reset to compiled for retry
           # Remove from claimed so it can be re-grabbed
-          self.claimed_job_ids.discard(job_id)
-          self.logger.info("Job %s failed and reset to 'compiled' - removed from claimed set for retry", job_id)
+          try:
+            self.claimed_job_ids.remove(job_id)
+            self.logger.info("Job %s failed and reset to 'compiled' - removed from claimed list for retry", job_id)
+          except ValueError:
+            # Job ID not in list, ignore
+            pass
         else:
           self.logger.warning("Job %s has unexpected final state: %s", job_id, final_state)
 
