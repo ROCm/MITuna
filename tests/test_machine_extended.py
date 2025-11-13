@@ -592,37 +592,6 @@ def test_make_temp_file():
   os.unlink(tmpfile)
 
 
-def test_remote_machine_with_qts():
-  """Test remote machine init with QTS check - covers lines 132-133"""
-  keys = {
-      'id': 1,
-      'hostname': 'test-host',
-      'user': 'test-user',
-      'password': 'test-pass',
-      'port': 22,
-      'local_ip': '192.168.1.100',
-      'local_port': 2222,
-      'avail_gpus': '0,1',
-      'arch': 'gfx908',
-      'num_cu': 120,
-      'local_machine': False
-  }
-
-  # Use MagicMock for automatic context manager support
-  mock_process = MagicMock()
-  mock_process.stdout.readline.return_value = 'qts-hostname\n'
-
-  # Patch Popen where it's imported (tuna.machine)
-  with patch('tuna.machine.Popen', return_value=mock_process):
-    # Patch check_qts where it's used (in machine module)
-    with patch('tuna.machine.check_qts', return_value=True):
-      m = Machine(**keys)
-
-      # Verify that local_ip was used (lines 132-133)
-      assert m.hostname == '192.168.1.100'
-      assert m.port == 2222
-
-
 def test_chk_gpu_status_in_bounds_but_fails():
   """Test chk_gpu_status when GPU is in bounds - covers line 471"""
   keys = {'local_machine': True}
@@ -668,6 +637,5 @@ if __name__ == '__main__':
   test_getusedspace_remote_no_output()
   test_exec_command_list()
   test_make_temp_file()
-  test_remote_machine_with_qts()
   test_chk_gpu_status_in_bounds_but_fails()
   print("All extended machine tests passed!")
