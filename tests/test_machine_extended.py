@@ -608,15 +608,15 @@ def test_remote_machine_with_qts():
       'local_machine': False
   }
 
-  with patch('subprocess.Popen') as mock_popen:
-    mock_process = Mock()
-    mock_process.stdout = Mock()
-    # Return a hostname that will trigger QTS check
-    mock_process.stdout.readline = Mock(return_value='qts-hostname\n')
-    mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
-    mock_popen.return_value.__exit__ = Mock(return_value=False)
+  with patch('tuna.utils.utility.check_qts', return_value=True):
+    with patch('subprocess.Popen') as mock_popen:
+      mock_process = Mock()
+      mock_process.stdout = Mock()
+      # Return a hostname that will trigger QTS check
+      mock_process.stdout.readline = Mock(return_value='qts-hostname\n')
+      mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
+      mock_popen.return_value.__exit__ = Mock(return_value=False)
 
-    with patch('tuna.machine.check_qts', return_value=True):
       m = Machine(**keys)
 
       # Verify that local_ip was used (lines 132-133)
