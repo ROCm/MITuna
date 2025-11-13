@@ -592,6 +592,59 @@ def test_make_temp_file():
   os.unlink(tmpfile)
 
 
+def test_remote_machine_with_qts():
+  """Test remote machine init with QTS check - covers lines 132-133"""
+  keys = {
+      'id': 1,
+      'hostname': 'test-host',
+      'user': 'test-user',
+      'password': 'test-pass',
+      'port': 22,
+      'local_ip': '192.168.1.100',
+      'local_port': 2222,
+      'avail_gpus': '0,1',
+      'arch': 'gfx908',
+      'num_cu': 120,
+      'local_machine': False
+  }
+
+  with patch('subprocess.Popen') as mock_popen:
+    mock_process = Mock()
+    mock_process.stdout = Mock()
+    # Return a hostname that will trigger QTS check
+    mock_process.stdout.readline = Mock(return_value='qts-hostname\n')
+    mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
+    mock_popen.return_value.__exit__ = Mock(return_value=False)
+
+    with patch('tuna.machine.check_qts', return_value=True):
+      m = Machine(**keys)
+
+      # Verify that local_ip was used (lines 132-133)
+      assert m.hostname == '192.168.1.100'
+      assert m.port == 2222
+
+
+def test_chk_gpu_status_in_bounds_but_fails():
+  """Test chk_gpu_status when GPU is in bounds - covers line 471"""
+  keys = {'local_machine': True}
+  m = Machine(**keys)
+
+  # Set avail_gpus explicitly
+  m.avail_gpus = [0, 1, 2, 3]
+
+  # Mock connection that returns output without the expected arch
+  mock_cnx = Mock()
+  mock_stdout = StringIO("gfx906\n")  # Wrong arch
+  mock_cnx.exec_command = Mock(return_value=(0, mock_stdout, StringIO()))
+
+  with patch.object(m, 'connect', return_value=mock_cnx):
+    with patch.object(m, 'get_gpu', return_value={'arch': 'gfx908'}):
+      # Use GPU ID 2 which is in bounds
+      result = m.chk_gpu_status(2)
+      # Should still fail due to arch mismatch
+      assert result is False
+
+
 if __name__ == '__main__':
   test_remote_machine_init()
   test_get_avail_gpus_empty()
@@ -616,4 +669,6 @@ if __name__ == '__main__':
   test_getusedspace_remote_no_output()
   test_exec_command_list()
   test_make_temp_file()
+  test_remote_machine_with_qts()
+  test_chk_gpu_status_in_bounds_but_fails()
   print("All extended machine tests passed!")
