@@ -8,7 +8,7 @@
 """Tests for MachineManagementInterface module"""
 
 import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, mock_open
 import socket
 import paramiko
 
@@ -25,13 +25,14 @@ def test_key_from_file_found():
   with patch('os.path.isfile', return_value=True):
     with patch('os.path.expanduser',
                side_effect=lambda x: x.replace('~', '/home/user')):
-      # Mock the key loading
-      mock_rsa_key = Mock()
-      with patch('paramiko.rsakey.RSAKey.from_private_key_file',
-                 return_value=mock_rsa_key):
-        keys = key_from_file()
-        assert len(keys) > 0
-        assert mock_rsa_key in keys
+      # Mock reading key file contents
+      with patch('builtins.open', mock_open(read_data='dummy_key')):
+        mock_rsa_key = Mock()
+        with patch('paramiko.rsakey.RSAKey.from_private_key_file',
+                   return_value=mock_rsa_key):
+          keys = key_from_file()
+          assert len(keys) > 0
+          assert mock_rsa_key in keys
 
 
 def test_key_from_file_not_found():
@@ -279,20 +280,17 @@ def test_run_ipmi_command_direct_success():
   """Test run_ipmi_command when direct ipmitool works - covers lines 232-270"""
   mmi = MachineManagementInterface('192.168.1.100', 623, 'admin', 'password')
 
-  mock_process = Mock()
-  mock_process.stderr = Mock()
-  mock_process.stderr.readlines = Mock(return_value=[])
+  mock_process = MagicMock()
+  mock_process.stderr.readlines.return_value = []
 
   with patch('subprocess.Popen', return_value=mock_process):
-    with patch.object(mock_process, '__enter__', return_value=mock_process):
-      with patch.object(mock_process, '__exit__', return_value=False):
-        # This should work without gateway
-        # Note: The actual implementation has issues, but we test what's there
-        try:
-          retcode = mmi.run_ipmi_command('chassis status')
-        except:
-          # Expected due to implementation issues
-          pass
+    # This should work without gateway
+    # Note: The actual implementation has issues, but we test what's there
+    try:
+      retcode = mmi.run_ipmi_command('chassis status')
+    except:
+      # Expected due to implementation issues
+      pass
 
 
 def test_run_ipmi_command_via_gateway():
@@ -300,10 +298,8 @@ def test_run_ipmi_command_via_gateway():
   mmi = MachineManagementInterface('192.168.1.100', 623, 'admin', 'password')
 
   # Mock Popen to return error (triggers gateway path)
-  mock_process = Mock()
-  mock_process.stderr = Mock()
-  mock_process.stderr.readlines = Mock(
-      return_value=['Error: connection failed'])
+  mock_process = MagicMock()
+  mock_process.stderr.readlines.return_value = ['Error: connection failed']
 
   mock_ssh = Mock()
   mock_out_ch = Mock()
@@ -318,23 +314,20 @@ def test_run_ipmi_command_via_gateway():
   MachineManagementInterface.gateway_session = None
 
   with patch('subprocess.Popen', return_value=mock_process):
-    with patch.object(mock_process, '__enter__', return_value=mock_process):
-      with patch.object(mock_process, '__exit__', return_value=False):
-        with patch.object(mmi, 'connect_to_gateway', return_value=mock_ssh):
-          try:
-            retcode = mmi.run_ipmi_command('chassis status')
-          except:
-            # Implementation has issues, but we're covering the lines
-            pass
+    with patch.object(mmi, 'connect_to_gateway', return_value=mock_ssh):
+      try:
+        retcode = mmi.run_ipmi_command('chassis status')
+      except:
+        # Implementation has issues, but we're covering the lines
+        pass
 
 
 def test_run_ipmi_command_ssh_exception():
   """Test run_ipmi_command with SSHException - covers lines 263-264"""
   mmi = MachineManagementInterface('192.168.1.100', 623, 'admin', 'password')
 
-  mock_process = Mock()
-  mock_process.stderr = Mock()
-  mock_process.stderr.readlines = Mock(return_value=['Error'])
+  mock_process = MagicMock()
+  mock_process.stderr.readlines.return_value = ['Error']
 
   mock_ssh = Mock()
   mock_ssh.exec_command.side_effect = paramiko.ssh_exception.SSHException(
@@ -343,12 +336,10 @@ def test_run_ipmi_command_ssh_exception():
   MachineManagementInterface.gateway_session = mock_ssh
 
   with patch('subprocess.Popen', return_value=mock_process):
-    with patch.object(mock_process, '__enter__', return_value=mock_process):
-      with patch.object(mock_process, '__exit__', return_value=False):
-        try:
-          retcode = mmi.run_ipmi_command('chassis status')
-        except:
-          pass  # Expected
+    try:
+      retcode = mmi.run_ipmi_command('chassis status')
+    except:
+      pass  # Expected
 
 
 def test_restart_server_ipmi_backend():
