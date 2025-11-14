@@ -9,6 +9,18 @@
 
 import sys
 from unittest.mock import Mock, patch, MagicMock, mock_open
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def fast_sleep(monkeypatch):
+  """Automatically stub sleep and limit retries for all tests"""
+  monkeypatch.setattr('tuna.machine_management_interface.sleep',
+                      lambda *args, **kwargs: None)
+  monkeypatch.setattr('tuna.machine_management_interface.NUM_SSH_RETRIES', 3)
+
+
 import socket
 import paramiko
 
