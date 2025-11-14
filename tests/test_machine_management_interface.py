@@ -161,7 +161,8 @@ def test_connect_to_gateway_ssh_exception_retry():
   ]
 
   with patch('paramiko.SSHClient', return_value=mock_ssh):
-    with patch('time.sleep'):  # Speed up the test
+    with patch(
+        'tuna.machine_management_interface.sleep'):  # Patch where sleep is used
       result = mmi.connect_to_gateway('gateway.example.com', 22, 'user')
 
       # Should eventually succeed
@@ -179,7 +180,7 @@ def test_connect_to_gateway_socket_error():
   ]
 
   with patch('paramiko.SSHClient', return_value=mock_ssh):
-    with patch('time.sleep'):
+    with patch('tuna.machine_management_interface.sleep'):
       result = mmi.connect_to_gateway('gateway.example.com', 22, 'user')
 
       assert result == mock_ssh
@@ -194,8 +195,9 @@ def test_connect_to_gateway_abort_file():
       'Connection failed')
 
   with patch('paramiko.SSHClient', return_value=mock_ssh):
-    with patch('os.path.exists', return_value=True):  # Abort file exists
-      with patch('time.sleep'):
+    with patch('tuna.machine_management_interface.os.path.exists',
+               return_value=True):
+      with patch('tuna.machine_management_interface.sleep'):
         result = mmi.connect_to_gateway('gateway.example.com', 22, 'user')
 
         # Should abort and return None
@@ -212,12 +214,15 @@ def test_connect_to_gateway_retries_exhausted():
       'Connection failed')
 
   with patch('paramiko.SSHClient', return_value=mock_ssh):
-    with patch('os.path.exists', return_value=False):  # No abort file
-      with patch('time.sleep'):
-        result = mmi.connect_to_gateway('gateway.example.com', 22, 'user')
+    with patch('tuna.machine_management_interface.os.path.exists',
+               return_value=False):
+      # Reduce retries to speed up test
+      with patch('tuna.machine_management_interface.NUM_SSH_RETRIES', 2):
+        with patch('tuna.machine_management_interface.sleep'):
+          result = mmi.connect_to_gateway('gateway.example.com', 22, 'user')
 
-        # Should return None after exhausting retries
-        assert result is None
+          # Should return None after exhausting retries
+          assert result is None
 
 
 def test_run_bmc_command_existing_tunnel():
