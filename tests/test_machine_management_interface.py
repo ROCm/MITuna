@@ -37,14 +37,24 @@ def test_key_from_file_found():
   with patch('os.path.isfile', return_value=True):
     with patch('os.path.expanduser',
                side_effect=lambda x: x.replace('~', '/home/user')):
-      # Mock reading key file contents
-      with patch('builtins.open', mock_open(read_data='dummy_key')):
-        mock_rsa_key = Mock()
-        with patch('paramiko.rsakey.RSAKey.from_private_key_file',
-                   return_value=mock_rsa_key):
+      with patch(
+          'builtins.open',
+          mock_open(read_data='-----BEGIN KEY-----\nfoo\n-----END KEY-----\n')):
+        mock_key = Mock()
+        patches = [
+            patch('paramiko.rsakey.RSAKey.from_private_key_file',
+                  return_value=mock_key),
+            patch('paramiko.dsskey.DSSKey.from_private_key_file',
+                  return_value=mock_key),
+            patch('paramiko.ecdsakey.ECDSAKey.from_private_key_file',
+                  return_value=mock_key),
+            patch('paramiko.ed25519key.Ed25519Key.from_private_key_file',
+                  return_value=mock_key),
+        ]
+        with patches[0], patches[1], patches[2], patches[3]:
           keys = key_from_file()
           assert len(keys) > 0
-          assert mock_rsa_key in keys
+          assert mock_key in keys
 
 
 def test_key_from_file_not_found():
