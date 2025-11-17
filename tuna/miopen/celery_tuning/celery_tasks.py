@@ -36,14 +36,34 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
 from tuna.utils.celery_utils import prep_default_kwargs, get_cached_worker
 from tuna.miopen.miopen_lib import Q_NAME
+from tuna.dbBase.sql_alchemy import DbSession
 
 logger = get_task_logger(__name__)
 
 
 @celeryd_after_setup.connect
 def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-argument
-  """Capture worker name"""
+  """Capture worker name and ensure machine is registered"""
   app.worker_name = sender
+  
+  # Ensure this machine is in the database
+  global cached_machine
+  with DbSession() as session:
+    # Check if machine exists by hostname
+    existing = session.query(Machine).filter(
+        Machine.hostname == cached_machine.hostname
+    ).first()
+    
+    if not existing:
+      # Insert the machine
+      session.add(cached_machine)
+      session.commit()
+      session.refresh(cached_machine)
+      logger.info("Registered machine %s with id %s", cached_machine.hostname, cached_machine.id)
+    else:
+      # Use existing machine id
+      cached_machine.id = existing.id
+      logger.info("Using existing machine %s with id %s", cached_machine.hostname, cached_machine.id)
 
 
 cached_machine = Machine(local_machine=True)
@@ -91,4 +111,8 @@ def celery_enqueue(context):
 
   worker = prep_worker(copy.deepcopy(context))
   ret = worker.run()
+  
+  # Add machine_id to the context before returning
+  context['machine_id'] = cached_machine.id
+  
   return {"ret": ret, "context": context}

@@ -862,6 +862,9 @@ class MIOpen(MITunaInterface):
     result_str = ""
     pending = []
     orig_state = "compiled"
+    
+    # Extract machine_id from context
+    machine_id = context.get('machine_id', None)
 
     try:
       if fin_json:
@@ -908,7 +911,7 @@ class MIOpen(MITunaInterface):
       if failed_job:
         if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):  # pylint: disable=no-member
           self.logger.warning("max job retries exhausted, setting to errored")
-          set_job_state(session, job, self.dbt, "errored", result=result_str)
+          set_job_state(session, job, self.dbt, "errored", result=result_str, machine_id=machine_id)
         else:
           self.logger.warning("resetting job state to %s, incrementing retries",
                               orig_state)
@@ -919,10 +922,11 @@ class MIOpen(MITunaInterface):
               orig_state,
               increment_retries=True,
               result=result_str,
+              machine_id=machine_id,
           )
       else:
         self.logger.info("\n\n Setting job state to evaluated")
-        set_job_state(session, job, self.dbt, "evaluated", result=result_str)
+        set_job_state(session, job, self.dbt, "evaluated", result=result_str, machine_id=machine_id)
         clean_cache_table(self.dbt, job)
     except (OperationalError, IntegrityError) as err:
       self.logger.warning("FinBuild: Unable to update Database %s", err)
