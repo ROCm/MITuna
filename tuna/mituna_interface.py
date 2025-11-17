@@ -449,6 +449,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       # 1. Check if we should wait for progress (skip on first batch)
       if not is_first_batch and self._should_wait_for_progress(job_batch_size):
         self.logger.info("Waiting for current batch to progress before fetching more jobs")
+        # Reset consecutive_empty_fetches since we're waiting for progress, not out of jobs
+        consecutive_empty_fetches = 0
         time.sleep(poll_interval)
         continue
 
