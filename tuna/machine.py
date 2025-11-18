@@ -38,6 +38,7 @@ import logging
 
 from typing import Set, List, Optional, TextIO, Tuple, Dict, Union, Any, Callable
 from sqlalchemy import Text, Column, orm
+from sqlalchemy.orm import validates
 from sqlalchemy.dialects.mysql import TINYINT, INTEGER
 
 from paramiko import SSHClient
@@ -144,6 +145,13 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
       self.gpus = []
 
     self.logger.info("avail gpus: %s", self.avail_gpus)
+
+  @validates('avail_gpus')
+  def validate_avail_gpus(self, key, value):
+    """Convert avail_gpus to comma-separated string for database storage"""
+    if isinstance(value, list):
+      return ','.join(map(str, value))
+    return value if value else ''
 
   def set_logger(self, logger: logging.Logger) -> bool:
     """set logging for machine, use this to associate the machine with a subprocess"""

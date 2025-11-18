@@ -74,13 +74,6 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
     cached_machine.hostname = socket.gethostname()
     logger.info("Initialized hostname: %s", cached_machine.hostname)
   
-  # Ensure avail_gpus is properly formatted as string
-  avail_gpus_str = cached_machine.avail_gpus
-  if isinstance(avail_gpus_str, list):
-    avail_gpus_str = ','.join(map(str, avail_gpus_str))
-  elif avail_gpus_str is None:
-    avail_gpus_str = ''
-  
   with DbSession() as session:
     # Check for unique constraint on hostname (only check once)
     if not check_hostname_unique_constraint(session):
@@ -99,13 +92,15 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
     if not existing:
       # Create a new machine object for database insertion
       # Don't use cached_machine directly as it has id=0 hardcoded
+      # Note: avail_gpus can be passed as a list - the @validates decorator
+      # in Machine class will automatically convert it to a string for database storage
       new_machine = Machine(
           hostname=cached_machine.hostname,
           user=os.getenv('USER', 'unknown'),
           password='',
           arch=cached_machine.arch if cached_machine.arch else 'unknown',
           num_cu=cached_machine.num_cu if cached_machine.num_cu else 64,
-          avail_gpus=avail_gpus_str
+          avail_gpus=cached_machine.avail_gpus if cached_machine.avail_gpus else []
       )
       
       try:
@@ -135,7 +130,7 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
         session.rollback()
         logger.error("Error registering machine: %s", e)
         logger.error("Machine details - hostname: %s, arch: %s, num_cu: %s, avail_gpus: %s",
-                     cached_machine.hostname, cached_machine.arch, cached_machine.num_cu, avail_gpus_str)
+                     cached_machine.hostname, cached_machine.arch, cached_machine.num_cu, cached_machine.avail_gpus)
         raise
     else:
       # Use existing machine id
