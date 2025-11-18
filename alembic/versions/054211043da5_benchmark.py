@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import func as sqla_func
 from sqlalchemy import Column, Integer, DateTime, text, ForeignKey, String
-from tuna.miopen.benchmark import ModelEnum, FrameworkEnum
+from tuna.miopen.db.benchmark import ModelEnum, FrameworkEnum
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE, MEDIUMBLOB, LONGBLOB
 from sqlalchemy import Float, BigInteger, String
 from sqlalchemy import Enum

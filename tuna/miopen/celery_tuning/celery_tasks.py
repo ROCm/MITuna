@@ -26,9 +26,11 @@
 #
 ###############################################################################
 """Module to register MIOpen celery tasks"""
+import os
 import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
+from sqlalchemy.exc import IntegrityError
 from tuna.celery_app.celery_app import app
 from tuna.libraries import Operation
 from tuna.machine import Machine
@@ -41,6 +43,23 @@ from tuna.dbBase.sql_alchemy import DbSession
 logger = get_task_logger(__name__)
 
 
+def check_hostname_unique_constraint(session):
+  """Check if hostname has a unique constraint on the machine table"""
+  try:
+    from sqlalchemy import text
+    result = session.execute(text(
+        "SELECT COUNT(*) FROM information_schema.statistics "
+        "WHERE table_schema = DATABASE() "
+        "AND table_name = 'machine' "
+        "AND column_name = 'hostname' "
+        "AND non_unique = 0"
+    )).scalar()
+    return result > 0
+  except Exception as e:  # pylint: disable=broad-exception-caught
+    logger.warning("Could not check for hostname unique constraint: %s", e)
+    return None  # Unknown state
+
+
 @celeryd_after_setup.connect
 def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-argument
   """Capture worker name and ensure machine is registered"""
@@ -49,17 +68,54 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
   # Ensure this machine is in the database
   global cached_machine
   with DbSession() as session:
+    # Check for unique constraint on hostname (only check once)
+    if not check_hostname_unique_constraint(session):
+      logger.warning(
+          "WARNING: The 'machine' table does not have a UNIQUE constraint on 'hostname'. "
+          "This may lead to duplicate machine entries and race conditions. "
+          "Please run: ALTER TABLE machine ADD UNIQUE INDEX idx_hostname (hostname(255)); "
+          "Or apply the Alembic migration: alembic upgrade head"
+      )
+    
     # Check if machine exists by hostname
     existing = session.query(Machine).filter(
         Machine.hostname == cached_machine.hostname
     ).first()
     
     if not existing:
-      # Insert the machine
-      session.add(cached_machine)
-      session.commit()
-      session.refresh(cached_machine)
-      logger.info("Registered machine %s with id %s", cached_machine.hostname, cached_machine.id)
+      # Create a new machine object for database insertion
+      # Don't use cached_machine directly as it has id=0 hardcoded
+      new_machine = Machine(
+          hostname=cached_machine.hostname,
+          user=os.getenv('USER', 'unknown'),
+          password='',
+          arch=cached_machine.arch,
+          num_cu=cached_machine.num_cu,
+          avail_gpus=','.join(map(str, cached_machine.avail_gpus)) if isinstance(cached_machine.avail_gpus, list) else str(cached_machine.avail_gpus)
+      )
+      
+      try:
+        # Insert the machine and let database auto-assign ID
+        session.add(new_machine)
+        session.commit()
+        session.refresh(new_machine)
+        cached_machine.id = new_machine.id
+        logger.info("Registered machine %s with id %s", cached_machine.hostname, cached_machine.id)
+      except IntegrityError:
+        # Race condition: another worker beat us to it
+        # Rollback and query again to get the existing record
+        session.rollback()
+        logger.info("Race condition detected during machine registration, querying existing record")
+        existing = session.query(Machine).filter(
+            Machine.hostname == cached_machine.hostname
+        ).first()
+        if existing:
+          cached_machine.id = existing.id
+          logger.info("Using existing machine %s with id %s (from race condition recovery)", cached_machine.hostname, cached_machine.id)
+        else:
+          # This should never happen, but log it if it does
+          logger.error("Failed to find machine after IntegrityError - this should not happen!")
+          raise
     else:
       # Use existing machine id
       cached_machine.id = existing.id
