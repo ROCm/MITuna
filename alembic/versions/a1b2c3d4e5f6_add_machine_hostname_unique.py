@@ -24,16 +24,13 @@ def upgrade() -> None:
     WHERE m1.id > m2.id 
     AND m1.hostname = m2.hostname
   """)
-  
+
   # Then add the unique constraint on hostname
   # Using prefix length of 255 since hostname is TEXT type
-  op.create_index(
-    'idx_hostname',
-    'machine',
-    ['hostname'],
-    unique=True,
-    mysql_length={'hostname': 255}
-  )
+  op.create_index('idx_hostname',
+                  'machine', ['hostname'],
+                  unique=True,
+                  mysql_length={'hostname': 255})
 
 
 def downgrade() -> None:

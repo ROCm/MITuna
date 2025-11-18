@@ -204,19 +204,25 @@ def get_db_id(db_elems, config_table):
   return cid
 
 
-def set_job_state(session, job, dbt, state, increment_retries=False, result="", machine_id=None):
+def set_job_state(session,
+                  job,
+                  dbt,
+                  state,
+                  increment_retries=False,
+                  result="",
+                  machine_id=None):
   """Update job state for builder/evaluator job_set_attr: List[str]"""
 
   LOGGER.info('Setting job id %s state to %s', job.id, state)
   job_set_attr = ['state', 'gpu_id']
   job.state = state
-  
+
   # Add machine_id if provided
   if machine_id is not None:
     job_set_attr.append('machine_id')
     job.machine_id = machine_id
     LOGGER.info('Setting job %s machine_id to %s', job.id, machine_id)
-  
+
   if result:
     job_set_attr.append('result')
     job.result = result
@@ -227,11 +233,13 @@ def set_job_state(session, job, dbt, state, increment_retries=False, result="", 
     current_retries = session.execute(text(query_retries)).scalar()
     if current_retries is not None:
       job.retries = current_retries + 1
-      LOGGER.info('Job %s retry count: %d -> %d', job.id, current_retries, job.retries)
+      LOGGER.info('Job %s retry count: %d -> %d', job.id, current_retries,
+                  job.retries)
     else:
       # Fallback if query fails
       job.retries = getattr(job, 'retries', 0) + 1
-      LOGGER.warning('Could not query current retries for job %s, using fallback', job.id)
+      LOGGER.warning(
+          'Could not query current retries for job %s, using fallback', job.id)
 
   #pylint: disable=duplicate-code
   if '_start' in state:
