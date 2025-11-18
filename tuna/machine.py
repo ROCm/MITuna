@@ -137,10 +137,14 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
                                             self.ipmi_user, self.ipmi_password)
 
       if not self.avail_gpus is None:
-        self.avail_gpus = [
-            int(val) for val in self.avail_gpus.split(',')  #type: ignore
-        ]  #type: ignore
-        self.num_gpus = len(self.avail_gpus)
+        # Check if it's already a list (from hybrid property getter)
+        if isinstance(self.avail_gpus, list):
+          # Already converted by hybrid property, just use it
+          self.num_gpus = len(self.avail_gpus)
+        elif isinstance(self.avail_gpus, str) and self.avail_gpus:
+          # String from database, convert to list
+          self.avail_gpus = [int(val) for val in self.avail_gpus.split(',')]
+          self.num_gpus = len(self.avail_gpus)
       self.cpus = []
       self.gpus = []
 
