@@ -376,7 +376,10 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
     return our_in_progress_count >= progress_threshold
 
-  def _fetch_jobs_with_retry(self, job_batch_size, max_retries=3, retry_delay=5):
+  def _fetch_jobs_with_retry(self,
+                             job_batch_size,
+                             max_retries=3,
+                             retry_delay=5):
     """Fetch jobs from database with retry logic
     
     Returns:
@@ -395,8 +398,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
           return job_list
 
       except Exception as db_err:  # pylint: disable=broad-exception-caught
-        self.logger.warning('Database error on attempt %d/%d: %s',
-                            attempt + 1, max_retries, db_err)
+        self.logger.warning('Database error on attempt %d/%d: %s', attempt + 1,
+                            max_retries, db_err)
         if attempt < max_retries - 1:
           time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
         else:
@@ -419,7 +422,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     # Get context and enqueue each job
     with DbSession() as session:
       context_list = self.get_context_list(session, job_list)
-    
+
     for context in context_list:
       try:
         self.celery_enqueue_call(context, q_name=q_name)
@@ -439,7 +442,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
   def enqueue_jobs(self, job_counter, job_batch_size, q_name):
     """Enqueue celery jobs with simplified progress tracking"""
     self.logger.info("Starting enqueue")
-    
+
     is_first_batch = True
     consecutive_empty_fetches = 0
     max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
@@ -448,7 +451,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     while True:
       # 1. Check if we should wait for progress (skip on first batch)
       if not is_first_batch and self._should_wait_for_progress(job_batch_size):
-        self.logger.info("Waiting for current batch to progress before fetching more jobs")
+        self.logger.info(
+            "Waiting for current batch to progress before fetching more jobs")
         # Reset consecutive_empty_fetches since we're waiting for progress, not out of jobs
         consecutive_empty_fetches = 0
         time.sleep(poll_interval)
@@ -456,18 +460,19 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
       # 2. Fetch jobs with built-in retry logic
       job_list = self._fetch_jobs_with_retry(job_batch_size)
-      
+
       # 3. Handle empty results
       if not job_list:
         consecutive_empty_fetches += 1
         self.logger.info('No jobs found (attempt %d/%d)',
                          consecutive_empty_fetches, max_empty_fetches)
-        
+
         if consecutive_empty_fetches >= max_empty_fetches:
-          self.logger.info('No more jobs available after %d attempts. Exiting enqueue loop.',
-                           max_empty_fetches)
+          self.logger.info(
+              'No more jobs available after %d attempts. Exiting enqueue loop.',
+              max_empty_fetches)
           return
-        
+
         time.sleep(poll_interval)
         continue
 
@@ -486,10 +491,13 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       # Clear and repopulate the shared list
       del self.completed_job_ids[:]
       self.completed_job_ids.extend(recent_completions)
-      
+
       # Remove old claimed jobs that are completed
       completed_set = set(recent_completions[:-1000])
-      claimed_list = [job_id for job_id in self.claimed_job_ids if job_id not in completed_set]
+      claimed_list = [
+          job_id for job_id in self.claimed_job_ids
+          if job_id not in completed_set
+      ]
       del self.claimed_job_ids[:]
       self.claimed_job_ids.extend(claimed_list)
 
@@ -620,12 +628,12 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
     # set job count to 1 until first job fetch is finished
     job_counter = Value("i", 1)
-    
+
     # Create shared data structures for cross-process communication
     manager = Manager()
     self.claimed_job_ids = manager.list()  # Shared list across processes
     self.completed_job_ids = manager.list()  # Shared list across processes
-    
+
     try:
       # cleanup old results
       cleanup_proc = Process(target=self.async_wrap,
@@ -792,22 +800,26 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       if job_id and job_id in self.claimed_job_ids:
         # Check the final state of the job after processing
         final_state = self.get_job_final_state(session, job_id)
-        
+
         if final_state in ['evaluated', 'errored']:
           # Job is truly complete - append to completed list
           self.completed_job_ids.append(job_id)
-          self.logger.info("Marked job %s as completed with state: %s", job_id, final_state)
+          self.logger.info("Marked job %s as completed with state: %s", job_id,
+                           final_state)
         elif final_state == 'compiled':
           # Job failed and was reset to compiled for retry
           # Remove from claimed so it can be re-grabbed
           try:
             self.claimed_job_ids.remove(job_id)
-            self.logger.info("Job %s failed and reset to 'compiled' - removed from claimed list for retry", job_id)
+            self.logger.info(
+                "Job %s failed and reset to 'compiled' - removed from claimed list for retry",
+                job_id)
           except ValueError:
             # Job ID not in list, ignore
             pass
         else:
-          self.logger.warning("Job %s has unexpected final state: %s", job_id, final_state)
+          self.logger.warning("Job %s has unexpected final state: %s", job_id,
+                              final_state)
 
       return True
 

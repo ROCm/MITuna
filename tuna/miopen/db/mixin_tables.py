@@ -65,8 +65,8 @@ class MIOpenJobMixin(JobMixin):
   solver = Column(String(length=128), nullable=True, server_default="")
   eval_mid = Column(Integer, server_default="-1")
   fin_step = Column(mysql.SET(*(list(k for k in FinStep.__members__))),
-                  nullable=False,
-                  server_default="not_fin")
+                    nullable=False,
+                    server_default="not_fin")
 
 
 class ConfigTagMixin():

@@ -143,12 +143,12 @@ def sanitize_sql_string(value: str, max_length: int = 2000) -> str:
   # Truncate to safe length to avoid excessively long queries
   if len(value) > max_length:
     value = value[:max_length] + '... [truncated]'
-  
+
   # Escape backslashes first (must be done before quotes)
   value = value.replace('\\', '\\\\')
   # Escape single quotes by doubling them (SQL standard)
   value = value.replace("'", "''")
-  
+
   return value
 
 

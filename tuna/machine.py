@@ -38,7 +38,7 @@ import logging
 
 from typing import Set, List, Optional, TextIO, Tuple, Dict, Union, Any, Callable
 from sqlalchemy import Text, Column, orm
-from sqlalchemy.orm import validates
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.mysql import TINYINT, INTEGER
 
 from paramiko import SSHClient
@@ -69,7 +69,7 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
   local_port: int = Column(INTEGER, server_default="22")
   user: str = Column(Text, nullable=False)
   password: str = Column(Text, nullable=False)
-  avail_gpus: List[int] = Column(Text, nullable=False)
+  _avail_gpus: str = Column('avail_gpus', Text, nullable=False)
   arch: str = Column(Text, nullable=False)
   arch_full: str = ''
   num_cu: int = Column(INTEGER, nullable=False, server_default="64")
@@ -146,12 +146,24 @@ class Machine(BASE):  #pylint: disable=too-many-instance-attributes
 
     self.logger.info("avail gpus: %s", self.avail_gpus)
 
-  @validates('avail_gpus')
-  def validate_avail_gpus(self, key, value):
-    """Convert avail_gpus to comma-separated string for database storage"""
+  @hybrid_property
+  def avail_gpus(self) -> List[int]:
+    """Return avail_gpus as a list of integers for application use"""
+    if isinstance(self._avail_gpus, str) and self._avail_gpus:
+      return [int(x) for x in self._avail_gpus.split(',')]
+    elif isinstance(self._avail_gpus, list):
+      return self._avail_gpus
+    return []
+
+  @avail_gpus.setter
+  def avail_gpus(self, value: Union[List[int], str]) -> None:
+    """Store avail_gpus as comma-separated string for database storage"""
     if isinstance(value, list):
-      return ','.join(map(str, value))
-    return value if value else ''
+      self._avail_gpus = ','.join(map(str, value))
+    elif value:
+      self._avail_gpus = str(value)
+    else:
+      self._avail_gpus = ''
 
   def set_logger(self, logger: logging.Logger) -> bool:
     """set logging for machine, use this to associate the machine with a subprocess"""
