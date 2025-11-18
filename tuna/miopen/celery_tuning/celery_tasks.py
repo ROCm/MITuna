@@ -27,10 +27,12 @@
 ###############################################################################
 """Module to register MIOpen celery tasks"""
 import os
+import socket
 import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 from tuna.celery_app.celery_app import app
 from tuna.libraries import Operation
 from tuna.machine import Machine
@@ -46,7 +48,6 @@ logger = get_task_logger(__name__)
 def check_hostname_unique_constraint(session):
   """Check if hostname has a unique constraint on the machine table"""
   try:
-    from sqlalchemy import text
     result = session.execute(text(
         "SELECT COUNT(*) FROM information_schema.statistics "
         "WHERE table_schema = DATABASE() "
@@ -67,6 +68,19 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
   
   # Ensure this machine is in the database
   global cached_machine
+  
+  # Ensure cached_machine is fully initialized
+  if not cached_machine.hostname:
+    cached_machine.hostname = socket.gethostname()
+    logger.info("Initialized hostname: %s", cached_machine.hostname)
+  
+  # Ensure avail_gpus is properly formatted as string
+  avail_gpus_str = cached_machine.avail_gpus
+  if isinstance(avail_gpus_str, list):
+    avail_gpus_str = ','.join(map(str, avail_gpus_str))
+  elif avail_gpus_str is None:
+    avail_gpus_str = ''
+  
   with DbSession() as session:
     # Check for unique constraint on hostname (only check once)
     if not check_hostname_unique_constraint(session):
@@ -89,9 +103,9 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
           hostname=cached_machine.hostname,
           user=os.getenv('USER', 'unknown'),
           password='',
-          arch=cached_machine.arch,
-          num_cu=cached_machine.num_cu,
-          avail_gpus=','.join(map(str, cached_machine.avail_gpus)) if isinstance(cached_machine.avail_gpus, list) else str(cached_machine.avail_gpus)
+          arch=cached_machine.arch if cached_machine.arch else 'unknown',
+          num_cu=cached_machine.num_cu if cached_machine.num_cu else 64,
+          avail_gpus=avail_gpus_str
       )
       
       try:
@@ -101,7 +115,7 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
         session.refresh(new_machine)
         cached_machine.id = new_machine.id
         logger.info("Registered machine %s with id %s", cached_machine.hostname, cached_machine.id)
-      except IntegrityError:
+      except IntegrityError as ie:
         # Race condition: another worker beat us to it
         # Rollback and query again to get the existing record
         session.rollback()
@@ -115,7 +129,14 @@ def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-ar
         else:
           # This should never happen, but log it if it does
           logger.error("Failed to find machine after IntegrityError - this should not happen!")
-          raise
+          raise ie
+      except Exception as e:  # pylint: disable=broad-exception-caught
+        # Log any other errors during machine registration
+        session.rollback()
+        logger.error("Error registering machine: %s", e)
+        logger.error("Machine details - hostname: %s, arch: %s, num_cu: %s, avail_gpus: %s",
+                     cached_machine.hostname, cached_machine.arch, cached_machine.num_cu, avail_gpus_str)
+        raise
     else:
       # Use existing machine id
       cached_machine.id = existing.id
