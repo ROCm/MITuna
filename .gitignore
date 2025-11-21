@@ -2,11 +2,5 @@
 __pycache__
 *.rej
 *.orig
-<<<<<<< HEAD
-
-myvenv/
-.rules/
-=======
 myvenv
 venv
->>>>>>> develop
