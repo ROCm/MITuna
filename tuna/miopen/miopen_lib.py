@@ -35,6 +35,7 @@ from collections.abc import Iterable
 from kombu.utils.uuid import uuid
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
+from sqlalchemy import text
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
@@ -603,6 +604,73 @@ class MIOpen(MITunaInterface):
                                   dbt.job_table.__tablename__, cond_str)
 
     return job_entries
+
+  def detect_and_handle_locked_jobs(self, session: DbSession,
+                                    find_state: List[str]) -> bool:
+    """Detect jobs that are locked and preventing progress
+    
+    This method queries for jobs without locking to detect if jobs exist
+    but are being skipped due to database locks. If found, it marks jobs
+    with high retry counts as errored to unblock the pipeline.
+    
+    @param session DB session
+    @param find_state List of job states to check
+    @return True if locked jobs were found and handled, False otherwise
+    """
+    # Query WITHOUT lock to see if jobs are being skipped
+    conds = [f"session={self.dbt.session.id}", "valid=1"]
+    
+    if self.args.label:
+      conds.append(f"reason='{self.args.label}'")
+    
+    conds.append(f"retries<{self.max_job_retries}")
+    conds.append("state in (" + str(find_state).strip("{").strip("}") + ")")
+    
+    if self.args.fin_steps:
+      conds.append(f"fin_step like '%{self.args.fin_steps[0]}%'")
+    
+    cond_str = " AND ".join(conds)
+    query = f"""
+        SELECT id, config, retries, state, solver
+        FROM {self.dbt.job_table.__tablename__} 
+        WHERE {cond_str}
+        ORDER BY retries, config ASC
+        LIMIT 10
+    """
+    
+    unlocked_jobs = session.execute(text(query)).fetchall()
+    
+    if unlocked_jobs:
+      self.logger.warning(
+          "Found %d jobs in target state but they were skipped by FOR UPDATE SKIP LOCKED",
+          len(unlocked_jobs))
+      self.logger.warning("Likely cause: stale database locks. Job IDs: %s",
+                         [job[0] for job in unlocked_jobs])
+      
+      # Mark jobs with high retries as errored to unblock
+      jobs_marked = 0
+      for job_row in unlocked_jobs:
+        job_id, config_id, retries, state, solver = job_row
+        if retries >= (MAX_ERRORED_JOB_RETRIES - 1):  # retries >= 2
+          self.logger.warning(
+              "Marking locked job %d (config=%d, solver=%s, retries=%d) as errored to unblock pipeline",
+              job_id, config_id, solver, retries)
+          update_query = f"""
+                    UPDATE {self.dbt.job_table.__tablename__}
+                    SET state = 'errored', 
+                        result = 'Marked as errored due to stale lock or excessive retries',
+                        update_ts = NOW()
+                    WHERE id = {job_id}
+                """
+          session.execute(text(update_query))
+          jobs_marked += 1
+      
+      if jobs_marked > 0:
+        session.commit()
+        self.logger.info("Marked %d locked jobs as errored", jobs_marked)
+        return True
+    
+    return False
 
   def compose_work_objs_fin(self, session, job_entries,
                             dbt) -> List[Tuple[SimpleDict, SimpleDict]]:

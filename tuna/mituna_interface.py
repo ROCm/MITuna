@@ -282,18 +282,24 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     ids: list
     row: SimpleDict
 
-    self.logger.info("Fetching DB rows...")
+    self.logger.info("Fetching DB rows for states=%s, session=%d, claim_num=%s",
+                     find_state, session_id, claim_num)
     job_list = self.get_job_list(session, find_state, claim_num)
+    self.logger.info("get_job_list returned %d jobs", len(job_list) if job_list else 0)
 
     if not self.check_jobs_found(job_list, find_state, session_id):
+      self.logger.info("check_jobs_found returned False - no jobs available")
       return []
 
     if no_update:
+      self.logger.info("no_update=True, returning %d jobs without state update",
+                       len(job_list))
       return job_list
 
     ids = [row.id for row in job_list]
-    self.logger.info("%s jobs %s", find_state, ids)
-    self.logger.info("Updating job state to %s", set_state)
+    self.logger.info("Found %d jobs with IDs: %s (showing first 10)",
+                     len(ids), ids[:10] if len(ids) > 10 else ids)
+    self.logger.info("Updating job state from %s to %s", find_state, set_state)
 
     # OPTIMIZATION: Use bulk UPDATE instead of individual updates
     if self.dbt is not None:
@@ -304,6 +310,7 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 WHERE id IN ({id_str})
             """
       session.execute(text(query))
+      self.logger.info("Executed bulk UPDATE for %d jobs", len(ids))
 
       # Update local objects to reflect new state
       for job in job_list:
@@ -312,6 +319,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       raise CustomError("DBTable must be set")
 
     session.commit()
+    self.logger.info("Transaction committed - %d jobs now in state '%s'",
+                     len(ids), set_state)
 
     return job_list
 
@@ -441,45 +450,88 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
   def enqueue_jobs(self, job_counter, job_batch_size, q_name):
     """Enqueue celery jobs with simplified progress tracking"""
-    self.logger.info("Starting enqueue")
+    self.logger.info("Starting enqueue loop - batch_size=%d, queue=%s",
+                     job_batch_size, q_name)
+    self.logger.info("Fetch states: %s, Set state: %s", self.fetch_state,
+                     self.set_state)
 
     is_first_batch = True
     consecutive_empty_fetches = 0
     max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
     poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 60))
+    loop_iteration = 0
 
     while True:
+      loop_iteration += 1
+      self.logger.info("=== Enqueue loop iteration %d ===", loop_iteration)
+
       # 1. Check if we should wait for progress (skip on first batch)
       if not is_first_batch and self._should_wait_for_progress(job_batch_size):
         self.logger.info(
-            "Waiting for current batch to progress before fetching more jobs")
+            "Waiting for current batch to progress before fetching more jobs (iteration %d)",
+            loop_iteration)
         # Reset consecutive_empty_fetches since we're waiting for progress, not out of jobs
         consecutive_empty_fetches = 0
+        self.logger.info("Sleeping for %d seconds...", poll_interval)
         time.sleep(poll_interval)
         continue
 
       # 2. Fetch jobs with built-in retry logic
+      self.logger.info("Attempting to fetch %d jobs (iteration %d)",
+                       job_batch_size, loop_iteration)
       job_list = self._fetch_jobs_with_retry(job_batch_size)
+      self.logger.info("Fetch returned %d jobs", len(job_list) if job_list else 0)
 
       # 3. Handle empty results
       if not job_list:
         consecutive_empty_fetches += 1
-        self.logger.info('No jobs found (attempt %d/%d)',
-                         consecutive_empty_fetches, max_empty_fetches)
+        self.logger.warning(
+            'No jobs found (attempt %d/%d) - iteration %d',
+            consecutive_empty_fetches, max_empty_fetches, loop_iteration)
+
+        # Check if jobs are being skipped due to database locks
+        if consecutive_empty_fetches == 2:  # After 2nd empty fetch
+          self.logger.warning(
+              "Checking for locked jobs that may be blocking progress (iteration %d)",
+              loop_iteration)
+          with DbSession() as lock_check_session:
+            if hasattr(self, 'detect_and_handle_locked_jobs'):
+              try:
+                handled = self.detect_and_handle_locked_jobs(
+                    lock_check_session, list(self.fetch_state))
+                if handled:
+                  self.logger.info(
+                      "Handled locked jobs, resetting empty fetch counter")
+                  consecutive_empty_fetches = 0  # Reset counter to retry
+                  continue
+                else:
+                  self.logger.info("No locked jobs found to handle")
+              except Exception as lock_err:  # pylint: disable=broad-exception-caught
+                self.logger.error("Error checking for locked jobs: %s", lock_err)
+            else:
+              self.logger.warning(
+                  "detect_and_handle_locked_jobs method not available")
 
         if consecutive_empty_fetches >= max_empty_fetches:
-          self.logger.info(
-              'No more jobs available after %d attempts. Exiting enqueue loop.',
-              max_empty_fetches)
+          self.logger.warning(
+              'EXITING: No more jobs available after %d attempts (iteration %d). Exiting enqueue loop.',
+              max_empty_fetches, loop_iteration)
+          self.logger.info("Final state - claimed: %d, completed: %d",
+                          len(self.claimed_job_ids), len(self.completed_job_ids))
           return
 
+        self.logger.info("Sleeping for %d seconds before retry (iteration %d)...",
+                        poll_interval, loop_iteration)
         time.sleep(poll_interval)
         continue
 
       # 4. Process the batch
+      self.logger.info("Processing batch of %d jobs (iteration %d)", len(job_list),
+                       loop_iteration)
       consecutive_empty_fetches = 0
       self._process_job_batch(job_list, job_counter, q_name)
       is_first_batch = False
+      self.logger.info("Batch processed successfully (iteration %d)", loop_iteration)
 
   def cleanup_completed_jobs(self):
     """Periodically clean up old job tracking data"""
