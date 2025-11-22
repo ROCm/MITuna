@@ -25,39 +25,42 @@
 #
 ###############################################################################
 """Interface class to set up and launch tuning functionality"""
-import os
-from multiprocessing import Value, Lock, Queue as mpQueue, Process, Manager
-from typing import Optional, Dict, Any, List
-from io import StringIO
-from functools import lru_cache
+import argparse
+import asyncio
 import json
 import logging
-import argparse
+import os
 import subprocess
-import time
+import sys
 import threading
-import asyncio
+import time
 from datetime import timedelta
+from functools import lru_cache
+from io import StringIO
+from multiprocessing import Lock, Manager, Process
+from multiprocessing import Queue as mpQueue
+from multiprocessing import Value
+from typing import Any, Dict, List, Optional
+
+import kombu
+import redis.asyncio as aioredis
+from paramiko.channel import ChannelFile
+from sqlalchemy import text
 from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.inspection import inspect
-from sqlalchemy import text
-import redis.asyncio as aioredis
-import kombu
-from paramiko.channel import ChannelFile
 
-from tuna.worker_interface import WorkerInterface
-from tuna.machine import Machine
-from tuna.libraries import Library
-from tuna.utils.logger import setup_logger
-from tuna.utils.utility import get_env_vars, SimpleDict
-from tuna.dbBase.sql_alchemy import DbSession
-from tuna.celery_app.celery_app import stop_active_workers, stop_named_worker
-from tuna.celery_app.celery_app import get_backend_env, purge_queue
-from tuna.celery_app.utility import get_q_name
+from tuna.celery_app.celery_app import (get_backend_env, purge_queue,
+                                        stop_active_workers, stop_named_worker)
 from tuna.celery_app.celery_workers import launch_celery_worker
-from tuna.libraries import Operation
+from tuna.celery_app.utility import get_q_name
 from tuna.custom_errors import CustomError
+from tuna.dbBase.sql_alchemy import DbSession
+from tuna.libraries import Library, Operation
+from tuna.machine import Machine
 from tuna.utils.db_utility import gen_update_query, session_retry
+from tuna.utils.logger import setup_logger
+from tuna.utils.utility import SimpleDict, get_env_vars
+from tuna.worker_interface import WorkerInterface
 
 job_counter_lock = threading.Lock()
 
@@ -282,24 +285,17 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     ids: list
     row: SimpleDict
 
-    self.logger.info("Fetching DB rows for states=%s, session=%d, claim_num=%s",
-                     find_state, session_id, claim_num)
     job_list = self.get_job_list(session, find_state, claim_num)
-    self.logger.info("get_job_list returned %d jobs", len(job_list) if job_list else 0)
 
     if not self.check_jobs_found(job_list, find_state, session_id):
-      self.logger.info("check_jobs_found returned False - no jobs available")
       return []
 
     if no_update:
-      self.logger.info("no_update=True, returning %d jobs without state update",
-                       len(job_list))
       return job_list
 
     ids = [row.id for row in job_list]
-    self.logger.info("Found %d jobs with IDs: %s (showing first 10)",
-                     len(ids), ids[:10] if len(ids) > 10 else ids)
-    self.logger.info("Updating job state from %s to %s", find_state, set_state)
+    # Log summary of jobs being updated
+    self.logger.info("Updating %d jobs from %s to %s", len(ids), find_state, set_state)
 
     # OPTIMIZATION: Use bulk UPDATE instead of individual updates
     if self.dbt is not None:
@@ -310,7 +306,6 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                 WHERE id IN ({id_str})
             """
       session.execute(text(query))
-      self.logger.info("Executed bulk UPDATE for %d jobs", len(ids))
 
       # Update local objects to reflect new state
       for job in job_list:
@@ -319,8 +314,6 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       raise CustomError("DBTable must be set")
 
     session.commit()
-    self.logger.info("Transaction committed - %d jobs now in state '%s'",
-                     len(ids), set_state)
 
     return job_list
 
@@ -384,6 +377,79 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     )
 
     return our_in_progress_count >= progress_threshold
+
+  def reconcile_tracking_state(self):
+    """Reconcile tracking lists with actual database state
+    
+    This method queries the database to check the actual state of claimed jobs
+    and updates the tracking lists accordingly. This prevents the distributor
+    from getting stuck waiting for jobs that have already completed.
+    
+    Returns:
+        Number of jobs reconciled
+    """
+    if not self.claimed_job_ids:
+      self.logger.info("No claimed jobs to reconcile")
+      return 0
+    
+    claimed_set = set(self.claimed_job_ids)
+    completed_set = set(self.completed_job_ids)
+    in_progress_set = claimed_set - completed_set
+    
+    if not in_progress_set:
+      self.logger.info("No in-progress jobs to reconcile")
+      return 0
+    
+    self.logger.info("Reconciling %d in-progress jobs with database state",
+                     len(in_progress_set))
+    
+    # Query database for actual state of these jobs
+    with DbSession() as session:
+      try:
+        # Batch the query to avoid SQL statement too long
+        in_progress_list = list(in_progress_set)
+        batch_size = 1000
+        reconciled_count = 0
+        
+        for i in range(0, len(in_progress_list), batch_size):
+          batch = in_progress_list[i:i + batch_size]
+          id_str = ','.join(map(str, batch))
+          
+          query = f"""
+            SELECT id, state FROM {self.dbt.job_table.__tablename__}
+            WHERE id IN ({id_str})
+          """
+          results = session.execute(text(query)).fetchall()
+          
+          completed_jobs = 0
+          removed_jobs = 0
+          
+          for job_id, state in results:
+            if state in ['evaluated', 'errored']:
+              # Job is complete but not tracked - add to completed
+              if job_id not in self.completed_job_ids:
+                self.completed_job_ids.append(job_id)
+                completed_jobs += 1
+                reconciled_count += 1
+            elif state in ['compiled', 'new']:
+              # Job was reset but still in claimed - remove from claimed
+              if job_id in self.claimed_job_ids:
+                self.claimed_job_ids.remove(job_id)
+                removed_jobs += 1
+                reconciled_count += 1
+            # Jobs in 'eval_start' state are legitimately in progress - no action needed
+          
+          # Log batch summary instead of individual jobs
+          if completed_jobs > 0 or removed_jobs > 0:
+            self.logger.info("Batch %d: marked %d completed, removed %d from claimed",
+                           i // batch_size + 1, completed_jobs, removed_jobs)
+        
+        self.logger.info("Reconciliation complete: %d total jobs updated", reconciled_count)
+        return reconciled_count
+        
+      except Exception as err:  # pylint: disable=broad-exception-caught
+        self.logger.error("Error during reconciliation: %s", err)
+        return 0
 
   def _fetch_jobs_with_retry(self,
                              job_batch_size,
@@ -450,6 +516,22 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
 
   def enqueue_jobs(self, job_counter, job_batch_size, q_name):
     """Enqueue celery jobs with simplified progress tracking"""
+    # Configure logger for subprocess to write to stdout
+    # This ensures logs are captured by bash redirection (> logfile.log 2>&1)
+    
+    # Remove any existing handlers to avoid duplicates
+    self.logger.handlers.clear()
+    
+    # Add StreamHandler that writes to stdout
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+    )
+    stdout_handler.setFormatter(formatter)
+    self.logger.addHandler(stdout_handler)
+    self.logger.setLevel(logging.INFO)
+    
     self.logger.info("Starting enqueue loop - batch_size=%d, queue=%s",
                      job_batch_size, q_name)
     self.logger.info("Fetch states: %s, Set state: %s", self.fetch_state,
@@ -460,27 +542,67 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
     poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 60))
     loop_iteration = 0
+    
+    # Track consecutive waits to detect stale state
+    consecutive_waits = 0
+    last_in_progress_count = -1
+    reconcile_threshold = int(os.environ.get('TUNA_RECONCILE_THRESHOLD', 5))
 
     while True:
       loop_iteration += 1
-      self.logger.info("=== Enqueue loop iteration %d ===", loop_iteration)
+      # Only log iteration every 10 iterations or when something interesting happens
+      if loop_iteration % 10 == 1:
+        self.logger.info("=== Enqueue loop iteration %d ===", loop_iteration)
 
       # 1. Check if we should wait for progress (skip on first batch)
       if not is_first_batch and self._should_wait_for_progress(job_batch_size):
-        self.logger.info(
-            "Waiting for current batch to progress before fetching more jobs (iteration %d)",
-            loop_iteration)
+        claimed_set = set(self.claimed_job_ids)
+        completed_set = set(self.completed_job_ids)
+        current_in_progress = len(claimed_set - completed_set)
+        
+        # Check if we're stuck waiting with the same in-progress count
+        if current_in_progress == last_in_progress_count:
+          consecutive_waits += 1
+          # Only log warning every 5 waits to reduce verbosity
+          if consecutive_waits % 5 == 0 or consecutive_waits >= reconcile_threshold - 2:
+            self.logger.warning(
+                "Consecutive waits: %d/%d with same in-progress count: %d",
+                consecutive_waits, reconcile_threshold, current_in_progress)
+        else:
+          # Log when wait state changes
+          if consecutive_waits > 0:
+            self.logger.info("Wait state changed - in-progress count: %d -> %d",
+                           last_in_progress_count, current_in_progress)
+          consecutive_waits = 0
+          last_in_progress_count = current_in_progress
+        
+        # Trigger reconciliation if stuck waiting too long
+        if consecutive_waits >= reconcile_threshold:
+          self.logger.warning(
+              "RECONCILIATION TRIGGERED: Stuck waiting for %d iterations with %d jobs in progress",
+              consecutive_waits, current_in_progress)
+          reconciled = self.reconcile_tracking_state()
+          self.logger.info("Reconciled %d jobs - resetting wait counter", reconciled)
+          consecutive_waits = 0
+          last_in_progress_count = -1
+          # Don't sleep, immediately retry fetching jobs
+          continue
+        
+        # Only log wait message on first wait or every 10th wait
+        if consecutive_waits == 1 or consecutive_waits % 10 == 0:
+          self.logger.info(
+              "Waiting for batch progress (iteration %d, wait #%d)",
+              loop_iteration, consecutive_waits)
         # Reset consecutive_empty_fetches since we're waiting for progress, not out of jobs
         consecutive_empty_fetches = 0
-        self.logger.info("Sleeping for %d seconds...", poll_interval)
         time.sleep(poll_interval)
         continue
 
       # 2. Fetch jobs with built-in retry logic
-      self.logger.info("Attempting to fetch %d jobs (iteration %d)",
-                       job_batch_size, loop_iteration)
       job_list = self._fetch_jobs_with_retry(job_batch_size)
-      self.logger.info("Fetch returned %d jobs", len(job_list) if job_list else 0)
+      # Only log fetch details when jobs are found or on errors
+      if job_list:
+        self.logger.info("Fetched %d jobs (iteration %d)", len(job_list), loop_iteration)
 
       # 3. Handle empty results
       if not job_list:
