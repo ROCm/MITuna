@@ -183,8 +183,8 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
 
           if job.config in pre_ex:
             if job.solver in pre_ex[job.config]:
-              logger.warning("Job exists (skip): %s : %s", job.config,
-                             job.solver)
+              # logger.warning("Job exists (skip): %s : %s", job.config,
+              #                job.solver)
               continue
 
           session.add(job)

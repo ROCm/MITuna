@@ -225,6 +225,20 @@ class MIOpen(MITunaInterface):
         action="store_true",
         help="Update the applicability table in the database",
     )
+    parser.add_argument(
+        "--new_only",
+        dest="new_only",
+        action="store_true",
+        default=False,
+        help="Only update applicability for configs without existing data in this session (use with --update_applicability)",
+    )
+    parser.add_argument(
+        "--config_limit",
+        dest="config_limit",
+        type=int,
+        default=None,
+        help="Limit the number of configs to process (useful for testing with --update_applicability)",
+    )
     group.add_argument(
         "-s",
         "--status",
@@ -364,7 +378,12 @@ class MIOpen(MITunaInterface):
     kwargs = self.get_kwargs(gpu_idx, f_vals)
     if self.args.update_applicability:
       kwargs["fin_steps"] = ["applicability"]
+      kwargs["new_only"] = self.args.new_only
+      kwargs["config_limit"] = self.args.config_limit
       worker = FinClass(**kwargs)
+      self.logger.info("Created FinClass worker with gpu_id=%s, ROCR_VISIBLE_DEVICES in envmt: %s",
+                 worker.gpu_id,
+                 any('ROCR_VISIBLE_DEVICES' in env for env in worker.envmt))
       worker.start()
       worker_lst.append(worker)
       return True
@@ -404,25 +423,40 @@ class MIOpen(MITunaInterface):
       # fin_steps should only contain one step
       worker_ids = None
       if self.args.fin_steps and "eval" in self.args.fin_steps[0]:
-        worker_ids = machine.get_avail_gpus()
+        worker_ids = machine.get_avail_gpus()  # Use actual GPUs
         if self.args.gpu_lim and self.args.gpu_lim < len(worker_ids):
-          worker_ids = range(self.args.gpu_lim)
+            worker_ids = list(range(self.args.gpu_lim))
+      elif self.args.update_applicability: 
+        worker_ids = list(range(len(machine.get_avail_gpus()) * 4 ))  # Use GPU count
+        if self.args.gpu_lim and self.args.gpu_lim < len(worker_ids):
+            worker_ids = list(range(self.args.gpu_lim))
       else:
-        worker_ids = super().get_num_procs(machine)
+        worker_ids = super().get_num_procs(machine)  # Use CPU count for other operations
+
 
       if self.args.update_applicability:
         f_vals = super().get_f_vals(machine, [1])
         kwargs = self.get_kwargs(0, f_vals)
         kwargs["fin_steps"] = ["applicability"]
+        kwargs["new_only"] = self.args.new_only
+        kwargs["config_limit"] = self.args.config_limit
         worker = FinClass(**kwargs)
-        query = worker.query_cfgs(self.args.label)
+        skip_existing = self.args.new_only
+        config_limit = self.args.config_limit
+        query = worker.query_cfgs(self.args.label, skip_existing=skip_existing, config_limit=config_limit)
         cfg_rows = query.all()
         len_rows = len(cfg_rows)
+        self.logger.warning("Found %d configs to process (label=%s, new_only=%s, config_limit=%s)",
+                           len_rows, self.args.label, self.args.new_only, self.args.config_limit)
         proc_lim = (len_rows + 99) / 100
         if 32 < proc_lim:
           proc_lim = 32
+        self.logger.info("Calculated proc_lim=%d based on %d configs", proc_lim, len_rows)
+        initial_workers = len(worker_ids)
         while len(worker_ids) > proc_lim:
           worker_ids.pop()
+        self.logger.warning("Worker count: initial=%d, after limit=%d (proc_lim=%d)",
+                           initial_workers, len(worker_ids), proc_lim)
 
       if len(worker_ids) == 0:
         return None
