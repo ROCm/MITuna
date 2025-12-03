@@ -60,38 +60,38 @@ DATA_TYPES_ATTENTION_MFMA = ['i8', 'f32', 'f16', 'bf16']
 DATA_TYPES_ATTENTION = None
 
 def hipCheck(call_result):
-    err = call_result[0]
-    result = call_result[1:]
-    if len(result) == 1:
-        result = result[0]
-    if isinstance(err, hip.hipError_t) and err != hip.hipError_t.hipSuccess:
-        raise RuntimeError(str(err))
-    return result
+  err = call_result[0]
+  result = call_result[1:]
+  if len(result) == 1:
+    result = result[0]
+  if isinstance(err, hip.hipError_t) and err != hip.hipError_t.hipSuccess:
+    raise RuntimeError(str(err))
+  return result
 
 
 def getArch() -> str:
-    agents = set()
-    device_count = hipCheck(hip.hipGetDeviceCount())
-    for device in range(device_count):
-        props = hip.hipDeviceProp_t()
-        hipCheck(hip.hipGetDeviceProperties(props, device))
-        agent = props.gcnArchName.decode('utf-8')
-        agents.add(agent)
-    if (len(agents) > 1):
-        print(
-            f"WARNING: Found {len(agents)} different kinds of agents on the same machine :  {', '.join(agents)}"
-        )
-        print(
-            "WARNING: Using the first agent by default. If you want to use a different agent, please set the HIP_VISIBLE_DEVICES environment variable."
-        )
-    # select first agent by default
-    return list(agents)[0]
+  agents = set()
+  device_count = hipCheck(hip.hipGetDeviceCount())
+  for device in range(device_count):
+    props = hip.hipDeviceProp_t()
+    hipCheck(hip.hipGetDeviceProperties(props, device))
+    agent = props.gcnArchName.decode('utf-8')
+    agents.add(agent)
+  if len(agents) > 1:
+    print(
+        f"WARNING: Found {len(agents)} different kinds of agents on the same machine :  {', '.join(agents)}"
+    )
+    print(
+        "WARNING: Using the first agent by default. If you want to use a different agent, please set the HIP_VISIBLE_DEVICES environment variable."
+    )
+  # select first agent by default
+  return list(agents)[0]
 
 
 def getChip():
-    arch = getArch()
-    chip = GFX_CHIP_RE.search(arch).group(0)
-    return chip
+  arch = getArch()
+  chip = GFX_CHIP_RE.search(arch).group(0)
+  return chip
 
 def initializeAttentionDatatypes():
   """Initialize attention data types based on architecture.
@@ -101,10 +101,10 @@ def initializeAttentionDatatypes():
   chip = getChip()
   if chip.startswith('gfx9'):
     DATA_TYPES_ATTENTION = DATA_TYPES_ATTENTION_MFMA
-  else if chip.startswith('gfx1'):
+  elif chip.startswith('gfx1'):
     DATA_TYPES_ATTENTION = DATA_TYPES_ATTENTION_WMMA
   else:
-    raise ValueError(f"Could not determine attention data types for architecture: {arch_name}")
+    raise ValueError(f"Could not determine attention data types for architecture: {chip}")
   return DATA_TYPES_ATTENTION
 
 def getAttentionDatatypes():
