@@ -742,7 +742,7 @@ class AttentionConfig(BASE, SimpleCSVMixin):
       for datatype, transQ, transK, transV, transO, withAttnScale, withAttnBias, causal, return_lse, line in \
               itertools.product(['f32', 'f16'], ['false', 'true'],
                                 ['false', 'true'], ['false', 'true'],
-                                ['false', 'true'], ['false', 'true'], ['false', 'true'], ['false', 'true'], ['false', 'true'], lines):
+                                ['false', 'true'], ['false'], ['false'], ['false'], ['false'], lines):
         line = line.strip()
 
         # Skip empty lines
