@@ -106,7 +106,7 @@ def config_query(args: argparse.Namespace, session, dbt: MIOpenDBTables):
   if args.tag:
     tag_query = session.query(dbt.config_tags_table.config)\
       .filter(dbt.config_tags_table.tag == args.tag).subquery()
-    cfg_query = cfg_query.filter(dbt.config_table.id.in_(tag_query))
+    cfg_query = cfg_query.filter(dbt.config_table.id.in_(tag_query.select()))
 
   if args.cmd:
     cfg_query = cfg_query.filter(
@@ -136,7 +136,7 @@ def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
   if args.only_dynamic:
     query = query.filter(Solver.is_dynamic == true())
 
-  query = query.filter(dbt.solver_app.config.in_(cfg_query.subquery()))
+  query = query.filter(dbt.solver_app.config.in_(cfg_query.subquery().select()))
 
   return query
 
