@@ -607,11 +607,13 @@ def pytestSuite1() {
         sshagent (credentials: ['bastion-ssh-key']) {
            sh "coverage erase"
            sh "python3 -m coverage run -a -m pytest tests/test_export_db.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_export_db_branches.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_abort_file.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_analyze_parse_db.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_connection.py -s"
            // builder then evaluator in sequence
            sh "python3 -m coverage run -a -m pytest tests/test_importconfigs.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_import_configs_branches.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_machine.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_dbBase.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_driver.py -s"
@@ -652,12 +654,14 @@ def pytestSuite1() {
            sh "python3 -m coverage run -a -m pytest tests/test_example_lib_extended.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_yaml_parser.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_load_job.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_load_job_branches.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_add_session_rocmlir.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_importconfigs_rocmlir.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_load_job_rocmlir.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_rocmlir.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_helper.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_mituna_interface.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_merge_db_branches.py -s"
            // The OBMC host used in the following test is down
            // sh "pytest tests/test_mmi.py "
         }
