@@ -265,8 +265,8 @@ def test_build_miopen_pdb(monkeypatch):
   monkeypatch.setattr(export_db, 'fin_db_key', lambda *_: {1: 'db1', 2: 'db2'})
   res = export_db.build_miopen_pdb(query, MagicMock())
   assert set(res.keys()) == {'db1', 'db2'}
-  # duplicate solver entry skipped, leaving one record for db1
-  assert len(res['db1']) == 1
+  # entries sharing a db_key are preserved even with different fdb_keys
+  assert len(res['db1']) == 2
 
 
 def test_write_pdb_orders_by_solver(monkeypatch, tmp_path):
