@@ -55,7 +55,7 @@ def test_is_float():
 
 
 def test_merge_text_file_copy_only(tmp_path):
-  master = tmp_path / "gfx900.HIP.fdb.txt"
+  master = tmp_path / "gfx90040.HIP.fdb.txt"  # gfx900 with 0x40 (64 CU)
   target = tmp_path / "target.HIP.fdb.txt"
   master.write_text("a=1:1.0\n", encoding="utf-8")
   target.write_text("b=2:2.0\n", encoding="utf-8")
@@ -103,7 +103,7 @@ def test_merge_sqlite_bin_cache(tmp_path):
 def test_get_file_list_filters(tmp_path):
   master_dir = tmp_path / "dir"
   master_dir.mkdir()
-  (master_dir / "gfx803_36.HIP.fdb.txt").write_text("", encoding="utf-8")
+  (master_dir / "gfx900_40.HIP.fdb.txt").write_text("", encoding="utf-8")
   (master_dir / "ignore.txt").write_text("", encoding="utf-8")
   args = merge_db.argparse.Namespace(master_file=str(master_dir),
                                      find_db=True,
