@@ -147,7 +147,8 @@ def test_parse_line_batches(monkeypatch):
 
 
 def test_add_model_integrity_error(monkeypatch):
-  fake_session = _FakeSession(raise_on_commit=IntegrityError('dup'))
+  fake_session = _FakeSession(
+      raise_on_commit=IntegrityError('stmt', 'params', Exception('dup')))
   monkeypatch.setattr(import_configs, 'DbSession', lambda: fake_session)
   args = argparse.Namespace(add_model='m', md_version=1)
   logger = MagicMock()
