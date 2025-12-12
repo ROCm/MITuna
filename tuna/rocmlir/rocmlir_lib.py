@@ -58,7 +58,7 @@ class RocMLIR(MITunaInterface):
     parser: argparse.ArgumentParser
     # pylint: disable=duplicate-code
     parser = setup_arg_parser('RocMLIR library integrated with MITuna', [
-        TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION, TunaArgs.SESSION_ID,
+        TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.NUM_CHIPLETS, TunaArgs.VERSION, TunaArgs.SESSION_ID,
         TunaArgs.MACHINES, TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL,
         TunaArgs.RESTART_MACHINE, TunaArgs.DOCKER_NAME
     ])
@@ -92,7 +92,7 @@ class RocMLIR(MITunaInterface):
         '--execute',
         dest='execute',
         action='store_true',
-        help='Run jobs from the job tables based on arch, num_cu and session_id'
+        help='Run jobs from the job tables based on arch, num_cu, num_chiplets and session_id'
     )
 
     group.add_argument('--init_session',
