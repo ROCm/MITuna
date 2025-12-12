@@ -83,6 +83,16 @@ class _FakeSession:
     return None
 
 
+class _FakeColumn:
+  """Column stub supporting in_ operator used in filters."""
+
+  def __init__(self, value=None):
+    self.value = value
+
+  def in_(self, _):
+    return self
+
+
 def test_arg_solvers_uses_algo(monkeypatch):
   algo = next(iter(ALG_SLV_MAP.keys()))
   args = argparse.Namespace(solvers=None, algo=algo)
@@ -102,10 +112,11 @@ def test_config_query_filters(monkeypatch):
   session = _FakeSession(result=[(1,)])
   args = argparse.Namespace(tag='foo', cmd=cmd_key)
   dbt = SimpleNamespace(
-      config_table=SimpleNamespace(id=1,
-                                   valid=1,
-                                   input_t=SimpleNamespace(data_type=None)),
-      config_tags_table=SimpleNamespace(config=1, tag='foo'),
+      config_table=SimpleNamespace(
+          id=_FakeColumn(),
+          valid=1,
+          input_t=SimpleNamespace(data_type=_FakeColumn())),
+      config_tags_table=SimpleNamespace(config=_FakeColumn(), tag='foo'),
   )
   query = load_job.config_query(args, session, dbt)
   assert isinstance(query, _FakeQuery)
@@ -117,11 +128,12 @@ def test_compose_query_with_filters(monkeypatch):
                             tunable=True,
                             config_type=ConfigType.batch_norm,
                             only_dynamic=True)
-  dbt = SimpleNamespace(solver_app=SimpleNamespace(config=1,
-                                                   session=1,
-                                                   solver=1),
-                        config_table=SimpleNamespace(id=1),
-                        job_table=MagicMock())
+  dbt = SimpleNamespace(solver_app=SimpleNamespace(config=_FakeColumn(),
+                                                   session=_FakeColumn(),
+                                                   solver=_FakeColumn(),
+                                                   applicable=_FakeColumn()),
+                        config_table=SimpleNamespace(id=_FakeColumn()),
+                        job_table=SimpleNamespace(__tablename__='job'))
   session = _FakeSession(result=[(1, 'solver')])
   query = load_job.compose_query(args, session, dbt, _FakeQuery(result=[1]))
   assert isinstance(query, _FakeQuery)
@@ -129,7 +141,7 @@ def test_compose_query_with_filters(monkeypatch):
 
 def test_add_jobs_empty_results(monkeypatch, caplog):
   logger = MagicMock()
-  dbt = SimpleNamespace(job_table=MagicMock())
+  dbt = SimpleNamespace(job_table=SimpleNamespace(__tablename__='job'))
   args = argparse.Namespace(label='lbl',
                             fin_steps=None,
                             session_id=1,
