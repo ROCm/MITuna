@@ -180,6 +180,8 @@ class RocMLIRWorker(WorkerInterface):
       special_args = "--operation gemm"
     elif self.dbt.config_type == ConfigType.attention:
       special_args = "--operation attention --verify-mode none"
+    elif self.dbt.config_type == ConfigType.gemm_gemm:
+      special_args = "--operation gemm_gemm"
     else:
       raise ValueError(f"Config type {self.dbt.config_type} not yet supported.")
     if self.dbt.session.tuning_space:

@@ -33,6 +33,7 @@ class ConfigType(Enum):
   convolution: str = 'convolution'
   gemm: str = 'gemm'
   attention: str = 'attention'
+  gemm_gemm: str = 'gemm_gemm'
 
   def __str__(self) -> str:
     return self.value
