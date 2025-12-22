@@ -140,6 +140,19 @@ def get_import_cfg_parser(
       'Tag to mark the origin of this config but skips the insert new config \
                       step in case the config does not exist in the table. Wildcard columns \
                       allowed for tagging')
+  parser.add_argument(
+      '--batch_size',
+      type=int,
+      dest='batch_size',
+      default=1000,
+      help='Batch size for bulk database operations (default: 1000). \
+                      Higher values are faster but use more memory.')
+  parser.add_argument(
+      '--disable_batch_import',
+      action='store_true',
+      dest='disable_batch_import',
+      help='Disable batch import optimization and use original one-by-one import. \
+                      Use this for debugging or if batch import has issues.')
 
   return parser
 

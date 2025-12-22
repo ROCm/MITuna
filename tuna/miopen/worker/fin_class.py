@@ -335,8 +335,11 @@ class FinClass(WorkerInterface):
                         .filter(self.dbt.config_table.valid == 1)
 
       if label:
-        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
-            .filter(self.dbt.config_tags_table.tag == label)
+          query = query.join(
+              self.dbt.config_tags_table,
+              self.dbt.config_table.id == self.dbt.config_tags_table.config
+          ).filter(self.dbt.config_tags_table.tag == label)
+
 
       # Skip configs that already have applicability data in this session
       if skip_existing:
