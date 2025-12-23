@@ -70,3 +70,4 @@ python-logstash-async==3.0.0
 mysql-connector-python
 prometheus_flask_exporter
 tenacity
+tqdm
