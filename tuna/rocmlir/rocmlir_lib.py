@@ -77,7 +77,7 @@ class RocMLIR(MITunaInterface):
         '--tuning_space',
         dest='tuning_space',
         default='exhaustive',
-        choices=['quick', 'full', 'exhaustive'],
+        choices=['quick', 'full', 'exhaustive', 'greedy'],
         help='Which space of tuning configs should be used while tuning')
 
     group: argparse._MutuallyExclusiveGroup = parser.add_mutually_exclusive_group(
