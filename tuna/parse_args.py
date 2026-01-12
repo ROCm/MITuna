@@ -38,6 +38,7 @@ class TunaArgs(Enum):
   """ Enumeration of all the common argument supported by setup_arg_parser """
   ARCH: str = 'arch'
   NUM_CU: str = 'num_cu'
+  NUM_CHIPLETS: str = 'num_chiplets'
   DIRECTION: str = 'direction'
   VERSION: str = 'version'
   CONFIG_TYPE: str = 'config_type'

@@ -71,9 +71,9 @@ class RocMLIRWorker(WorkerInterface):
     """update results table with individual result entry"""
     obj = self.dbt.results()
 
-    arch, num_cu, config, perf_config, tflops = obj.parse(result_str)
+    arch, num_cu, num_chiplets, config, perf_config, tflops = obj.parse(result_str)
 
-    print(f"arch = '{arch}', num_cu = '{num_cu}', config = '{config}', \
+    print(f"arch = '{arch}', num_cu = '{num_cu}', num_chiplets = '{num_chiplets}', config = '{config}', \
           perf_config = '{perf_config}', tflops = {tflops}",
           file=sys.stderr)
 
