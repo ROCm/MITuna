@@ -67,7 +67,20 @@ job_counter_lock = threading.Lock()
 
 class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-public-methods
   """Interface class extended by libraries. The purpose of this class is to define
-    common functionalities."""
+    common functionalities.
+    
+    Job Progress Tracking:
+    ----------------------
+    The distributor uses database queries to track job progress, ensuring accuracy
+    and eliminating synchronization issues with in-memory tracking lists.
+    
+    - claimed_job_ids: List of job IDs claimed by this distributor instance
+    - Progress checking: Queries database directly for actual job states
+    - No reconciliation needed: Database is the single source of truth
+    
+    The Redis consumer still runs to process results and update the database,
+    but progress decisions are based solely on database queries.
+    """
 
   def __init__(self, library=Library.MIOPEN) -> None:
 
@@ -362,94 +375,63 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     raise NotImplementedError("Not implemented")
 
   def _should_wait_for_progress(self, job_batch_size):
-    """Check if we should wait before fetching more jobs based on progress"""
-    # Convert to sets for set operations
-    claimed_set = set(self.claimed_job_ids)
-    completed_set = set(self.completed_job_ids)
-    our_in_progress_count = len(claimed_set - completed_set)
-    progress_threshold = job_batch_size * self.progress_factor
-
-    self.logger.info(
-        "Jobs in progress: %d, completed: %d, threshold: %.0f",
-        our_in_progress_count,
-        len(completed_set),
-        progress_threshold,
-    )
-
-    return our_in_progress_count >= progress_threshold
-
-  def reconcile_tracking_state(self):
-    """Reconcile tracking lists with actual database state
+    """Check if we should wait before fetching more jobs based on database state
     
-    This method queries the database to check the actual state of claimed jobs
-    and updates the tracking lists accordingly. This prevents the distributor
-    from getting stuck waiting for jobs that have already completed.
-    
-    Returns:
-        Number of jobs reconciled
+    This method queries the database directly to get accurate job counts,
+    eliminating reliance on potentially stale in-memory tracking lists.
     """
     if not self.claimed_job_ids:
-      self.logger.info("No claimed jobs to reconcile")
-      return 0
+      # No jobs claimed yet, don't wait
+      return False
     
-    claimed_set = set(self.claimed_job_ids)
-    completed_set = set(self.completed_job_ids)
-    in_progress_set = claimed_set - completed_set
+    progress_threshold = job_batch_size * self.progress_factor
     
-    if not in_progress_set:
-      self.logger.info("No in-progress jobs to reconcile")
-      return 0
-    
-    self.logger.info("Reconciling %d in-progress jobs with database state",
-                     len(in_progress_set))
-    
-    # Query database for actual state of these jobs
+    # Query database for actual state of claimed jobs
     with DbSession() as session:
       try:
         # Batch the query to avoid SQL statement too long
-        in_progress_list = list(in_progress_set)
+        claimed_list = list(self.claimed_job_ids)
         batch_size = 1000
-        reconciled_count = 0
+        total_in_progress = 0
+        total_completed = 0
         
-        for i in range(0, len(in_progress_list), batch_size):
-          batch = in_progress_list[i:i + batch_size]
+        for i in range(0, len(claimed_list), batch_size):
+          batch = claimed_list[i:i + batch_size]
           id_str = ','.join(map(str, batch))
           
-          query = f"""
-            SELECT id, state FROM {self.dbt.job_table.__tablename__}
+          # Count jobs still in progress states
+          in_progress_query = f"""
+            SELECT COUNT(*) FROM {self.dbt.job_table.__tablename__}
             WHERE id IN ({id_str})
+            AND state IN ('eval_start', 'compile_start')
           """
-          results = session.execute(text(query)).fetchall()
+          batch_in_progress = session.execute(text(in_progress_query)).scalar()
+          total_in_progress += batch_in_progress
           
-          completed_jobs = 0
-          removed_jobs = 0
-          
-          for job_id, state in results:
-            if state in ['evaluated', 'errored']:
-              # Job is complete but not tracked - add to completed
-              if job_id not in self.completed_job_ids:
-                self.completed_job_ids.append(job_id)
-                completed_jobs += 1
-                reconciled_count += 1
-            elif state in ['compiled', 'new']:
-              # Job was reset but still in claimed - remove from claimed
-              if job_id in self.claimed_job_ids:
-                self.claimed_job_ids.remove(job_id)
-                removed_jobs += 1
-                reconciled_count += 1
-            # Jobs in 'eval_start' state are legitimately in progress - no action needed
-          
-          # Log batch summary instead of individual jobs
-          if completed_jobs > 0 or removed_jobs > 0:
-            self.logger.info("Batch %d: marked %d completed, removed %d from claimed",
-                           i // batch_size + 1, completed_jobs, removed_jobs)
+          # Count completed jobs
+          completed_query = f"""
+            SELECT COUNT(*) FROM {self.dbt.job_table.__tablename__}
+            WHERE id IN ({id_str})
+            AND state IN ('evaluated', 'errored', 'completed')
+          """
+          batch_completed = session.execute(text(completed_query)).scalar()
+          total_completed += batch_completed
         
-        self.logger.info("Reconciliation complete: %d total jobs updated", reconciled_count)
-        return reconciled_count
+        self.logger.info(
+            "DB query - Jobs in progress: %d, completed: %d, threshold: %.0f",
+            total_in_progress,
+            total_completed,
+            progress_threshold,
+        )
+        
+        return total_in_progress >= progress_threshold
         
       except Exception as err:  # pylint: disable=broad-exception-caught
-        self.logger.error("Error during reconciliation: %s", err)
-        return 0
+        self.logger.error("Error querying job progress: %s", err)
+        # On error, be conservative: assume we should wait (return True)
+        # This prevents over-fetching if database is temporarily unavailable
+        self.logger.warning("Defaulting to WAIT due to database error (conservative approach)")
+        return True
 
   def _fetch_jobs_with_retry(self,
                              job_batch_size,
@@ -542,11 +524,6 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
     poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 60))
     loop_iteration = 0
-    
-    # Track consecutive waits to detect stale state
-    consecutive_waits = 0
-    last_in_progress_count = -1
-    reconcile_threshold = int(os.environ.get('TUNA_RECONCILE_THRESHOLD', 5))
 
     while True:
       loop_iteration += 1
@@ -555,44 +532,11 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
         self.logger.info("=== Enqueue loop iteration %d ===", loop_iteration)
 
       # 1. Check if we should wait for progress (skip on first batch)
+      # Database query now provides accurate state, no reconciliation needed
       if not is_first_batch and self._should_wait_for_progress(job_batch_size):
-        claimed_set = set(self.claimed_job_ids)
-        completed_set = set(self.completed_job_ids)
-        current_in_progress = len(claimed_set - completed_set)
-        
-        # Check if we're stuck waiting with the same in-progress count
-        if current_in_progress == last_in_progress_count:
-          consecutive_waits += 1
-          # Only log warning every 5 waits to reduce verbosity
-          if consecutive_waits % 5 == 0 or consecutive_waits >= reconcile_threshold - 2:
-            self.logger.warning(
-                "Consecutive waits: %d/%d with same in-progress count: %d",
-                consecutive_waits, reconcile_threshold, current_in_progress)
-        else:
-          # Log when wait state changes
-          if consecutive_waits > 0:
-            self.logger.info("Wait state changed - in-progress count: %d -> %d",
-                           last_in_progress_count, current_in_progress)
-          consecutive_waits = 0
-          last_in_progress_count = current_in_progress
-        
-        # Trigger reconciliation if stuck waiting too long
-        if consecutive_waits >= reconcile_threshold:
-          self.logger.warning(
-              "RECONCILIATION TRIGGERED: Stuck waiting for %d iterations with %d jobs in progress",
-              consecutive_waits, current_in_progress)
-          reconciled = self.reconcile_tracking_state()
-          self.logger.info("Reconciled %d jobs - resetting wait counter", reconciled)
-          consecutive_waits = 0
-          last_in_progress_count = -1
-          # Don't sleep, immediately retry fetching jobs
-          continue
-        
-        # Only log wait message on first wait or every 10th wait
-        if consecutive_waits == 1 or consecutive_waits % 10 == 0:
-          self.logger.info(
-              "Waiting for batch progress (iteration %d, wait #%d)",
-              loop_iteration, consecutive_waits)
+        self.logger.info(
+            "Waiting for batch progress (iteration %d)",
+            loop_iteration)
         # Reset consecutive_empty_fetches since we're waiting for progress, not out of jobs
         consecutive_empty_fetches = 0
         time.sleep(poll_interval)
@@ -656,24 +600,43 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       self.logger.info("Batch processed successfully (iteration %d)", loop_iteration)
 
   def cleanup_completed_jobs(self):
-    """Periodically clean up old job tracking data"""
-    # Keep lists from growing indefinitely
+    """Periodically clean up old job tracking data
+    
+    Since we now query the database for accurate progress tracking,
+    we only need to keep claimed_job_ids from growing too large.
+    The completed_job_ids list is kept for Redis consumer compatibility
+    but is not used for progress decisions.
+    """
+    # Keep claimed_job_ids list from growing indefinitely
     max_tracking_size = 10000
-    if len(self.completed_job_ids) > max_tracking_size:
-      # Keep only the most recent completions
-      recent_completions = list(self.completed_job_ids)[-5000:]
-      # Clear and repopulate the shared list
-      del self.completed_job_ids[:]
-      self.completed_job_ids.extend(recent_completions)
-
-      # Remove old claimed jobs that are completed
-      completed_set = set(recent_completions[:-1000])
-      claimed_list = [
-          job_id for job_id in self.claimed_job_ids
-          if job_id not in completed_set
-      ]
-      del self.claimed_job_ids[:]
-      self.claimed_job_ids.extend(claimed_list)
+    if len(self.claimed_job_ids) > max_tracking_size:
+      # Query database to find which claimed jobs are actually complete
+      with DbSession() as session:
+        try:
+          claimed_list = list(self.claimed_job_ids)
+          id_str = ','.join(map(str, claimed_list))
+          
+          # Get IDs of jobs that are complete
+          query = f"""
+            SELECT id FROM {self.dbt.job_table.__tablename__}
+            WHERE id IN ({id_str})
+            AND state IN ('evaluated', 'errored', 'completed')
+          """
+          completed_ids = {row[0] for row in session.execute(text(query)).fetchall()}
+          
+          # Keep only jobs that are still in progress
+          active_jobs = [job_id for job_id in claimed_list if job_id not in completed_ids]
+          
+          # Update the list
+          del self.claimed_job_ids[:]
+          self.claimed_job_ids.extend(active_jobs)
+          
+          self.logger.info(
+              "Cleaned up tracking: removed %d completed jobs, kept %d active jobs",
+              len(completed_ids), len(active_jobs))
+          
+        except Exception as err:  # pylint: disable=broad-exception-caught
+          self.logger.error("Error during cleanup: %s", err)
 
   async def cleanup_redis_results(self, prefix):
     """Remove stale redis results by key"""
