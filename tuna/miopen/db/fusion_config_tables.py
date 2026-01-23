@@ -30,6 +30,7 @@ from sqlalchemy import Column, Integer, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 from tuna.dbBase.base_class import BASE
 from tuna.miopen.db.mixin_tables import ConfigTagMixin, MIOpenJobMixin, SolverApplicabilityMixin
+from tuna.miopen.db.tensortable import TensorTable
 
 COMMON_UNIQ_FDS = ["config", "solver", "session"]
 
