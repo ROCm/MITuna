@@ -105,6 +105,12 @@ class FinClass(WorkerInterface):
     if hasattr(self, 'gpu_id') and self.gpu_id is not None:
       num_gpus = len(self.machine.get_avail_gpus()) if hasattr(self, 'machine') else 1
       actual_gpu = self.gpu_id % num_gpus  # Wrap around available GPUs
+      
+      # Remove HIP_VISIBLE_DEVICES to avoid conflicts with ROCR_VISIBLE_DEVICES
+      # Setting both can cause "No ROCm-capable device is detected" errors
+      self.envmt = [env for env in self.envmt if 'HIP_VISIBLE_DEVICES' not in env]
+      
+      # Set ROCR_VISIBLE_DEVICES for GPU pinning
       self.envmt.append(f"ROCR_VISIBLE_DEVICES={actual_gpu}")
       self.logger.info("Set ROCR_VISIBLE_DEVICES=%d for worker (worker_id=%d, num_gpus=%d)", 
                      actual_gpu, self.gpu_id, num_gpus)

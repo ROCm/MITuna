@@ -71,6 +71,8 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
       for gpu_id in num_gpus:
         # Create a separate environment for each worker with GPU pinning
         worker_env = dict(os.environ.copy())
+        
+        # Set GPU pinning using ROCR_VISIBLE_DEVICES
         worker_env['ROCR_VISIBLE_DEVICES'] = str(gpu_id)
         
         if formatted:
