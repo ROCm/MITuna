@@ -82,6 +82,9 @@ async def test_celery_workers():
   assert q_name == f"compile_q_{db_name}_sess_{miopen.args.session_id}"
   q_name = get_q_name(miopen, op_eval=True)
   assert q_name == f"eval_q_{db_name}_sess_{miopen.args.session_id}"
+  # Test else branch (neither op_compile nor op_eval)
+  q_name = get_q_name(miopen, op_compile=False, op_eval=False)
+  assert q_name == f"unknown_op_{db_name}_sess_{miopen.args.session_id}"
 
   #testing prep_tuning
   _, subp_list = miopen.prep_tuning()
@@ -313,3 +316,128 @@ assert TUNA_CELERY_BROKER_PWD
 TUNA_CELERY_BACKEND_PORT, TUNA_CELERY_BACKEND_HOST = get_backend_env()
 assert TUNA_CELERY_BACKEND_PORT
 assert TUNA_CELERY_BACKEND_HOST
+
+
+def test_launch_worker_per_node_exception():
+  """Test exception handling in launch_worker_per_node"""
+  from tuna.celery_app.celery_workers import launch_worker_per_node
+  from unittest.mock import Mock
+
+  # Create a mock machine with hostname
+  machine = Mock()
+  machine.hostname = "test_host"
+
+  # Test with invalid command that will cause subprocess.Popen to fail
+  # Using a command with null bytes which will raise an exception
+  cmd = "test\x00command"
+  result = launch_worker_per_node([machine], cmd, formatted=True)
+  assert result is False
+
+
+def test_launch_worker_per_gpu():
+  """Test launch_worker_per_gpu function"""
+  from tuna.celery_app.celery_workers import launch_worker_per_gpu
+  from unittest.mock import Mock
+  from time import sleep
+
+  # Test 1: Normal execution with formatted=True
+  machine = Mock()
+  machine.hostname = "test_host"
+  machine.get_avail_gpus = Mock(return_value=[0, 1])
+
+  cmd = "echo test_HOSTNAME_GPUID"
+  result = launch_worker_per_gpu([machine], cmd, formatted=True)
+  assert result is not False
+  assert isinstance(result, list)
+  assert len(result) == 2
+
+  # Clean up subprocesses
+  for subp in result:
+    subp.kill()
+    subp.wait()
+  sleep(0.1)
+
+  # Test 2: No GPUs available
+  machine_no_gpu = Mock()
+  machine_no_gpu.hostname = "test_host"
+  machine_no_gpu.get_avail_gpus = Mock(return_value=[])
+
+  result = launch_worker_per_gpu([machine_no_gpu], cmd, formatted=True)
+  assert result is False
+
+  # Test 3: Exception during command replacement
+  machine_error = Mock()
+  machine_error.hostname = None  # This will cause an exception in replace()
+  machine_error.get_avail_gpus = Mock(return_value=[0])
+
+  result = launch_worker_per_gpu([machine_error], cmd, formatted=True)
+  assert result is False
+
+  # Test 4: Exception during subprocess creation
+  machine_subprocess_error = Mock()
+  machine_subprocess_error.hostname = "test_host"
+  machine_subprocess_error.get_avail_gpus = Mock(return_value=[0])
+
+  # Command with null bytes that will cause subprocess.Popen to fail
+  bad_cmd = "test\x00command_HOSTNAME_GPUID"
+  result = launch_worker_per_gpu([machine_subprocess_error],
+                                 bad_cmd,
+                                 formatted=True)
+  assert result is False
+
+  # Test 5: Unformatted command
+  result = launch_worker_per_gpu([machine], "echo test", formatted=False)
+  assert result is not False
+  assert isinstance(result, list)
+
+  # Clean up subprocesses
+  for subp in result:
+    subp.kill()
+    subp.wait()
+  sleep(0.1)
+
+
+def test_launch_celery_worker():
+  """Test launch_celery_worker function"""
+  from tuna.celery_app.celery_workers import launch_celery_worker
+  from tuna.libraries import Operation
+  from time import sleep
+
+  args = GoFishArgs()
+
+  # Test 1: Operation.COMPILE (already tested via launch_worker_per_node)
+  cmd = "echo test_compile"
+  result = launch_celery_worker(Operation.COMPILE, cmd, args, formatted=False)
+  assert result is not False
+  assert isinstance(result, list)
+  for subp in result:
+    subp.kill()
+    subp.wait()
+  sleep(0.1)
+
+  # Test 2: Operation.EVAL
+  # Need to create a machine with GPUs for this test
+  from unittest.mock import patch, Mock
+
+  mock_machine = Mock()
+  mock_machine.hostname = "test_host"
+  mock_machine.get_avail_gpus = Mock(return_value=[0])
+
+  with patch('tuna.celery_app.celery_workers.load_machines',
+             return_value=[mock_machine]):
+    cmd = "echo test_eval"
+    result = launch_celery_worker(Operation.EVAL, cmd, args, formatted=False)
+    assert result is not False
+    assert isinstance(result, list)
+    for subp in result:
+      subp.kill()
+      subp.wait()
+    sleep(0.1)
+
+  # Test 3: Invalid operation (should raise ValueError)
+  import pytest
+  with pytest.raises(
+      ValueError, match='Operation does not support launching celery workers'):
+    # Using an arbitrary string that's not a valid Operation
+    invalid_op = "INVALID_OPERATION"
+    launch_celery_worker(invalid_op, cmd, args, formatted=False)
