@@ -27,7 +27,10 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
+import os
 import copy
+import time
+import threading
 from typing import List, Tuple, Any
 from functools import lru_cache
 from collections.abc import Iterable
@@ -85,6 +88,14 @@ class MIOpen(MITunaInterface):
     super().__init__(library=Library.MIOPEN)
     self.args = None
     self.set_state = None
+    
+    # Phase 2: Batch result writing (micro-batching)
+    self.result_buffer = []
+    self.buffer_lock = threading.Lock()
+    self.last_flush_time = time.time()
+    # Use environment variables for configuration (defaults: 10 results, 5 second timeout)
+    self.BATCH_SIZE = int(os.environ.get('TUNA_RESULT_BATCH_SIZE', 10))
+    self.FLUSH_INTERVAL = int(os.environ.get('TUNA_FLUSH_INTERVAL', 5))
 
   def parse_args(self):
     # pylint: disable=too-many-statements
@@ -952,20 +963,20 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def process_eval_results(self, session, fin_json, context):
-    """! Process fin_json result
-        @param session DB session
-        @param fin_json MIFin results for job
-        @param context Context for Celery job
-        @return Boolean value
-        """
+  def _process_single_eval_result(self, session, fin_json, context, commit=True):
+    """Process a single evaluation result (extracted for batching)
+    
+    @param session DB session
+    @param fin_json MIFin results for job
+    @param context Context for Celery job
+    @param commit Whether to commit immediately (False for batching)
+    @return Boolean value
+    """
     job = SimpleDict(**context["job"])
     failed_job = True
     result_str = ""
     pending = []
     orig_state = "compiled"
-
-    # Extract machine_id from context
     machine_id = context.get('machine_id', None)
 
     try:
@@ -1044,7 +1055,88 @@ class MIOpen(MITunaInterface):
       self.logger.warning("FinBuild: Unable to update Database %s", err)
       session.rollback()
       set_job_state(session, job, self.dbt, "errored", result=result_str)
+    
+    # Commit immediately if not batching
+    if commit:
+      session.commit()
 
+    return True
+
+  def _flush_results_batch(self, session):
+    """Flush all buffered results to database in single transaction
+    
+    @param session DB session
+    @return Number of results flushed
+    """
+    if not self.result_buffer:
+      return 0
+    
+    # Copy buffer before processing to prevent issues if processing fails partway
+    buffer_to_process = list(self.result_buffer)
+    buffer_size = len(buffer_to_process)
+    self.logger.info("Flushing batch of %d results to database", buffer_size)
+    
+    try:
+      # Process all results from copy (not from original buffer)
+      for fin_json, context in buffer_to_process:
+        self._process_single_eval_result(session, fin_json, context, commit=False)
+      
+      # Single commit for entire batch
+      session.commit()
+      self.logger.info("Successfully flushed %d results", buffer_size)
+      
+      # Only clear original buffer after successful commit
+      self.result_buffer.clear()
+      self.last_flush_time = time.time()
+      
+      return buffer_size
+      
+    except Exception as err:  # pylint: disable=broad-exception-caught
+      self.logger.error("Batch flush failed: %s", err)
+      session.rollback()
+      
+      # Retry each result individually from the copy
+      self.logger.warning("Retrying %d results individually", buffer_size)
+      failed_count = 0
+      for fin_json, context in buffer_to_process:
+        try:
+          self._process_single_eval_result(session, fin_json, context, commit=True)
+        except Exception as retry_err:  # pylint: disable=broad-exception-caught
+          self.logger.error("Individual retry failed for job %s: %s", 
+                          context.get('job', {}).get('id', 'unknown'), retry_err)
+          failed_count += 1
+      
+      # Clear buffer even if some retries failed (prevent infinite retry loop)
+      self.result_buffer.clear()
+      self.last_flush_time = time.time()
+      
+      if failed_count > 0:
+        self.logger.error("Failed to process %d/%d results even after individual retry", 
+                         failed_count, buffer_size)
+      
+      return buffer_size - failed_count
+
+  def process_eval_results(self, session, fin_json, context):
+    """Process fin_json result with micro-batching
+    
+    @param session DB session
+    @param fin_json MIFin results for job
+    @param context Context for Celery job
+    @return Boolean value
+    """
+    # Add result to buffer
+    with self.buffer_lock:
+      self.result_buffer.append((fin_json, context))
+      
+      # Check if we should flush
+      should_flush = (
+          len(self.result_buffer) >= self.BATCH_SIZE or
+          (time.time() - self.last_flush_time) >= self.FLUSH_INTERVAL
+      )
+      
+      if should_flush:
+        self._flush_results_batch(session)
+    
     return True
 
   def extract_job_id_from_context(self, context):
