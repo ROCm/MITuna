@@ -100,8 +100,10 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     # Track jobs claimed by this specific instance when in distributor mode
     self.claimed_job_ids = set()
     self.completed_job_ids = set()
-    # if less than 25% of the jobs are remaining, we can grab more jobs
-    self.progress_factor = 0.25
+    # Wait if in-progress jobs exceed this factor of batch size
+    # With 8 distributors × 250 batch = 2000 jobs, factor of 2.0 means wait if >4000 in progress
+    # This prevents over-fetching while keeping GPUs fed
+    self.progress_factor = float(os.environ.get('TUNA_PROGRESS_FACTOR', '2.0'))
 
   def check_docker(self,
                    worker: WorkerInterface,
@@ -375,63 +377,69 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     raise NotImplementedError("Not implemented")
 
   def _should_wait_for_progress(self, job_batch_size):
-    """Check if we should wait before fetching more jobs based on database state
+    """Check if we should wait before fetching more jobs based on Redis-cached progress
     
-    This method queries the database directly to get accurate job counts,
-    eliminating reliance on potentially stale in-memory tracking lists.
+    This method reads progress from Redis (updated by progress_tracker process),
+    eliminating the need for each distributor to query the database directly.
+    This prevents database query storms when running multiple distributors.
+    
+    NOTE: We check GLOBAL progress (from Redis), not just this distributor's claimed jobs.
+    This prevents all distributors from over-fetching at startup.
     """
-    if not self.claimed_job_ids:
-      # No jobs claimed yet, don't wait
-      return False
-    
     progress_threshold = job_batch_size * self.progress_factor
     
-    # Query database for actual state of claimed jobs
-    with DbSession() as session:
-      try:
-        # Batch the query to avoid SQL statement too long
-        claimed_list = list(self.claimed_job_ids)
-        batch_size = 1000
-        total_in_progress = 0
-        total_completed = 0
-        
-        for i in range(0, len(claimed_list), batch_size):
-          batch = claimed_list[i:i + batch_size]
-          id_str = ','.join(map(str, batch))
-          
-          # Count jobs still in progress states
-          in_progress_query = f"""
-            SELECT COUNT(*) FROM {self.dbt.job_table.__tablename__}
-            WHERE id IN ({id_str})
-            AND state IN ('eval_start', 'compile_start')
-          """
-          batch_in_progress = session.execute(text(in_progress_query)).scalar()
-          total_in_progress += batch_in_progress
-          
-          # Count completed jobs
-          completed_query = f"""
-            SELECT COUNT(*) FROM {self.dbt.job_table.__tablename__}
-            WHERE id IN ({id_str})
-            AND state IN ('evaluated', 'errored', 'completed')
-          """
-          batch_completed = session.execute(text(completed_query)).scalar()
-          total_completed += batch_completed
-        
+    try:
+      # Read from Redis (instant, no SQL)
+      import redis
+      backend_port = int(os.environ.get('TUNA_CELERY_BACKEND_PORT', 6379))
+      backend_host = os.environ.get('TUNA_CELERY_BACKEND_HOST', 'localhost')
+      r = redis.Redis(host=backend_host, port=backend_port, db=0, decode_responses=True)
+      
+      key = f"{self.prefix}:progress"
+      progress_data = r.get(key)
+      
+      if not progress_data:
+        # No progress data yet (tracker not started or no data)
+        # On first startup, don't wait to allow initial job fetching
+        if not self.claimed_job_ids:
+          self.logger.info("No progress data in Redis yet and no jobs claimed, not waiting")
+          return False
+        else:
+          # If we've claimed jobs but Redis has no data, something is wrong
+          # Be conservative and wait
+          self.logger.warning("No progress data in Redis but jobs were claimed, waiting as safety measure")
+          return True
+      
+      progress = json.loads(progress_data)
+      states = progress.get('states', {})
+      
+      # Calculate in-progress jobs from cached GLOBAL state counts
+      # This includes jobs from ALL distributors, not just this one
+      in_progress = states.get('eval_start', 0) + states.get('compile_start', 0)
+      
+      # Wait if too many jobs in progress GLOBALLY
+      should_wait = in_progress >= progress_threshold
+      
+      if should_wait:
         self.logger.info(
-            "DB query - Jobs in progress: %d, completed: %d, threshold: %.0f",
-            total_in_progress,
-            total_completed,
-            progress_threshold,
+            "Redis progress check - In progress: %d, threshold: %.0f - WAITING",
+            in_progress, progress_threshold
         )
-        
-        return total_in_progress >= progress_threshold
-        
-      except Exception as err:  # pylint: disable=broad-exception-caught
-        self.logger.error("Error querying job progress: %s", err)
-        # On error, be conservative: assume we should wait (return True)
-        # This prevents over-fetching if database is temporarily unavailable
-        self.logger.warning("Defaulting to WAIT due to database error (conservative approach)")
-        return True
+      else:
+        # Log when NOT waiting to help debug
+        if loop_iteration % 10 == 1:  # Only log occasionally
+          self.logger.info(
+              "Redis progress check - In progress: %d, threshold: %.0f - NOT WAITING",
+              in_progress, progress_threshold
+          )
+      
+      return should_wait
+      
+    except Exception as err:  # pylint: disable=broad-exception-caught
+      self.logger.error("Error reading progress from Redis: %s", err)
+      # On error, don't wait (fail open) to avoid blocking distributors
+      self.logger.warning("Defaulting to NOT WAIT due to Redis error (fail-open approach)")
+      return False
 
   def _fetch_jobs_with_retry(self,
                              job_batch_size,
@@ -518,8 +526,9 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                      job_batch_size, q_name)
     self.logger.info("Fetch states: %s, Set state: %s", self.fetch_state,
                      self.set_state)
+    self.logger.info("Progress factor: %.2f, threshold per distributor: %.0f",
+                     self.progress_factor, job_batch_size * self.progress_factor)
 
-    is_first_batch = True
     consecutive_empty_fetches = 0
     max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
     poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 60))
@@ -531,9 +540,10 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       if loop_iteration % 10 == 1:
         self.logger.info("=== Enqueue loop iteration %d ===", loop_iteration)
 
-      # 1. Check if we should wait for progress (skip on first batch)
-      # Database query now provides accurate state, no reconciliation needed
-      if not is_first_batch and self._should_wait_for_progress(job_batch_size):
+      # 1. Check if we should wait for progress
+      # Always check progress (even on first iteration) if Redis data is available
+      # This prevents initial burst when multiple distributors start simultaneously
+      if self._should_wait_for_progress(job_batch_size):
         self.logger.info(
             "Waiting for batch progress (iteration %d)",
             loop_iteration)
@@ -778,6 +788,14 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       cleanup_proc.start()
       cleanup_proc.join()
 
+      # Start progress tracker process (monitors DB and updates Redis)
+      from tuna.progress_tracker import run_progress_tracker
+      poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 60))
+      tracker_proc = Process(target=run_progress_tracker,
+                            args=(self.args.session_id, self.prefix, self.dbt, poll_interval))
+      self.logger.info("Starting progress tracker process (poll_interval=%d)", poll_interval)
+      tracker_proc.start()
+
       # start async consume thread, blocking
       consume_proc = Process(target=self.async_wrap,
                              args=(self.consume, job_counter, self.prefix))
@@ -792,6 +810,13 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       # Wait for both processes to complete naturally
       consume_proc.join()
       enqueue_proc.join()
+      
+      # Stop progress tracker
+      self.logger.info("Stopping progress tracker")
+      tracker_proc.terminate()
+      tracker_proc.join(timeout=5)
+      if tracker_proc.is_alive():
+        tracker_proc.kill()
 
     except (
         KeyboardInterrupt,
