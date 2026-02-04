@@ -760,16 +760,9 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       self.logger.error(verr)
       return False
 
-    try:
-      # if enqueue_only is False, we launch the celery workers
-      if not self.args.enqueue_only:
-        for subp in subp_list:
-          subp.wait()
-        return True
-    except KeyboardInterrupt:
-      for subp in subp_list:
-        subp.kill()
-      return False
+    # Note: When enqueue_only is False, we launch celery workers above
+    # but we DON'T wait for them here - we need to continue to start
+    # the consumer, enqueue, and tracker processes below
 
     start = time.time()
 
