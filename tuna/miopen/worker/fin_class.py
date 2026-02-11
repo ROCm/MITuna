@@ -103,8 +103,10 @@ class FinClass(WorkerInterface):
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
     
     if hasattr(self, 'gpu_id') and self.gpu_id is not None:
-      num_gpus = len(self.machine.get_avail_gpus()) if hasattr(self, 'machine') else 1
-      actual_gpu = self.gpu_id % num_gpus  # Wrap around available GPUs
+      # In Celery worker context, self.machine is not available
+      # So we should just use gpu_id directly
+      # The Celery worker launch already ensures gpu_id matches the actual GPU
+      actual_gpu = self.gpu_id
       
       # Remove HIP_VISIBLE_DEVICES to avoid conflicts with ROCR_VISIBLE_DEVICES
       # Setting both can cause "No ROCm-capable device is detected" errors
@@ -112,8 +114,8 @@ class FinClass(WorkerInterface):
       
       # Set ROCR_VISIBLE_DEVICES for GPU pinning
       self.envmt.append(f"ROCR_VISIBLE_DEVICES={actual_gpu}")
-      self.logger.info("Set ROCR_VISIBLE_DEVICES=%d for worker (worker_id=%d, num_gpus=%d)", 
-                     actual_gpu, self.gpu_id, num_gpus)
+      self.logger.info("Set ROCR_VISIBLE_DEVICES=%d for worker (worker_id=%d)", 
+                     actual_gpu, self.gpu_id)
     else:
       self.logger.warning("gpu_id not set - ROCR_VISIBLE_DEVICES not configured. All workers may use same GPU!")
 
