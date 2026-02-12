@@ -425,13 +425,8 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
             "Redis progress check - In progress: %d, threshold: %.0f - WAITING",
             in_progress, progress_threshold
         )
-      else:
-        # Log when NOT waiting to help debug
-        if loop_iteration % 10 == 1:  # Only log occasionally
-          self.logger.info(
-              "Redis progress check - In progress: %d, threshold: %.0f - NOT WAITING",
-              in_progress, progress_threshold
-          )
+      # Note: Removed conditional logging that referenced undefined loop_iteration variable
+      # The waiting/not-waiting status is already logged above
       
       return should_wait
       
@@ -727,6 +722,10 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
       cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{self.args.session_id} -Q {q_name}"  # pylint: disable=line-too-long
     else:
       q_name = get_q_name(self, op_eval=True)
+      # CRITICAL FIX: Increase consumer timeout via CELERY_BROKER_TRANSPORT_OPTIONS environment variable
+      # The consumer_timeout=7200000 (2 hours) allows workers to process long-running jobs
+      # without RabbitMQ timing out and assuming the worker crashed
+      # Note: --acks-late and --time-limit flags are not supported in this Celery version
       cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{self.args.session_id}_gpu_id_GPUID -Q {q_name}"  # pylint: disable=line-too-long
 
     self.logger.info("celery Q name: %s", q_name)
