@@ -582,7 +582,7 @@ class MIOpen(MITunaInterface):
   def get_job_objs(
       self,
       session: DbSession,
-      find_state: list,
+      find_state: set,
       label: str,
       dbt: DBTablesInterface,
       job_attr: List[str],
@@ -606,7 +606,9 @@ class MIOpen(MITunaInterface):
       conds.append(f"reason='{label}'")
 
     conds.append(f"retries<{self.max_job_retries}")
-    conds.append("state in (" + str(find_state).strip("{").strip("}") + ")")
+    # Convert set to proper SQL format
+    state_list = "', '".join(find_state)
+    conds.append(f"state in ('{state_list}')")
 
     entries = self.compose_work_objs(session, conds, dbt, job_attr, claim_num,
                                      fin_steps)
@@ -651,7 +653,7 @@ class MIOpen(MITunaInterface):
     return job_entries
 
   def detect_and_handle_locked_jobs(self, session: DbSession,
-                                    find_state: List[str]) -> bool:
+                                    find_state: set) -> bool:
     """Detect jobs that are locked and preventing progress
     
     This method queries for jobs without locking to detect if jobs exist
@@ -659,7 +661,7 @@ class MIOpen(MITunaInterface):
     with high retry counts as errored to unblock the pipeline.
     
     @param session DB session
-    @param find_state List of job states to check
+    @param find_state Set of job states to check
     @return True if locked jobs were found and handled, False otherwise
     """
     # Query WITHOUT lock to see if jobs are being skipped
@@ -669,7 +671,9 @@ class MIOpen(MITunaInterface):
       conds.append(f"reason='{self.args.label}'")
     
     conds.append(f"retries<{self.max_job_retries}")
-    conds.append("state in (" + str(find_state).strip("{").strip("}") + ")")
+    # Convert set to proper SQL format
+    state_list = "', '".join(find_state)
+    conds.append(f"state in ('{state_list}')")
     
     if self.args.fin_steps:
       conds.append(f"fin_step like '%{self.args.fin_steps[0]}%'")
@@ -963,7 +967,7 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def _process_single_eval_result(self, session, fin_json, context, commit=True):
+  def _process_single_eval_result(self, session, fin_json, context, r=True):
     """Process a single evaluation result (extracted for batching)
     
     @param session DB session
