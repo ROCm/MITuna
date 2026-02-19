@@ -967,7 +967,7 @@ class MIOpen(MITunaInterface):
 
     return True
 
-  def _process_single_eval_result(self, session, fin_json, context, r=True):
+  def _process_single_eval_result(self, session, fin_json, context, commit=True):
     """Process a single evaluation result (extracted for batching)
     
     @param session DB session

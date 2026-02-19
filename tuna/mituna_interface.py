@@ -376,16 +376,78 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
     """Wrapper function for celery enqueue func"""
     raise NotImplementedError("Not implemented")
 
-  def _should_wait_for_progress(self, job_batch_size):
-    """Check if we should wait before fetching more jobs based on Redis-cached progress
+  def _get_rabbitmq_queue_depth(self, q_name=None):
+    """Get current RabbitMQ queue depth
     
-    This method reads progress from Redis (updated by progress_tracker process),
-    eliminating the need for each distributor to query the database directly.
-    This prevents database query storms when running multiple distributors.
+    Returns the number of messages in the RabbitMQ queue.
+    This provides real-time queue status without Redis dependency.
     
-    NOTE: We check GLOBAL progress (from Redis), not just this distributor's claimed jobs.
-    This prevents all distributors from over-fetching at startup.
+    @param q_name Queue name (optional, will use default if not provided)
+    @return Number of messages in queue, or -1 on error
     """
+    try:
+      # Get queue name if not provided
+      if q_name is None:
+        from tuna.celery_app.utility import get_q_name
+        q_name = get_q_name(self, op_eval=(self.operation == Operation.EVAL))
+      
+      # Use rabbitmqctl to get queue depth
+      broker_host = os.environ.get('TUNA_CELERY_BROKER_HOST', 'localhost')
+      broker_port = int(os.environ.get('TUNA_CELERY_BROKER_PORT', 5672))
+      
+      # Try to get queue info via rabbitmqctl
+      cmd = f"rabbitmqctl list_queues name messages | grep {q_name}"
+      result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
+      
+      if result.returncode == 0 and result.stdout.strip():
+        # Parse output: "queue_name  123"
+        parts = result.stdout.strip().split()
+        if len(parts) >= 2:
+          return int(parts[1])
+      
+      # Fallback: return -1 to indicate we couldn't get queue depth
+      return -1
+      
+    except Exception as err:  # pylint: disable=broad-exception-caught
+      self.logger.debug("Could not get RabbitMQ queue depth: %s", err)
+      return -1
+
+  def _should_wait_for_progress(self, job_batch_size):
+    """Check if we should wait before fetching more jobs
+    
+    Uses two mechanisms (in priority order):
+    1. RabbitMQ queue depth (real-time, direct)
+    2. Redis progress cache (fallback if RabbitMQ check fails)
+    
+    This hybrid approach provides robustness while preferring the simpler
+    RabbitMQ queue depth check when available.
+    """
+    # Environment variable thresholds
+    queue_min = int(os.environ.get('TUNA_QUEUE_MIN_THRESHOLD', 1000))
+    queue_max = int(os.environ.get('TUNA_QUEUE_MAX_THRESHOLD', 3000))
+    
+    # Try RabbitMQ queue depth first (simpler, more direct)
+    queue_depth = self._get_rabbitmq_queue_depth()
+    
+    if queue_depth >= 0:  # Successfully got queue depth
+      if queue_depth >= queue_max:
+        self.logger.info(
+            "RabbitMQ queue check - Queue depth: %d >= max threshold: %d - WAITING",
+            queue_depth, queue_max)
+        return True
+      elif queue_depth < queue_min:
+        self.logger.debug(
+            "RabbitMQ queue check - Queue depth: %d < min threshold: %d - FETCHING",
+            queue_depth, queue_min)
+        return False
+      else:
+        self.logger.debug(
+            "RabbitMQ queue check - Queue depth: %d (healthy range %d-%d) - FETCHING",
+            queue_depth, queue_min, queue_max)
+        return False
+    
+    # Fallback to Redis progress tracking if RabbitMQ check failed
+    self.logger.debug("RabbitMQ queue check unavailable, falling back to Redis progress tracking")
     progress_threshold = job_batch_size * self.progress_factor
     
     try:
