@@ -93,9 +93,9 @@ class MIOpen(MITunaInterface):
     self.result_buffer = []
     self.buffer_lock = threading.Lock()
     self.last_flush_time = time.time()
-    # Use environment variables for configuration (defaults: 10 results, 5 second timeout)
+    # Use environment variables for configuration (defaults: 10 results, 10 second timeout)
     self.BATCH_SIZE = int(os.environ.get('TUNA_RESULT_BATCH_SIZE', 10))
-    self.FLUSH_INTERVAL = int(os.environ.get('TUNA_FLUSH_INTERVAL', 5))
+    self.FLUSH_INTERVAL = int(os.environ.get('TUNA_FLUSH_INTERVAL', 10))
 
   async def consume(self, job_counter, prefix):
     """Override consume to flush buffer before exit
@@ -1144,7 +1144,7 @@ class MIOpen(MITunaInterface):
 
   def process_eval_results(self, session, fin_json, context):
     """Process fin_json result with micro-batching
-    
+
     @param session DB session
     @param fin_json MIFin results for job
     @param context Context for Celery job
@@ -1153,16 +1153,26 @@ class MIOpen(MITunaInterface):
     # Add result to buffer
     with self.buffer_lock:
       self.result_buffer.append((fin_json, context))
-      
+
       # Check if we should flush
       should_flush = (
           len(self.result_buffer) >= self.BATCH_SIZE or
           (time.time() - self.last_flush_time) >= self.FLUSH_INTERVAL
       )
-      
+
       if should_flush:
         self._flush_results_batch(session)
-    
+      elif len(self.result_buffer) > 0:
+        # Even if not flushing batch, check idle time
+        # If buffer has content and we haven't flushed in 2x FLUSH_INTERVAL,
+        # flush anyway to prevent indefinite buffering when queue empties
+        idle_threshold = self.FLUSH_INTERVAL * 2
+        if (time.time() - self.last_flush_time) >= idle_threshold:
+          self.logger.warning(
+              "Buffer idle for %ds with %d results - flushing to prevent data loss",
+              idle_threshold, len(self.result_buffer))
+          self._flush_results_batch(session)
+
     return True
 
   def extract_job_id_from_context(self, context):
