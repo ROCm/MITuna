@@ -646,12 +646,46 @@ class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-p
                   "detect_and_handle_locked_jobs method not available")
 
         if consecutive_empty_fetches >= max_empty_fetches:
-          self.logger.warning(
-              'EXITING: No more jobs available after %d attempts (iteration %d). Exiting enqueue loop.',
-              max_empty_fetches, loop_iteration)
-          self.logger.info("Final state - claimed: %d, completed: %d",
-                          len(self.claimed_job_ids), len(self.completed_job_ids))
-          return
+          # Before exiting, check if there are still jobs being processed
+          # Query database for jobs in progress states
+          try:
+            with DbSession() as check_session:
+              if self.dbt is not None:
+                # Check for jobs in eval_start or compile_start states for this session
+                in_progress_state = 'eval_start' if self.operation == Operation.EVAL else 'compile_start'
+                query = f"""
+                  SELECT COUNT(*) FROM {self.dbt.job_table.__tablename__}
+                  WHERE session = {self.args.session_id}
+                  AND state = '{in_progress_state}'
+                  AND valid = 1
+                """
+                result = check_session.execute(text(query)).fetchone()
+                jobs_in_progress = result[0] if result else 0
+                
+                if jobs_in_progress > 0:
+                  self.logger.warning(
+                      'No new jobs to claim, but %d jobs still in progress (state=%s) - iteration %d',
+                      jobs_in_progress, in_progress_state, loop_iteration)
+                  self.logger.info("Waiting for in-progress jobs to complete before exiting...")
+                  consecutive_empty_fetches = 0  # Reset counter to keep waiting
+                  time.sleep(poll_interval)
+                  continue
+                else:
+                  self.logger.warning(
+                      'EXITING: No more jobs available after %d attempts and no jobs in progress (iteration %d). Exiting enqueue loop.',
+                      max_empty_fetches, loop_iteration)
+                  self.logger.info("Final state - claimed: %d, completed: %d",
+                                  len(self.claimed_job_ids), len(self.completed_job_ids))
+                  return
+          except Exception as check_err:  # pylint: disable=broad-exception-caught
+            self.logger.error("Error checking for in-progress jobs: %s", check_err)
+            # On error, be conservative and exit to avoid infinite loop
+            self.logger.warning(
+                'EXITING: No more jobs available after %d attempts (iteration %d). Exiting enqueue loop.',
+                max_empty_fetches, loop_iteration)
+            self.logger.info("Final state - claimed: %d, completed: %d",
+                            len(self.claimed_job_ids), len(self.completed_job_ids))
+            return
 
         self.logger.info("Sleeping for %d seconds before retry (iteration %d)...",
                         poll_interval, loop_iteration)

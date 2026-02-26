@@ -26,7 +26,7 @@
 ###############################################################################
 """Utility module for parsing fin json results"""
 import functools
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy import text
 
 from tuna.utils.logger import setup_logger
@@ -383,13 +383,36 @@ def __compose_fdb_entry(  #pylint: disable=too-many-arguments
 def __submit_tuning_data_entry(  #pylint: disable=too-many-arguments
     session, dbt, tuning_data_entry, tuning_data_attr, slv_stat, config,
     pending):
-  """Compose a FindDB table entry from fin_output"""
+  """Compose a FindDB table entry from fin_output
+  
+  Handles duplicate entries gracefully - if an INSERT fails due to a duplicate
+  key constraint (e.g., when a job is reset and re-run), it will UPDATE the
+  existing entry instead of failing.
+  """
+
+  
   __check_layout_mismatch(tuning_data_entry, slv_stat, config)
   if tuning_data_entry in pending:
     pending.remove(tuning_data_entry)
     query = gen_insert_query(tuning_data_entry, tuning_data_attr,
                              dbt.tuning_data_table.__tablename__)
-    session.execute(text(query))
+    try:
+      session.execute(text(query))
+    except IntegrityError as err:
+      # Duplicate entry - this is expected when jobs are reset and re-run
+      # Just UPDATE the existing entry instead of failing
+      if '1062' in str(err) or 'Duplicate entry' in str(err):
+        LOGGER.info('Duplicate tuning_data entry found, updating instead: '
+                   'config=%s, solver=%s, params=%s',
+                   tuning_data_entry.config, 
+                   getattr(tuning_data_entry, 'solver', 'unknown'),
+                   getattr(tuning_data_entry, 'params', 'unknown')[:50])
+        query = gen_update_query(tuning_data_entry, tuning_data_attr,
+                                 dbt.tuning_data_table.__tablename__)
+        session.execute(text(query))
+      else:
+        # Re-raise if it's a different integrity error
+        raise
   else:
     query = gen_update_query(tuning_data_entry, tuning_data_attr,
                              dbt.tuning_data_table.__tablename__)

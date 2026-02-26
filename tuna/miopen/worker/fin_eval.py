@@ -42,8 +42,8 @@ class FinEvaluator(FinClass):
 
   def __init__(self, **kwargs):
     super().__init__(**kwargs)
-    if self.gpu_id != -1:
-      self.envmt.append(f"ROCR_VISIBLE_DEVICES={self.gpu_id}")
+    # Note: ROCR_VISIBLE_DEVICES is already set in parent class (FinClass.__init__)
+    # No need to set it again here - doing so would create duplicates in envmt
 
   def check_gpu(self):
     """Function to check gpu heartbeat"""

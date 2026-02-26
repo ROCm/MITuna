@@ -188,6 +188,15 @@ def celery_enqueue(context):
     logger.info("Enqueueing worker %s: job %s", app.worker_name, context['job'])
 
   worker = prep_worker(copy.deepcopy(context))
+  
+  # Log GPU pinning verification for eval operations
+  if operation == Operation.EVAL:
+    rocr_env = [env for env in worker.envmt if 'ROCR_VISIBLE_DEVICES' in env]
+    if rocr_env:
+      logger.info("GPU pinning verified - worker %s: %s", app.worker_name, rocr_env[0])
+    else:
+      logger.warning("GPU pinning NOT SET for worker %s - all GPUs may be used!", app.worker_name)
+  
   ret = worker.run()
 
   # Add machine_id to the context before returning

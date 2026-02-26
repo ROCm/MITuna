@@ -97,6 +97,28 @@ class MIOpen(MITunaInterface):
     self.BATCH_SIZE = int(os.environ.get('TUNA_RESULT_BATCH_SIZE', 10))
     self.FLUSH_INTERVAL = int(os.environ.get('TUNA_FLUSH_INTERVAL', 5))
 
+  async def consume(self, job_counter, prefix):
+    """Override consume to flush buffer before exit
+    
+    Ensures any buffered results are flushed to the database before
+    the consumer exits. This prevents results from being lost when
+    the buffer hasn't reached BATCH_SIZE threshold.
+    """
+    # Call parent class consume method
+    result = await super().consume(job_counter, prefix)
+    
+    # Flush any remaining buffered results
+    self.logger.info("Consumer finished - flushing any remaining buffered results")
+    if self.result_buffer:
+      self.logger.info("Found %d results in buffer, flushing...", len(self.result_buffer))
+      with DbSession() as session:
+        self._flush_results_batch(session)
+      self.logger.info("Final buffer flush completed")
+    else:
+      self.logger.info("No buffered results to flush")
+    
+    return result
+
   def parse_args(self):
     # pylint: disable=too-many-statements
     """Function to parse arguments"""

@@ -309,6 +309,27 @@ class Connection():
         o_var.close()
       if e_var and hasattr(e_var, "close"):
         e_var.close()
+      # Properly clean up subprocess to prevent pipe file descriptor leak
+      if self.local_machine and hasattr(self, 'subp') and self.subp is not None:
+        try:
+          # Ensure subprocess has finished
+          if self.subp.poll() is None:
+            try:
+              self.subp.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+              self.subp.kill()
+              self.subp.wait()
+          # Close any remaining file handles
+          if self.subp.stdout and not self.subp.stdout.closed:
+            self.subp.stdout.close()
+          if self.subp.stderr and not self.subp.stderr.closed:
+            self.subp.stderr.close()
+          if self.subp.stdin and not self.subp.stdin.closed:
+            self.subp.stdin.close()
+        except (OSError, ValueError):
+          pass  # Ignore errors during cleanup
+        finally:
+          self.subp = None
 
   def open_sftp(self) -> Optional[paramiko.sftp_client.SFTPClient]:
     """Helper function for ftp client"""
