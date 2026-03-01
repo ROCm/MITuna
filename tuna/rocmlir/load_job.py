@@ -45,7 +45,7 @@ def parse_args():
   #pylint: disable=duplicate-code
   parser = setup_arg_parser(
       'Insert jobs into MySQL db',
-      [TunaArgs.VERSION, TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.SESSION_ID])
+      [TunaArgs.VERSION, TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.NUM_CHIPLETS, TunaArgs.SESSION_ID])
   parser.add_argument('-l',
                       '--label',
                       type=str,

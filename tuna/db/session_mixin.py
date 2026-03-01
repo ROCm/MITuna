@@ -43,6 +43,7 @@ class SessionMixin():
 
   arch: str = Column(String(length=20), nullable=False, server_default="")
   num_cu: int = Column(Integer, nullable=False)
+  num_chiplets: int = Column(Integer, nullable=False)
   rocm_v: str = Column(String(length=64), nullable=False)
   reason: str = Column(String(length=60), nullable=False)
   ticket: str = Column(String(length=64), nullable=False, server_default="N/A")
@@ -70,6 +71,11 @@ class SessionMixin():
       self.num_cu = args.num_cu
     else:
       self.num_cu = worker.machine.num_cu
+
+    if hasattr(args, 'num_chiplets') and args.num_chiplets:
+      self.num_chiplets = args.num_chiplets
+    else:
+      self.num_chiplets = 1
 
     if hasattr(args, 'rocm_v') and args.rocm_v:
       self.rocm_v = args.rocm_v

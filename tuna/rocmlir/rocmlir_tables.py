@@ -68,6 +68,7 @@ class SessionRocMLIR(BASE, SessionMixin):
   __tablename__ = "session_rocmlir"
   __table_args__ = (UniqueConstraint("arch",
                                      "num_cu",
+                                     "num_chiplets",
                                      "rocm_v",
                                      "mlir_v",
                                      "reason",
@@ -80,6 +81,7 @@ class SessionRocMLIR(BASE, SessionMixin):
     query = sess.query(sess_obj.id)\
         .filter(sess_obj.arch == entry.arch)\
         .filter(sess_obj.num_cu == entry.num_cu)\
+        .filter(sess_obj.num_chiplets == entry.num_chiplets)\
         .filter(sess_obj.rocm_v == entry.rocm_v)\
         .filter(sess_obj.mlir_v == entry.mlir_v)\
         .filter(sess_obj.reason == entry.reason)\
@@ -403,6 +405,7 @@ class ResultsMixin(SimpleCSVMixin):  # pylint: disable=too-many-instance-attribu
     """Write the contents of the table as a .tsv file for perfRunner.py."""
     arch = dbt.session.arch_full
     num_cu = dbt.session.num_cu
+    num_chiplets = dbt.session.num_chiplets
     session_id = dbt.session_id
 
     with open(filename, 'a' if append else 'w', encoding='utf8') as out:
@@ -416,10 +419,10 @@ class ResultsMixin(SimpleCSVMixin):  # pylint: disable=too-many-instance-attribu
           # For detailed compatibility, downcase False and True.
           config_str = row.config_str.replace("False",
                                               "false").replace("True", "true")
-          print(f"Arch = {arch}({num_cu} CUs), vector = '{config_str}', \
+          print(f"Arch = {arch}({num_cu} CUs, {num_chiplets} chiplets), vector = '{config_str}', \
                 perfConfig = {row.perf_config}",
                 file=sys.stderr)
-          print(f"{arch}\t{num_cu}\t{config_str}\t{row.perf_config}", file=out)
+          print(f"{arch}\t{num_cu}\t{num_chiplets}\t{config_str}\t{row.perf_config}", file=out)
         return len(res)
 
 
