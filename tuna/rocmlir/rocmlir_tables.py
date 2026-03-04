@@ -949,11 +949,6 @@ class RocMLIRDBTables(DBTablesInterface):
 
   def set_tables(self, sess_class=None):
     """Set appropriate tables based on requirements"""
-    # #region agent log
-    import json
-    with open('/home/djoantic/.cursor/debug.log', 'a') as f:
-      f.write(json.dumps({"timestamp": __import__('time').time()*1000, "location": "rocmlir_tables.py:805", "message": "set_tables called", "data": {"config_type": str(self.config_type), "config_type_value": self.config_type.value if self.config_type else None}, "sessionId": "debug-session", "hypothesisId": "B"}) + '\n')
-    # #endregion
     if self.config_type == ConfigType.convolution:
       self.job_table = ConvolutionJob
       self.config_table = ConvolutionConfig
@@ -971,22 +966,12 @@ class RocMLIRDBTables(DBTablesInterface):
       self.config_table = GemmGemmConfig
       self.results = GemmGemmResults
     else:
-      # #region agent log
-      import json
-      with open('/home/djoantic/.cursor/debug.log', 'a') as f:
-        f.write(json.dumps({"timestamp": __import__('time').time()*1000, "location": "rocmlir_tables.py:820", "message": "ValueError about to be raised", "data": {"config_type": str(self.config_type), "config_type_value": self.config_type.value if self.config_type else None}, "sessionId": "debug-session", "hypothesisId": "B"}) + '\n')
-      # #endregion
       raise ValueError(f"Config type {self.config_type} not yet supported.")
 
 
 def get_tables() -> List[BASE]:
   """Returns a list of all RocMLIR lib DB tables"""
   tables: List[BASE] = []
-  # #region agent log
-  import json
-  with open('/home/djoantic/.cursor/debug.log', 'a') as f:
-    f.write(json.dumps({"timestamp": __import__('time').time()*1000, "location": "rocmlir_tables.py:823", "message": "get_tables called", "data": {}, "sessionId": "debug-session", "hypothesisId": "C"}) + '\n')
-  # #endregion
   with DbSession() as session:
     engine = session.bind
     connect = session.connection()
@@ -1011,11 +996,6 @@ def get_tables() -> List[BASE]:
     append_if_not_exists(GemmGemmJob())
     append_if_not_exists(GemmGemmResults())
 
-  # #region agent log
-  import json
-  with open('/home/djoantic/.cursor/debug.log', 'a') as f:
-    f.write(json.dumps({"timestamp": __import__('time').time()*1000, "location": "rocmlir_tables.py:848", "message": "get_tables returning", "data": {"tables_count": len(tables), "table_names": [t.__tablename__ for t in tables]}, "sessionId": "debug-session", "hypothesisId": "C"}) + '\n')
-  # #endregion
   return tables
 
 
