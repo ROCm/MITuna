@@ -809,6 +809,9 @@ class GemmGemmConfig(BASE, SimpleCSVMixin):
   k = Column(Integer, nullable=False, server_default="0")
   transpose_A = Column(Boolean, nullable=False, server_default="0")
   transpose_B = Column(Boolean, nullable=False, server_default="0")
+  transpose_C = Column(Boolean, nullable=False, server_default="0")
+  transpose_O = Column(Boolean, nullable=False, server_default="0")
+  gemm_o = Column(Integer, nullable=False, server_default="0")
   kernel_repeats = Column(Integer, nullable=False, server_default="0")
 
   def __repr__(self) -> str:
@@ -819,10 +822,13 @@ class GemmGemmConfig(BASE, SimpleCSVMixin):
       'out_data_type': '-out_datatype',
       'transpose_A': '-transA',
       'transpose_B': '-transB',
+      'transpose_C': '-transC',
+      'transpose_O': '-transO',
       'group_size': '-g',
       'm': '-m',
       'n': '-n',
       'k': '-k',
+      'gemm_o': '-gemmO',
       'kernel_repeats': None,
       'id': None,
       'valid': None
@@ -848,16 +854,21 @@ class GemmGemmConfig(BASE, SimpleCSVMixin):
     fields = {
         '-transA': 'transpose_A',
         '-transB': 'transpose_B',
+        '-transC': 'transpose_C',
+        '-transO': 'transpose_O',
         '-g': 'group_size',
         '-m': 'm',
         '-n': 'n',
         '-k': 'k',
         '-t': 'data_type',
-        '-out_datatype': 'out_data_type'
+        '-out_datatype': 'out_data_type',
+        '-gemmO': 'gemm_o',
     }
 
     self.kernel_repeats = 1
     for flag, value in options.items():
+      if flag not in fields:
+        continue
       if value in ["true", "True"]:
         value = 1
       if value in ["false", "False"]:
