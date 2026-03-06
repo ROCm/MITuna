@@ -54,6 +54,13 @@ def write_read_bytes(m):
   assert (contents == retval)
 
 
+def write_read_text(m):
+  contents = b'test file content'
+  tmpfile = m.write_file(contents, is_temp=True)
+  retval = m.read_file(tmpfile, byteread=False)
+  assert (isinstance(retval, str))
+
+
 def test_machine():
   keys = {'local_machine': True}
 
@@ -63,3 +70,4 @@ def test_machine():
   config_gpus(m)
 
   write_read_bytes(m)
+  write_read_text(m)

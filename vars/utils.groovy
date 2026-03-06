@@ -613,6 +613,8 @@ def pytestSuite1() {
            // builder then evaluator in sequence
            sh "python3 -m coverage run -a -m pytest tests/test_importconfigs.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_machine.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_machine_extended.py -s"
+           sh "python3 -m coverage run -a -m pytest tests/test_machine_management_interface.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_dbBase.py -s"
            sh "python3 -m coverage run -a -m pytest tests/test_driver.py -s"
            // Phase 1-3: New testing infrastructure and database tests
