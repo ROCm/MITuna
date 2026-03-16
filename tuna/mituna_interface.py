@@ -61,9 +61,9 @@ from tuna.utils.db_utility import gen_update_query, session_retry
 job_counter_lock = threading.Lock()
 
 
-class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-public-methods
-  """ Interface class extended by libraries. The purpose of this class is to define
-  common functionalities. """
+class MITunaInterface:  # pylint:disable=too-many-instance-attributes,too-many-public-methods
+  """Interface class extended by libraries. The purpose of this class is to define
+    common functionalities."""
 
   def __init__(self, library=Library.MIOPEN) -> None:
 
@@ -77,16 +77,22 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     self.max_job_retries = 10
     self.dbt = None
     self.operation = None
-    self.db_name = os.environ['TUNA_DB_NAME']
+    self.db_name = os.environ["TUNA_DB_NAME"]
     self.prefix = None
+
+    # Track jobs claimed by this specific instance when in distributor mode
+    self.claimed_job_ids = set()
+    self.completed_job_ids = set()
+    # if less than 25% of the jobs are remaining, we can grab more jobs
+    self.progress_factor = 0.25
 
   def check_docker(self,
                    worker: WorkerInterface,
                    dockername="miopentuna") -> bool:
     """! Checking for docker
-      @param worker The worker interface instance
-      @param dockername The name of the docker
-    """
+        @param worker The worker interface instance
+        @param dockername The name of the docker
+        """
     out2: ChannelFile
     _, out2, _ = worker.exec_command("sudo docker info")
     while not out2.channel.exit_status_ready():
@@ -102,34 +108,44 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     for line in out.readlines():
       if line is not None:
         if line.find(dockername) != -1:
-          self.logger.warning('%s docker image exists', dockername)
+          self.logger.warning("%s docker image exists", dockername)
           return True
     if line is None:
-      self.logger.warning('%s docker image does not exist', dockername)
+      self.logger.warning("%s docker image does not exist", dockername)
       return False
 
     return False
 
-  def check_status(self,
-                   worker: WorkerInterface,
-                   b_first: int,
-                   gpu_idx: int,
-                   machine: Machine,
-                   dockername: str = "miopentuna") -> bool:
+  def check_status(
+      self,
+      worker: WorkerInterface,
+      b_first: int,
+      gpu_idx: int,
+      machine: Machine,
+      dockername: str = "miopentuna",
+  ) -> bool:
     """! Function to check gpu_status
-      @param worker The worker interface instance
-      @param b_first Flag to keep track of visited GPU
-      @param gpu_idx Unique ID of the GPU
-      @param machine The machine instance
-      @param dockername The name of the docker
-    """
+        @param worker The worker interface instance
+        @param b_first Flag to keep track of visited GPU
+        @param gpu_idx Unique ID of the GPU
+        @param machine The machine instance
+        @param dockername The name of the docker
+        """
 
     if machine.chk_gpu_status(worker.gpu_id):
-      self.logger.info('Machine: (%s, %u) GPU_ID: %u OK', machine.hostname,
-                       machine.port, gpu_idx)
+      self.logger.info(
+          "Machine: (%s, %u) GPU_ID: %u OK",
+          machine.hostname,
+          machine.port,
+          gpu_idx,
+      )
     else:
-      self.logger.info('Machine: (%s, %u) GPU_ID: %u ERROR', machine.hostname,
-                       machine.port, gpu_idx)
+      self.logger.info(
+          "Machine: (%s, %u) GPU_ID: %u ERROR",
+          machine.hostname,
+          machine.port,
+          gpu_idx,
+      )
 
     if not b_first:
       return False
@@ -146,10 +162,10 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       for line in out.readlines():
         if line is not None:
           if line.find(dockername) != -1:
-            self.logger.warning('%s docker image exists', dockername)
+            self.logger.warning("%s docker image exists", dockername)
             break
         else:
-          self.logger.warning('%s docker image does not exist', dockername)
+          self.logger.warning("%s docker image does not exist", dockername)
 
     return True
 
@@ -163,16 +179,16 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     num_procs: int
     env: Dict[str, Any]
     env = get_env_vars()
-    if env['slurm_cpus'] > 0:
-      num_procs = int(env['slurm_cpus'])
+    if env["slurm_cpus"] > 0:
+      num_procs = int(env["slurm_cpus"])
     else:
-      num_procs = int(machine.get_num_cpus() * .6)
+      num_procs = int(machine.get_num_cpus() * 0.6)
 
     worker_ids = list(range(num_procs))
 
     if len(worker_ids) == 0:
-      self.logger.error('num_procs must be bigger than zero to launch worker')
-      self.logger.error('Cannot launch worker on machine: %s', machine.id)
+      self.logger.error("num_procs must be bigger than zero to launch worker")
+      self.logger.error("Cannot launch worker on machine: %s", machine.id)
       worker_ids = []
 
     return worker_ids
@@ -181,14 +197,14 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
                  machine: Machine,
                  worker_ids: range,
                  tuning=False) -> Dict[str, Any]:
-    #pylint:disable=unused-argument
+    # pylint:disable=unused-argument
     """Determine kwargs for worker_interface"""
     f_vals: Dict[str, Any]
     f_vals = self.compose_f_vals(machine)
-    f_vals['envmt'] = self.get_envmt()
+    f_vals["envmt"] = self.get_envmt()
 
     if not tuning:
-      f_vals["num_procs"] = Value('i', len(worker_ids))
+      f_vals["num_procs"] = Value("i", len(worker_ids))
 
     return f_vals
 
@@ -198,20 +214,20 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
   def compose_f_vals(self, machine: Machine, tuning=False) -> Dict[str, Any]:
     """! Compose dict for WorkerInterface constructor
-      @param args The command line arguments
-      @param machine Machine instance
-    """
+        @param args The command line arguments
+        @param machine Machine instance
+        """
     f_vals: Dict[str, Any] = {}
     f_vals["b_first"] = True
 
-    #adding non-serializable obj when not running through celery
+    # adding non-serializable obj when not running through celery
     if not tuning:
       f_vals["machine"] = machine
       f_vals["bar_lock"] = Lock()
-      #multiprocess queue for jobs, shared on machine
+      # multiprocess queue for jobs, shared on machine
       f_vals["job_queue"] = mpQueue()
       f_vals["job_queue_lock"] = Lock()
-      f_vals["end_jobs"] = Value('i', 0)
+      f_vals["end_jobs"] = Value("i", 0)
 
     return f_vals
 
@@ -220,21 +236,21 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
                  f_vals: Dict[str, Any],
                  tuning=False) -> Dict[str, Any]:
     """! Helper function to set up kwargs for worker instances
-      @param gpu_idx Unique ID of the GPU
-      @param f_vals Dict containing runtime information
-    """
+        @param gpu_idx Unique ID of the GPU
+        @param f_vals Dict containing runtime information
+        """
     envmt: Dict[str, Any] = f_vals["envmt"].copy()
     kwargs: Dict[str, Any] = {}
 
     kwargs = {
-        'gpu_id': gpu_idx,
-        'envmt': envmt,
-        'label': self.args.label,
-        'docker_name': self.args.docker_name,
-        'session_id': self.args.session_id
+        "gpu_id": gpu_idx,
+        "envmt": envmt,
+        "label": self.args.label,
+        "docker_name": self.args.docker_name,
+        "session_id": self.args.session_id,
     }
 
-    #adding non-serializable obj when not running through celery
+    # adding non-serializable obj when not running through celery
     if not tuning:
       kwargs["machine"] = f_vals["machine"]
       kwargs["job_queue"] = f_vals["job_queue"]
@@ -251,19 +267,21 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """Get list of jobs"""
     raise NotImplementedError("Not implemented")
 
-  def get_jobs(self,
-               session: DbSession,
-               find_state: List[str],
-               set_state: str,
-               session_id: int,
-               claim_num: int = None,
-               no_update=False):
+  def get_jobs(
+      self,
+      session: DbSession,
+      find_state: List[str],
+      set_state: str,
+      session_id: int,
+      claim_num: int = None,
+      no_update=False,
+  ):
     """Interface function to get jobs based on session and find_state"""
-    #job_rows: List[SimpleDict]
+    # job_rows: List[SimpleDict]
     ids: list
     row: SimpleDict
 
-    self.logger.info('Fetching DB rows...')
+    self.logger.info("Fetching DB rows...")
     job_list = self.get_job_list(session, find_state, claim_num)
 
     if not self.check_jobs_found(job_list, find_state, session_id):
@@ -274,15 +292,23 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     ids = [row.id for row in job_list]
     self.logger.info("%s jobs %s", find_state, ids)
-    self.logger.info('Updating job state to %s', set_state)
-    for job in job_list:
-      job.state = set_state
-      if self.dbt is not None:
-        query: str = gen_update_query(job, ['state'],
-                                      self.dbt.job_table.__tablename__)
-      else:
-        raise CustomError('DBTable must be set')
+    self.logger.info("Updating job state to %s", set_state)
+
+    # OPTIMIZATION: Use bulk UPDATE instead of individual updates
+    if self.dbt is not None:
+      id_str = ','.join(map(str, ids))
+      query = f"""
+                UPDATE {self.dbt.job_table.__tablename__} 
+                SET state = '{set_state}' 
+                WHERE id IN ({id_str})
+            """
       session.execute(query)
+
+      # Update local objects to reflect new state
+      for job in job_list:
+        job.state = set_state
+    else:
+      raise CustomError("DBTable must be set")
 
     session.commit()
 
@@ -295,68 +321,171 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
   def cancel_consumer(self, queue):
     """Cancel consumers for queue"""
     try:
-      cmd = f"celery -A tuna.celery_app.celery_app control cancel_consumer {queue}"
-      subp = subprocess.Popen(  #pylint: disable=consider-using-with
+      cmd = (
+          f"celery -A tuna.celery_app.celery_app control cancel_consumer {queue}"
+      )
+      subp = subprocess.Popen(  # pylint: disable=consider-using-with
           cmd,
           stdout=subprocess.PIPE,
           stderr=subprocess.STDOUT,
           shell=True,
-          universal_newlines=True)
+          universal_newlines=True,
+      )
 
-      #filter the workers by session id
-      sess_str = "sess_" + queue.split('_')[-1]
+      # filter the workers by session id
+      sess_str = "sess_" + queue.split("_")[-1]
       stdout, _ = subp.stdout, subp.stderr
       while True:
         line = stdout.readline()
         if not line:
           break
-        #stop workers that were feeding from this queue
+        # stop workers that were feeding from this queue
         if "->" in line and sess_str in line:
-          hostname = line.split('->')[1].split()[0].split(':')[0]
+          hostname = line.split("->")[1].split()[0].split(":")[0]
           stop_named_worker(hostname)
 
-    except Exception as exp:  #pylint: disable=broad-exception-caught
+    except Exception as exp:  # pylint: disable=broad-exception-caught
       self.logger.warning(
-          'Error occurred trying to cancel consumer for queue: %s ', queue)
+          "Error occurred trying to cancel consumer for queue: %s ", queue)
       self.logger.warning(exp)
       return False
 
-    self.logger.info('Sucessfully cancelled consumer for queue: %s', queue)
+    self.logger.info("Sucessfully cancelled consumer for queue: %s", queue)
 
     return True
 
   def celery_enqueue_call(self, context, q_name, task_id=False):
     """Wrapper function for celery enqueue func"""
-    raise NotImplementedError('Not implemented')
+    raise NotImplementedError("Not implemented")
 
   def enqueue_jobs(self, job_counter, job_batch_size, q_name):
-    """Enqueue celery jobs"""
-    self.logger.info('Starting enqueue')
-    with DbSession() as session:
-      while True:
-        job_list = []
-        #get all the jobs from mySQL
-        job_list = self.get_jobs(
-            session,
-            self.fetch_state,
-            self.set_state,  #pylint: disable=no-member
-            self.args.session_id,  #pylint: disable=no-member
-            job_batch_size)
+    """Enqueue celery jobs with machine-specific progress tracking and error handling"""
+    self.logger.info("Starting enqueue")
+    current_batch_size = 0
 
-        with job_counter_lock:
-          job_counter.value = job_counter.value + len(job_list)
+    max_retries = 3
+    retry_delay = 5  # seconds
+    consecutive_empty_fetches = 0
+    max_empty_fetches = int(os.environ.get('TUNA_MAX_EMPTY_FETCHES', 3))
 
-        for i in range(0, len(job_list), job_batch_size):
-          batch_jobs = job_list[i:min(i + job_batch_size, len(job_list))]
-          context_list = self.get_context_list(session, batch_jobs)
-          for context in context_list:
-            #calling celery task, enqueuing to celery queue
-            self.celery_enqueue_call(context, q_name=q_name)
+    while True:
+      # Retry loop for database operations
+      for attempt in range(max_retries):
+        try:
+          with DbSession() as session:
+            # Check if we should enqueue more jobs based on OUR progress
+            if current_batch_size > 0:
+              if not self.should_enqueue_more_jobs(session, current_batch_size):
+                self.logger.info(
+                    "Waiting for our current batch to progress before enqueuing more"
+                )
+                break  # Exit retry loop, will wait and check again
 
-        self.logger.info('Job counter: %s', job_counter.value)
-        if not job_list:
-          self.logger.info('All tasks added to queue')
-          break
+            # Get jobs from database
+            job_list = self.get_jobs(
+                session,
+                self.fetch_state,
+                self.set_state,  # pylint: disable=no-member
+                self.args.session_id,  # pylint: disable=no-member
+                job_batch_size,
+            )
+
+            if not job_list:
+              consecutive_empty_fetches += 1
+              self.logger.info('No jobs found (attempt %d/%d)',
+                               consecutive_empty_fetches, max_empty_fetches)
+
+              if consecutive_empty_fetches >= max_empty_fetches:
+                self.logger.info(
+                    'No new jobs after %d attempts. Exiting enqueue loop.',
+                    max_empty_fetches)
+                return  # Exit gracefully
+
+              time.sleep(60)  # Wait before next check
+              break  # Break retry loop, continue main loop
+
+            # Reset counter when jobs are found
+            consecutive_empty_fetches = 0
+
+            # Track the jobs we just claimed
+            new_job_ids = {job.id for job in job_list}
+            self.claimed_job_ids.update(new_job_ids)
+
+            self.logger.info("Claimed jobs: %s", list(new_job_ids))
+
+            with job_counter_lock:
+              job_counter.value = job_counter.value + len(job_list)
+
+            # Process all jobs in this batch
+            context_list = self.get_context_list(session, job_list)
+            for context in context_list:
+              try:
+                # calling celery task, enqueuing to celery queue
+                self.celery_enqueue_call(context, q_name=q_name)
+              except Exception as enqueue_err:  # pylint: disable=broad-exception-caught
+                self.logger.error('Failed to enqueue job: %s', enqueue_err)
+                # Continue with other jobs rather than failing completely
+                continue
+
+            current_batch_size = len(job_list)
+            self.logger.info(
+                "Job counter: %s, enqueued batch size: %s",
+                job_counter.value,
+                current_batch_size,
+            )
+
+            # Cleanup old tracking data periodically
+            self.cleanup_completed_jobs()
+            break  # Success, break retry loop
+
+        except Exception as db_err:  # pylint: disable=broad-exception-caught
+          self.logger.warning('Database error on attempt %d/%d: %s',
+                              attempt + 1, max_retries, db_err)
+          if attempt < max_retries - 1:
+            time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+          else:
+            self.logger.error(
+                'Max retries exceeded for database operation. Exiting.')
+            raise
+
+      # If we broke out because we're waiting for progress, sleep before next check
+      if current_batch_size > 0 and (not job_list or not self.should_enqueue_more_jobs(None, current_batch_size)):
+        self.logger.info("Sleeping 60s before checking for more jobs...")
+        time.sleep(60)
+        continue
+
+      # If we got here with no jobs, the consecutive_empty_fetches logic handled it
+      if not job_list:
+        continue
+
+  def should_enqueue_more_jobs(self, session, current_batch_size):
+    """Check if we should enqueue more jobs based on THIS instance's progress"""
+    # Count only jobs claimed by this machine instance
+    our_in_progress_count = len(self.claimed_job_ids - self.completed_job_ids)
+
+    # Allow enqueuing when less than 25% of our claimed jobs are still in progress
+    progress_threshold = current_batch_size * self.progress_factor
+
+    self.logger.info(
+        "Our jobs in progress: %d, completed: %d, threshold: %d",
+        our_in_progress_count,
+        len(self.completed_job_ids),
+        progress_threshold,
+    )
+
+    return our_in_progress_count < progress_threshold
+
+  def cleanup_completed_jobs(self):
+    """Periodically clean up old job tracking data"""
+    # Keep sets from growing indefinitely
+    max_tracking_size = 10000
+    if len(self.completed_job_ids) > max_tracking_size:
+      # Keep only the most recent completions
+      recent_completions = list(self.completed_job_ids)[-5000:]
+      self.completed_job_ids = set(recent_completions)
+
+      # Remove old claimed jobs that are completed
+      self.claimed_job_ids -= set(recent_completions[:-1000])
 
   async def cleanup_redis_results(self, prefix):
     """Remove stale redis results by key"""
@@ -366,25 +495,25 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     keys = []
     cursor = "0"
     if prefix:
-      #a prefix is necessary when the need to different results in redis based on operation
-      #withough a prefix the redis key defaults to: "celery-task-meta-<unique kombu hash>"
-      #with a prefix the key will look like: "celery-task-meta-<prefix>-<unique kombu hash>"
-      #the prefix can be applied when filtering the redis keys as bellow
+      # a prefix is necessary when the need to different results in redis based on operation
+      # withough a prefix the redis key defaults to: "celery-task-meta-<unique kombu hash>"
+      # with a prefix the key will look like: "celery-task-meta-<prefix>-<unique kombu hash>"
+      # the prefix can be applied when filtering the redis keys as bellow
       cursor, results = await redis.scan(cursor, match=f"*{prefix}*")
     else:
-      #no prefix, match any key
+      # no prefix, match any key
       cursor, results = await redis.scan(cursor, match="*")
     keys.extend(results)
-    self.logger.info('Found %s old results', len(results))
+    self.logger.info("Found %s old results", len(results))
     for key in keys:
       try:
         await redis.delete(key)
       except aioredis.exceptions.ResponseError as red_err:
         self.logger.error(red_err)
-        self.logger.info(key.decode('utf-8'))
+        self.logger.info(key.decode("utf-8"))
         continue
 
-    self.logger.info('Done removing old redis results for prefix: %s', prefix)
+    self.logger.info("Done removing old redis results for prefix: %s", prefix)
 
     return True
 
@@ -399,30 +528,30 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       keys = []
       while cursor != 0:
         if prefix:
-          #a prefix is necessary when the need to different results in redis based on operation
-          #withough a prefix the redis key defaults to: "celery-task-meta-<unique kombu hash>"
-          #with a prefix the key will look like: "celery-task-meta-<prefix>-<unique kombu hash>"
-          #the prefix can be applied when filtering the redis keys as bellow
+          # a prefix is necessary when the need to different results in redis based on operation
+          # withough a prefix the redis key defaults to: "celery-task-meta-<unique kombu hash>"
+          # with a prefix the key will look like: "celery-task-meta-<prefix>-<unique kombu hash>"
+          # the prefix can be applied when filtering the redis keys as bellow
           cursor, results = await redis.scan(cursor, match=f"*{prefix}*")
         else:
-          #no prefix, match any key
+          # no prefix, match any key
           cursor, results = await redis.scan(cursor, match="*")
         keys.extend(results)
-      self.logger.info('Found %s results', len(results))
+      self.logger.info("Found %s results", len(results))
       for key in keys:
         try:
           data = await redis.get(key)
           if data:
-            _ = await self.parse_result(data.decode('utf-8'))
+            _ = await self.parse_result(data.decode("utf-8"))
             await redis.delete(key)
             with job_counter_lock:
               job_counter.value = job_counter.value - 1
         except aioredis.exceptions.ResponseError as red_err:
           self.logger.error(red_err)
-          self.logger.info(key.decode('utf-8'))
+          self.logger.info(key.decode("utf-8"))
 
       await asyncio.sleep(1)
-    self.logger.info('Job counter reached 0')
+    self.logger.info("Job counter reached 0")
     await redis.close()
 
     return True
@@ -434,33 +563,33 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     q_name = None
     if self.operation == Operation.COMPILE:
       q_name = get_q_name(self, op_compile=True)
-      cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{self.args.session_id} -Q {q_name}"  #pylint: disable=line-too-long
+      cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -n tuna_HOSTNAME_sess_{self.args.session_id} -Q {q_name}"  # pylint: disable=line-too-long
     else:
       q_name = get_q_name(self, op_eval=True)
-      cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{self.args.session_id}_gpu_id_GPUID -Q {q_name}"  #pylint: disable=line-too-long
+      cmd = f"celery -A tuna.celery_app.celery_app worker -l info -E -c 1 -n tuna_HOSTNAME_sess_{self.args.session_id}_gpu_id_GPUID -Q {q_name}"  # pylint: disable=line-too-long
 
-    self.logger.info('celery Q name: %s', q_name)
+    self.logger.info("celery Q name: %s", q_name)
     if not self.args.enqueue_only:
       try:
-        self.logger.info('Launching celery workers for queue %s', q_name)
+        self.logger.info("Launching celery workers for queue %s", q_name)
         subp_list = launch_celery_worker(self.operation, cmd, self.args, True)
-        self.logger.info('Done launching celery workers')
+        self.logger.info("Done launching celery workers")
         if not subp_list:
-          raise CustomError('Could not launch celery worker')
+          raise CustomError("Could not launch celery worker")
       except kombu.exceptions.OperationalError as k_err:
-        self.logger.error('Redis error ocurred: %s', k_err)
+        self.logger.error("Redis error ocurred: %s", k_err)
         return False
     else:
       purge_queue([q_name])
 
     return q_name, subp_list
 
-  #pylint: disable=too-many-locals
+  # pylint: disable=too-many-locals
   def tune(self, job_batch_size=1000):
     """tuning loop to spin out celery tasks"""
 
     if self.args.shutdown_workers:
-      self.logger.info('Shutting down all celery workers')
+      self.logger.info("Shutting down all celery workers")
       stop_active_workers()
       return True
 
@@ -471,7 +600,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
       return False
 
     try:
-      #if enqueue_only is False, we launch the celery workers
+      # if enqueue_only is False, we launch the celery workers
       if not self.args.enqueue_only:
         for subp in subp_list:
           subp.wait()
@@ -483,43 +612,49 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     start = time.time()
 
-    #set job count to 1 until first job fetch is finished
-    job_counter = Value('i', 1)
+    # set job count to 1 until first job fetch is finished
+    job_counter = Value("i", 1)
     try:
       enqueue_proc = Process(target=self.enqueue_jobs,
                              args=[job_counter, job_batch_size, q_name])
-      #Start enqueue proc
+      # Start enqueue proc
       enqueue_proc.start()
 
-      #cleanup old results
+      # cleanup old results
       cleanup_proc = Process(target=self.async_wrap,
                              args=(self.cleanup_redis_results, self.prefix))
       cleanup_proc.start()
       cleanup_proc.join()
 
-      #start async consume thread, blocking
+      # start async consume thread, blocking
       consume_proc = Process(target=self.async_wrap,
                              args=(self.consume, job_counter, self.prefix))
-      self.logger.info('Starting consume thread')
+      self.logger.info("Starting consume thread")
       consume_proc.start()
 
       enqueue_proc.join()
-      #enqueue finished first fetch, remove hold on job_counter
+      # enqueue finished first fetch, remove hold on job_counter
       with job_counter_lock:
         job_counter.value = job_counter.value - 1
 
-      #check for new jobs
+      # Progress-aware polling - shorter intervals, smarter enqueuing
+      poll_interval = int(os.environ.get("TUNA_POLL_INTERVAL", 5))
+
+      # check for new jobs
       while consume_proc.is_alive():
         enqueue_proc = Process(target=self.enqueue_jobs,
                                args=[job_counter, job_batch_size, q_name])
         enqueue_proc.start()
         enqueue_proc.join()
-        time.sleep(10)
+        time.sleep(poll_interval)  # Shorter, configurable polling
 
       consume_proc.join()
 
-    except (KeyboardInterrupt, Exception) as exp:  #pylint: disable=broad-exception-caught
-      self.logger.error('Error ocurred %s', exp)
+    except (
+        KeyboardInterrupt,
+        Exception,
+    ) as exp:  # pylint: disable=broad-exception-caught
+      self.logger.error("Error ocurred %s", exp)
       purge_queue([q_name])
       self.cancel_consumer(q_name)
       self.reset_job_state_on_ctrl_c()
@@ -528,7 +663,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     self.cancel_consumer(q_name)
     end = time.time()
-    self.logger.info("Took {:0>8} to tune".format(  #pylint: disable=consider-using-f-string
+    self.logger.info("Took {:0>8} to tune".format(  # pylint: disable=consider-using-f-string
         str(timedelta(seconds=end - start))))
 
     return True
@@ -542,38 +677,40 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     try:
       asyncio.run(self.async_callback(async_func, *args))
     except KeyboardInterrupt:
-      self.logger.warning('Keyboard interrupt caught, terminating')
+      self.logger.warning("Keyboard interrupt caught, terminating")
 
   def reset_job_state_on_ctrl_c(self):
     """Reset job state for jobs in flight"""
     temp_obj = SimpleDict()
-    temp_obj.session_id = self.args.session_id  #pylint: disable=invalid-name
-    attribs = ['state']
+    temp_obj.session_id = self.args.session_id  # pylint: disable=invalid-name
+    attribs = ["state"]
     temp_obj.state = 1
 
-    self.logger.info('Resetting job state in DB for in flight jobs')
+    self.logger.info("Resetting job state in DB for in flight jobs")
 
     if self.operation == Operation.COMPILE:
       state = 16
     elif self.operation == Operation.EVAL:
       state = 12
 
-    query = gen_update_query(temp_obj, attribs,
-                             self.dbt.job_table.__tablename__,
-                             [('session', self.args.session_id),
-                              ('state', state)])
+    query = gen_update_query(
+        temp_obj,
+        attribs,
+        self.dbt.job_table.__tablename__,
+        [("session", self.args.session_id), ("state", state)],
+    )
     with DbSession() as session:
 
-      #pylint: disable=duplicate-code
+      # pylint: disable=duplicate-code
       def callback() -> bool:
         session.execute(query)
         session.commit()
         return True
 
-      #pylint: enable=duplicate-code
+      # pylint: enable=duplicate-code
 
       assert session_retry(session, callback, lambda x: x(), self.logger)
-      self.logger.info('Sucessfully reset job state')
+      self.logger.info("Sucessfully reset job state")
       return True
 
     return False
@@ -598,7 +735,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
     """check for end of jobs"""
     if not job_rows:
       # we are done
-      self.logger.warning('No %s jobs found, session %s', find_state,
+      self.logger.warning("No %s jobs found, session %s", find_state,
                           session_id)
       return False
     return True
@@ -624,7 +761,7 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     context_list: List[dict] = None
     serialized_jobs = self.serialize_jobs(session, batch_jobs)
-    #build context for each celery task
+    # build context for each celery task
     context_list = self.build_context(serialized_jobs)
 
     return context_list
@@ -635,21 +772,34 @@ class MITunaInterface():  #pylint:disable=too-many-instance-attributes,too-many-
 
     with DbSession() as session:
       try:
-        fin_json = data['result']['ret']
-        context = data['result']['context']
+        fin_json = data["result"]["ret"]
+        context = data["result"]["context"]
+
+        # Extract job ID from context to track completion
+        job_id = self.extract_job_id_from_context(context)
+        if job_id and job_id in self.claimed_job_ids:
+          self.completed_job_ids.add(job_id)
+          self.logger.info("Marked job %s as completed", job_id)
+
       except KeyError as kerr:
         self.logger.error(kerr)
         return False
 
-      self.logger.info('Parsing: %s', fin_json)
+      self.logger.info("Parsing: %s", fin_json)
       if self.operation == Operation.COMPILE:
         self.process_compile_results(session, fin_json, context)
       elif self.operation == Operation.EVAL:
         self.process_eval_results(session, fin_json, context)
       else:
-        raise CustomError('Unsupported tuning operation')
+        raise CustomError("Unsupported tuning operation")
 
       return True
+
+  def extract_job_id_from_context(self, context):
+    """Extract job ID from celery task context"""
+    # This needs to be implemented in the MIOpen subclass
+    # based on how job IDs are stored in the context
+    raise NotImplementedError("Subclass must implement job ID extraction")
 
   def process_compile_results(self, session, fin_json, context):
     """Process result from fin_build worker"""

@@ -6,7 +6,7 @@ ARG OSDB_BKC_VERSION=
 ARG HASVER=${ROCMVERSION:+$ROCMVERSION}
 ARG HASVER=${HASVER:-$OSDB_BKC_VERSION}
 
-ARG BASEIMAGE=rocm/miopen:ci_3708da
+ARG BASEIMAGE=rocm/miopen:ci_7c45f0
 ARG UBUNTU=ubuntu:22.04
 
 #use UBUNTU with rocm version set
@@ -18,6 +18,8 @@ FROM $USEIMAGE as dtuna-ver-0
 #args before from are wiped
 ARG ROCMVERSION=
 ARG OSDB_BKC_VERSION=
+# pass through baseimage for later use
+ARG BASEIMAGE
 
 RUN test -d /opt/rocm*; \
     if [ $? -eq 0 ] ; then \
@@ -71,7 +73,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --all
     apt-utils \
     build-essential \
     cmake \ 
-    clang-format-12 \
+    clang-format \
     curl \
     doxygen \
     gdb \
@@ -124,7 +126,9 @@ ARG MIOPEN_DIR=$ROCM_LIBS_DIR/projects/miopen
 RUN git clone --filter=blob:none --sparse https://github.com/ROCm/rocm-libraries.git $ROCM_LIBS_DIR
 WORKDIR $MIOPEN_DIR
 RUN git sparse-checkout set projects/miopen
-ARG MIOPEN_BRANCH=4940cf3ec
+# not sure what this commit is, using latest develop for now
+ARG MIOPEN_BRANCH=5564e20238 
+# ARG MIOPEN_BRANCH=develop
 RUN git pull && git checkout $MIOPEN_BRANCH
 
 ARG PREFIX=/opt/rocm
@@ -209,3 +213,26 @@ RUN python3 setup.py install
 
 # reset WORKDIR to /tuna
 WORKDIR /tuna
+
+# save BASEIMAGE as env variable
+ENV BASEIMAGE=${BASEIMAGE}
+
+# install mysql-server and mysql-client
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    mysql-server \
+    mysql-client
+
+# install redis-server
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    redis-server
+
+# install RabbitMQ server
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    rabbitmq-server
+
+# install iproute2
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -f -y --allow-unauthenticated \
+    iproute2
+
+# clean up apt cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
