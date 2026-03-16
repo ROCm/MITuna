@@ -56,20 +56,43 @@ def launch_worker_per_node(machines, cmd, formatted=False):
   return subp_list
 
 
-def launch_worker_per_gpu(machines, cmd, formatted=False):
-  """Launch celery worker for eval"""
-  curr_env = dict(os.environ.copy())
+def launch_worker_per_gpu(machines, cmd, formatted=False, gpu_lim=None):
+  """Launch celery worker for eval
+  
+  Args:
+    machines: List of machine objects
+    cmd: Command template to run
+    formatted: Whether to format the command with hostname/gpu_id
+    gpu_lim: Optional limit on number of GPUs to use (uses GPUs 0 to gpu_lim-1)
+  """
   final_cmd = cmd
   subp_list = []
 
   for machine in machines:
-    num_gpus = machine.get_avail_gpus()
+    all_gpus = machine.get_avail_gpus()
     try:
-      if not num_gpus:
+      if not all_gpus:
         LOGGER.warning(
             'No available GPUs detected, unable to launch celery worker')
         return False
+      
+      # Apply GPU limit if specified
+      if gpu_lim is not None and gpu_lim < len(all_gpus):
+        num_gpus = list(range(gpu_lim))
+        LOGGER.info("GPU limit applied: using %d of %d available GPUs (GPUs %s)",
+                   gpu_lim, len(all_gpus), ', '.join(map(str, num_gpus)))
+      else:
+        num_gpus = all_gpus
+        LOGGER.info("Using all %d available GPUs (GPUs %s)",
+                   len(num_gpus), ', '.join(map(str, num_gpus)))
+      
       for gpu_id in num_gpus:
+        # Create a separate environment for each worker with GPU pinning
+        worker_env = dict(os.environ.copy())
+        
+        # Set GPU pinning using ROCR_VISIBLE_DEVICES
+        worker_env['ROCR_VISIBLE_DEVICES'] = str(gpu_id)
+        
         if formatted:
           try:
             temp = cmd.replace('HOSTNAME', machine.hostname)
@@ -79,10 +102,10 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
             return False
         subp = subprocess.Popen(  #pylint: disable=consider-using-with
             final_cmd.split(),
-            env=curr_env)
+            env=worker_env)  # Use GPU-pinned environment
         subp_list.append(subp)
-        LOGGER.info("Successfully launched celery worker #%s for eval, pid %s",
-                    gpu_id, subp.pid)
+        LOGGER.info("Successfully launched celery worker #%s for eval (pinned to GPU %s), pid %s",
+                    gpu_id, gpu_id, subp.pid)
     except Exception as exp:  #pylint: disable=broad-exception-caught
       LOGGER.info('Error ocurred: %s', exp)
       return False
@@ -93,10 +116,16 @@ def launch_worker_per_gpu(machines, cmd, formatted=False):
 def launch_celery_worker(operation, cmd, args, formatted=False):
   """Helper function to launch celery workers"""
   machines = load_machines(args)
+  
+  # Get gpu_lim from args if available
+  gpu_lim = getattr(args, 'gpu_lim', None)
+  if gpu_lim is not None:
+    LOGGER.info("GPU limit from args: %d", gpu_lim)
+  
   if operation == Operation.COMPILE:
     ret = launch_worker_per_node(machines, cmd, formatted)
   elif operation == Operation.EVAL:
-    ret = launch_worker_per_gpu(machines, cmd, formatted)
+    ret = launch_worker_per_gpu(machines, cmd, formatted, gpu_lim=gpu_lim)
   else:
     raise ValueError('Operation does not support launching celery workers')
 

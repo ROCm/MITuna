@@ -28,6 +28,7 @@
 
 import numpy as np
 import pandas as pd
+from sqlalchemy import text
 from tuna.parse_args import TunaArgs, setup_arg_parser
 from tuna.utils.logger import setup_logger
 from tuna.miopen.db.tables import MIOpenDBTables
@@ -66,14 +67,14 @@ def get_data(args, dbt, arch, num_cu):
     query = f"select config, solver, kernel_time from {dbt.find_db_table.__tablename__} "\
             f"where session={args.session_id} order by config"
     pd.options.display.max_rows = 100
-    query_data = session.execute(query).fetchall()
+    query_data = session.execute(text(query)).fetchall()
     all_cfgs = [x[0] for x in query_data]
     configs = set(all_cfgs)
     session_data = pd.DataFrame(data=query_data)
     query = f"select config, solver, kernel_time from conv_golden where golden_miopen_v="\
             f"{args.golden_v} and arch='{arch}' and num_cu={num_cu} and config in "\
             f"{tuple(configs)} order by config"
-    golden_data = pd.DataFrame(data=session.execute(query).fetchall())
+    golden_data = pd.DataFrame(data=session.execute(text(query)).fetchall())
     session_data.columns = golden_data.columns = ['config', 'solver', 'ktime']
 
     dfr = pd.merge(session_data,

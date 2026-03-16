@@ -3,6 +3,7 @@
 #!/usr/bin/env python3
 
 from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy import text
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.miopen.utils.helper import handle_op_error
@@ -60,15 +61,15 @@ group by cpd2.theid, mcfg;
 def main():
   """main"""
   with DbSession() as session:
-    session.execute(view_perf_cfg_rep)
+    session.execute(text(view_perf_cfg_rep))
     session.commit()
-    res = session.execute("select id, cfg from perf_cfg_rep").all()
+    res = session.execute(text("select id, cfg from perf_cfg_rep")).all()
     invalid = 0
     for session_id, cfg in res:
       try:
         query = f"update conv_perf_config set config={cfg} where id={session_id};"
         print(query)
-        #session.execute(query)
+        #session.execute(text(query))
         #session.commit()
       except OperationalError as error:
         handle_op_error(LOGGER, error)
@@ -79,21 +80,21 @@ def main():
           query = f"update conv_perf_config set valid=0 where id={session_id};"
           LOGGER.warning('Invalidating entry (%s)', query)
           invalid += 1
-          session.execute(query)
+          session.execute(text(query))
           session.commit()
 
     if invalid:
       LOGGER.warning('Invalidated %u perf_config entries', invalid)
 
-    session.execute(view_perf_db_rep)
+    session.execute(text(view_perf_db_rep))
     session.commit()
-    res = session.execute("select theid, mcfg from perf_db_rep").all()
+    res = session.execute(text("select theid, mcfg from perf_db_rep")).all()
     invalid = 0
     for session_id, cfg in res:
       try:
         query = f"update conv_perf_db set miopen_config={cfg} where id={session_id};"
         print(query)
-        session.execute(query)
+        session.execute(text(query))
         session.commit()
       except OperationalError as error:
         handle_op_error(LOGGER, error)
@@ -104,7 +105,7 @@ def main():
           query = f"update conv_perf_db set valid=0 where id={session_id};"
           LOGGER.warning('Invalidating entry (%s)', query)
           invalid += 1
-          session.execute(query)
+          session.execute(text(query))
           session.commit()
 
     if invalid:

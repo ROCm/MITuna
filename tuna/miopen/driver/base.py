@@ -160,26 +160,38 @@ class MIOpenDriver(DriverBase):
   def __insert_tensor(self, tensor_dict: dict) -> int:
     """Insert new row into tensor table and return primary key"""
     ret_id: int = -1
+    
+    # Check cache first without creating a session
+    tid = TensorTable(**tensor_dict)
+    tid.valid = 1
+    key = build_dict_val_key(tid)
+    
+    # If cache is populated and key exists, return immediately
+    if MIOpenDriver.tensor_id_map and key in MIOpenDriver.tensor_id_map:
+      ret_id = MIOpenDriver.tensor_id_map[key]
+      LOGGER.info("Get Tensor: %s", ret_id)
+      return ret_id
+    
+    # Cache miss or not populated - need database session
     session: Session
     with DbSession() as session:
       try:
-        tid = TensorTable(**tensor_dict)
-        tid.valid = 1
-        key = build_dict_val_key(tid)
         #cache the tensor table to avoid queries
         if not MIOpenDriver.tensor_id_map:
           MIOpenDriver.tensor_id_map = get_session_val_map(
               session, TensorTable, MIOpenDriver.tensor_attr)
-        id_map = MIOpenDriver.tensor_id_map
-        if key in id_map:
-          ret_id = id_map[key]
-          LOGGER.info("Get Tensor: %s", ret_id)
-        else:
-          session.add(tid)
-          session.commit()
-          ret_id = tid.id
-          id_map[key] = ret_id
-          LOGGER.info("Insert Tensor: %s", ret_id)
+          # Check cache again after loading
+          if key in MIOpenDriver.tensor_id_map:
+            ret_id = MIOpenDriver.tensor_id_map[key]
+            LOGGER.info("Get Tensor: %s", ret_id)
+            return ret_id
+        
+        # Not in cache, insert new tensor
+        session.add(tid)
+        session.commit()
+        ret_id = tid.id
+        MIOpenDriver.tensor_id_map[key] = ret_id
+        LOGGER.info("Insert Tensor: %s", ret_id)
       except IntegrityError as err:
         LOGGER.warning(err)
         session.rollback()

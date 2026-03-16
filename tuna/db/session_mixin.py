@@ -41,14 +41,14 @@ LOGGER: logging.Logger = setup_logger('session')
 class SessionMixin():
   """Session Mixin to provide interface for the session table"""
 
-  arch: str = Column(String(length=20), nullable=False, server_default="")
-  num_cu: int = Column(Integer, nullable=False)
-  rocm_v: str = Column(String(length=64), nullable=False)
-  reason: str = Column(String(length=60), nullable=False)
-  ticket: str = Column(String(length=64), nullable=False, server_default="N/A")
-  docker: str = Column(String(length=128),
-                       nullable=False,
-                       server_default="miopentuna")
+  arch = Column(String(length=20), nullable=False, server_default="")
+  num_cu = Column(Integer, nullable=False)
+  rocm_v = Column(String(length=64), nullable=False)
+  reason = Column(String(length=60), nullable=False)
+  ticket = Column(String(length=64), nullable=False, server_default="N/A")
+  docker = Column(String(length=128),
+                  nullable=False,
+                  server_default="miopentuna")
 
   def __init__(self):
     self.id: int = 0  # pylint: disable=invalid-name
@@ -60,7 +60,10 @@ class SessionMixin():
   def add_new_session(self, args: argparse.Namespace, worker) -> None:
     """Add new session entry"""
     self.reason = args.label
-    self.docker = args.docker_name
+    if len(args.docker_name) >= 128:
+      self.docker = args.docker_name[:128]
+    else:
+      self.docker = args.docker_name
     if hasattr(args, 'arch') and args.arch:
       self.arch = args.arch
     else:

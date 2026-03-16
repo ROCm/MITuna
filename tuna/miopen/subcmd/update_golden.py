@@ -31,6 +31,7 @@ import argparse
 from typing import Dict, Any
 from sqlalchemy.sql.expression import func as sqlfunc
 from sqlalchemy.exc import OperationalError
+from sqlalchemy import text
 
 from tuna.miopen.parse_miopen_args import get_update_golden_parser
 from tuna.dbBase.sql_alchemy import DbSession
@@ -142,9 +143,10 @@ def create_perf_table(args: argparse.Namespace, logger: logging.Logger):
   print(table_name)
   with ENGINE.connect() as conn:
     try:
-      conn.execute(f'drop table if exists {table_name}')
+      conn.execute(text(f'drop table if exists {table_name}'))
       logger.info('Creating new performance table %s', table_name)
-      conn.execute(get_perf_str(args, table_name))
+      conn.execute(text(get_perf_str(args, table_name)))
+      conn.commit()
       logger.info('Done creating new performance table %s', table_name)
     except OperationalError as oerr:
       logger.info('%s \n', oerr)
@@ -169,7 +171,7 @@ def gold_base_update(session: DbSession,
     f" where cg.golden_miopen_v={gold_v} and ps.golden_miopen_v={base_gold_v} and ps.valid=1"\
     " and ps.kernel_time>0;"
     logger.info(update_q)
-    session.execute(update_q)
+    session.execute(text(update_q))
 
   logger.info("Inserting golden version %s -> %s.", base_gold_v, gold_v)
   insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
@@ -178,7 +180,7 @@ def gold_base_update(session: DbSession,
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   f" from conv_golden where golden_miopen_v={base_gold_v} and valid=1 and kernel_time>0;"
   logger.info(insert_q)
-  session.execute(insert_q)
+  session.execute(text(insert_q))
   session.commit()
 
   return True
@@ -200,7 +202,7 @@ def gold_session_update(session: DbSession,
     ", cg.kernel_time=ps.kernel_time, cg.kernel_group=ps.kernel_group, cg.session=ps.session"\
     f" where cg.golden_miopen_v={gold_v} and ps.session={tune_s} and ps.valid=1"\
     " and ps.kernel_time>0;"
-    session.execute(update_q)
+    session.execute(text(update_q))
 
   logger.info("Gold %s Insert session %s.", gold_v, tune_s)
   insert_q = "insert ignore into conv_golden (valid, golden_miopen_v, arch, num_cu, config"\
@@ -209,7 +211,7 @@ def gold_session_update(session: DbSession,
   ", workspace_sz, alg_lib, opencl, kernel_group, session, solver"\
   " from conv_find_db as cfd inner join session as s on cfd.session=s.id"\
   f" where session={tune_s} and cfd.valid=1 and kernel_time>0;"
-  session.execute(insert_q)
+  session.execute(text(insert_q))
   session.commit()
 
   return True

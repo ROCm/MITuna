@@ -39,7 +39,7 @@ try:
 except ImportError:
   import Queue as queue  #type: ignore
 
-from sqlalchemy import func as sqlalchemy_func
+from sqlalchemy import func as sqlalchemy_func, text
 from sqlalchemy.exc import IntegrityError, InvalidRequestError  #pylint: disable=wrong-import-order
 from sqlalchemy.inspection import inspect
 
@@ -67,7 +67,7 @@ class FinClass(WorkerInterface):
     """Constructor"""
     allowed_keys = set([
         'fin_steps', 'local_file', 'fin_infile', 'fin_outfile', 'config_type',
-        'dynamic_solvers_only'
+        'dynamic_solvers_only', 'new_only', 'config_limit'
     ])
     self.__dict__.update((key, None) for key in allowed_keys)
 
@@ -101,6 +101,23 @@ class FinClass(WorkerInterface):
     )
     self.envmt.append(
         f"MIOPEN_CUSTOM_CACHE_DIR=/tmp/miopenpdb/thread-{self.gpu_id}/cache")
+    
+    if hasattr(self, 'gpu_id') and self.gpu_id is not None:
+      # In Celery worker context, self.machine is not available
+      # So we should just use gpu_id directly
+      # The Celery worker launch already ensures gpu_id matches the actual GPU
+      actual_gpu = self.gpu_id
+      
+      # Remove HIP_VISIBLE_DEVICES to avoid conflicts with ROCR_VISIBLE_DEVICES
+      # Setting both can cause "No ROCm-capable device is detected" errors
+      self.envmt = [env for env in self.envmt if 'HIP_VISIBLE_DEVICES' not in env]
+      
+      # Set ROCR_VISIBLE_DEVICES for GPU pinning
+      self.envmt.append(f"ROCR_VISIBLE_DEVICES={actual_gpu}")
+      self.logger.info("Set ROCR_VISIBLE_DEVICES=%d for worker (worker_id=%d)", 
+                     actual_gpu, self.gpu_id)
+    else:
+      self.logger.warning("gpu_id not set - ROCR_VISIBLE_DEVICES not configured. All workers may use same GPU!")
 
     self.cfg_attr = [column.name for column in inspect(self.dbt.config_table).c]
 
@@ -319,27 +336,48 @@ class FinClass(WorkerInterface):
 
     return True
 
-  def query_cfgs(self, label=None):
-    """query all configs from table, optionally limit by label"""
+  def query_cfgs(self, label=None, skip_existing=False, config_limit=None):
+    """query all configs from table, optionally limit by label, skip existing, and limit count"""
     with DbSession() as session:
       query = session.query(self.dbt.config_table)\
                         .filter(self.dbt.config_table.valid == 1)
 
       if label:
-        query = query.filter(self.dbt.config_table.id == self.dbt.config_tags_table.config)\
-            .filter(self.dbt.config_tags_table.tag == label)
+          query = query.join(
+              self.dbt.config_tags_table,
+              self.dbt.config_table.id == self.dbt.config_tags_table.config
+          ).filter(self.dbt.config_tags_table.tag == label)
+
+
+      # Skip configs that already have applicability data in this session
+      if skip_existing:
+        query = query.outerjoin(
+            self.dbt.solver_app,
+            (self.dbt.solver_app.config == self.dbt.config_table.id) &
+            (self.dbt.solver_app.session == self.session_id)
+        ).filter(self.dbt.solver_app.id == None)
 
       #order by id for splitting configs into blocks
       query = query.order_by(self.dbt.config_table.id)
+      
+      # Apply config limit if specified
+      if config_limit is not None and config_limit > 0:
+        query = query.limit(config_limit)
+        self.logger.info("Limiting query to %d configs", config_limit)
+      
       return query
 
   def __set_all_configs(self, idx: int = 0, num_blk: int = 1) -> bool:
     """Gathering all configs from Tuna DB to set up fin input file"""
     if idx == 0:
-      query = self.query_cfgs(self.label)
+      skip_existing = getattr(self, 'new_only', False)
+      config_limit = getattr(self, 'config_limit', None)
+      query = self.query_cfgs(self.label, skip_existing=skip_existing, config_limit=config_limit)
       rows = query.all()
 
       len_rows = len(rows)
+      self.logger.warning("Query returned %d configs (label=%s, skip_existing=%s, config_limit=%s)",
+                         len_rows, self.label, skip_existing, config_limit)
       master_cfg_list = []
       for row in rows:
         r_dict = compose_config_obj(row, self.config_type)
@@ -491,7 +529,7 @@ class FinClass(WorkerInterface):
       self.logger.info('Commit bulk configs (%s), entries (%s), please wait',
                        len(app_cfgs), len(app_values))
       for sql_str in inserts:
-        session.execute(sql_str)
+        session.execute(text(sql_str))
       session.commit()
       self.logger.info('End bulk inserts')
 

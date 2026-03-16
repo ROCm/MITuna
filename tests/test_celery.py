@@ -29,7 +29,7 @@ import json
 import pytest
 from time import sleep
 from multiprocessing import Value
-import aioredis
+import redis.asyncio as aioredis
 import pytest_asyncio
 from sqlalchemy.inspection import inspect
 

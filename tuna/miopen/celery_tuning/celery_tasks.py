@@ -26,9 +26,13 @@
 #
 ###############################################################################
 """Module to register MIOpen celery tasks"""
+import os
+import socket
 import copy
 from celery.signals import celeryd_after_setup
 from celery.utils.log import get_task_logger
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 from tuna.celery_app.celery_app import app
 from tuna.libraries import Operation
 from tuna.machine import Machine
@@ -36,14 +40,108 @@ from tuna.miopen.utils.lib_helper import get_worker
 from tuna.utils.utility import SimpleDict
 from tuna.utils.celery_utils import prep_default_kwargs, get_cached_worker
 from tuna.miopen.miopen_lib import Q_NAME
+from tuna.dbBase.sql_alchemy import DbSession
 
 logger = get_task_logger(__name__)
 
 
+def check_hostname_unique_constraint(session):
+  """Check if hostname has a unique constraint on the machine table"""
+  try:
+    result = session.execute(
+        text("SELECT COUNT(*) FROM information_schema.statistics "
+             "WHERE table_schema = DATABASE() "
+             "AND table_name = 'machine' "
+             "AND column_name = 'hostname' "
+             "AND non_unique = 0")).scalar()
+    return result > 0
+  except Exception as e:  # pylint: disable=broad-exception-caught
+    logger.warning("Could not check for hostname unique constraint: %s", e)
+    return None  # Unknown state
+
+
 @celeryd_after_setup.connect
 def capture_worker_name(sender, instance, **kwargs):  #pylint: disable=unused-argument
-  """Capture worker name"""
+  """Capture worker name and ensure machine is registered"""
   app.worker_name = sender
+
+  # Ensure this machine is in the database
+  global cached_machine
+
+  # Ensure cached_machine is fully initialized
+  if not cached_machine.hostname:
+    cached_machine.hostname = socket.gethostname()
+    logger.info("Initialized hostname: %s", cached_machine.hostname)
+
+  with DbSession() as session:
+    # Check for unique constraint on hostname (only check once)
+    if not check_hostname_unique_constraint(session):
+      logger.warning(
+          "WARNING: The 'machine' table does not have a UNIQUE constraint on 'hostname'. "
+          "This may lead to duplicate machine entries and race conditions. "
+          "Please run: ALTER TABLE machine ADD UNIQUE INDEX idx_hostname (hostname(255)); "
+          "Or apply the Alembic migration: alembic upgrade head")
+
+    # Check if machine exists by hostname
+    existing = session.query(Machine).filter(
+        Machine.hostname == cached_machine.hostname).first()
+
+    if not existing:
+      # Create a new machine object for database insertion
+      # Don't use cached_machine directly as it has id=0 hardcoded
+      # Note: avail_gpus can be passed as a list - the @validates decorator
+      # in Machine class will automatically convert it to a string for database storage
+      new_machine = Machine(
+          hostname=cached_machine.hostname,
+          user=os.getenv('USER', 'unknown'),
+          password='',
+          arch=cached_machine.arch if cached_machine.arch else 'unknown',
+          num_cu=cached_machine.num_cu if cached_machine.num_cu else 64,
+          avail_gpus=cached_machine.avail_gpus
+          if cached_machine.avail_gpus else [])
+
+      try:
+        # Insert the machine and let database auto-assign ID
+        session.add(new_machine)
+        session.commit()
+        session.refresh(new_machine)
+        cached_machine.id = new_machine.id
+        logger.info("Registered machine %s with id %s", cached_machine.hostname,
+                    cached_machine.id)
+      except IntegrityError as ie:
+        # Race condition: another worker beat us to it
+        # Rollback and query again to get the existing record
+        session.rollback()
+        logger.info(
+            "Race condition detected during machine registration, querying existing record"
+        )
+        existing = session.query(Machine).filter(
+            Machine.hostname == cached_machine.hostname).first()
+        if existing:
+          cached_machine.id = existing.id
+          logger.info(
+              "Using existing machine %s with id %s (from race condition recovery)",
+              cached_machine.hostname, cached_machine.id)
+        else:
+          # This should never happen, but log it if it does
+          logger.error(
+              "Failed to find machine after IntegrityError - this should not happen!"
+          )
+          raise ie
+      except Exception as e:  # pylint: disable=broad-exception-caught
+        # Log any other errors during machine registration
+        session.rollback()
+        logger.error("Error registering machine: %s", e)
+        logger.error(
+            "Machine details - hostname: %s, arch: %s, num_cu: %s, avail_gpus: %s",
+            cached_machine.hostname, cached_machine.arch, cached_machine.num_cu,
+            cached_machine.avail_gpus)
+        raise
+    else:
+      # Use existing machine id
+      cached_machine.id = existing.id
+      logger.info("Using existing machine %s with id %s",
+                  cached_machine.hostname, cached_machine.id)
 
 
 cached_machine = Machine(local_machine=True)
@@ -90,5 +188,18 @@ def celery_enqueue(context):
     logger.info("Enqueueing worker %s: job %s", app.worker_name, context['job'])
 
   worker = prep_worker(copy.deepcopy(context))
+  
+  # Log GPU pinning verification for eval operations
+  if operation == Operation.EVAL:
+    rocr_env = [env for env in worker.envmt if 'ROCR_VISIBLE_DEVICES' in env]
+    if rocr_env:
+      logger.info("GPU pinning verified - worker %s: %s", app.worker_name, rocr_env[0])
+    else:
+      logger.warning("GPU pinning NOT SET for worker %s - all GPUs may be used!", app.worker_name)
+  
   ret = worker.run()
+
+  # Add machine_id to the context before returning
+  context['machine_id'] = cached_machine.id
+
   return {"ret": ret, "context": context}

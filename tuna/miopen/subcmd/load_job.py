@@ -34,6 +34,7 @@ from typing import Dict
 
 from sqlalchemy.exc import IntegrityError  #pylint: disable=wrong-import-order
 from sqlalchemy.sql.expression import true
+from sqlalchemy import text
 
 from tuna.miopen.utils.metadata import ALG_SLV_MAP, TENSOR_PRECISION
 from tuna.miopen.db.solver import get_solver_ids
@@ -105,7 +106,7 @@ def config_query(args: argparse.Namespace, session, dbt: MIOpenDBTables):
   if args.tag:
     tag_query = session.query(dbt.config_tags_table.config)\
       .filter(dbt.config_tags_table.tag == args.tag).subquery()
-    cfg_query = cfg_query.filter(dbt.config_table.id.in_(tag_query))
+    cfg_query = cfg_query.filter(dbt.config_table.id.in_(tag_query.select()))
 
   if args.cmd:
     cfg_query = cfg_query.filter(
@@ -135,7 +136,7 @@ def compose_query(args: argparse.Namespace, session, dbt: MIOpenDBTables,
   if args.only_dynamic:
     query = query.filter(Solver.is_dynamic == true())
 
-  query = query.filter(dbt.solver_app.config.in_(cfg_query.subquery()))
+  query = query.filter(dbt.solver_app.config.in_(cfg_query.subquery().select()))
 
   return query
 
@@ -160,7 +161,7 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
       where session={args.session_id} and fin_step='{fin_step_str}'"
 
     logger.info(query)
-    ret = session.execute(query)
+    ret = session.execute(text(query))
     pre_ex: Dict[str, Dict[str, bool]] = {}
     for config, solver in ret:
       if config not in pre_ex:
@@ -182,8 +183,8 @@ def add_jobs(args: argparse.Namespace, dbt: MIOpenDBTables,
 
           if job.config in pre_ex:
             if job.solver in pre_ex[job.config]:
-              logger.warning("Job exists (skip): %s : %s", job.config,
-                             job.solver)
+              # logger.warning("Job exists (skip): %s : %s", job.config,
+              #                job.solver)
               continue
 
           session.add(job)

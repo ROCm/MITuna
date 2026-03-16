@@ -35,7 +35,7 @@ from datetime import datetime
 from typing import Callable, Any, List, Dict
 import pymysql
 from sqlalchemy.exc import OperationalError, IntegrityError, ProgrammingError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from tuna.dbBase.sql_alchemy import DbSession
 from tuna.dbBase.base_class import BASE
@@ -49,8 +49,7 @@ LOGGER = setup_logger('db_utility')
 ENV_VARS = get_env_vars()
 
 ENGINE = create_engine(f"mysql+pymysql://{ENV_VARS['user_name']}:{ENV_VARS['user_password']}" +\
-                         f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}",
-                       encoding="utf8")
+                         f"@{ENV_VARS['db_hostname']}:3306/{ENV_VARS['db_name']}")
 
 
 def connect_db():
@@ -62,19 +61,25 @@ def connect_db():
     raise ValueError('DB name must be specified in env variable: TUNA_DB_NAME')
 
   try:
-    ENGINE.execute(f'Use {db_name}')
+    with ENGINE.connect() as conn:
+      conn.execute(text(f'Use {db_name}'))
+      conn.commit()
     return
   except OperationalError:  # as err:
     LOGGER.warning('Database %s does not exist, attempting to create database',
                    db_name)
 
   try:
-    ENGINE.execute(f'Create database if not exists {db_name}')
+    with ENGINE.connect() as conn:
+      conn.execute(text(f'Create database if not exists {db_name}'))
+      conn.commit()
   except OperationalError as err:
     LOGGER.error('Database creation failed %s for username: %s', err,
                  ENV_VARS['user_name'])
-  ENGINE.execute(f'Use {db_name}')
-  ENGINE.execute('SET GLOBAL max_allowed_packet=4294967296')
+  with ENGINE.connect() as conn:
+    conn.execute(text(f'Use {db_name}'))
+    conn.execute(text('SET GLOBAL max_allowed_packet=4294967296'))
+    conn.commit()
 
 
 def create_tables(all_tables):
@@ -100,7 +105,8 @@ def create_indices(all_indices):
   with ENGINE.connect() as conn:
     for idx in all_indices:
       try:
-        conn.execute(idx)
+        conn.execute(text(idx))
+        conn.commit()
         LOGGER.info('Idx created successfully: %s', idx)
       except (OperationalError, ProgrammingError) as oerr:
         LOGGER.info('%s \n', oerr)
@@ -132,6 +138,20 @@ def session_retry(session: DbSession,
   return False
 
 
+def sanitize_sql_string(value: str, max_length: int = 2000) -> str:
+  """Sanitize string for safe SQL insertion by escaping special characters"""
+  # Truncate to safe length to avoid excessively long queries
+  if len(value) > max_length:
+    value = value[:max_length] + '... [truncated]'
+
+  # Escape backslashes first (must be done before quotes)
+  value = value.replace('\\', '\\\\')
+  # Escape single quotes by doubling them (SQL standard)
+  value = value.replace("'", "''")
+
+  return value
+
+
 def get_attr_vals(obj, attr_list):
   """create the dictionary of values for the attribute list """
   attr_vals = {}
@@ -140,10 +160,14 @@ def get_attr_vals(obj, attr_list):
     if val is None:
       val = 'NULL'
     elif isinstance(val, (datetime, str)):
-      val = f"'{val}'"
+      # Sanitize and escape the string value
+      sanitized = sanitize_sql_string(str(val))
+      val = f"'{sanitized}'"
     elif isinstance(val, bytes):
       val = val.decode('utf-8')
-      val = f"'{val}'"
+      # Sanitize and escape the string value
+      sanitized = sanitize_sql_string(val)
+      val = f"'{sanitized}'"
     else:
       val = str(val)
     attr_vals[attr] = val
@@ -213,7 +237,7 @@ def get_job_rows(session, attribs, tablename, cond_str):
 
   LOGGER.info('Query Select: %s', query)
   try:
-    ret = session.execute(query)
+    ret = session.execute(text(query))
   except (Exception, KeyboardInterrupt) as ex:  #pylint: disable=broad-except
     LOGGER.warning(ex)
     ret = None
@@ -245,7 +269,7 @@ def has_attr_set(obj, attribs):
 def get_class_by_tablename(tablename):
   """use tablename to find class"""
   # pylint: disable=protected-access
-  for class_name in BASE._decl_class_registry.values():
+  for class_name in BASE.registry._class_registry.values():
     if hasattr(class_name,
                '__tablename__') and class_name.__tablename__ == tablename:
       return class_name

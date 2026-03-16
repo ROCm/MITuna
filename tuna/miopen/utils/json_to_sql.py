@@ -26,7 +26,8 @@
 ###############################################################################
 """Utility module for parsing fin json results"""
 import functools
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy import text
 
 from tuna.utils.logger import setup_logger
 from tuna.dbBase.sql_alchemy import DbSession
@@ -68,13 +69,13 @@ def __update_fdb_w_kernels(  #pylint: disable=too-many-arguments,too-many-locals
         if not pending:
           query = gen_update_query(fdb_entry, fdb_attr,
                                    dbt.find_db_table.__tablename__)
-          session.execute(query)
+          session.execute(text(query))
         else:
           assert len(pending) == 1
           pending.pop()
           query = gen_insert_query(fdb_entry, fdb_attr,
                                    dbt.find_db_table.__tablename__)
-          session.execute(query)
+          session.execute(text(query))
 
           fdb_entry = __update_fdb_entry(session,
                                          solver_id_map[fdb_obj['solver_name']],
@@ -83,7 +84,7 @@ def __update_fdb_w_kernels(  #pylint: disable=too-many-arguments,too-many-locals
           fdb_entry.kernel_group = fdb_entry.id
           query = gen_update_query(fdb_entry, ['kernel_group'],
                                    dbt.find_db_table.__tablename__)
-          session.execute(query)
+          session.execute(text(query))
 
         if fdb_obj['reason'] == 'Success':
           __compose_kernel_entry(session, fdb_obj, fdb_entry, dbt)
@@ -253,18 +254,29 @@ def __compose_kernel_entry(session, fdb_obj, fdb_entry, dbt):
 def __update_fdb_entry(session, solver, session_id, dbt, config, job, fdb_attr,
                        pending):
   """ Add a new entry to fdb if there isnt one already """
+  import os
+  
   obj, fdb_entry = get_fdb_entry(session, solver, session_id, dbt, config,
                                  fdb_attr)
   if obj:  # existing entry in db
     # This can be removed if we implement the delete orphan cascade
     fdb_entry = obj
-    if not fdb_entry.kernel_group is None:
+    
+    # CRITICAL FIX: Skip kernel_group invalidation during job processing to avoid lock contention
+    # The invalidation UPDATE causes severe lock timeouts when 8 workers run simultaneously
+    # The periodic cleanup daemon will handle cleanup of invalid entries
+    skip_invalidation = os.environ.get('TUNA_SKIP_KERNEL_INVALIDATION', 'true').lower() == 'true'
+    
+    if not fdb_entry.kernel_group is None and not skip_invalidation:
       LOGGER.info('Invalidate kernel_group %s', fdb_entry.kernel_group)
       session.query(dbt.kernel_cache)\
           .filter(dbt.kernel_cache.valid == 1)\
           .filter(dbt.kernel_cache.kernel_group ==
                                         fdb_entry.kernel_group)\
           .update({'valid': 0})
+    elif not fdb_entry.kernel_group is None and skip_invalidation:
+      LOGGER.debug('Skipping kernel_group %s invalidation (TUNA_SKIP_KERNEL_INVALIDATION=true)', 
+                  fdb_entry.kernel_group)
   else:
     # Bundle Insert for later
     pending.append((job, fdb_entry))
@@ -371,17 +383,40 @@ def __compose_fdb_entry(  #pylint: disable=too-many-arguments
 def __submit_tuning_data_entry(  #pylint: disable=too-many-arguments
     session, dbt, tuning_data_entry, tuning_data_attr, slv_stat, config,
     pending):
-  """Compose a FindDB table entry from fin_output"""
+  """Compose a FindDB table entry from fin_output
+  
+  Handles duplicate entries gracefully - if an INSERT fails due to a duplicate
+  key constraint (e.g., when a job is reset and re-run), it will UPDATE the
+  existing entry instead of failing.
+  """
+
+  
   __check_layout_mismatch(tuning_data_entry, slv_stat, config)
   if tuning_data_entry in pending:
     pending.remove(tuning_data_entry)
     query = gen_insert_query(tuning_data_entry, tuning_data_attr,
                              dbt.tuning_data_table.__tablename__)
-    session.execute(query)
+    try:
+      session.execute(text(query))
+    except IntegrityError as err:
+      # Duplicate entry - this is expected when jobs are reset and re-run
+      # Just UPDATE the existing entry instead of failing
+      if '1062' in str(err) or 'Duplicate entry' in str(err):
+        LOGGER.info('Duplicate tuning_data entry found, updating instead: '
+                   'config=%s, solver=%s, params=%s',
+                   tuning_data_entry.config, 
+                   getattr(tuning_data_entry, 'solver', 'unknown'),
+                   getattr(tuning_data_entry, 'params', 'unknown')[:50])
+        query = gen_update_query(tuning_data_entry, tuning_data_attr,
+                                 dbt.tuning_data_table.__tablename__)
+        session.execute(text(query))
+      else:
+        # Re-raise if it's a different integrity error
+        raise
   else:
     query = gen_update_query(tuning_data_entry, tuning_data_attr,
                              dbt.tuning_data_table.__tablename__)
-    session.execute(query)
+    session.execute(text(query))
 
 
 def process_fdb_w_kernels(session,
@@ -445,17 +480,47 @@ def process_tuning_data(session,
   return status
 
 
-def clean_cache_table(dbt, job):
-  """Remove the fin cache kernel entries for this job"""
+def clean_cache_table(dbt, job, skip_global_cleanup=None):
+  """Remove the fin cache kernel entries for this job
+  
+  Args:
+      dbt: Database tables interface
+      job: Job object with id
+      skip_global_cleanup: If True, skip the table-wide invalid kernel cleanup
+                          If None, check TUNA_SKIP_CACHE_CLEANUP env var (default: True)
+  
+  The function performs two cleanups:
+  1. Job-specific cleanup: Removes fin_cache entries for this specific job
+  2. Global cleanup: Removes ALL invalid kernel_cache entries (valid=0)
+  
+  The global cleanup causes severe lock contention when multiple workers run simultaneously.
+  By default, we skip it during job processing and rely on periodic cleanup instead.
+  """
+  import os
+  
+  # Default to skipping global cleanup to avoid lock contention
+  if skip_global_cleanup is None:
+    skip_global_cleanup = os.environ.get('TUNA_SKIP_CACHE_CLEANUP', 'true').lower() == 'true'
+  
   with DbSession() as session:
     try:
-      LOGGER.info('Delete kernel cache entries job(%s)', job.id)
+      # Always clean job-specific cache (no contention, job_id is unique)
+      LOGGER.info('Delete fin_cache entries for job(%s)', job.id)
       job_cache = session.query(dbt.fin_cache_table)\
           .filter(dbt.fin_cache_table.job_id == job.id)
-      job_cache.delete()
-      invalid_fdb_cache = session.query(dbt.kernel_cache)\
-          .filter(dbt.kernel_cache.valid == 0)
-      invalid_fdb_cache.delete()
+      deleted_count = job_cache.delete()
+      LOGGER.info('Deleted %d fin_cache entries for job(%s)', deleted_count, job.id)
+      
+      # Conditionally clean global invalid kernel cache
+      if not skip_global_cleanup:
+        LOGGER.info('Cleaning invalid kernel_cache entries (valid=0) - may cause lock contention')
+        invalid_fdb_cache = session.query(dbt.kernel_cache)\
+            .filter(dbt.kernel_cache.valid == 0)
+        invalid_count = invalid_fdb_cache.delete()
+        LOGGER.info('Deleted %d invalid kernel_cache entries', invalid_count)
+      else:
+        LOGGER.debug('Skipping global kernel_cache cleanup (TUNA_SKIP_CACHE_CLEANUP=true)')
+      
       session.commit()
     except OperationalError as err:
       session.rollback()

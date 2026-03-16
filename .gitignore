@@ -2,5 +2,7 @@
 __pycache__
 *.rej
 *.orig
+.cline*
+*.egg-info
 myvenv
 venv

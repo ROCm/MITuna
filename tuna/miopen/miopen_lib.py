@@ -27,7 +27,10 @@
 """MIOpen class that holds MIOpen specifig  tuning functionality"""
 
 import sys
+import os
 import copy
+import time
+import threading
 from typing import List, Tuple, Any
 from functools import lru_cache
 from collections.abc import Iterable
@@ -35,6 +38,7 @@ from collections.abc import Iterable
 from kombu.utils.uuid import uuid
 from sqlalchemy.inspection import inspect
 from sqlalchemy.exc import OperationalError, DataError, IntegrityError
+from sqlalchemy import text
 from tuna.mituna_interface import MITunaInterface
 from tuna.miopen.utils.helper import print_solvers
 from tuna.parse_args import TunaArgs, setup_arg_parser, args_check
@@ -60,7 +64,8 @@ from tuna.miopen.db.build_schema import create_tables, recreate_triggers
 from tuna.miopen.db.triggers import drop_miopen_triggers, get_miopen_triggers
 from tuna.miopen.utils.config_type import ConfigType
 from tuna.miopen.db.tables import MIOpenDBTables
-#from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
+
+# from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue
 from tuna.miopen.utils.json_to_sql import process_fdb_w_kernels, process_tuning_data
 from tuna.miopen.utils.json_to_sql import process_pdb_compile
 from tuna.miopen.utils.json_to_sql import clean_cache_table
@@ -83,135 +88,214 @@ class MIOpen(MITunaInterface):
     super().__init__(library=Library.MIOPEN)
     self.args = None
     self.set_state = None
+    
+    # Phase 2: Batch result writing (micro-batching)
+    self.result_buffer = []
+    self.buffer_lock = threading.Lock()
+    self.last_flush_time = time.time()
+    # Use environment variables for configuration (defaults: 10 results, 10 second timeout)
+    self.BATCH_SIZE = int(os.environ.get('TUNA_RESULT_BATCH_SIZE', 10))
+    self.FLUSH_INTERVAL = int(os.environ.get('TUNA_FLUSH_INTERVAL', 10))
+
+  async def consume(self, job_counter, prefix):
+    """Override consume to flush buffer before exit
+    
+    Ensures any buffered results are flushed to the database before
+    the consumer exits. This prevents results from being lost when
+    the buffer hasn't reached BATCH_SIZE threshold.
+    """
+    # Call parent class consume method
+    result = await super().consume(job_counter, prefix)
+    
+    # Flush any remaining buffered results
+    self.logger.info("Consumer finished - flushing any remaining buffered results")
+    if self.result_buffer:
+      self.logger.info("Found %d results in buffer, flushing...", len(self.result_buffer))
+      with DbSession() as session:
+        self._flush_results_batch(session)
+      self.logger.info("Final buffer flush completed")
+    else:
+      self.logger.info("No buffered results to flush")
+    
+    return result
 
   def parse_args(self):
     # pylint: disable=too-many-statements
     """Function to parse arguments"""
     parser = setup_arg_parser(
-        'Run Performance Tuning on a certain architecture', [
-            TunaArgs.ARCH, TunaArgs.NUM_CU, TunaArgs.VERSION,
-            TunaArgs.CONFIG_TYPE, TunaArgs.SESSION_ID, TunaArgs.MACHINES,
-            TunaArgs.REMOTE_MACHINE, TunaArgs.LABEL, TunaArgs.RESTART_MACHINE,
-            TunaArgs.DOCKER_NAME, TunaArgs.SHUTDOWN_WORKERS,
-            TunaArgs.ENQUEUE_ONLY
-        ])
+        "Run Performance Tuning on a certain architecture",
+        [
+            TunaArgs.ARCH,
+            TunaArgs.NUM_CU,
+            TunaArgs.VERSION,
+            TunaArgs.CONFIG_TYPE,
+            TunaArgs.SESSION_ID,
+            TunaArgs.MACHINES,
+            TunaArgs.REMOTE_MACHINE,
+            TunaArgs.LABEL,
+            TunaArgs.RESTART_MACHINE,
+            TunaArgs.DOCKER_NAME,
+            TunaArgs.SHUTDOWN_WORKERS,
+            TunaArgs.ENQUEUE_ONLY,
+        ],
+    )
     parser.add_argument(
-        '--find_mode',
-        dest='find_mode',
+        "--find_mode",
+        dest="find_mode",
         type=int,
         default=1,
-        help='Set the MIOPEN_FIND_MODE environment variable for MIOpen',
-        choices=['1', '3'])
-    parser.add_argument('--ticket',
-                        dest='ticket',
-                        type=str,
-                        default=None,
-                        help='Specify tuning ticket number')
+        help="Set the MIOPEN_FIND_MODE environment variable for MIOpen",
+        choices=["1", "3"],
+    )
     parser.add_argument(
-        '--solver_id',
-        type=int,
-        dest='solver_id',
-        default=None,
-        help='Specify solver_id. Use --list_solvers to see options')
-    parser.add_argument('--dynamic_solvers_only',
-                        dest='dynamic_solvers_only',
-                        action='store_true',
-                        default=False,
-                        help='Only tune dynamic solvers.')
-    parser.add_argument(
-        '-B',
-        '--blacklist',
-        dest='blacklist',
+        "--ticket",
+        dest="ticket",
         type=str,
         default=None,
-        help='MIOpen blacklist algorithm, if multiple then comma separate')
-    parser.add_argument('-i',
-                        '--reset_interval',
-                        type=int,
-                        dest='reset_interval',
-                        required=False,
-                        help='Restart interval for job in hours.')
+        help="Specify tuning ticket number",
+    )
     parser.add_argument(
-        '--gpu_lim',
-        dest='gpu_lim',
+        "--solver_id",
+        type=int,
+        dest="solver_id",
+        default=None,
+        help="Specify solver_id. Use --list_solvers to see options",
+    )
+    parser.add_argument(
+        "--dynamic_solvers_only",
+        dest="dynamic_solvers_only",
+        action="store_true",
+        default=False,
+        help="Only tune dynamic solvers.",
+    )
+    parser.add_argument(
+        "-B",
+        "--blacklist",
+        dest="blacklist",
+        type=str,
+        default=None,
+        help="MIOpen blacklist algorithm, if multiple then comma separate",
+    )
+    parser.add_argument(
+        "-i",
+        "--reset_interval",
+        type=int,
+        dest="reset_interval",
+        required=False,
+        help="Restart interval for job in hours.",
+    )
+    parser.add_argument(
+        "--gpu_lim",
+        dest="gpu_lim",
         type=int,
         default=None,
-        help='Limit the number of gpu workers created by Tuna, index from 0')
+        help="Limit the number of gpu workers created by Tuna, index from 0",
+    )
 
     parser.add_argument(
-        '-R',
-        '--rich_data',
-        dest='rich_data',
-        action='store_true',
+        "-R",
+        "--rich_data",
+        dest="rich_data",
+        action="store_true",
         default=False,
-        help='record intermediate parameter results from perf tuning')
+        help="record intermediate parameter results from perf tuning",
+    )
 
     subcommands = parser.add_subcommands(required=False)
-    subcommands.add_subcommand('import_configs',
+    subcommands.add_subcommand("import_configs",
                                get_import_cfg_parser(),
                                required=False)
 
-    subcommands.add_subcommand('load_job',
+    subcommands.add_subcommand("load_job",
                                get_load_job_parser(),
                                required=False)
 
-    subcommands.add_subcommand('export_db',
+    subcommands.add_subcommand("export_db",
                                get_export_db_parser(),
                                required=False)
 
-    subcommands.add_subcommand('update_golden',
+    subcommands.add_subcommand("update_golden",
                                get_update_golden_parser(),
                                required=False)
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--add_tables',
-                       dest='add_tables',
-                       action='store_true',
-                       help='Add MIOpen library specific tables')
-
-    group.add_argument('--init_session',
-                       action='store_true',
-                       dest='init_session',
-                       help='Set up a new tuning session.')
     group.add_argument(
-        '--fin_steps',
+        "--add_tables",
+        dest="add_tables",
+        action="store_true",
+        help="Add MIOpen library specific tables",
+    )
+
+    group.add_argument(
+        "--init_session",
+        action="store_true",
+        dest="init_session",
+        help="Set up a new tuning session.",
+    )
+    group.add_argument(
+        "--fin_steps",
         type=str,
-        dest='fin_steps',
-        help='Specify fin steps. Multiple steps should be comma separated.')
-    group.add_argument('--list_solvers',
-                       action='store_true',
-                       dest='list_solvers',
-                       help='List of solvers from the solver table')
+        dest="fin_steps",
+        help="Specify fin steps. Multiple steps should be comma separated.",
+    )
+    group.add_argument(
+        "--list_solvers",
+        action="store_true",
+        dest="list_solvers",
+        help="List of solvers from the solver table",
+    )
 
     # JD: implement the following two using fin_steps
-    group.add_argument('--update_solvers',
-                       dest='update_solvers',
-                       action='store_true',
-                       help='Update the list of solvers in the database')
-    group.add_argument('--update_applicability',
-                       dest='update_applicability',
-                       action='store_true',
-                       help='Update the applicability table in the database')
-    group.add_argument('-s',
-                       '--status',
-                       dest='check_status',
-                       action='store_true',
-                       default=False,
-                       help='Check the status of machines')
+    group.add_argument(
+        "--update_solvers",
+        dest="update_solvers",
+        action="store_true",
+        help="Update the list of solvers in the database",
+    )
+    group.add_argument(
+        "--update_applicability",
+        dest="update_applicability",
+        action="store_true",
+        help="Update the applicability table in the database",
+    )
+    parser.add_argument(
+        "--new_only",
+        dest="new_only",
+        action="store_true",
+        default=False,
+        help="Only update applicability for configs without existing data in this session (use with --update_applicability)",
+    )
+    parser.add_argument(
+        "--config_limit",
+        dest="config_limit",
+        type=int,
+        default=None,
+        help="Limit the number of configs to process (useful for testing with --update_applicability)",
+    )
+    group.add_argument(
+        "-s",
+        "--status",
+        dest="check_status",
+        action="store_true",
+        default=False,
+        help="Check the status of machines",
+    )
 
-    group.add_argument('-e',
-                       '--exec',
-                       dest='execute_cmd',
-                       type=str,
-                       default=None,
-                       help='execute on each machine')
+    group.add_argument(
+        "-e",
+        "--exec",
+        dest="execute_cmd",
+        type=str,
+        default=None,
+        help="execute on each machine",
+    )
 
     self.args = parser.parse_args()
 
     if self.args.config_type is None:
       self.args.config_type = ConfigType.convolution
 
-    #overwritte common lib args with subcommand args value
+    # overwritte common lib args with subcommand args value
     if self.args.subcommand is not None:
       self.overwrite_common_args()
 
@@ -221,16 +305,16 @@ class MIOpen(MITunaInterface):
 
     if self.args.list_solvers:
       print_solvers()
-      raise CustomError('Printing solvers...')
+      raise CustomError("Printing solvers...")
 
-    if self.args.fin_steps and self.args.subcommand != 'load_job':
+    if self.args.fin_steps and self.args.subcommand != "load_job":
       self.check_fin_args(parser)
       self.set_prefix()
 
     if self.args.find_mode is None and not (self.args.check_status or
                                             self.args.restart_machine or
                                             self.args.execute_cmd):
-      parser.error('find_mode must be specified for a tuning run')
+      parser.error("find_mode must be specified for a tuning run")
 
     if self.args.blacklist:
       self.check_blacklist(parser)
@@ -238,8 +322,13 @@ class MIOpen(MITunaInterface):
     args_check(self.args, parser)
 
     fin_session_steps = [
-        'miopen_find_compile', 'miopen_find_eval', 'miopen_perf_compile',
-        'miopen_perf_eval', 'get_applicability', 'find_compile', 'find_eval'
+        "miopen_find_compile",
+        "miopen_find_eval",
+        "miopen_perf_compile",
+        "miopen_perf_eval",
+        "get_applicability",
+        "find_compile",
+        "find_eval",
     ]
     has_fin = False
     if self.args.fin_steps:
@@ -255,14 +344,14 @@ class MIOpen(MITunaInterface):
   def set_prefix(self):
     """Set redis key prefix"""
     if isinstance(self.args.fin_steps, Iterable):
-      steps_str = ('-').join(x for x in self.args.fin_steps)
-      self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_"\
-                    f"{steps_str}"
+      steps_str = ("-").join(x for x in self.args.fin_steps)
+      self.prefix = (f"d_{self.db_name}_sess_{self.args.session_id}_"
+                     f"{steps_str}")
     else:
       steps_str = self.args.fin_steps[0]
       self.prefix = f"d_{self.db_name}_sess_{self.args.session_id}_{steps_str}"
 
-    self.logger.info('redis prefix: %s', self.prefix)
+    self.logger.info("redis prefix: %s", self.prefix)
 
   def overwrite_common_args(self):
     """Overwrite common MIOpen_lib args with subcommand args"""
@@ -274,12 +363,12 @@ class MIOpen(MITunaInterface):
 
   def check_fin_args(self, parser):
     """! Helper function for fin args
-       @param parser The command line argument parser
+        @param parser The command line argument parser
         """
     valid_fin_steps = list(k for k in FinStep.__members__)
-    if ',' in self.args.fin_steps:
-      parser.error('Multiple fin_steps currently not supported')
-    f_steps = self.args.fin_steps.split(',')
+    if "," in self.args.fin_steps:
+      parser.error("Multiple fin_steps currently not supported")
+    f_steps = self.args.fin_steps.split(",")
     self.args.fin_steps = f_steps
     for step in self.args.fin_steps:
       if step not in valid_fin_steps:
@@ -288,41 +377,46 @@ class MIOpen(MITunaInterface):
 
   def check_blacklist(self, parser):
     """! Helper function
-       @param parser The command line argument parser
-      @return ret Boolean value
-    """
-    self.args.blacklist = self.args.blacklist.split(',')
+         @param parser The command line argument parser
+        @return ret Boolean value
+        """
+    self.args.blacklist = self.args.blacklist.split(",")
     for sol in self.args.blacklist:
       if sol not in MIOPEN_ALG_LIST:
         parser.error("Incorrect blacklist value")
 
   def do_fin_work(self, gpu, f_vals):
     """! Helper function to execute job independendent fin work
-      @param gpu Unique ID of the GPU
-      @param f_vals Dict containing runtime information
-    """
+        @param gpu Unique ID of the GPU
+        @param f_vals Dict containing runtime information
+        """
     kwargs = self.get_kwargs(gpu, f_vals)
     fin_worker = FinClass(**kwargs)
 
     if self.args.update_solvers:
       if not fin_worker.get_solvers():
-        self.logger.error('No solvers returned from Fin class')
+        self.logger.error("No solvers returned from Fin class")
 
     return True
 
   def launch_worker(self, gpu_idx, f_vals, worker_lst):
     """! Function to launch worker
-      @param gpu_idx Unique ID of the GPU
-      @param f_vals Dict containing runtime information
-      @param worker_lst List containing worker instances
-      @return ret Boolean value
-    """
+        @param gpu_idx Unique ID of the GPU
+        @param f_vals Dict containing runtime information
+        @param worker_lst List containing worker instances
+        @return ret Boolean value
+        """
     # pylint: disable=too-many-branches
     worker = None
     kwargs = self.get_kwargs(gpu_idx, f_vals)
     if self.args.update_applicability:
-      kwargs['fin_steps'] = ['applicability']
+      kwargs["fin_steps"] = ["applicability"]
+      kwargs["new_only"] = self.args.new_only
+      kwargs["config_limit"] = self.args.config_limit
       worker = FinClass(**kwargs)
+      self.logger.info("Created FinClass worker with gpu_id=%s, ROCR_VISIBLE_DEVICES in envmt: %s",
+                 worker.gpu_id,
+                 any('ROCR_VISIBLE_DEVICES' in env for env in worker.envmt))
       worker.start()
       worker_lst.append(worker)
       return True
@@ -330,8 +424,13 @@ class MIOpen(MITunaInterface):
     worker = FinClass(**kwargs)
     ret = False
     if self.args.check_status:
-      if not super().check_status(worker, f_vals["b_first"], gpu_idx,
-                                  f_vals["machine"], self.args.docker_name):
+      if not super().check_status(
+          worker,
+          f_vals["b_first"],
+          gpu_idx,
+          f_vals["machine"],
+          self.args.docker_name,
+      ):
         ret = True
     elif self.args.init_session:
       Session().add_new_session(self.args, worker)
@@ -345,8 +444,8 @@ class MIOpen(MITunaInterface):
   def compose_worker_list(self, machines):
     # pylint: disable=too-many-branches
     """! Helper function to compose worker_list
-      @param machines List of machines to execute on
-    """
+        @param machines List of machines to execute on
+        """
     worker_lst = []
     fin_work_done = False
     for machine in machines:
@@ -354,28 +453,43 @@ class MIOpen(MITunaInterface):
         machine.restart_server(wait=False)
         continue
 
-      #fin_steps should only contain one step
+      # fin_steps should only contain one step
       worker_ids = None
-      if self.args.fin_steps and 'eval' in self.args.fin_steps[0]:
-        worker_ids = machine.get_avail_gpus()
+      if self.args.fin_steps and "eval" in self.args.fin_steps[0]:
+        worker_ids = machine.get_avail_gpus()  # Use actual GPUs
         if self.args.gpu_lim and self.args.gpu_lim < len(worker_ids):
-          worker_ids = range(self.args.gpu_lim)
+            worker_ids = list(range(self.args.gpu_lim))
+      elif self.args.update_applicability: 
+        worker_ids = list(range(len(machine.get_avail_gpus()) * 4 ))  # Use GPU count
+        if self.args.gpu_lim and self.args.gpu_lim < len(worker_ids):
+            worker_ids = list(range(self.args.gpu_lim))
       else:
-        worker_ids = super().get_num_procs(machine)
+        worker_ids = super().get_num_procs(machine)  # Use CPU count for other operations
+
 
       if self.args.update_applicability:
         f_vals = super().get_f_vals(machine, [1])
         kwargs = self.get_kwargs(0, f_vals)
-        kwargs['fin_steps'] = ['applicability']
+        kwargs["fin_steps"] = ["applicability"]
+        kwargs["new_only"] = self.args.new_only
+        kwargs["config_limit"] = self.args.config_limit
         worker = FinClass(**kwargs)
-        query = worker.query_cfgs(self.args.label)
+        skip_existing = self.args.new_only
+        config_limit = self.args.config_limit
+        query = worker.query_cfgs(self.args.label, skip_existing=skip_existing, config_limit=config_limit)
         cfg_rows = query.all()
         len_rows = len(cfg_rows)
+        self.logger.warning("Found %d configs to process (label=%s, new_only=%s, config_limit=%s)",
+                           len_rows, self.args.label, self.args.new_only, self.args.config_limit)
         proc_lim = (len_rows + 99) / 100
         if 32 < proc_lim:
           proc_lim = 32
+        self.logger.info("Calculated proc_lim=%d based on %d configs", proc_lim, len_rows)
+        initial_workers = len(worker_ids)
         while len(worker_ids) > proc_lim:
           worker_ids.pop()
+        self.logger.warning("Worker count: initial=%d, after limit=%d (proc_lim=%d)",
+                           initial_workers, len(worker_ids), proc_lim)
 
       if len(worker_ids) == 0:
         return None
@@ -388,7 +502,7 @@ class MIOpen(MITunaInterface):
         break
 
       for gpu_idx in worker_ids:
-        self.logger.info('launch mid %u, proc %u', machine.id, gpu_idx)
+        self.logger.info("launch mid %u, proc %u", machine.id, gpu_idx)
         if not self.launch_worker(gpu_idx, f_vals, worker_lst):
           break
 
@@ -396,10 +510,10 @@ class MIOpen(MITunaInterface):
 
   def add_tables(self):
     """! Function to create new DB tables
-    @return Bool
-    """
+        @return Bool
+        """
     ret_t = create_tables(get_miopen_tables())
-    self.logger.info('DB creation successful: %s', ret_t)
+    self.logger.info("DB creation successful: %s", ret_t)
     recreate_triggers(drop_miopen_triggers(), get_miopen_triggers())
     return True
 
@@ -414,19 +528,20 @@ class MIOpen(MITunaInterface):
       self.add_tables()
       return None
 
-    if self.args.subcommand is not None and self.args.subcommand == 'import_configs':
+    if (self.args.subcommand is not None and
+        self.args.subcommand == "import_configs"):
       run_import_configs(self.args.import_configs, self.logger)
       return None
 
-    if self.args.subcommand is not None and self.args.subcommand == 'load_job':
+    if self.args.subcommand is not None and self.args.subcommand == "load_job":
       run_load_job(self.args.load_job, self.logger)
       return None
 
-    if self.args.subcommand is not None and self.args.subcommand == 'export_db':
+    if self.args.subcommand is not None and self.args.subcommand == "export_db":
       run_export_db(self.args.export_db, self.logger)
       return None
 
-    if self.args.subcommand is not None and self.args.subcommand == 'update_golden':
+    if self.args.subcommand is not None and self.args.subcommand == "update_golden":
       run_update_golden(self.args.update_golden, self.logger)
       return None
 
@@ -435,8 +550,7 @@ class MIOpen(MITunaInterface):
     return res
 
   def get_envmt(self):
-    """! Function to construct environment var
-    """
+    """! Function to construct environment var"""
     envmt = ["MIOPEN_LOG_LEVEL=4"]
 
     envmt.append("MIOPEN_SQLITE_KERN_CACHE=ON")
@@ -447,58 +561,66 @@ class MIOpen(MITunaInterface):
 
     if self.args.blacklist:
       bk_str = ", ".join([f"{arg}=0" for arg in self.args.blacklist])
-      for bk_var in bk_str.split(','):
+      for bk_var in bk_str.split(","):
         envmt.append(bk_var)
 
     return envmt
 
   def get_kwargs(self, gpu_idx, f_vals, tuning=False):
     """! Helper function to set up kwargs for worker instances
-      @param gpu_idx Unique ID of the GPU
-      @param f_vals Dict containing runtime information
-      @param tuning Boolean that indicates if kwargs are for a tuning step
-      @return kwargs Dictionary
-    """
+        @param gpu_idx Unique ID of the GPU
+        @param f_vals Dict containing runtime information
+        @param tuning Boolean that indicates if kwargs are for a tuning step
+        @return kwargs Dictionary
+        """
     kwargs = super().get_kwargs(gpu_idx, f_vals, tuning)
-    kwargs['fin_steps'] = self.args.fin_steps
-    kwargs['dynamic_solvers_only'] = self.args.dynamic_solvers_only
-    kwargs['config_type'] = self.args.config_type
-    kwargs['reset_interval'] = self.args.reset_interval
+    kwargs["fin_steps"] = self.args.fin_steps
+    kwargs["dynamic_solvers_only"] = self.args.dynamic_solvers_only
+    kwargs["config_type"] = self.args.config_type
+    kwargs["reset_interval"] = self.args.reset_interval
 
     return kwargs
 
   def get_job_list(self, session, find_state, claim_num):
     """! Get list of jobs
-    @param session DB session
-    @param find_state DB job state
-    @param claim_num Number of DB jobs to pick up
-    @return List of DB jobs
+        @param session DB session
+        @param find_state DB job state
+        @param claim_num Number of DB jobs to pick up
+        @return List of DB jobs
 
-    """
-    job_list = self.get_job_objs(session, find_state, self.args.label, self.dbt,
-                                 self.get_job_attr(), claim_num,
-                                 self.args.fin_steps)
+        """
+    job_list = self.get_job_objs(
+        session,
+        find_state,
+        self.args.label,
+        self.dbt,
+        self.get_job_attr(),
+        claim_num,
+        self.args.fin_steps,
+    )
 
     return job_list
 
-  def get_job_objs(self,
-                   session: DbSession,
-                   find_state: list,
-                   label: str,
-                   dbt: DBTablesInterface,
-                   job_attr: List[str],
-                   claim_num: int = None,
-                   fin_steps: List[str] = None) -> List[SimpleDict]:
+  def get_job_objs(
+      self,
+      session: DbSession,
+      find_state: set,
+      label: str,
+      dbt: DBTablesInterface,
+      job_attr: List[str],
+      claim_num: int = None,
+      fin_steps: List[str] = None,
+  ) -> List[SimpleDict]:
     """! Get list of job objects
-    @param session DB session
-    @param find_state DB job state
-    @param label DB job reason
-    @param dbt Class representing all DB tables associated with this class
-    @param job_attr List of DB job columns
-    @param claim_num Number of DB jobs to pick up
-    @param fin_steps List of MIFin steps
-    @return List of DB jobs
-    """
+        @param session DB session
+        @param find_state DB job state
+        @param label DB job reason
+        @param dbt Class representing all DB tables associated with this class
+        @param job_attr List of DB job columns
+        @param claim_num Number of DB jobs to pick up
+        @param fin_steps List of MIFin steps
+        @return List of DB jobs
+        """
     entries: List[Tuple[SimpleDict, ...]]
     conds: List[str] = [f"session={dbt.session.id}", "valid=1"]
 
@@ -506,38 +628,44 @@ class MIOpen(MITunaInterface):
       conds.append(f"reason='{label}'")
 
     conds.append(f"retries<{self.max_job_retries}")
-    conds.append("state in (" + str(find_state).strip('{').strip('}') + ")")
+    # Convert set to proper SQL format
+    state_list = "', '".join(find_state)
+    conds.append(f"state in ('{state_list}')")
 
     entries = self.compose_work_objs(session, conds, dbt, job_attr, claim_num,
                                      fin_steps)
     return entries
 
-  def compose_work_objs(self,
-                        session: DbSession,
-                        conds: List[str],
-                        dbt: DBTablesInterface,
-                        job_attr: List[str],
-                        claim_num: int = None,
-                        fin_steps: List[str] = None) -> List[SimpleDict]:
+  def compose_work_objs(
+      self,
+      session: DbSession,
+      conds: List[str],
+      dbt: DBTablesInterface,
+      job_attr: List[str],
+      claim_num: int = None,
+      fin_steps: List[str] = None,
+  ) -> List[SimpleDict]:
     """! Query a job list for update
-    @param session DB session
-    @param conds List of conditions for DB job WHERE clause
-    @param dbt Class representing all DB tables associated with this class
-    @param job_attr List of DB job columns
-    @param fin_steps List of MIFin steps
-    @return List of MIFin work objects
-    """
+        @param session DB session
+        @param conds List of conditions for DB job WHERE clause
+        @param dbt Class representing all DB tables associated with this class
+        @param job_attr List of DB job columns
+        @param fin_steps List of MIFin steps
+        @return List of MIFin work objects
+        """
     job_entries = []
     if fin_steps:
       conds.append(f"fin_step like '%{fin_steps[0]}%'")
     else:
       conds.append("fin_step='not_fin'")
 
-    cond_str = ' AND '.join(conds)
+    cond_str = " AND ".join(conds)
     if cond_str:
       cond_str = f"WHERE {cond_str}"
     if claim_num:
-      cond_str += f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE SKIP LOCKED"
+      cond_str += (
+          f" ORDER BY retries,config ASC LIMIT {claim_num} FOR UPDATE SKIP LOCKED"
+      )
     else:
       cond_str += " ORDER BY retries,config ASC FOR UPDATE SKIP LOCKED"
 
@@ -546,26 +674,95 @@ class MIOpen(MITunaInterface):
 
     return job_entries
 
+  def detect_and_handle_locked_jobs(self, session: DbSession,
+                                    find_state: set) -> bool:
+    """Detect jobs that are locked and preventing progress
+    
+    This method queries for jobs without locking to detect if jobs exist
+    but are being skipped due to database locks. If found, it marks jobs
+    with high retry counts as errored to unblock the pipeline.
+    
+    @param session DB session
+    @param find_state Set of job states to check
+    @return True if locked jobs were found and handled, False otherwise
+    """
+    # Query WITHOUT lock to see if jobs are being skipped
+    conds = [f"session={self.dbt.session.id}", "valid=1"]
+    
+    if self.args.label:
+      conds.append(f"reason='{self.args.label}'")
+    
+    conds.append(f"retries<{self.max_job_retries}")
+    # Convert set to proper SQL format
+    state_list = "', '".join(find_state)
+    conds.append(f"state in ('{state_list}')")
+    
+    if self.args.fin_steps:
+      conds.append(f"fin_step like '%{self.args.fin_steps[0]}%'")
+    
+    cond_str = " AND ".join(conds)
+    query = f"""
+        SELECT id, config, retries, state, solver
+        FROM {self.dbt.job_table.__tablename__} 
+        WHERE {cond_str}
+        ORDER BY retries, config ASC
+        LIMIT 10
+    """
+    
+    unlocked_jobs = session.execute(text(query)).fetchall()
+    
+    if unlocked_jobs:
+      self.logger.warning(
+          "Found %d jobs in target state but they were skipped by FOR UPDATE SKIP LOCKED",
+          len(unlocked_jobs))
+      self.logger.warning("Likely cause: stale database locks. Job IDs: %s",
+                         [job[0] for job in unlocked_jobs])
+      
+      # Mark jobs with high retries as errored to unblock
+      jobs_marked = 0
+      for job_row in unlocked_jobs:
+        job_id, config_id, retries, state, solver = job_row
+        if retries >= (MAX_ERRORED_JOB_RETRIES - 1):  # retries >= 2
+          self.logger.warning(
+              "Marking locked job %d (config=%d, solver=%s, retries=%d) as errored to unblock pipeline",
+              job_id, config_id, solver, retries)
+          update_query = f"""
+                    UPDATE {self.dbt.job_table.__tablename__}
+                    SET state = 'errored', 
+                        result = 'Marked as errored due to stale lock or excessive retries',
+                        update_ts = NOW()
+                    WHERE id = {job_id}
+                """
+          session.execute(text(update_query))
+          jobs_marked += 1
+      
+      if jobs_marked > 0:
+        session.commit()
+        self.logger.info("Marked %d locked jobs as errored", jobs_marked)
+        return True
+    
+    return False
+
   def compose_work_objs_fin(self, session, job_entries,
                             dbt) -> List[Tuple[SimpleDict, SimpleDict]]:
     """! Return jobs for fin work
-    @param session DB session
-    @param job_entries List of DB jobs
-    @param dbt Class representing all DB tables associated with this class
-    @return ret Job tuple
-    """
+        @param session DB session
+        @param job_entries List of DB jobs
+        @param dbt Class representing all DB tables associated with this class
+        @return ret Job tuple
+        """
     ret = []
 
     cfg_rel = {
         key: {
-            'key': list(val.local_columns)[0].name,
-            'ftble': str(list(val.remote_side)[0]).split('.', maxsplit=1)[0],
-            'fkey': str(list(val.remote_side)[0]).split('.')[1]
+            "key": list(val.local_columns)[0].name,
+            "ftble": str(list(val.remote_side)[0]).split(".", maxsplit=1)[0],
+            "fkey": str(list(val.remote_side)[0]).split(".")[1],
         } for key, val in inspect(dbt.config_table).relationships.items()
     }
 
     if job_entries:
-      id_str = ','.join({str(job.config) for job in job_entries})
+      id_str = ",".join({str(job.config) for job in job_entries})
       cfg_cond_str = f"where valid=1 and id in ({id_str})"
       cfg_attr = [column.name for column in inspect(dbt.config_table).c]
       cfg_entries = gen_select_objs(session, cfg_attr,
@@ -583,30 +780,32 @@ class MIOpen(MITunaInterface):
 
   def attach_tensors(self, session, cfg_rel, cfg_entries):
     """! Attach tensor relationship information to config entries
-    @param session DB session
-    @param cfg_rel DB Config col value
-    @param cfg_entries List of DB Config entries
-    @return cfg_entries List of DB Config entries with attached tensors (foreign keys)
+        @param session DB session
+        @param cfg_rel DB Config col value
+        @param cfg_entries List of DB Config entries
+        @return cfg_entries List of DB Config entries with attached tensors (foreign keys)
 
-    """
+        """
     for key, val in cfg_rel.items():
       rel_attr = [
           column.name
-          for column in inspect(get_class_by_tablename(val['ftble'])).c
+          for column in inspect(get_class_by_tablename(val["ftble"])).c
       ]
-      val['fattr'] = rel_attr
+      val["fattr"] = rel_attr
 
     for cfg in cfg_entries:
       for key, val in cfg_rel.items():
-        rel_val = getattr(cfg, val['key'])
+        rel_val = getattr(cfg, val["key"])
         rel_cond_str = f"where {val['fkey']}={rel_val}"
         setattr(
-            cfg, key,
-            gen_select_objs(session, val['fattr'], val['ftble'],
-                            rel_cond_str)[0])
+            cfg,
+            key,
+            gen_select_objs(session, val["fattr"], val["ftble"],
+                            rel_cond_str)[0],
+        )
     return cfg_entries
 
-  #deprecated
+  # deprecated
   def get_job_tables(self, job_rows: List[Tuple[SimpleDict, ...]],
                      job_attr: List[str]) -> List[SimpleDict]:
     """Find job tables in query results"""
@@ -626,15 +825,16 @@ class MIOpen(MITunaInterface):
   def update_operation(self):
     """! Update the workers type that this library needs"""
     if self.args.fin_steps:
-      if 'miopen_find_compile' in self.args.fin_steps \
-      or 'miopen_perf_compile' in self.args.fin_steps:
-        self.fetch_state.add('new')
-        self.set_state = 'compile_start'
+      if ("miopen_find_compile" in self.args.fin_steps or
+          "miopen_perf_compile" in self.args.fin_steps):
+        self.fetch_state.add("new")
+        self.set_state = "compile_start"
         self.operation = Operation.COMPILE
-      elif 'miopen_find_eval' in self.args.fin_steps or 'miopen_perf_eval' in self.args.fin_steps:
-        self.fetch_state.add('new')
-        self.fetch_state.add('compiled')
-        self.set_state = 'eval_start'
+      elif ("miopen_find_eval" in self.args.fin_steps or
+            "miopen_perf_eval" in self.args.fin_steps):
+        self.fetch_state.add("new")
+        self.fetch_state.add("compiled")
+        self.set_state = "eval_start"
         self.operation = Operation.EVAL
 
     if self.args.update_applicability:
@@ -642,8 +842,8 @@ class MIOpen(MITunaInterface):
 
   def has_tunable_operation(self):
     """! Check if its a tuning loop operation
-    @return Bool value that represents if operation is tuning
-    """
+        @return Bool value that represents if operation is tuning
+        """
     if self.args is None:
       self.parse_args()
     if self.args.subcommand and "load_job" in self.args.subcommand:
@@ -657,8 +857,8 @@ class MIOpen(MITunaInterface):
   @lru_cache(1)
   def get_fdb_attr(self):
     """! Get find_db table attrs
-    @return fdb_attr find_db table attributes without timestamps
-    """
+        @return fdb_attr find_db table attributes without timestamps
+        """
     fdb_attr = None
     fdb_attr = [column.name for column in inspect(self.dbt.find_db_table).c]
     fdb_attr.remove("insert_ts")
@@ -668,8 +868,8 @@ class MIOpen(MITunaInterface):
   @lru_cache(1)
   def get_tuning_data_attr(self):
     """! Get tuning_data table attrs
-    @return tuning_data_attr tuning_data table attributes without timestamps
-    """
+        @return tuning_data_attr tuning_data table attributes without timestamps
+        """
     tuning_data_attr = None
     tuning_data_attr = [
         column.name for column in inspect(self.dbt.tuning_data_table).c
@@ -680,10 +880,10 @@ class MIOpen(MITunaInterface):
 
   def serialize_jobs(self, session: DbSession, batch_jobs: List[Any]):
     """! Return list of serialize jobs
-    @param session DB session
-    @param batch_jobs List of DB jobs
-    @return DB jobs, serialized
-    """
+        @param session DB session
+        @param batch_jobs List of DB jobs
+        @return DB jobs, serialized
+        """
     entries = self.compose_work_objs_fin(session, batch_jobs, self.dbt)
     return serialize_chunk(entries)
 
@@ -696,15 +896,15 @@ class MIOpen(MITunaInterface):
     tuning_data_attr = self.get_tuning_data_attr()
     for job, config in serialized_jobs:
       context = {
-          'job': job,
-          'config': config,
-          'operation': self.operation,
-          'arch': self.dbt.session.arch,
-          'num_cu': self.dbt.session.num_cu,
-          'kwargs': kwargs,
-          'rich_data': self.args.rich_data,
-          'fdb_attr': fdb_attr,
-          'tuning_data_attr': tuning_data_attr
+          "job": job,
+          "config": config,
+          "operation": self.operation,
+          "arch": self.dbt.session.arch,
+          "num_cu": self.dbt.session.num_cu,
+          "kwargs": kwargs,
+          "rich_data": self.args.rich_data,
+          "fdb_attr": fdb_attr,
+          "tuning_data_attr": tuning_data_attr,
       }
       context_list.append(context)
 
@@ -712,48 +912,55 @@ class MIOpen(MITunaInterface):
 
   def celery_enqueue_call(self, context: dict, q_name: str, task_id=False):
     """! Enqueue job (context) for queue:q_name
-    @param context Context for Celery job
-    @param q_name Custom Celery queue name
-    @param task_id Custom Redis Key
-    """
+        @param context Context for Celery job
+        @param q_name Custom Celery queue name
+        @param task_id Custom Redis Key
+        """
 
-    #hacky way to get the Q_NAME to the task decorator for interpreter to decorate the
-    #function with correct q_name arg
-    #if import is moved to top it will result in circular imports
-    Q_NAME = q_name  #pylint: disable=import-outside-toplevel,unused-variable,invalid-name,redefined-outer-name
-    from tuna.miopen.celery_tuning.celery_tasks import celery_enqueue  #pylint: disable=import-outside-toplevel
+    # hacky way to get the Q_NAME to the task decorator for interpreter to decorate the
+    # function with correct q_name arg
+    # if import is moved to top it will result in circular imports
+    Q_NAME = q_name  # pylint: disable=import-outside-toplevel,unused-variable,invalid-name,redefined-outer-name
+    from tuna.miopen.celery_tuning.celery_tasks import (
+        celery_enqueue,)  # pylint: disable=import-outside-toplevel
 
-    return celery_enqueue.apply_async((context,),
-                                      task_id=('-').join([self.prefix,
-                                                          uuid()]),
-                                      queue=q_name,
-                                      reply_to=q_name)
+    return celery_enqueue.apply_async(
+        (context,),
+        task_id=("-").join([self.prefix, uuid()]),
+        queue=q_name,
+        reply_to=q_name,
+    )
 
   def process_compile_results(self, session, fin_json, context):
     """! Process result from fin_build worker
-    @param session DB session
-    @param fin_json MIFin results for job
-    @param context Context for Celery job
-    @return Boolean value
-    """
-    job = SimpleDict(**context['job'])
+        @param session DB session
+        @param fin_json MIFin results for job
+        @param context Context for Celery job
+        @return Boolean value
+        """
+    job = SimpleDict(**context["job"])
     pending = []
     solver_id_map = get_solver_ids()
 
     failed_job = False
-    result_str = ''
+    result_str = ""
     status = None
     try:
       if fin_json:
-        if 'success' in fin_json and fin_json["success"] is False:
+        if "success" in fin_json and fin_json["success"] is False:
           status = [fin_json]
         else:
-          if 'miopen_find_compile_result' in fin_json:
-            status = process_fdb_w_kernels(session, fin_json,
-                                           copy.deepcopy(context), self.dbt,
-                                           context['fdb_attr'], pending)
+          if "miopen_find_compile_result" in fin_json:
+            status = process_fdb_w_kernels(
+                session,
+                fin_json,
+                copy.deepcopy(context),
+                self.dbt,
+                context["fdb_attr"],
+                pending,
+            )
 
-          elif 'miopen_perf_compile_result' in fin_json:
+          elif "miopen_perf_compile_result" in fin_json:
             status = process_pdb_compile(session, fin_json, job, self.dbt,
                                          solver_id_map)
 
@@ -761,96 +968,217 @@ class MIOpen(MITunaInterface):
         failed_job = not success
 
     except (OperationalError, IntegrityError) as err:
-      self.logger.warning('FinBuild: Unable to update Database %s', err)
+      self.logger.warning("FinBuild: Unable to update Database %s", err)
       session.rollback()
       failed_job = True
     except DataError as err:
       self.logger.warning(
-          'FinBuild: Invalid data, likely large workspace. DB Error: %s', err)
+          "FinBuild: Invalid data, likely large workspace. DB Error: %s", err)
       session.rollback()
       failed_job = True
 
     if failed_job:
-      set_job_state(session, job, self.dbt, 'errored', False, result=result_str)
+      set_job_state(session, job, self.dbt, "errored", False, result=result_str)
     else:
       set_job_state(session,
                     job,
                     self.dbt,
-                    'compiled',
+                    "compiled",
                     False,
                     result=result_str)
 
     return True
 
-  def process_eval_results(self, session, fin_json, context):
-    """! Process fin_json result
+  def _process_single_eval_result(self, session, fin_json, context, commit=True):
+    """Process a single evaluation result (extracted for batching)
+    
     @param session DB session
     @param fin_json MIFin results for job
     @param context Context for Celery job
+    @param commit Whether to commit immediately (False for batching)
     @return Boolean value
     """
-    job = SimpleDict(**context['job'])
+    job = SimpleDict(**context["job"])
     failed_job = True
-    result_str = ''
+    result_str = ""
     pending = []
-    orig_state = 'compiled'
+    orig_state = "compiled"
+    machine_id = context.get('machine_id', None)
 
     try:
       if fin_json:
-        if 'success' in fin_json and fin_json["success"] is False:
+        if "success" in fin_json and fin_json["success"] is False:
           status = [fin_json]
         else:
-          if 'miopen_find_eval_result' in fin_json:
-            status = process_fdb_w_kernels(session,
-                                           fin_json,
-                                           copy.deepcopy(context),
-                                           self.dbt,
-                                           context['fdb_attr'],
-                                           pending,
-                                           result_str='miopen_find_eval_result',
-                                           check_str='evaluated')
-          elif 'miopen_perf_eval_result' in fin_json:
-            status = process_fdb_w_kernels(session,
-                                           fin_json,
-                                           copy.deepcopy(context),
-                                           self.dbt,
-                                           context['fdb_attr'],
-                                           pending,
-                                           result_str='miopen_perf_eval_result',
-                                           check_str='evaluated')
+          if "miopen_find_eval_result" in fin_json:
+            status = process_fdb_w_kernels(
+                session,
+                fin_json,
+                copy.deepcopy(context),
+                self.dbt,
+                context["fdb_attr"],
+                pending,
+                result_str="miopen_find_eval_result",
+                check_str="evaluated",
+            )
+          elif "miopen_perf_eval_result" in fin_json:
+            status = process_fdb_w_kernels(
+                session,
+                fin_json,
+                copy.deepcopy(context),
+                self.dbt,
+                context["fdb_attr"],
+                pending,
+                result_str="miopen_perf_eval_result",
+                check_str="evaluated",
+            )
             if context["rich_data"]:
-              status = process_tuning_data(session,
-                                           fin_json,
-                                           copy.deepcopy(context),
-                                           self.dbt,
-                                           context['tuning_data_attr'],
-                                           pending,
-                                           result_str='miopen_perf_eval_result',
-                                           check_str='evaluated')
+              status = process_tuning_data(
+                  session,
+                  fin_json,
+                  copy.deepcopy(context),
+                  self.dbt,
+                  context["tuning_data_attr"],
+                  pending,
+                  result_str="miopen_perf_eval_result",
+                  check_str="evaluated",
+              )
 
         success, result_str = get_fin_result(status)
         failed_job = not success
 
       if failed_job:
-        if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):  #pylint: disable=no-member
-          self.logger.warning('max job retries exhausted, setting to errored')
-          set_job_state(session, job, self.dbt, 'errored', result=result_str)
-        else:
-          self.logger.warning('resetting job state to %s, incrementing retries',
-                              orig_state)
+        if job.retries >= (MAX_ERRORED_JOB_RETRIES - 1):  # pylint: disable=no-member
+          self.logger.warning("max job retries exhausted, setting to errored")
           set_job_state(session,
                         job,
                         self.dbt,
-                        orig_state,
-                        increment_retries=True,
-                        result=result_str)
+                        "errored",
+                        result=result_str,
+                        machine_id=machine_id)
+        else:
+          self.logger.warning("resetting job state to %s, incrementing retries",
+                              orig_state)
+          set_job_state(
+              session,
+              job,
+              self.dbt,
+              orig_state,
+              increment_retries=True,
+              result=result_str,
+              machine_id=machine_id,
+          )
       else:
         self.logger.info("\n\n Setting job state to evaluated")
-        set_job_state(session, job, self.dbt, 'evaluated', result=result_str)
+        set_job_state(session,
+                      job,
+                      self.dbt,
+                      "evaluated",
+                      result=result_str,
+                      machine_id=machine_id)
         clean_cache_table(self.dbt, job)
     except (OperationalError, IntegrityError) as err:
-      self.logger.warning('FinBuild: Unable to update Database %s', err)
+      self.logger.warning("FinBuild: Unable to update Database %s", err)
       session.rollback()
-      set_job_state(session, job, self.dbt, 'errored', result=result_str)
+      set_job_state(session, job, self.dbt, "errored", result=result_str)
+    
+    # Commit immediately if not batching
+    if commit:
+      session.commit()
 
     return True
+
+  def _flush_results_batch(self, session):
+    """Flush all buffered results to database in single transaction
+    
+    @param session DB session
+    @return Number of results flushed
+    """
+    if not self.result_buffer:
+      return 0
+    
+    # Copy buffer before processing to prevent issues if processing fails partway
+    buffer_to_process = list(self.result_buffer)
+    buffer_size = len(buffer_to_process)
+    self.logger.info("Flushing batch of %d results to database", buffer_size)
+    
+    try:
+      # Process all results from copy (not from original buffer)
+      for fin_json, context in buffer_to_process:
+        self._process_single_eval_result(session, fin_json, context, commit=False)
+      
+      # Single commit for entire batch
+      session.commit()
+      self.logger.info("Successfully flushed %d results", buffer_size)
+      
+      # Only clear original buffer after successful commit
+      self.result_buffer.clear()
+      self.last_flush_time = time.time()
+      
+      return buffer_size
+      
+    except Exception as err:  # pylint: disable=broad-exception-caught
+      self.logger.error("Batch flush failed: %s", err)
+      session.rollback()
+      
+      # Retry each result individually from the copy
+      self.logger.warning("Retrying %d results individually", buffer_size)
+      failed_count = 0
+      for fin_json, context in buffer_to_process:
+        try:
+          self._process_single_eval_result(session, fin_json, context, commit=True)
+        except Exception as retry_err:  # pylint: disable=broad-exception-caught
+          self.logger.error("Individual retry failed for job %s: %s", 
+                          context.get('job', {}).get('id', 'unknown'), retry_err)
+          failed_count += 1
+      
+      # Clear buffer even if some retries failed (prevent infinite retry loop)
+      self.result_buffer.clear()
+      self.last_flush_time = time.time()
+      
+      if failed_count > 0:
+        self.logger.error("Failed to process %d/%d results even after individual retry", 
+                         failed_count, buffer_size)
+      
+      return buffer_size - failed_count
+
+  def process_eval_results(self, session, fin_json, context):
+    """Process fin_json result with micro-batching
+
+    @param session DB session
+    @param fin_json MIFin results for job
+    @param context Context for Celery job
+    @return Boolean value
+    """
+    # Add result to buffer
+    with self.buffer_lock:
+      self.result_buffer.append((fin_json, context))
+
+      # Check if we should flush
+      should_flush = (
+          len(self.result_buffer) >= self.BATCH_SIZE or
+          (time.time() - self.last_flush_time) >= self.FLUSH_INTERVAL
+      )
+
+      if should_flush:
+        self._flush_results_batch(session)
+      elif len(self.result_buffer) > 0:
+        # Even if not flushing batch, check idle time
+        # If buffer has content and we haven't flushed in 2x FLUSH_INTERVAL,
+        # flush anyway to prevent indefinite buffering when queue empties
+        idle_threshold = self.FLUSH_INTERVAL * 2
+        if (time.time() - self.last_flush_time) >= idle_threshold:
+          self.logger.warning(
+              "Buffer idle for %ds with %d results - flushing to prevent data loss",
+              idle_threshold, len(self.result_buffer))
+          self._flush_results_batch(session)
+
+    return True
+
+  def extract_job_id_from_context(self, context):
+    """Extract job ID from MIOpen celery task context"""
+    try:
+      # Extract job ID from the job context
+      return context.get("job", {}).get("id")
+    except (AttributeError, KeyError):
+      return None
