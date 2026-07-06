@@ -1,0 +1,21 @@
+{
+  "gfx90a:110": [
+    {
+      "solver": "ConvAsm1x1U",
+      "config": "64-75-75-3x3-64-75-75-512-1x1-1x1-1x1-0-NHWC-FP16-F",
+      "params": "1,4,1,64,2,2,1,1",
+      "kernel_time": 0.123456,
+      "workspace_size": 0,
+      "md5": "abc123def456"
+    },
+    {
+      "solver": "ConvAsm3x3U",
+      "config": "128-28-28-3x3-128-28-28-256-1x1-1x1-1x1-1-NCHW-FP32-F",
+      "params": "1,8,1,32,2,2,1,1",
+      "kernel_time": 0.234567,
+      "workspace_size": 0,
+      "md5": "def456abc789"
+    }
+  ]
+}
+

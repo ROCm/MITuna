@@ -2,7 +2,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,51 +23,15 @@
 # SOFTWARE.
 #
 ###############################################################################
+"""Test fixtures for example module"""
 
-import sys
+from .example_fixtures import (create_mock_args, create_mock_machine,
+                               create_mock_worker, create_example_job,
+                               create_example_session, create_mock_db_session,
+                               create_mock_kwargs, create_simple_dict)
 
-sys.path.append("../tuna")
-sys.path.append("tuna")
-
-from tuna.machine import Machine
-
-
-def config_cpus(m):
-  for cpu in m.cpus:
-    assert (cpu['rinfo']['Device Type'] == 'CPU')
-  m.getusedspace()
-
-
-def config_gpus(m):
-  for i, gpu in enumerate(m.gpus):
-    assert (gpu == m.get_gpu(i))
-    assert (gpu['rinfo']['Device Type'] == 'GPU')
-    assert (m.chk_gpu_status(i))
-    m.get_gpu_clock(i)
-    #print('{}: {}'.format(i, m.chk_gpu_status(i)))
-
-
-def write_read_bytes(m):
-  contents = bytes('8756abd', 'utf-8')
-  tmpfile = m.write_file(contents, is_temp=True)
-  retval = m.read_file(tmpfile, byteread=True)
-  assert (contents == retval)
-
-
-def write_read_text(m):
-  contents = b'test file content'
-  tmpfile = m.write_file(contents, is_temp=True)
-  retval = m.read_file(tmpfile, byteread=False)
-  assert (isinstance(retval, str))
-
-
-def test_machine():
-  keys = {'local_machine': True}
-
-  m = Machine(**keys)
-
-  config_cpus(m)
-  config_gpus(m)
-
-  write_read_bytes(m)
-  write_read_text(m)
+__all__ = [
+    'create_mock_args', 'create_mock_machine', 'create_mock_worker',
+    'create_example_job', 'create_example_session', 'create_mock_db_session',
+    'create_mock_kwargs', 'create_simple_dict'
+]

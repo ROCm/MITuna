@@ -181,10 +181,12 @@ def build_driver_cmd(fds, vals, precision, direction):
   """make a driver command for a value set"""
   arg_names = fds[:]
   args = dict(zip(arg_names, vals))
-  args['forw'] = INVERS_DIR_MAP[direction]
+  args['forw'] = direction
   conv = 'conv'
   if precision == 'FP16':
     conv = 'convfp16'
+  if precision == 'BF16':
+    conv = 'convbfp16'
 
   arg_strs = [f'--{key} {args[key]}' for key in sorted(args)]
   cmd = f"MIOpenDriver {conv} {' '.join(arg_strs)}"

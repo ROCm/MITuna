@@ -2,7 +2,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright (c) 2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,51 +23,35 @@
 # SOFTWARE.
 #
 ###############################################################################
-
+"""Tests for tuna.example.metadata"""
+import os
 import sys
 
 sys.path.append("../tuna")
 sys.path.append("tuna")
 
-from tuna.machine import Machine
+from tuna.example import metadata
 
 
-def config_cpus(m):
-  for cpu in m.cpus:
-    assert (cpu['rinfo']['Device Type'] == 'CPU')
-  m.getusedspace()
+def test_example_tuning_steps():
+  """Test EXAMPLE_TUNING_STEPS constant"""
+  assert hasattr(metadata, 'EXAMPLE_TUNING_STEPS')
+  assert isinstance(metadata.EXAMPLE_TUNING_STEPS, list)
+  assert 'init_session' in metadata.EXAMPLE_TUNING_STEPS
+  assert 'execute' in metadata.EXAMPLE_TUNING_STEPS
+  assert len(metadata.EXAMPLE_TUNING_STEPS) == 2
 
 
-def config_gpus(m):
-  for i, gpu in enumerate(m.gpus):
-    assert (gpu == m.get_gpu(i))
-    assert (gpu['rinfo']['Device Type'] == 'GPU')
-    assert (m.chk_gpu_status(i))
-    m.get_gpu_clock(i)
-    #print('{}: {}'.format(i, m.chk_gpu_status(i)))
+def test_example_single_op():
+  """Test EXAMPLE_SINGLE_OP constant"""
+  assert hasattr(metadata, 'EXAMPLE_SINGLE_OP')
+  assert isinstance(metadata.EXAMPLE_SINGLE_OP, list)
+  assert 'init_session' in metadata.EXAMPLE_SINGLE_OP
+  assert 'execute' in metadata.EXAMPLE_SINGLE_OP
+  assert len(metadata.EXAMPLE_SINGLE_OP) == 2
 
 
-def write_read_bytes(m):
-  contents = bytes('8756abd', 'utf-8')
-  tmpfile = m.write_file(contents, is_temp=True)
-  retval = m.read_file(tmpfile, byteread=True)
-  assert (contents == retval)
-
-
-def write_read_text(m):
-  contents = b'test file content'
-  tmpfile = m.write_file(contents, is_temp=True)
-  retval = m.read_file(tmpfile, byteread=False)
-  assert (isinstance(retval, str))
-
-
-def test_machine():
-  keys = {'local_machine': True}
-
-  m = Machine(**keys)
-
-  config_cpus(m)
-  config_gpus(m)
-
-  write_read_bytes(m)
-  write_read_text(m)
+def test_metadata_values():
+  """Verify metadata constants have correct values"""
+  assert metadata.EXAMPLE_TUNING_STEPS == metadata.EXAMPLE_SINGLE_OP
+  assert metadata.EXAMPLE_TUNING_STEPS == ['init_session', 'execute']
